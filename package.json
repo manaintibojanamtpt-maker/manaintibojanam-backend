@@ -7,6 +7,7 @@
     "seed": "tsx seed.ts",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin",
+    "build:server": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "deploy": "firebase deploy --only hosting",
