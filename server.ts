@@ -35,8 +35,8 @@ try {
 const ambientProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
 const configProjectId = firebaseConfig.projectId;
 // Prioritize config project ID as it's the one explicitly provisioned for the app
-const projectId = configProjectId || ambientProjectId; 
-const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+const projectId = configProjectId || ambientProjectId || 'mana-inti-bojanam-pune-492610'; 
+const databaseId = firebaseConfig.firestoreDatabaseId || "ai-studio-3efd2980-c2f3-4286-8dff-afeca044d855"; 
 
 console.log("--- Firebase Admin Initialization ---");
 console.log(`Ambient Project ID: ${ambientProjectId || 'not set'}`);
@@ -1603,7 +1603,7 @@ app.get("/api/orders/user/:userId", async (req, res) => {
 const rpName = 'Mana Inti Bojanam';
 // You must set APP_URL in production to the domain (e.g., https://your-app.web.app)
 const origin = process.env.APP_URL || process.env.VITE_APP_URL || 'https://mana-inti-bojanam-pune-492610.web.app';
-const rpID = new URL(origin).hostname;
+const rpID = 'mana-inti-bojanam-pune-492610.web.app';
 
 // In-memory cache for challenges (In a multi-server setup, use Redis or Firestore)
 const challengeCache = new Map<string, string>();
