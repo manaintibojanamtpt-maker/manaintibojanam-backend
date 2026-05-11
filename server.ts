@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import path from "path";
 import fs from "fs";
 import { createHmac } from "crypto";
-import { initializeApp, getApp, getApps, deleteApp } from "firebase-admin/app";
+import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
@@ -48,14 +48,30 @@ console.log("-------------------------------------");
 
 let appAdmin: any;
 try {
-  // 1. Try to initialize with ambient credentials (most reliable in this environment)
   if (getApps().length === 0) {
-    // If we have a projectId, try to use it even with ambient credentials
-    appAdmin = initializeApp(projectId ? { projectId } : {});
-    console.log(`✅ [Firebase Admin] Initialized [DEFAULT] app (Project: ${appAdmin.options.projectId || 'ambient'}).`);
+    const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+    
+    if (serviceAccountVar) {
+      try {
+        const serviceAccount = JSON.parse(serviceAccountVar);
+        appAdmin = initializeApp({
+          credential: cert(serviceAccount),
+          projectId: projectId,
+          databaseId: databaseId !== "(default)" ? databaseId : undefined
+        });
+        console.log(`✅ [Firebase Admin] Initialized with Service Account (Project: ${projectId})`);
+      } catch (parseErr) {
+        console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:", parseErr);
+        // Fallback
+        appAdmin = initializeApp(projectId ? { projectId } : {});
+      }
+    } else {
+      // Standard initialization for GCP/Firebase environments
+      appAdmin = initializeApp(projectId ? { projectId } : {});
+      console.log(`✅ [Firebase Admin] Initialized [DEFAULT] app (Project: ${appAdmin.options.projectId || 'ambient'}).`);
+    }
   } else {
     appAdmin = getApp();
-    console.log(`✅ [Firebase Admin] Using existing [DEFAULT] app (Project: ${appAdmin.options.projectId || 'ambient'}).`);
   }
 } catch (err: any) {
   console.error(`❌ [Firebase Admin] Primary initialization failed: ${err.message}`);
