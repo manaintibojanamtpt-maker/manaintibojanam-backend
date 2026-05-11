@@ -1,0 +1,5 @@
+{
+  "name": "Mana Inti Bojanam - Home Style Food",
+  "description": "Next-generation premium food delivery platform for authentic homemade Andhra meals. Experience AI-powered recommendations, live tracking, and a seamless Zomato-style dining experience.",
+  "requestFramePermissions": ["geolocation"]
+}

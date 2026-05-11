@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&display=swap');
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #icon-container {
+            width: 1024px;
+            height: 1024px;
+            position: relative;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Zoom in on the emblem to make it fill the square */
+        .emblem-bg {
+            position: absolute;
+            width: 120%; /* Scale up the background image so the circular emblem fills the square */
+            height: 120%;
+            background: url('./public/app_icon_new.png');
+            background-size: cover;
+            background-position: center;
+        }
+        .brand-overlay {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+        .brand-text {
+            color: #FFD700;
+            font-family: 'Playfair Display', serif;
+            font-size: 100px; /* Even bigger text */
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-shadow: 0 4px 30px rgba(0,0,0,0.9), 0 0 50px rgba(212, 175, 55, 0.6);
+            text-transform: uppercase;
+        }
+        .brand-subtitle {
+            color: #FFD700;
+            font-family: sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            margin-top: -10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="icon-container">
+        <div class="emblem-bg"></div>
+        <div class="brand-overlay">
+            <div class="brand-text">Mana Inti Bojanam</div>
+            <div class="brand-subtitle">Authentic & Traditional</div>
+        </div>
+    </div>
+</body>
+</html>

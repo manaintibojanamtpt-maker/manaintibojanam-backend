@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'manaintibojanamtpt@gmail.com' ||
+        request.auth.token.email == 'lucky.lakshmi46@gmail.com' ||
+        request.auth.token.phone_number == '+917666258454' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+    function isWithinCancellationWindow(resource) {
+      return request.time < resource.data.createdAt + duration.value(60, 's');
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /_connection_test_/{docId} {
+      allow read, write: if true;
+    }
+    match /_admin_test_/{docId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    }
+
+    match /menu/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid);
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          resource.data.userId == request.auth.uid &&
+          (
+            // Customer cancellation: ONLY within cancellation window, only when order is newly placed
+            (
+              request.resource.data.status == 'CANCELLED' &&
+              resource.data.status in ['PLACED', 'PENDING'] &&
+              isWithinCancellationWindow(resource) &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'timeline'])
+            )
+            ||
+            // Customer feedback fields (no status changes)
+            (
+              request.resource.data.status == resource.data.status &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'rating',
+                'feedback',
+                'reviewed',
+                'feedbackStatus',
+                'feedbackSubmittedAt',
+                'updatedAt',
+                'timeline'
+              ])
+            )
+            ||
+            // Customer payment self-confirmation/proof submission (no status changes)
+            (
+              request.resource.data.status == resource.data.status &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'paymentStatus',
+                'paymentSubmittedAt',
+                'paymentProofType',
+                'paymentProofValue',
+                'paymentReferenceNumber',
+                'updatedAt',
+                'timeline'
+              ])
+            )
+          )
+        )
+      );
+    }
+
+    match /adminSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /userPreferences/{userId} {
+      allow read, write: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /supportTickets/{ticketId} {
+      // Customers can create tickets for support
+      allow create: if isAuthenticated();
+      // Admin-only visibility and moderation
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /paymentProofs/{proofId} {
+      allow create: if isAuthenticated() && request.resource.data.submittedBy == request.auth.uid &&
+                    request.resource.data.orderId is string &&
+                    request.resource.data.proofType in ['upi_screenshot', 'bank_transfer', 'card_transaction'] &&
+                    request.resource.data.proofValue is string &&
+                    request.resource.data.status == 'pending_review';
+      allow read: if isAuthenticated() &&
+                  (resource.data.submittedBy == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+
+    match /razorpayWebhooks/{webhookId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /subscriptions/{subId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /referrals/{refId} {
+      allow read, create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+  }
+}

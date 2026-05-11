@@ -1,0 +1,62 @@
+[
+  {
+    "id": "1",
+    "name": "Masala Dosa",
+    "description": "Crispy fermented rice and lentil crepe filled with a spiced potato mash.",
+    "price": 90,
+    "category": "Dosa",
+    "image": "https://picsum.photos/seed/dosa/400/300",
+    "isVeg": true,
+    "isBestseller": true,
+    "isPreOrder": false,
+    "available": true
+  },
+  {
+    "id": "2",
+    "name": "Idli Sambar",
+    "description": "Soft steamed rice cakes served with flavorful lentil soup and chutneys.",
+    "price": 60,
+    "category": "Breakfast",
+    "image": "https://picsum.photos/seed/idli/400/300",
+    "isVeg": true,
+    "isBestseller": false,
+    "isPreOrder": false,
+    "available": true
+  },
+  {
+    "id": "3",
+    "name": "Vada",
+    "description": "Deep-fried savory lentil donuts, crispy on the outside and soft inside.",
+    "price": 50,
+    "category": "Breakfast",
+    "image": "https://picsum.photos/seed/vada/400/300",
+    "isVeg": true,
+    "isBestseller": false,
+    "isPreOrder": false,
+    "available": true
+  },
+  {
+    "id": "4",
+    "name": "Paneer Butter Masala",
+    "description": "Rich and creamy tomato-based curry with cubes of fresh cottage cheese.",
+    "price": 220,
+    "category": "Main Course",
+    "image": "https://picsum.photos/seed/paneer/400/300",
+    "isVeg": true,
+    "isBestseller": true,
+    "isPreOrder": false,
+    "available": true
+  },
+  {
+    "id": "5",
+    "name": "Chicken Biryani",
+    "description": "Fragrant basmati rice cooked with succulent chicken pieces and aromatic spices.",
+    "price": 280,
+    "category": "Biryani",
+    "image": "https://picsum.photos/seed/biryani/400/300",
+    "isVeg": false,
+    "isBestseller": true,
+    "isPreOrder": false,
+    "available": true
+  }
+]

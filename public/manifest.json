@@ -1,0 +1,33 @@
+{
+  "name": "Mana Inti Bojanam",
+  "short_name": "MIB",
+  "description": "Authentic home-style Telugu meals prepared with love, fresh ingredients, and zero preservatives.",
+  "id": "com.manaintibojanam.pwa",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0C0C0C",
+  "theme_color": "#0C0C0C",
+  "orientation": "portrait",
+  "categories": ["food", "lifestyle"],
+  "icons": [
+    {
+      "src": "/logo-v20-final.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-v20-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-v20-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

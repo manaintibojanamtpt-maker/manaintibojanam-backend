@@ -1,0 +1,225 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "customer"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "phoneNumber", "role"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Food item in the menu",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "discount": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "itemOrderCount": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "type": { "type": "string", "enum": ["veg", "non-veg"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "category", "isAvailable"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order information",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "number" },
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "gst": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "packingFee": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["placed", "preparing", "out_for_delivery", "delivered", "cancelled"] },
+        "address": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cod", "online"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "failed"] },
+        "razorpayOrderId": { "type": "string" },
+        "instructions": {
+          "type": "object",
+          "properties": {
+            "noCutlery": { "type": "boolean" },
+            "spiceLevel": { "type": "string", "enum": ["less", "normal", "extra"] },
+            "noOnion": { "type": "boolean" },
+            "lessOil": { "type": "boolean" },
+            "customNote": { "type": "string" }
+          }
+        },
+        "eta": { "type": "number" },
+        "rating": { "type": "number" },
+        "feedback": { "type": "string" },
+        "assignedDelivery": { "type": "string" },
+        "trackingLink": { "type": "string" },
+        "riderName": { "type": "string" },
+        "riderPhone": { "type": "string" },
+        "deliveryPartner": { "type": "string" },
+        "refundStatus": { "type": "string", "enum": ["initiated", "processing", "completed"] },
+        "refundAmount": { "type": "number" },
+        "refundedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderNumber", "items", "total", "status", "address", "phoneNumber", "paymentMethod"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Dynamic promotional banners",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "image": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "priority": { "type": "number" },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "image", "isActive", "priority"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "gst": { "type": "number" },
+        "packingFee": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "isStoreOpen": { "type": "boolean" },
+        "festivalTheme": {
+          "type": "object",
+          "properties": {
+            "isEnabled": { "type": "boolean" },
+            "name": { "type": "string" },
+            "primaryColor": { "type": "string" },
+            "secondaryColor": { "type": "string" },
+            "bannerImage": { "type": "string" }
+          }
+        },
+        "storeTiming": {
+          "type": "object",
+          "properties": {
+            "openTime": { "type": "string" },
+            "closeTime": { "type": "string" },
+            "isManualOverride": { "type": "boolean" }
+          }
+        },
+        "workflow": {
+          "type": "object",
+          "properties": {
+            "autoMode": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["gst", "packingFee", "deliveryFee", "isStoreOpen"]
+    },
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "User behavior and preferences",
+      "type": "object",
+      "properties": {
+        "lastOrders": { "type": "array" },
+        "favoriteItems": { "type": "array" },
+        "lastOrderTime": { "type": "string", "format": "date-time" },
+        "lastInstructions": { "$ref": "Order.instructions" }
+      }
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer reviews",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "menuItemId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "rating": { "type": "number" },
+        "feedback": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "rating"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount coupons",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discount": { "type": "number" },
+        "type": { "type": "string", "enum": ["percentage", "fixed"] },
+        "expiry": { "type": "string", "format": "date-time" },
+        "minOrder": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["code", "discount", "type", "isActive"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Menu categories",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "priority": { "type": "number" },
+        "image": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "priority"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/menu/{itemId}": {
+      "schema": "MenuItem",
+      "description": "Menu items"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
+    },
+    "/adminSettings/global": {
+      "schema": "Settings",
+      "description": "Global settings"
+    },
+    "/userPreferences/{userId}": {
+      "schema": "UserPreferences",
+      "description": "User preferences"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer reviews"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Discount coupons"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Dynamic banners"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Menu categories"
+    }
+  }
+}
