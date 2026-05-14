@@ -152,9 +152,13 @@ export class BiometricService {
       clearTimeout(timeoutId);
 
       if (!resp.ok) {
-        const errText = await resp.text();
+        let errText = await resp.text();
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error) errText = errJson.error;
+        } catch (e) {}
         console.error(`[BiometricService] Server returned error: ${resp.status} ${errText}`);
-        throw new Error(`Failed to get registration options: ${resp.status}`);
+        throw new Error(`Failed to get registration options: ${resp.status} - ${errText}`);
       }
       
       const options = await resp.json();

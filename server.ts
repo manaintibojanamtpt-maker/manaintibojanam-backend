@@ -1672,7 +1672,7 @@ app.post("/api/auth/generate-registration-options", async (req, res) => {
     // Get existing passkeys to exclude them
     const passkeysSnapshot = await db.collection("users").doc(userId).collection("passkeys").get();
     const excludeCredentials = passkeysSnapshot.docs.map(doc => ({
-      id: base64url.toBuffer(doc.id),
+      id: doc.id, // In v13, this must be a base64url string, which our doc.id already is
       type: 'public-key' as const,
       transports: doc.data().transports || [],
     }));
