@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, ShieldCheck, X } from 'lucide-react';
+import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, ShieldCheck, X, ArrowRight } from 'lucide-react';
 import { useCheckoutState } from '../hooks/useCheckoutState';
 import { createOrder } from '../services/api';
 import LocationPicker from '../components/LocationPicker';
 import { OrderStatus } from '../types';
-import { formatPrice } from '../lib/utils';
+import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../firebase';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { MenuItem } from '../types';
+import { Skeleton } from '../components/SkeletonSystem';
 
 // Countdown removed by request
 
@@ -340,30 +342,49 @@ const Checkout: React.FC = () => {
       const orderData: any = buildOrderData();
 
       if (state.paymentMethod === 'online') {
-        const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
+        // Fallback to Render backend if VITE_API_URL is not set
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
         
-        const createRes = await fetch(`${API_BASE_URL}/create-order`, {
+        const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: orderData.totalAmount })
         });
         const createData = await createRes.json();
         
-        if (!createRes.ok || !createData.order_id) {
+        if (!createRes.ok || !createData.success || !createData.order?.id) {
           throw new Error(createData.error || 'Failed to create secure payment session');
         }
 
+        // Handle Mock Payment in development environments if keys are missing
+        if (createData.isMock) {
+          toast.success('Test Mode: Payment simulated');
+          orderData.paymentStatus = 'success';
+          orderData.razorpayOrderId = createData.order.id;
+          const orderId = await createOrder(orderData);
+          
+          if (state.currentUser) {
+            await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
+              'preferences.lastPaymentMethod': state.paymentMethod
+            });
+          }
+          
+          state.clearCart();
+          navigate(`/payment-success?orderId=${orderId}`);
+          return;
+        }
+
         const options = {
-          key: 'rzp_live_Sjcjj19nnWXEzX',
-          amount: createData.amount,
+          key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
+          amount: createData.order.amount,
           currency: 'INR',
           name: 'Mana Inti Bojanam',
           description: 'Authentic Telugu Meals',
-          order_id: createData.order_id,
+          order_id: createData.order.id,
           prefill: {
-            name: state.name || '',
-            email: state.email || '',
-            contact: state.phone || ''
+            name: (state.name || '').trim(),
+            email: (state.email || '').trim().toLowerCase(),
+            contact: (state.phone || '').replace(/\D/g, '').slice(-10)
           },
           theme: {
             color: '#E65100'
@@ -372,7 +393,7 @@ const Checkout: React.FC = () => {
             try {
               setIsPlacingOrder(true);
               
-              const verifyRes = await fetch(`${API_BASE_URL}/verify-payment`, {
+              const verifyRes = await fetch(`${API_BASE_URL}/api/verify-razorpay-payment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(response)
@@ -381,6 +402,8 @@ const Checkout: React.FC = () => {
               
               if (verifyData.success) {
                 orderData.paymentStatus = 'success';
+                orderData.razorpayOrderId = response.razorpay_order_id;
+                orderData.razorpayPaymentId = response.razorpay_payment_id;
                 const orderId = await createOrder(orderData);
                 
                 if (state.currentUser) {
@@ -434,12 +457,18 @@ const Checkout: React.FC = () => {
           }
         };
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (response: any) {
-          toast.error('Payment failed: ' + response.error.description);
+        try {
+          const rzp = new (window as any).Razorpay(options);
+          rzp.on('payment.failed', function (response: any) {
+            toast.error('Payment failed: ' + response.error.description);
+            setIsPlacingOrder(false);
+          });
+          rzp.open();
+        } catch (rzpErr: any) {
+          console.error("Razorpay SDK Error:", rzpErr);
+          toast.error("Could not open payment window. Please check your phone/email.");
           setIsPlacingOrder(false);
-        });
-        rzp.open();
+        }
         
       } else {
         // COD Flow
@@ -542,7 +571,7 @@ const Checkout: React.FC = () => {
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 sticky top-0 z-30 shadow-sm border-b border-gray-100 dark:border-gray-800" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center px-4 py-4 gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors">
+          <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors">
             <ArrowLeft size={24} />
           </button>
           <div>
@@ -617,6 +646,7 @@ const Checkout: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 w-[84px] h-7 shadow-sm">
                       <button 
+                        type="button"
                         onClick={() => state.updateQuantity(item.id, item.quantity - 1)}
                         className="w-7 h-full flex items-center justify-center text-red-600 dark:text-red-400"
                       >
@@ -624,6 +654,7 @@ const Checkout: React.FC = () => {
                       </button>
                       <span className="text-xs font-black text-gray-900 dark:text-white">{item.quantity}</span>
                       <button 
+                        type="button"
                         onClick={() => state.updateQuantity(item.id, item.quantity + 1)}
                         className="w-7 h-full flex items-center justify-center text-red-600 dark:text-red-400"
                       >
@@ -653,69 +684,102 @@ const Checkout: React.FC = () => {
           </motion.div>
         )}
 
-        {/* 2. Bill Details */}
-        <motion.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="space-y-4">
-            <h3 className="font-black text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Bill Details</h3>
-            
+        {/* 2. Bill Details - Premium Editorial Card */}
+        <motion.div 
+          className="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800"
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.1 }}
+        >
+          <div className="px-6 py-5 border-b border-gray-50 dark:border-white/5">
+            <h3 className="font-black text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Bill Summary</h3>
+          </div>
+          
+          <div className="p-6 space-y-4">
             {/* Promo Code Section */}
             {!hasSubscription && (
-              <div className="mb-4">
+              <div className="mb-2">
                 {state.appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 p-3 rounded-xl">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
+                    <div className="flex items-center gap-2 text-emerald-400">
                       <Sparkles size={16} />
                       <span className="font-bold text-sm">'{state.appliedCoupon.code}' applied</span>
                     </div>
-                    <button onClick={() => { state.setAppliedCoupon(null); setPromoInput(''); }} className="text-xs font-bold text-red-500 hover:text-red-600">Remove</button>
+                    <button onClick={() => { state.setAppliedCoupon(null); setPromoInput(''); }} className="text-xs font-black text-red-500 uppercase tracking-wider">Remove</button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 p-1 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-white/5">
                     <input 
-                      type="text" placeholder="Promo Code" value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                      className="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-white/5 p-3 rounded-xl text-sm font-black text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      type="text" placeholder="HAVE A PROMO CODE?" value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      className="flex-1 bg-transparent px-3 py-2 text-[10px] font-black text-gray-900 dark:text-white uppercase outline-none placeholder:text-gray-500"
                     />
                     <button 
+                      type="button"
                       onClick={handleApplyPromo} 
                       disabled={!promoInput.trim() || isApplyingPromo} 
-                      className="bg-indigo-600 text-white px-5 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center min-w-[80px]"
+                      className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-5 rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50 min-h-[36px]"
                     >
-                      {isApplyingPromo ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Apply'}
+                      {isApplyingPromo ? '...' : 'Apply'}
                     </button>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400 font-medium">Item Total</span>
-              <span className="font-bold text-gray-900 dark:text-white">{formatPrice(state.total)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <div className="flex flex-col">
-                <span className="text-gray-600 dark:text-gray-400 font-bold">Taxes & Packaging</span>
-                <span className="text-[10px] text-gray-400 font-medium tracking-tight leading-none mt-0.5">GST ({state.fees.gst}%) + Eco-friendly packaging</span>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Item Total</span>
+                <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatPrice(state.total)}</span>
               </div>
-              <span className="font-bold text-gray-900 dark:text-white">{formatPrice(state.gstAmount + state.packingFee)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400 font-medium">{state.orderType === 'pickup' ? 'Delivery (Pickup)' : 'Delivery Fee'}</span>
-              <span className="font-bold text-gray-900 dark:text-white">
-                {state.orderType === 'pickup' || state.deliveryFee === 0 ? <span className="text-green-600">FREE</span> : formatPrice(state.deliveryFee)}
-              </span>
-            </div>
-            {state.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span className="font-medium">Promo Discount</span>
-                <span className="font-bold">- {formatPrice(state.discountAmount)}</span>
+              
+              <div className="flex justify-between text-sm">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">Delivery Partner Fee</span>
+                </div>
+                <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+                  {state.orderType === 'pickup' || state.deliveryFee === 0 ? <span className="text-emerald-500">FREE</span> : formatPrice(state.deliveryFee)}
+                </span>
               </div>
-            )}
-            <div className="border-t-2 border-dashed border-gray-100 dark:border-gray-800 pt-4 mt-2">
+
+              <div className="flex justify-between text-sm">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">Taxes and Charges</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">GST ({state.fees.gst}%) + Packaging</span>
+                </div>
+                <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatPrice(state.gstAmount + state.packingFee)}</span>
+              </div>
+
+              {state.discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-emerald-500 font-bold">
+                  <span>Offer Applied</span>
+                  <span className="tabular-nums">- {formatPrice(state.discountAmount)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-white/5">
               <div className="flex justify-between items-center">
-                <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Payable</span>
-                <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">{formatPrice(state.finalTotal)}</span>
+                <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">Grand Total</span>
+                <motion.span 
+                  key={state.finalTotal}
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: 1 }}
+                  className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums"
+                >
+                  {formatPrice(state.finalTotal)}
+                </motion.span>
               </div>
             </div>
+          </div>
+
+          {/* Trust Shield Section Integrated into Card */}
+          <div className="bg-gray-50 dark:bg-white/[0.02] px-6 py-4 flex items-center gap-3">
+             <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <ShieldCheck size={18} />
+             </div>
+             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-tight">
+                Securely handled & verified for hygiene
+             </p>
           </div>
         </motion.div>
 
@@ -731,11 +795,13 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex overflow-x-auto gap-3 pb-2 -mx-2 px-2 hide-scrollbar">
+            <div className="flex overflow-x-auto gap-3 pb-2 -mx-2 px-2 no-scrollbar">
               {loadingRecommendations ? (
                 Array(3).fill(0).map((_, i) => (
-                  <div key={`skel-${i}`} className="w-[140px] flex-shrink-0 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden h-[160px]">
-                    <div className="h-24 w-full bg-gray-200 dark:bg-gray-700 shimmer"></div>
+                  <div key={`skel-${i}`} className="w-[140px] flex-shrink-0">
+                    <Skeleton className="h-24 w-full rounded-2xl mb-2" />
+                    <Skeleton className="h-4 w-3/4 rounded mb-1" />
+                    <Skeleton className="h-3 w-1/2 rounded" />
                   </div>
                 ))
               ) : recommendations.map(item => (
@@ -747,7 +813,7 @@ const Checkout: React.FC = () => {
                     <p className="text-[11px] font-black text-gray-900 dark:text-white line-clamp-2 leading-tight flex-1 mb-2">{item.name}</p>
                     <div className="flex items-center justify-between w-full mt-auto">
                       <span className="text-xs font-black">{formatPrice(item.price)}</span>
-                      <button onClick={() => { state.addToCart(item); toast.success(`Added ${item.name}`); }} className="bg-red-600 text-white px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">Add</button>
+                      <button type="button" onClick={() => { state.addToCart(item); toast.success(`Added ${item.name}`); }} className="bg-red-600 text-white px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">Add</button>
                     </div>
                   </div>
                 </div>
@@ -764,8 +830,8 @@ const Checkout: React.FC = () => {
               animate={{ x: state.orderType === 'pickup' ? '100%' : '0%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
-            <button onClick={() => state.setOrderType('delivery')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'delivery' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Delivery</button>
-            <button onClick={() => state.setOrderType('pickup')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'pickup' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Pickup</button>
+            <button type="button" onClick={() => state.setOrderType('delivery')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'delivery' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Delivery</button>
+            <button type="button" onClick={() => state.setOrderType('pickup')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'pickup' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Pickup</button>
           </div>
         )}
 
@@ -783,7 +849,7 @@ const Checkout: React.FC = () => {
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Saved Address</p>
                   </div>
                 </div>
-                <button onClick={() => setShowAddressModal(true)} className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-500/10 px-3 py-2 rounded-xl active:scale-95 transition-transform">Change</button>
+                <button type="button" onClick={() => setShowAddressModal(true)} className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-500/10 px-3 py-2 rounded-xl active:scale-95 transition-transform">Change</button>
               </div>
 
               {state.addressText ? (
@@ -792,7 +858,7 @@ const Checkout: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed pr-6">{state.addressText}</p>
                 </div>
               ) : (
-                <button onClick={() => setShowAddressModal(true)} className="w-full py-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-orange-500 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all">
+                <button type="button" onClick={() => setShowAddressModal(true)} className="w-full py-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-orange-500 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all">
                   <Plus size={24} /> 
                   <span className="font-black text-xs uppercase tracking-widest">Add New Address</span>
                 </button>
@@ -802,8 +868,10 @@ const Checkout: React.FC = () => {
                   <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Full Name</label>
                   <input 
                     type="text" placeholder="e.g. Viswa Teja" 
+                    autoComplete="off"
                     className={`w-full p-3.5 rounded-xl border ${!state.name && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
-                    value={state.name || ''} onChange={(e) => state.setName(e.target.value)} 
+                    value={state.name || ''} 
+                    onChange={(e) => state.setName(e.target.value)} 
                   />
                   {!state.name && isPlacingOrder && <p className="text-[10px] font-bold text-red-500 ml-1">Name is required for delivery</p>}
                 </div>
@@ -811,8 +879,13 @@ const Checkout: React.FC = () => {
                   <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Phone Number</label>
                   <input 
                     type="tel" placeholder="10-digit mobile number" 
+                    autoComplete="off"
                     className={`w-full p-3.5 rounded-xl border ${!state.phone && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
-                    value={state.phone || ''} onChange={(e) => state.setPhone(e.target.value)} 
+                    value={state.phone || ''} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      state.setPhone(val);
+                    }} 
                   />
                   {!state.phone && isPlacingOrder && <p className="text-[10px] font-bold text-red-500 ml-1">Phone number is required for delivery updates</p>}
                 </div>
@@ -857,6 +930,7 @@ const Checkout: React.FC = () => {
                     {deliverySlots.filter(s => s.includes('Today') || s.includes('ASAP')).map(slot => (
                       <button 
                         key={slot} 
+                        type="button"
                         onClick={() => state.setDeliveryTimeSlot(slot)} 
                         className={`flex-shrink-0 px-4 py-2.5 rounded-xl border-2 font-bold text-xs transition-all ${
                           state.deliveryTimeSlot === slot 
@@ -879,6 +953,7 @@ const Checkout: React.FC = () => {
                     {deliverySlots.filter(s => s.includes('Tomorrow')).map(slot => (
                       <button 
                         key={slot} 
+                        type="button"
                         onClick={() => state.setDeliveryTimeSlot(slot)} 
                         className={`flex-shrink-0 px-4 py-2.5 rounded-xl border-2 font-bold text-xs transition-all ${
                           state.deliveryTimeSlot === slot 
@@ -900,11 +975,11 @@ const Checkout: React.FC = () => {
         <motion.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center gap-2 mb-4"><CreditCard size={20} className="text-red-500" /><h2 className="font-bold text-gray-900 dark:text-white">Payment Method</h2></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button onClick={() => state.setPaymentMethod('online')} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'online' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
+            <button type="button" onClick={() => state.setPaymentMethod('online')} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'online' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
               <div className="flex justify-between items-center mb-1"><span className="font-bold">Online</span>{state.paymentMethod === 'online' && <Check size={16} className="text-red-600" />}</div>
               <p className="text-xs text-gray-500">UPI, Cards, Wallets</p>
             </button>
-            <button onClick={() => !hasSubscription && state.setPaymentMethod('cod')} disabled={hasSubscription} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'cod' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'} ${hasSubscription ? 'opacity-50' : ''}`}>
+            <button type="button" onClick={() => !hasSubscription && state.setPaymentMethod('cod')} disabled={hasSubscription} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'cod' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'} ${hasSubscription ? 'opacity-50' : ''}`}>
               <div className="flex justify-between items-center mb-1"><span className="font-bold">COD</span>{state.paymentMethod === 'cod' && <Check size={16} className="text-red-600" />}</div>
               <p className="text-xs text-gray-500">Cash on Delivery</p>
             </button>
@@ -924,73 +999,124 @@ const Checkout: React.FC = () => {
         </div>
       </div>
 
-      {/* 7. Premium Edge-to-Edge Place Order Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        {/* Glassmorphism Background Layer */}
-        <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl border-t border-gray-100 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.3)]" />
-        
-        <div className="relative max-w-2xl mx-auto px-4 pt-3 pb-[calc(env(safe-area-inset-bottom,16px)+8px)]">
-          <p className="text-center text-[10px] font-black text-orange-600 dark:text-orange-400 mb-3 uppercase tracking-[0.2em] animate-pulse">High demand — slots filling fast</p>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col min-w-[80px]">
-              <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">To Pay</span>
-              <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">
-                {formatPrice(state.finalTotal)}
-              </span>
-            </div>
-            
-            <button 
-              onClick={handlePlaceOrder} 
-              disabled={isPlacingOrder || (state.orderType === 'delivery' && !state.addressText) || !state.name || !state.phone} 
-              className="flex-1 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-[0_8px_25px_-5px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:grayscale"
-            >
-              {!isPlacingOrder && <ShieldCheck size={18} className="opacity-80" />}
-              <span>{isPlacingOrder ? 'Processing...' : 'Place Order'}</span>
-              {!isPlacingOrder && <ChevronRight size={18} strokeWidth={3} className="ml-0.5" />}
-            </button>
-          </div>
+      {/* STICKY BOTTOM ACTION */}
+      <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 safe-area-bottom">
+        <div className="max-w-lg mx-auto flex items-center gap-4">
+           <div className="flex flex-col">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod.toUpperCase()}</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{formatPrice(state.finalTotal)}</p>
+           </div>
+           
+           <div className="flex-1 relative">
+             <motion.div
+               className="relative h-14 bg-gray-900 dark:bg-white rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center group"
+             >
+               <AnimatePresence mode="wait">
+                 {isPlacingOrder ? (
+                   <motion.div
+                     key="loading"
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     className="flex items-center gap-3 text-white dark:text-black font-black uppercase tracking-widest text-xs"
+                   >
+                     <div className="w-4 h-4 border-2 border-white/20 dark:border-black/20 border-t-white dark:border-t-black rounded-full animate-spin" />
+                     Securing Order...
+                   </motion.div>
+                 ) : (
+                   <motion.button
+                     key="action"
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     onClick={() => {
+                        triggerHaptic('medium');
+                        handlePlaceOrder();
+                     }}
+                     className="w-full h-full text-white dark:text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-active:scale-95 transition-all"
+                   >
+                     {hasSubscription ? 'Pay & Subscribe' : 'Place Order'}
+                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                   </motion.button>
+                 )}
+               </AnimatePresence>
+             </motion.div>
+           </div>
         </div>
       </div>
 
-      {/* Address Selection Modal */}
+      <LocationPicker 
+        isOpen={showLocationPicker} 
+        onClose={() => setShowLocationPicker(false)} 
+        onLocationSelect={handleLocationSelect} 
+      />
+
       <AnimatePresence>
         {showAddressModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4">
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white dark:bg-gray-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh]">
-              <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddressModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800"
+            >
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                 <div>
-                  <h3 className="font-black text-xl text-gray-900 dark:text-white tracking-tighter">Delivery Address</h3>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Where should we bring your food?</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select</p>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white">Delivery Address</h3>
                 </div>
-                <button onClick={() => setShowAddressModal(false)} className="w-10 h-10 rounded-full bg-gray-200/50 dark:bg-gray-800 flex items-center justify-center text-gray-500 active:scale-90 transition-all"><X size={20} /></button>
+                <button onClick={() => setShowAddressModal(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <X size={20} />
+                </button>
               </div>
-              <div className="p-4 overflow-y-auto flex-1 pb-10">
-                <div className="space-y-3 mb-6">
-                  {state.userProfile?.savedAddresses?.map(addr => (
-                    <button key={addr.id} onClick={() => { state.setSelectedAddressId(addr.id); state.setAddressText(addr.address); setShowAddressModal(false); }} className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${state.selectedAddressId === addr.id ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
-                      <div className="flex items-center gap-3 mb-1"><MapPin size={16} className={state.selectedAddressId === addr.id ? 'text-red-500' : 'text-gray-400'} /><span className="font-bold text-gray-900 dark:text-white">{addr.label}</span></div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 pl-7 line-clamp-2">{addr.address}</p>
-                    </button>
-                  ))}
-                </div>
-                <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl space-y-3">
-                    <textarea placeholder="Enter complete delivery address manually..." value={newAddressText} onChange={e => setNewAddressText(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none min-h-[80px] resize-none text-sm" />
-                    <input type="text" placeholder="Save as (e.g., Home, Work)" value={newAddressLabel} onChange={e => setNewAddressLabel(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none text-sm" />
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowLocationPicker(true)} className="flex-1 py-3 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold flex justify-center items-center gap-2 text-sm"><MapPin size={16} /> Use Map</button>
-                      <button onClick={handleSaveNewAddress} disabled={state.isProcessing || !newAddressText.trim() || !newAddressLabel.trim()} className="flex-[1.5] py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold disabled:opacity-50 text-sm">{state.isProcessing ? 'Saving...' : 'Save & Continue'}</button>
+              
+              <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {state.userProfile?.savedAddresses?.map((addr: any) => (
+                  <button
+                    key={addr.id}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      state.setSelectedAddressId(addr.id);
+                      state.setAddressText(addr.address);
+                      setShowAddressModal(false);
+                    }}
+                    className={cn(
+                      "w-full p-4 rounded-2xl text-left border transition-all",
+                      state.selectedAddressId === addr.id 
+                        ? "bg-red-500/5 border-red-500 shadow-sm" 
+                        : "bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 hover:border-gray-200"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                       <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg", 
+                         state.selectedAddressId === addr.id ? "bg-red-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-500")}>
+                         {addr.label}
+                       </span>
+                       {state.selectedAddressId === addr.id && <Check size={16} className="text-red-500" />}
                     </div>
-                  </div>
-                </div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white leading-relaxed">{addr.address}</p>
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setShowLocationPicker(true);
+                  }}
+                  className="w-full p-4 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex items-center justify-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest hover:border-red-500/50 hover:text-red-500 transition-all"
+                >
+                  <Plus size={16} /> Add New Address
+                </button>
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
-
-      <LocationPicker isOpen={showLocationPicker} onClose={() => setShowLocationPicker(false)} onLocationSelect={handleLocationSelect} />
 
       {/* Full-screen Loading Overlay for Placing Order */}
       <AnimatePresence>
@@ -1006,27 +1132,6 @@ const Checkout: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Secure Checkout Trust Signal */}
-      <div className="flex flex-col items-center justify-center py-8 gap-4 opacity-40 grayscale">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-center gap-1">
-            <ShieldCheck size={20} />
-            <span className="text-[8px] font-black uppercase tracking-widest">Secure Payments</span>
-          </div>
-          <div className="w-px h-6 bg-gray-400" />
-          <div className="flex flex-col items-center gap-1">
-            <Sparkles size={20} />
-            <span className="text-[8px] font-black uppercase tracking-widest">Hygiene Assured</span>
-          </div>
-          <div className="w-px h-6 bg-gray-400" />
-          <div className="flex flex-col items-center gap-1">
-            <Heart size={20} />
-            <span className="text-[8px] font-black uppercase tracking-widest">Home Style</span>
-          </div>
-        </div>
-        <p className="text-[9px] font-black uppercase tracking-[0.3em]">FSSAI LIC: 20125260000219</p>
-      </div>
     </div>
   );
 };

@@ -255,30 +255,64 @@ export default function SubscriptionPage() {
       endDate.setDate(now.getDate() + 30);
 
       // 1. Create order on backend for Razorpay
-      const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
-      const createRes = await fetch(`${API_BASE_URL}/create-order`, {
+      // 1. Create order on backend for Razorpay
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+      const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: finalPrice })
       });
       const createData = await createRes.json();
       
-      if (!createRes.ok || !createData.order_id) {
+      if (!createRes.ok || !createData.order?.id) {
         throw new Error(createData.error || 'Failed to create secure payment session');
+      }
+
+      // Handle Mock Payment in development environments
+      if (createData.isMock) {
+        toast.success('Test Mode: Subscription simulated');
+        await addDoc(collection(getDb(), 'subscriptions'), {
+          userId: currentUser.uid,
+          planType: selectedPlan,
+          price: activePlan.price,
+          finalPrice: finalPrice,
+          startDate: serverTimestamp(),
+          endDate: endDate.toISOString(),
+          mealsPerDay: activePlan.mealsPerDay,
+          mealPreference: mealPref,
+          weeklyPlan: weeklyBreakdown,
+          deliverySlot: deliverySlot,
+          status: 'active',
+          usedReferral: referralStatus === 'valid',
+          referralCodeUsed: referralStatus === 'valid' ? validReferralDoc?.referralCode : null,
+          createdAt: serverTimestamp()
+        });
+
+        if (referralStatus === 'valid' && validReferralDoc) {
+          await updateDoc(doc(getDb(), 'referrals', validReferralDoc.id), {
+            referredUsers: arrayUnion(currentUser.uid),
+            totalEarnings: (validReferralDoc.totalEarnings || 0) + 100,
+            discountGiven: (validReferralDoc.discountGiven || 0) + 100
+          });
+        }
+
+        setSubscriptionSuccess(true);
+        setIsSubmitting(false);
+        return;
       }
 
       // 2. Configure Razorpay
       const options = {
-        key: 'rzp_live_Sjcjj19nnWXEzX', // Live Key
-        amount: createData.amount,
+        key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
+        amount: createData.order.amount,
         currency: 'INR',
         name: 'Mana Inti Bojanam',
         description: 'Monthly Meal Subscription',
-        order_id: createData.order_id,
+        order_id: createData.order.id,
         prefill: {
           name: currentUser.displayName || '',
-          email: currentUser.email || '',
-          contact: currentUser.phoneNumber || ''
+          email: (currentUser.email || '').toLowerCase(),
+          contact: (currentUser.phoneNumber || '').replace(/\D/g, '').slice(-10)
         },
         theme: { color: '#E65100' },
         handler: async function (response: any) {
@@ -286,7 +320,7 @@ export default function SubscriptionPage() {
             setIsSubmitting(true);
             
             // 3. Verify payment on backend
-            const verifyRes = await fetch(`${API_BASE_URL}/verify-payment`, {
+            const verifyRes = await fetch(`${API_BASE_URL}/api/verify-razorpay-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(response)
@@ -309,12 +343,6 @@ export default function SubscriptionPage() {
                 status: 'active',
                 usedReferral: referralStatus === 'valid',
                 referralCodeUsed: referralStatus === 'valid' ? validReferralDoc?.referralCode : null,
-                pendingDiscount: 0,
-                deliveryFeeCharged: 0,
-                deliveryPartnerCost: 0,
-                profitMargin: 0,
-                isFreeDelivery: true,
-                absorbedCost: 0, // Admin tracking
                 createdAt: serverTimestamp()
               });
 
@@ -365,12 +393,18 @@ export default function SubscriptionPage() {
         }
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        toast.error('Payment failed: ' + response.error.description);
+      try {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (response: any) {
+          toast.error('Payment failed: ' + response.error.description);
+          setIsSubmitting(false);
+        });
+        rzp.open();
+      } catch (rzpErr: any) {
+        console.error("Razorpay SDK Error:", rzpErr);
+        toast.error("Could not open payment window. Please check your phone/email.");
         setIsSubmitting(false);
-      });
-      rzp.open();
+      }
 
     } catch (error: any) {
       console.error("Subscription Error:", error);

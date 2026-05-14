@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, getDb, firestoreConnectionPromise } from '../firebase';
+import { BiometricService } from '../services/biometric.service';
 
 interface SavedAddress {
   id: string;
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      await BiometricService.clearCredentials();
       await signOut(auth);
     } catch (e) {
       console.error(e);

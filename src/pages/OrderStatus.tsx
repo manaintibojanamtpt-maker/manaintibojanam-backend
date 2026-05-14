@@ -256,6 +256,10 @@ const OrderStatusPage: React.FC = () => {
             <div className="text-center py-12 text-2xl font-black text-red-600 bg-red-50 dark:bg-red-900/10 rounded-[2rem] mb-12">
               Order Cancelled ❌
             </div>
+          ) : order.status === OrderStatus.EXPIRED ? (
+            <div className="text-center py-12 text-2xl font-black text-gray-500 bg-gray-50 dark:bg-gray-900/10 rounded-[2rem] mb-12">
+              Order Expired ⏳
+            </div>
           ) : (
             <div className="mb-12 max-w-sm mx-auto pl-4">
               <div className="relative border-l-2 border-dashed border-gray-200 dark:border-gray-700 ml-6 py-4 space-y-10">

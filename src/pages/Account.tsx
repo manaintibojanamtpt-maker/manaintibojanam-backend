@@ -6,9 +6,14 @@ import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, H
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getDb } from '../firebase';
+import { useBiometrics } from '../hooks/useBiometrics';
+import { Fingerprint } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { triggerHaptic } from '../utils/haptics';
 
 const Account: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();
+  const { isSupported: bioSupported, isEnabled: bioEnabled, enroll: bioEnroll, disable: bioDisable, biometryType, enrollLoading, disableLoading } = useBiometrics();
   const navigate = useNavigate();
   
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -21,6 +26,9 @@ const Account: React.FC = () => {
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
+    } else {
+      // Wake up backend to avoid cold-start delays on Render
+      fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
     }
   }, [currentUser, navigate]);
 
@@ -209,6 +217,70 @@ const Account: React.FC = () => {
               </div>
               <ChevronRight size={18} className="text-white/20" />
             </div>
+
+            {bioSupported && (
+              <>
+                <div className="h-px bg-white/5 ml-[4.5rem]" />
+                <div className="flex items-center gap-4 p-4 active:bg-white/10 transition-colors">
+                  <div className={cn(
+                    "w-10 h-10 rounded-2xl flex items-center justify-center transition-colors",
+                    bioEnabled ? "bg-orange-500/20 text-orange-400" : "bg-white/5 text-white/40"
+                  )}>
+                    <Fingerprint size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-[15px]">{biometryType === 'Passkey' ? 'Passkey Unlock' : `${biometryType || 'Biometric'} Unlock`}</p>
+                    <p className="text-[11px] font-medium text-white/40 leading-tight mt-0.5">
+                      {bioEnabled 
+                        ? 'Authenticated with device biometrics' 
+                        : `Enable ${(biometryType?.toString() || 'biometrics').toLowerCase()} for faster login`
+                      }
+                    </p>
+                  </div>
+                  <button 
+                    disabled={enrollLoading || disableLoading}
+                    onClick={async () => {
+                      triggerHaptic('medium');
+                      try {
+                        if (bioEnabled) {
+                          await bioDisable();
+                        } else {
+                          await bioEnroll();
+                        }
+                      } catch (err) {
+                        console.error('Toggle error:', err);
+                      }
+                    }}
+                    className={cn(
+                      "relative w-12 h-6 rounded-full transition-all duration-300",
+                      bioEnabled ? "bg-orange-500" : "bg-white/10",
+                      (enrollLoading || disableLoading) && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {(enrollLoading || disableLoading) ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <div className={cn(
+                        "absolute top-1 w-4 h-4 rounded-full bg-white shadow-lg transition-all duration-300 flex items-center justify-center",
+                        bioEnabled ? "left-7" : "left-1"
+                      )}>
+                        {bioEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                      </div>
+                    )}
+                  </button>
+                </div>
+                {!bioEnabled && (
+                  <div className="mx-4 mb-4 p-3 bg-white/[0.03] border border-white/5 rounded-2xl">
+                    <p className="text-[10px] text-white/40 font-medium leading-relaxed">
+                      <span className="text-orange-400/80 font-bold uppercase tracking-wider mr-1">Note:</span> 
+                      If you've added this app to your Home Screen, you'll need to enable biometrics once here for this device's security enclave.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             
             {userProfile?.role === 'admin' && (
               <>

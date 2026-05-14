@@ -20,6 +20,8 @@ import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { useFCMInitialization } from './hooks/useFCMInitialization';
 import { seedMenuItems } from './populateData';
 import NetworkAwareness from './components/NetworkAwareness';
+import { useBiometrics } from './hooks/useBiometrics';
+import BiometricModal from './components/BiometricModal';
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -93,7 +95,7 @@ const SplashScreen: React.FC<{ onComplete: () => void; isReady: boolean }> = ({ 
 };
 
 const AppContent: React.FC = () => {
-  const { loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { connected, loading: firestoreLoading, retry } = useFirestoreConnection();
   const { fcmInitialized, initializing: fcmInitializing } = useFCMInitialization();
 
@@ -120,6 +122,25 @@ const AppContent: React.FC = () => {
       }
     }
   }, [authLoading, connected]);
+
+  // Biometric Lock Logic
+  const { isEnabled: biometricsEnabled, authenticate: bioAuth, isSupported: bioSupported, biometryType } = useBiometrics();
+  const [isAppLocked, setIsAppLocked] = useState(false);
+  const [hasCheckedLock, setHasCheckedLock] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && currentUser && biometricsEnabled && !hasCheckedLock) {
+      setIsAppLocked(true);
+      setHasCheckedLock(true);
+    }
+  }, [authLoading, currentUser, biometricsEnabled, hasCheckedLock]);
+
+  const handleUnlock = async () => {
+    const success = await bioAuth();
+    if (success) {
+      setIsAppLocked(false);
+    }
+  };
 
   const GlobalLoading = () => (
     <div className="min-h-screen bg-brand-bg dark:bg-dark-bg pb-32">
@@ -240,6 +261,14 @@ const AppContent: React.FC = () => {
         <FlyToCartAnimation />
         <PwaUpdatePrompt />
         <Toaster position="bottom-center" />
+
+        <BiometricModal
+          isOpen={isAppLocked}
+          onClose={() => {}} // User must unlock
+          onConfirm={handleUnlock}
+          type="unlock"
+          biometryType={biometryType}
+        />
       </div>
     </Router>
   );

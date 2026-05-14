@@ -41,34 +41,11 @@ import MenuItemCard from '../components/MenuItemCard';
 import Testimonials from '../components/Testimonials';
 import ReferralBanner from '../components/ReferralBanner';
 import SubscriptionWizardModal from '../components/SubscriptionWizardModal';
+import { cn } from '../lib/utils';
+import { CategorySkeleton, TrendingSkeleton, RecommendedSkeleton, Skeleton, HomeBentoSkeleton } from '../components/SkeletonSystem';
+import { triggerHaptic } from '../utils/haptics';
 
-const CategorySkeleton = () => (
-  <div className="flex-shrink-0 flex flex-col items-center gap-2 animate-pulse">
-    <div className="w-16 h-16 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] bg-gray-200 dark:bg-gray-800" />
-    <div className="w-12 h-2 bg-gray-200 dark:bg-gray-800 rounded" />
-  </div>
-);
-
-const TrendingSkeleton = () => (
-  <div className="flex-shrink-0 w-72 bg-white dark:bg-gray-900 rounded-[2.5rem] p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-4 items-center animate-pulse">
-    <div className="w-24 h-24 rounded-2xl bg-gray-200 dark:bg-gray-800 flex-shrink-0" />
-    <div className="flex-1 space-y-2">
-      <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
-      <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
-    </div>
-  </div>
-);
-
-const RecommendedSkeleton = () => (
-  <div className="flex gap-6 items-center bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-800 animate-pulse">
-    <div className="w-32 h-32 rounded-3xl bg-gray-200 dark:bg-gray-800 flex-shrink-0" />
-    <div className="flex-1 space-y-3">
-      <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
-      <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/4" />
-      <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-full" />
-    </div>
-  </div>
-);
+// Centralized skeletons used from SkeletonSystem
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -291,11 +268,28 @@ const Home: React.FC = () => {
     const cartItem = cart.find(item => item.id === id);
     return cartItem ? cartItem.quantity : 0;
   };
-
   return (
-    <div className="min-h-screen bg-brand-bg dark:bg-dark-bg transition-colors duration-500 pb-6">
+    <div className="flex flex-col min-h-screen bg-dark-bg">
+      {/* STICKY SEARCH BAR (Appears on scroll) */}
+      <motion.div 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ 
+          y: scrollY.get() > 400 ? 0 : -100, 
+          opacity: scrollY.get() > 400 ? 1 : 0 
+        }}
+        className="fixed top-0 inset-x-0 z-50 p-3 sm:px-4 bg-dark-bg/95 backdrop-blur-xl border-b border-white/5"
+      >
+        <div 
+          onClick={() => navigate('/menu')}
+          className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 cursor-pointer"
+        >
+          <Search size={18} className="text-orange-500" />
+          <span className="text-sm font-bold text-white/50">Search for 'Biryani' or 'Dosa'...</span>
+        </div>
+      </motion.div>
+
       {/* UNIFIED HERO SECTION */}
-      <section className="relative overflow-hidden min-h-screen bg-transparent flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <section className="relative overflow-hidden min-h-[90vh] bg-transparent flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* HERO IMAGE CONTAINER */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <motion.div 
@@ -303,248 +297,221 @@ const Home: React.FC = () => {
             className="w-full h-full"
           >
             <img 
-              src="/hero-south-indian-meal.webp" 
+              src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=1200&auto=format&fit=crop" 
               alt="Authentic Andhra Meal" 
-              className="w-full h-full object-cover brightness-[0.7] contrast-[1.1]"
+              className="w-full h-full object-cover brightness-[0.6] contrast-[1.1] scale-110"
             />
           </motion.div>
           
           {/* CINEMATIC OVERLAY */}
           <div className="absolute inset-0 mib-hero-gradient z-[1]" />
-          <div className="absolute inset-0 bg-black/10 z-[2]" />
+          <div className="absolute inset-0 bg-black/20 z-[2]" />
         </div>
 
         {/* ABSOLUTE TOP NAVIGATION */}
         <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-center" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
-          {/* Brand Logo - Premium Home-Touch */}
-          <div className="mib-glass flex items-center gap-2.5 rounded-2xl py-2 pl-2 pr-5 shadow-2xl">
-            <img src="/logo-v20-final.png" alt="MIB" className="w-9 h-9 object-contain rounded-3xl border border-white/10" />
+          {/* Brand Logo */}
+          <div className="mib-glass flex items-center gap-2.5 rounded-2xl py-2 pl-2 pr-5 shadow-2xl border border-white/10">
+            <img src="/logo-v20-final.png" alt="MIB" className="w-9 h-9 object-contain rounded-full bg-black/40 p-1" />
             <div className="flex flex-col -gap-0.5">
-              <span className="text-white font-black text-[9px] tracking-[0.3em] uppercase opacity-50">Authentic</span>
-              <span className="text-white font-black text-[13px] tracking-tight leading-none" style={{ fontFamily: "'Playfair Display', serif" }}>Mana Inti Bojanam</span>
+              <span className="text-white font-black text-[9px] tracking-[0.3em] uppercase opacity-50 leading-none">Authentic</span>
+              <span className="text-white font-black text-[13px] tracking-tight leading-none mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>Mana Inti Bojanam</span>
             </div>
           </div>
           
-          {/* Menu Pill */}
+          {/* Search Pill (Top right) */}
           <button 
             onClick={() => navigate('/menu')}
-            className="mib-glass flex items-center gap-2 rounded-3xl px-5 py-2.5 shadow-lg active:scale-95 transition-all"
+            className="mib-glass flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg active:scale-95 transition-all border border-white/10"
           >
-            <Menu size={16} className="text-white" />
-            <span className="text-white font-bold text-sm tracking-tight">Menu</span>
+            <Search size={20} className="text-white" />
           </button>
         </div>
 
-        {/* MAIN CONTENT LAYER - LEFT ALIGNED */}
-        <div className="relative z-20 flex flex-1 flex-col justify-center px-6 w-full sm:w-[80%] md:w-[60%] lg:w-[50%] mt-12 mb-[100px]">
+        {/* MAIN CONTENT LAYER - CENTERED FOR PREMIUM FEEL */}
+        <div className="relative z-20 flex flex-1 flex-col justify-center items-center text-center px-6 mt-12 mb-[120px]">
           
           <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center gap-2.5 mb-5"
+            className="inline-flex items-center gap-2.5 mb-6 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full"
           >
-            <span className="h-px w-8 bg-orange-500/60"></span>
-            <span className="text-[11px] font-black uppercase tracking-[0.5em] text-orange-500/90">Authentic Andhra Home Kitchen</span>
+            <Sparkles size={14} className="text-orange-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400">Authentic Andhra Home Kitchen</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-[3.2rem] sm:text-7xl md:text-8xl font-black tracking-tight leading-[1.05] text-white drop-shadow-2xl mb-5"
-            style={{ 
-              fontFamily: "'Playfair Display', serif"
-            }}
+            className="text-[3.5rem] sm:text-7xl md:text-8xl font-black tracking-tight leading-[0.95] text-white drop-shadow-2xl mb-6"
+            style={{ fontFamily: "'Playfair Display', serif" }}
           >
-            Taste the <br />
-            <span className="text-[4.8rem] sm:text-[6.5rem] md:text-[7.5rem] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] block -mt-5 -mb-5 py-2" style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 400 }}>
-              comfort
+            Freshly <br />
+            <span className="text-[5rem] sm:text-[7rem] md:text-[8rem] text-transparent bg-clip-text bg-gradient-to-r from-white via-orange-100 to-orange-400 drop-shadow-[0_0_20px_rgba(255,107,53,0.3)] block py-2" style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 400 }}>
+              Cooked
             </span>
-            of home
+            for You
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-white/70 font-medium text-base sm:text-lg leading-relaxed max-w-[28ch] mb-9"
+            className="text-white/70 font-bold text-base sm:text-lg leading-relaxed max-w-[28ch] mb-10"
           >
-            Authentic Telugu meals, prepared with love, fresh ingredients, and tradition.
+            Experience the soul of Telugu cuisine, prepared with love and zero preservatives.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="flex flex-col items-start gap-6"
+            className="flex flex-col items-center gap-6 w-full max-w-sm"
           >
             <button
-              onClick={() => navigate(cart.length > 0 ? '/checkout' : '/menu')}
-              className="group relative flex items-center justify-center gap-3 bg-gradient-to-r from-[#FF6B35] to-[#E65100] text-white px-9 py-5 rounded-3xl font-black text-sm uppercase tracking-widest shadow-[0_15px_30px_rgba(230,81,0,0.3)] active:scale-95 transition-all w-full sm:w-auto"
+              onClick={() => {
+                triggerHaptic('medium');
+                navigate('/menu');
+              }}
+              className="group relative flex items-center justify-center gap-3 bg-white text-black px-10 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
             >
-              <span>{cart.length > 0 ? 'CONTINUE CHECKOUT' : 'ORDER NOW'}</span>
+              <span>Explore Menu</span>
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div className="flex items-center gap-2 text-white/60">
-                <Heart size={14} className="text-red-400/80" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">500+ Happy Customers</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/60">
-                <MapPin size={14} className="text-orange-400/80" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Serving Pune since 2024</span>
-              </div>
-            </div>
           </motion.div>
         </div>
 
-        {/* BOTTOM GLASS INFO BAR */}
-        <div className="absolute bottom-6 left-4 right-4 z-40 pb-20">
-          <div className="bg-black/20 backdrop-blur-xl border border-white/10 rounded-[1.5rem] py-4 px-2 sm:px-6 flex justify-between items-center shadow-2xl max-w-5xl mx-auto w-full">
-            
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-center sm:justify-start">
-              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-3xl border border-white/20 flex items-center justify-center shrink-0">
-                <Clock size={14} className="text-white sm:w-5 sm:h-5" />
+        {/* FLOATING STATS */}
+        <div className="absolute bottom-[100px] left-0 right-0 z-30 px-6">
+           <div className="flex justify-center gap-8">
+              <div className="text-center">
+                <p className="text-white font-black text-xl leading-none">4.9/5</p>
+                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Rating</p>
               </div>
-              <div className="text-left leading-tight">
-                <p className="text-white font-semibold text-[11px] sm:text-sm">30-45 mins</p>
-                <p className="text-white/70 text-[9px] sm:text-xs">Delivery</p>
+              <div className="w-px h-8 bg-white/10"></div>
+              <div className="text-center">
+                <p className="text-white font-black text-xl leading-none">100%</p>
+                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Hygienic</p>
               </div>
-            </div>
-
-            <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-center">
-              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-3xl border border-white/20 flex items-center justify-center shrink-0">
-                <ChefHat size={14} className="text-white sm:w-5 sm:h-5" />
+              <div className="w-px h-8 bg-white/10"></div>
+              <div className="text-center">
+                <p className="text-white font-black text-xl leading-none">0</p>
+                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Chemicals</p>
               </div>
-              <div className="text-left leading-tight">
-                <p className="text-white font-semibold text-[11px] sm:text-sm">Home-style</p>
-                <p className="text-white/70 text-[9px] sm:text-xs">Taste</p>
-              </div>
-            </div>
-
-            <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-center sm:justify-end">
-              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-3xl border border-white/20 flex items-center justify-center shrink-0">
-                <ShieldCheck size={14} className="text-white sm:w-5 sm:h-5" />
-              </div>
-              <div className="text-left leading-tight">
-                <p className="text-white font-semibold text-[11px] sm:text-sm">Hygienic</p>
-                <p className="text-white/70 text-[9px] sm:text-xs">& Safe</p>
-              </div>
-            </div>
-            
-          </div>
+           </div>
         </div>
       </section>
 
-      {/* TODAY'S SPECIALS - IMMEDIATELY AFTER HERO */}
-      <div className="w-full px-3 sm:px-6 py-6 sm:py-12">
-        {/* PREMIUM MEAL SUBSCRIPTION BANNER */}
-        <section className="mb-10 sm:mb-14">
-          <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 to-black rounded-[2.5rem] p-6 sm:p-10 shadow-2xl border border-gray-800">
-            {/* Background Effects */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/20 rounded-3xl blur-3xl -mr-20 -mt-20 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-red-600/20 rounded-3xl blur-3xl -ml-10 -mb-10 pointer-events-none" />
-            
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex-1 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 bg-orange-500/20 border border-orange-500/30 text-orange-400 px-3 py-1.5 rounded-3xl text-[10px] font-black uppercase tracking-widest mb-4">
-                  <Sparkles size={14} /> New Feature
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter mb-4 leading-tight">
-                  Monthly Meal <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Subscriptions</span>
-                </h2>
-                <p className="text-gray-400 text-sm sm:text-base font-medium max-w-lg mx-auto md:mx-0 mb-6 sm:mb-8 leading-relaxed">
-                  Enjoy home-style meals delivered daily. Set your preferences, choose your delivery slots, and let us handle the cooking. Starting at just ₹3000/month.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
-                  <button 
-                    onClick={() => setShowSubscriptionModal(true)}
-                    className="w-full sm:w-auto px-8 py-4 bg-white text-black font-bold uppercase tracking-wider text-xs rounded-2xl hover:bg-gray-100 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2"
-                  >
-                    View Plans <ArrowRight size={16} />
-                  </button>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
-                    <CheckCircle2 size={14} className="text-green-500" /> Cancel Anytime
-                  </p>
-                </div>
-              </div>
-
-              {/* Visual Element */}
-              <div className="hidden lg:flex relative w-64 h-64 flex-shrink-0 items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 to-red-600 rounded-3xl blur-2xl opacity-20 animate-pulse" />
-                <div className="relative z-10 w-48 h-48 rounded-3xl border-4 border-gray-800 overflow-hidden shadow-2xl">
-                  <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" alt="Premium Meals" className="w-full h-full object-cover" />
-                </div>
-                {/* Floating Badges */}
-                <div className="absolute -top-4 -right-4 bg-gray-900 border border-gray-700 text-white p-3 rounded-2xl shadow-xl flex items-center gap-2 transform rotate-6">
-                  <Heart size={16} className="text-red-500 fill-red-500" />
-                  <span className="text-xs font-black">Home Style</span>
-                </div>
-                <div className="absolute -bottom-4 -left-4 bg-gray-900 border border-gray-700 text-white p-3 rounded-2xl shadow-xl flex items-center gap-2 transform -rotate-6">
-                  <Timer size={16} className="text-orange-500" />
-                  <span className="text-xs font-black">Daily Delivery</span>
-                </div>
-              </div>
+      {/* WHAT'S ON YOUR MIND? (CIRCULAR CATEGORIES) */}
+      <section className="relative z-10 -mt-10 px-4 sm:px-6 mb-12">
+        <div className="bg-dark-bg rounded-[3rem] p-6 shadow-2xl border border-white/5">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white">What's on your mind?</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mt-1">Quick bites to heavy meals</p>
             </div>
           </div>
-        </section>
 
-        {currentUser && userProfile?.referralCode && (
-          <section className="mb-10 sm:mb-14">
-            <ReferralBanner referralCode={userProfile.referralCode} />
-          </section>
-        )}
-
-        {/* EXPLORE CATEGORIES */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-orange-200 border border-white/10">
-                <UtensilsCrossed size={18} />
-              </span>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Explore Categories</h2>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">Pick your craving</p>
-              </div>
-            </div>
-            <Link to="/menu" className="text-orange-200/90 font-bold text-[10px] uppercase tracking-wider hover:underline">View all</Link>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          <div className="flex gap-6 overflow-x-auto no-scrollbar pb-2">
             {categoriesLoading
-              ? Array(6).fill(0).map((_, i) => <CategorySkeleton key={i} />)
-              : categories.slice(0, 10).map((cat: any, idx: number) => (
+              ? Array(6).fill(0).map((_, i) => <div key={i} className="flex-shrink-0 w-20 h-20 rounded-full bg-white/5 shimmer" />)
+              : categories.map((cat: any, idx: number) => (
                   <motion.button
                     key={cat.id || cat.name || idx}
                     type="button"
-                    onClick={() => navigate(`/menu?cat=${encodeURIComponent(cat.name)}`)}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.22, delay: Math.min(idx * 0.04, 0.2) }}
-                    className="mib-pressable flex-shrink-0 text-left"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      navigate(`/menu?cat=${encodeURIComponent(cat.name)}`);
+                    }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    className="flex-shrink-0 flex flex-col items-center group"
                   >
-                    <div className="relative h-20 w-20 md:h-24 md:w-24 overflow-hidden rounded-[2rem] border border-white/10 bg-white/5">
+                    <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full border-4 border-white/5 group-active:scale-95 transition-all shadow-xl">
                       <img
                         src={cat.image}
                         alt={cat.name}
-                        className="h-full w-full object-cover brightness-[0.92] saturate-[1.08]"
-                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/80" />
+                      <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                     </div>
-                    <p className="mt-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/90 text-center w-20 md:w-24 px-1">
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-[0.1em] text-white/80 group-hover:text-white transition-colors">
                       {cat.name}
                     </p>
                   </motion.button>
                 ))}
+          </div>
+        </div>
+      </section>
+
+      {/* DYNAMIC TIME-BASED SECTION */}
+      <div className="w-full px-4 sm:px-6">
+        <section className="mb-14">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <div className="inline-flex items-center gap-2 text-orange-500 mb-2">
+                <Timer size={16} strokeWidth={3} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Based on your clock</span>
+              </div>
+              <h2 className="text-3xl font-black text-white tracking-tight">
+                {new Date().getHours() < 12 ? 'Morning Favorites' : (new Date().getHours() < 17 ? 'Lunch Comforts' : 'Evening Cravings')}
+              </h2>
+            </div>
+            <Link to="/menu" className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+              Explore More <ChevronRight size={16} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recommendedItems.slice(0, 3).map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <MenuItemCard 
+                  item={item} 
+                  addToCart={addToCart}
+                  updateQuantity={updateQuantity}
+                  getItemQuantity={getItemQuantity}
+                  isStoreOpenNow={() => isStoreOpen}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* PREMIUM MEAL SUBSCRIPTION BANNER */}
+        <section className="mb-14">
+          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 to-black rounded-[3rem] p-8 sm:p-12 shadow-2xl border border-indigo-500/20">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tighter mb-4 leading-[0.9]">
+                  Eat like home, <br />
+                  <span className="text-indigo-400">every single day.</span>
+                </h2>
+                <p className="text-white/60 text-base font-bold mb-8 max-w-md">
+                  Join 200+ foodies who enjoy our monthly meal subscriptions. Zero cooking, zero hassle, pure health.
+                </p>
+                <button 
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="px-10 py-5 bg-indigo-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-indigo-500/30 active:scale-95 transition-all"
+                >
+                  View Subscription Plans
+                </button>
+              </div>
+              <div className="w-48 h-48 bg-white/5 rounded-[2rem] border border-white/10 p-2 transform rotate-3 hidden lg:block">
+                <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" className="w-full h-full object-cover rounded-[1.5rem]" alt="" />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -562,14 +529,17 @@ const Home: React.FC = () => {
 
         {/* ORDER AGAIN (IF LOGGED IN) */}
         {currentUser && orderAgainItems.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-orange-500/20 to-transparent p-4 rounded-[2rem] border border-orange-500/20">
-              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(255,107,53,0.3)]">
-                <RefreshCw size={24} />
+          <section className="mb-12">
+            <div className="flex items-center gap-4 mb-6 bg-white/[0.02] p-5 rounded-[2.5rem] border border-white/5 shadow-inner">
+              <div className="relative">
+                <div className="absolute inset-0 bg-orange-500/30 blur-2xl rounded-full" />
+                <div className="relative w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center text-orange-400 shadow-[0_8px_16px_rgba(0,0,0,0.4)] border border-white/10">
+                  <RefreshCw size={28} />
+                </div>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-white tracking-tight">Order Again</h3>
-                <p className="text-[10px] font-bold text-orange-200/70 uppercase tracking-wider mt-1">Jump right back to your favorites</p>
+                <h3 className="text-2xl font-black text-white tracking-tight leading-none">Order Again</h3>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-2">Jump right back to your favorites</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
@@ -589,38 +559,47 @@ const Home: React.FC = () => {
         )}
 
         {/* TRENDING NOW */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/5 rounded-xl flex items-center justify-center text-orange-200 border border-white/10">
-                <TrendingUp size={16} />
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-orange-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
+                  <TrendingUp size={22} />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">Trending Now</h3>
-                <p className="text-[9px] font-bold text-white/45 uppercase tracking-wider">Our community's favorite comfort</p>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Trending Now</h3>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
               </div>
             </div>
-            <Link to="/menu" className="text-orange-200/90 font-bold text-[10px] uppercase tracking-wider hover:underline">View All</Link>
+            <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
+              View All <ChevronRight size={14} strokeWidth={3} />
+            </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-            {loading ? (
-              Array(3).fill(0).map((_, i) => <TrendingSkeleton key={i} />)
-            ) : (
-              trendingItems.map((item, index) => (
+          
+          {loading ? (
+            <HomeBentoSkeleton />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trendingItems.slice(0, 4).map((item, index) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 14 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.1 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="relative"
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  className={cn(
+                    "relative",
+                    index === 0 && "sm:col-span-2 lg:col-span-2"
+                  )}
                 >
-                  {/* Social Proof Badge */}
-                  <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-3xl shadow-lg border border-white/20">
+                  <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2.5 py-1 rounded-3xl shadow-xl border border-white/20">
                     Highly Ordered
                   </div>
                   <MenuItemCard 
                     item={item} 
+                    index={index}
                     addToCart={addToCart}
                     updateQuantity={updateQuantity}
                     getItemQuantity={getItemQuantity}
@@ -628,9 +607,9 @@ const Home: React.FC = () => {
                     storeOpenTime={storeOpenTime}
                   />
                 </motion.div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* RECOMMENDED FOR YOU */}
@@ -1204,6 +1183,16 @@ const Home: React.FC = () => {
               className="bg-white dark:bg-gray-900 rounded-[3rem] p-10 max-w-sm w-full text-center relative overflow-hidden border border-gray-100 dark:border-white/5"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-red-600" />
+              <button 
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('locationStatus', 'dismissed');
+                  setShowLocationPrompt(false);
+                }}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
               <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-[2rem] flex items-center justify-center text-red-600 mx-auto mb-8">
                 <MapPin size={40} />
               </div>
@@ -1232,7 +1221,10 @@ const Home: React.FC = () => {
                   Enable Location
                 </button>
                 <button 
-                  onClick={() => setShowLocationPrompt(false)}
+                  onClick={() => {
+                    localStorage.setItem('locationStatus', 'manual');
+                    setShowLocationPrompt(false);
+                  }}
                   className="w-full py-4 text-gray-400 dark:text-gray-500 font-bold hover:text-gray-600 dark:hover:text-gray-300 transition-all"
                 >
                   Enter Manually

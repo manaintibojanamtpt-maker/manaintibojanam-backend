@@ -56,8 +56,7 @@ try {
         const serviceAccount = JSON.parse(serviceAccountVar);
         appAdmin = initializeApp({
           credential: cert(serviceAccount),
-          projectId: projectId,
-          databaseId: databaseId !== "(default)" ? databaseId : undefined
+          projectId: projectId
         });
         console.log(`✅ [Firebase Admin] Initialized with Service Account (Project: ${projectId})`);
       } catch (parseErr) {
@@ -256,26 +255,27 @@ const verifyConnection = async () => {
 // We will call this only inside startServer to avoid redundant calls
 
 // ================= RAZORPAY SETUP =================
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+// ================= RAZORPAY SETUP =================
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "";
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 
-const isRazorpayConfigured = RAZORPAY_KEY_ID && 
-                             !RAZORPAY_KEY_ID.includes("your_key_id") && 
-                             !RAZORPAY_KEY_ID.includes("XXXXXXXXXXXXXX") &&
-                             RAZORPAY_KEY_SECRET && 
-                             !RAZORPAY_KEY_SECRET.includes("your_key_secret") &&
-                             !RAZORPAY_KEY_SECRET.includes("XXXXXXXXXXXXXXXXXXXXXXXX");
+const isRazorpayConfigured = !!(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET && 
+                               !RAZORPAY_KEY_ID.includes("placeholder") && 
+                               !RAZORPAY_KEY_SECRET.includes("placeholder"));
 
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID || "rzp_test_placeholder",
-  key_secret: RAZORPAY_KEY_SECRET || "placeholder_secret",
-});
+const razorpay = isRazorpayConfigured 
+  ? new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    })
+  : null;
 
-const verifyRazorpaySignature = (razorpay_order_id: string, razorpay_payment_id: string, razorpay_signature: string) => {
-  const generatedSignature = createHmac('sha256', RAZORPAY_KEY_SECRET || '')
-    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-    .digest('hex');
-  return generatedSignature === razorpay_signature;
+const verifyRazorpaySignature = (orderId: string, paymentId: string, signature: string) => {
+  if (!isRazorpayConfigured) return false;
+  const hmac = createHmac("sha256", RAZORPAY_KEY_SECRET);
+  hmac.update(orderId + "|" + paymentId);
+  const generatedSignature = hmac.digest("hex");
+  return generatedSignature === signature;
 };
 
 const app = express();
@@ -1096,11 +1096,17 @@ app.post("/api/create-razorpay-order", async (req, res) => {
         return res.json({ 
           success: true, 
           isMock: true,
+          key: "rzp_test_mock_key",
           order: {
             id: `mock_order_${Date.now()}`,
             amount: Math.round(amount * 100),
             currency: "INR"
-          }
+          },
+          prefill: {
+            name: (req.body.name || '').trim(),
+            email: (req.body.email || '').trim().toLowerCase(),
+            contact: (req.body.phone || '').replace(/\D/g, '').slice(-10)
+          },
         });
       }
 
@@ -1113,7 +1119,7 @@ app.post("/api/create-razorpay-order", async (req, res) => {
       receipt: `receipt_${Date.now()}`,
     };
     const order = await razorpay.orders.create(options);
-    res.json({ success: true, order });
+    res.json({ success: true, order, key: RAZORPAY_KEY_ID });
   } catch (err: any) {
     console.error("Razorpay Order Creation Error:", err);
     const errorMessage = err.error?.description || err.message || "Failed to create Razorpay order";
@@ -1617,9 +1623,33 @@ app.get("/api/orders/user/:userId", async (req, res) => {
 
 // ================= WEBAUTHN / PASSKEYS =================
 const rpName = 'Mana Inti Bojanam';
-// You must set APP_URL in production to the domain (e.g., https://your-app.web.app)
-const origin = process.env.APP_URL || process.env.VITE_APP_URL || 'https://mana-inti-bojanam-pune-492610.web.app';
-const rpID = 'mana-inti-bojanam-pune-492610.web.app';
+// Origin and rpID should be dynamic to support local dev and multiple domains
+const getOrigin = (req: any) => {
+  // Use explicitly passed origin from client (most reliable for PWA standalone)
+  if (req.body?.origin) {
+    return req.body.origin.replace(/\/$/, '');
+  }
+  // Fallback to headers
+  const origin = req.headers.origin || req.headers.referer;
+  if (origin) {
+    return origin.replace(/\/$/, '');
+  }
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const proto = forwardedProto || req.protocol;
+  const host = req.headers.host;
+  return `${proto}://${host}`;
+};
+
+const getRpID = (req: any) => {
+  const origin = getOrigin(req);
+  try {
+    const url = new URL(origin);
+    return url.hostname;
+  } catch (e) {
+    const host = req.headers.host || '';
+    return host.split(':')[0];
+  }
+};
 
 // In-memory cache for challenges (In a multi-server setup, use Redis or Firestore)
 const challengeCache = new Map<string, string>();
@@ -1649,8 +1679,8 @@ app.post("/api/auth/generate-registration-options", async (req, res) => {
 
     const options = await generateRegistrationOptions({
       rpName,
-      rpID,
-      userID: userId, // String representation is fine for SimpleWebAuthn
+      rpID: getRpID(req),
+      userID: new Uint8Array(Buffer.from(userId)), // SimpleWebAuthn v13 requires Uint8Array
       userName: email || `user-${userId}`,
       userDisplayName: displayName || "User",
       attestationType: "none",
@@ -1685,19 +1715,20 @@ app.post("/api/auth/verify-registration", async (req, res) => {
     const verification = await verifyRegistrationResponse({
       response,
       expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
+      expectedOrigin: getOrigin(req),
+      expectedRPID: getRpID(req),
     });
 
     const { verified, registrationInfo } = verification;
 
     if (verified && registrationInfo) {
-      const { credentialPublicKey, credentialID, counter } = registrationInfo;
-      const credentialIdString = base64url.encode(credentialID);
+      const { credential } = registrationInfo;
+      const { id: credentialID, publicKey: credentialPublicKey, counter } = credential;
+      const credentialIdString = credentialID; // In v13, credential.id is already a base64url string
       
       // Save the passkey to the user's subcollection
       await db.collection("users").doc(userId).collection("passkeys").doc(credentialIdString).set({
-        publicKey: base64url.encode(credentialPublicKey),
+        publicKey: base64url.encode(Buffer.from(credentialPublicKey)),
         counter,
         transports: response.response.transports || [],
         createdAt: FieldValue.serverTimestamp()
@@ -1727,7 +1758,7 @@ app.post("/api/auth/generate-authentication-options", async (req, res) => {
     const challengeId = Math.random().toString(36).substring(2, 15);
     
     const options = await generateAuthenticationOptions({
-      rpID,
+      rpID: getRpID(req),
       userVerification: "preferred",
     });
 
@@ -1765,9 +1796,10 @@ app.post("/api/auth/verify-authentication", async (req, res) => {
     }
 
     const passkeyData = passkeyDoc.data();
-    const authenticator = {
-      credentialID: base64url.toBuffer(credentialIdString),
-      credentialPublicKey: base64url.toBuffer(passkeyData?.publicKey),
+    const publicKey = Uint8Array.from(base64url.toBuffer(passkeyData?.publicKey));
+    const credential = {
+      id: credentialIdString,
+      publicKey,
       counter: passkeyData?.counter || 0,
       transports: passkeyData?.transports || [],
     };
@@ -1775,9 +1807,9 @@ app.post("/api/auth/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response,
       expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
-      authenticator,
+      expectedOrigin: getOrigin(req),
+      expectedRPID: getRpID(req),
+      credential,
     });
 
     if (verification.verified) {
@@ -1798,6 +1830,76 @@ app.post("/api/auth/verify-authentication", async (req, res) => {
     }
   } catch (error: any) {
     console.error("Verify Authentication Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ================= NATIVE BIOMETRICS =================
+
+/**
+ * Register a biometric device secret for a user.
+ * The device generates a random secret and stores it in the hardware-backed keychain.
+ * This secret is hashed and stored on the server to allow future session restoration.
+ */
+app.post("/api/auth/biometric/register", async (req, res) => {
+  try {
+    const { userId, deviceSecret, deviceName } = req.body;
+    if (!userId || !deviceSecret) {
+      return res.status(400).json({ error: "Missing userId or deviceSecret" });
+    }
+
+    // Hash the secret before storing
+    const secretHash = createHmac("sha256", process.env.BIOMETRIC_SALT || 'mana-inti-salt').update(deviceSecret).digest("hex");
+    const deviceId = createHmac("sha256", userId).update(deviceName || 'default').digest("hex").substring(0, 16);
+
+    await db.collection("users").doc(userId).collection("biometric_devices").doc(deviceId).set({
+      secretHash,
+      deviceName: deviceName || "Unknown Device",
+      createdAt: FieldValue.serverTimestamp(),
+      lastUsedAt: FieldValue.serverTimestamp()
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Biometric Register Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Verify a biometric device secret and return a Firebase Custom Token.
+ * This allows "restoring" a session after successful biometric authentication on the device.
+ */
+app.post("/api/auth/biometric/verify", async (req, res) => {
+  try {
+    const { userId, deviceSecret, deviceName } = req.body;
+    if (!userId || !deviceSecret) {
+      return res.status(400).json({ error: "Missing userId or deviceSecret" });
+    }
+
+    const deviceId = createHmac("sha256", userId).update(deviceName || 'default').digest("hex").substring(0, 16);
+    const deviceDoc = await db.collection("users").doc(userId).collection("biometric_devices").doc(deviceId).get();
+
+    if (!deviceDoc.exists) {
+      return res.status(401).json({ error: "Biometric device not registered" });
+    }
+
+    // Verify hashed secret
+    const incomingHash = createHmac("sha256", process.env.BIOMETRIC_SALT || 'mana-inti-salt').update(deviceSecret).digest("hex");
+    if (deviceDoc.data()?.secretHash !== incomingHash) {
+      return res.status(401).json({ error: "Invalid biometric secret" });
+    }
+
+    // Update last used
+    await deviceDoc.ref.update({ lastUsedAt: FieldValue.serverTimestamp() });
+
+    // Mint Custom Token
+    const authInstance = getAdminAuth(appAdmin);
+    const customToken = await authInstance.createCustomToken(userId);
+
+    res.json({ verified: true, token: customToken });
+  } catch (error: any) {
+    console.error("Biometric Verify Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

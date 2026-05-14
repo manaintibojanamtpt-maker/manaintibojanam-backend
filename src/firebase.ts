@@ -234,8 +234,16 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  // Suppress scary technical credential errors from showing in the UI
+  if (errorMessage.includes('default credentials') || errorMessage.includes('GOOGLE_APPLICATION_CREDENTIALS')) {
+    console.error('CRITICAL: Server configuration error (Credentials). Check Render env vars.');
+    return; // Don't throw or show toast for this specific error to end-users
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -253,7 +261,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  throw new Error(errorMessage); // Throw just the message, not the full JSON
 }
 
 // Push Notification Logic

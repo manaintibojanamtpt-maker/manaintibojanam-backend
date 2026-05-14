@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Fingerprint, X, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { registerBiometric } from '../services/biometrics';
+import { BiometricService } from '../services/biometric.service';
 import toast from 'react-hot-toast';
 
 interface BiometricPromptProps {
@@ -11,7 +11,7 @@ interface BiometricPromptProps {
 }
 
 const BiometricPrompt: React.FC<BiometricPromptProps> = ({ isOpen, onClose }) => {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleEnable = async () => {
@@ -19,10 +19,9 @@ const BiometricPrompt: React.FC<BiometricPromptProps> = ({ isOpen, onClose }) =>
     
     setLoading(true);
     try {
-      const success = await registerBiometric(
-        currentUser.uid, 
-        currentUser.email, 
-        userProfile?.name || currentUser.displayName
+      const success = await BiometricService.enroll(
+        currentUser.uid,
+        currentUser.email || undefined
       );
       
       if (success) {
@@ -32,8 +31,8 @@ const BiometricPrompt: React.FC<BiometricPromptProps> = ({ isOpen, onClose }) =>
     } catch (error: any) {
       // User might have cancelled the native prompt
       if (!error.message?.includes('cancelled') && !error.message?.includes('timed out')) {
-        toast.error('Failed to enable biometrics. Please try again.');
-        console.error(error);
+        toast.error(`Error: ${error.message}`);
+        console.error('Biometric Error:', error);
       }
     } finally {
       setLoading(false);

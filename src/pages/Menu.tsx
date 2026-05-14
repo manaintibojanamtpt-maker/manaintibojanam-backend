@@ -35,23 +35,9 @@ import { collection, query, where, orderBy, onSnapshot, doc, limit, getDocs, add
 import AiOrderingWidget from '../components/AiOrderingWidget';
 import HelpMeChooseModal from '../components/HelpMeChooseModal';
 import { triggerHaptic } from '../utils/haptics';
+import { MenuItemSkeleton, CategorySkeleton, Skeleton } from '../components/SkeletonSystem';
 
-const SkeletonCard = () => (
-  <div className="mib-food-card flex gap-3 rounded-[1.6rem] p-3">
-    <div className="h-32 w-32 flex-shrink-0 rounded-[1.25rem] bg-white/10 shimmer" />
-    <div className="flex flex-1 flex-col justify-between py-1">
-      <div className="space-y-3">
-        <div className="h-4 w-3/4 rounded-full bg-white/10 shimmer" />
-        <div className="h-3 w-full rounded-full bg-white/10 shimmer" />
-        <div className="h-3 w-2/3 rounded-full bg-white/10 shimmer" />
-      </div>
-      <div className="flex items-end justify-between">
-        <div className="h-7 w-20 rounded-full bg-white/10 shimmer" />
-        <div className="h-10 w-20 rounded-2xl bg-white/10 shimmer" />
-      </div>
-    </div>
-  </div>
-);
+// SkeletonCard removed in favor of centralized SkeletonSystem
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
@@ -494,12 +480,15 @@ const Menu: React.FC = () => {
           className="min-h-screen bg-brand-bg dark:bg-dark-bg pb-32"
         >
           <div className="sticky top-0 z-40 border-b border-white/5 bg-dark-bg/95 px-3 py-4 backdrop-blur-xl sm:px-4">
-            <div className="h-14 rounded-2xl bg-white/10 shimmer" />
+            <Skeleton className="h-14 rounded-2xl" />
           </div>
           <div className="w-full px-3 py-5 sm:px-4">
-            <div className="mb-5 h-8 w-44 rounded-full bg-white/10 shimmer" />
-            <div className="flex flex-col">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
+            <div className="mb-5 flex flex-col gap-3">
+              <Skeleton className="h-8 w-44 rounded-full" />
+              <CategorySkeleton />
+            </div>
+            <div className="flex flex-col gap-2">
+              {[1, 2, 3, 4, 5, 6].map(i => <MenuItemSkeleton key={i} />)}
             </div>
           </div>
         </motion.div>
@@ -512,79 +501,135 @@ const Menu: React.FC = () => {
           style={{ transformOrigin: "top center", borderRadius: isCategorySheetOpen ? '2rem' : '0', overflow: 'hidden' }}
           className="min-h-screen bg-dark-bg pb-6 transition-all"
         >
+      {/* CATEGORY FAB (Swiggy Style) */}
+      <motion.button
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: showFAB ? 0 : 100, opacity: showFAB ? 1 : 0 }}
+        onClick={() => {
+          triggerHaptic('medium');
+          setIsCategorySheetOpen(true);
+        }}
+        className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-[60] bg-black text-white px-6 py-3.5 rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.5)] border border-white/10 flex items-center gap-2.5 active:scale-95 transition-all"
+      >
+        <MenuIcon size={18} strokeWidth={2.5} />
+        <span className="text-[11px] font-black uppercase tracking-[0.2em]">Browse Menu</span>
+      </motion.button>
 
-
-
-
+      {/* CATEGORY BOTTOM SHEET */}
+      <AnimatePresence>
+        {isCategorySheetOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCategorySheetOpen(false)}
+              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 z-[101] bg-dark-bg border-t border-white/10 rounded-t-[3rem] p-8 max-h-[80vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8" />
+              <div className="flex flex-col gap-6">
+                <button
+                  onClick={() => {
+                    setCategory('all');
+                    setIsCategorySheetOpen(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center justify-between group"
+                >
+                  <span className={cn("text-lg font-black tracking-tight transition-colors", category === 'all' ? "text-orange-500" : "text-white/60")}>Full Menu</span>
+                  <div className={cn("w-2 h-2 rounded-full", category === 'all' ? "bg-orange-500" : "bg-transparent")} />
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setCategory(cat.name);
+                      setIsCategorySheetOpen(false);
+                      const id = `category-${encodeURIComponent(cat.name)}`;
+                      const element = document.getElementById(id);
+                      if (element) {
+                        const y = element.getBoundingClientRect().top + window.scrollY - 160;
+                        window.scrollTo({ top: y, behavior: 'smooth' });
+                      }
+                    }}
+                    className="flex items-center justify-between group"
+                  >
+                    <span className={cn("text-lg font-black tracking-tight transition-colors", category === cat.name ? "text-orange-500" : "text-white/60")}>{cat.name}</span>
+                    <div className={cn("w-2 h-2 rounded-full", category === cat.name ? "bg-orange-500" : "bg-transparent")} />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ULTRA-COMPACT STICKY HEADER */}
       <div className="sticky top-0 z-40 border-b border-white/5 bg-dark-bg/95 backdrop-blur-xl mib-premium-sticky shadow-sm">
         {/* COMPACT STORE STATUS BANNER */}
         {!storeStatus && (
-          <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-red-400">
-            <Clock size={12} />
-            Currently Closed {settings?.storeTiming?.openTime ? `• Opens at ${settings.storeTiming.openTime}` : ''}
-          </div>
-        )}
-        {storeStatus && closingSoon && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-400">
-            <Clock size={12} />
-            Closing Soon ({settings?.storeTiming?.closeTime})
+          <div className="bg-orange-500/10 border-b border-orange-500/20 px-4 py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-400">
+            <Clock size={14} className="text-orange-500" />
+            Kitchen Closed {settings?.storeTiming?.openTime ? `• Reopening at ${settings.storeTiming.openTime}` : ''}
           </div>
         )}
         
-        {storeStatus && !closingSoon && (
-          <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-            <div className="flex items-center gap-1.5"><Sparkles size={12} /> Fresh Home-Style Meals</div>
-            <div className="flex items-center gap-1.5"><Clock size={12} /> 30-45 Min ETA</div>
+        <div className="px-3 py-3 sm:px-4 flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+             <button 
+                onClick={() => navigate('/')}
+                className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/5"
+             >
+                <ArrowLeft size={20} />
+             </button>
+             <div className="flex-1">
+                <AiOrderingWidget 
+                  menuItems={menu} 
+                  searchQuery={search}
+                  onSearchChange={setSearch}
+                  compact={true} 
+                />
+             </div>
           </div>
-        )}
-
-        <div className="px-3 py-2.5 sm:px-4 flex flex-col gap-3">
-          <AiOrderingWidget 
-            menuItems={menu} 
-            searchQuery={search}
-            onSearchChange={setSearch}
-            compact={true} 
-          />
           
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 p-1 bg-white/[0.03] rounded-2xl border border-white/5" role="tablist" aria-label="Menu categories">
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 p-1 bg-white/[0.02] rounded-2xl border border-white/5" role="tablist">
             <button
-              role="tab"
-              aria-selected={category === 'all'}
               onClick={() => {
                 triggerHaptic('light');
                 setCategory('all');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`min-h-0 flex-shrink-0 flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                category === 'all' 
-                  ? 'bg-white text-black shadow-lg shadow-white/10' 
-                  : 'text-white/40 hover:text-white/60 hover:bg-white/5'
-              }`}
+              className={cn(
+                "min-h-0 flex-shrink-0 flex items-center justify-center rounded-xl px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                category === 'all' ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white/60"
+              )}
             >
-              All
+              Full Menu
             </button>
             {categories.map(cat => (
               <button
                 key={cat.id}
-                role="tab"
-                aria-selected={category === cat.name}
                 onClick={() => {
                   triggerHaptic('light');
                   setCategory(cat.name);
                   const id = `category-${encodeURIComponent(cat.name)}`;
                   const element = document.getElementById(id);
                   if (element) {
-                    const y = element.getBoundingClientRect().top + window.scrollY - 150;
+                    const y = element.getBoundingClientRect().top + window.scrollY - 160;
                     window.scrollTo({ top: y, behavior: 'smooth' });
                   }
                 }}
-                className={`min-h-0 flex-shrink-0 flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                  category === cat.name 
-                    ? 'bg-white text-black shadow-lg shadow-white/10' 
-                    : 'text-white/40 hover:text-white/60 hover:bg-white/5'
-                }`}
+                className={cn(
+                  "min-h-0 flex-shrink-0 flex items-center justify-center rounded-xl px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                  category === cat.name ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white/60"
+                )}
               >
                 {cat.name}
               </button>
@@ -593,55 +638,37 @@ const Menu: React.FC = () => {
         </div>
       </div>
 
-      {/* AI OVERHAUL WIDGETS */}
-      <div className="px-3 sm:px-4 pt-3 pb-2">
-
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-white">{timeBasedRecs.title}</h2>
-            <p className="text-xs font-bold text-white/50">Thoughtfully curated for you</p>
-          </div>
-          <button 
-            onClick={() => setShowHelpMeChoose(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 active:scale-95"
-          >
-            <Sparkles size={14} /> Help Me Choose
-          </button>
-        </div>
-
-        {timeBasedRecs.items.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {timeBasedRecs.items.map(item => (
-              <div key={item.id} className="bg-white/5 border border-white/10 rounded-[1.25rem] overflow-hidden p-2 flex flex-col group">
-                <div className="h-24 w-full relative rounded-xl overflow-hidden mb-2">
-                  <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  <div className={`absolute top-1 left-1 w-3 h-3 rounded-full border-2 ${item.type === 'veg' ? 'border-green-400' : 'border-red-400'} bg-dark-bg flex items-center justify-center`}>
-                    <div className={`w-1 h-1 rounded-full ${item.type === 'veg' ? 'bg-green-400' : 'bg-red-400'}`} />
-                  </div>
-                </div>
-                <div className="flex flex-col flex-1 px-1">
-                  <h3 className="text-xs font-bold text-white line-clamp-1 mb-1">{item.name}</h3>
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="text-sm font-bold text-white">{formatPrice(item.price)}</span>
+      <div className="px-3 sm:px-4 pt-6">
+        {/* TIME-BASED RECOMMENDATIONS - BENTO STYLE */}
+        {!search && category === 'all' && timeBasedRecs.items.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
+              <h2 className="text-xl font-black text-white tracking-tight">{timeBasedRecs.title}</h2>
+            </div>
+            <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
+               {timeBasedRecs.items.map(item => (
+                 <div key={`time-rec-${item.id}`} className="min-w-[200px] bg-white/[0.03] border border-white/5 rounded-[2rem] p-3 flex flex-col group">
+                    <div className="h-32 rounded-2xl overflow-hidden mb-3 relative">
+                      <img src={item.image} className="w-full h-full object-cover" alt="" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute bottom-2 left-2 text-[10px] font-black text-white/90 px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg">{formatPrice(item.price)}</span>
+                    </div>
+                    <h3 className="text-xs font-black text-white/90 line-clamp-1 mb-3 px-1">{item.name}</h3>
                     <button 
-                      onClick={(e) => {
+                      onClick={() => {
+                        triggerHaptic('light');
                         addToCart(item);
                         toast.success(`Added ${item.name}`);
-                        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
-                        if (e && triggerFlyToCart) {
-                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                          triggerFlyToCart(item.image, rect.left, rect.top);
-                        }
                       }}
-                      className="w-6 h-6 rounded-lg bg-orange-600 flex items-center justify-center text-white active:scale-95 transition-transform shadow-md"
+                      className="w-full py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all active:scale-95"
                     >
-                      <Plus size={14} />
+                      Add to cart
                     </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                 </div>
+               ))}
+            </div>
+          </section>
         )}
       </div>
 

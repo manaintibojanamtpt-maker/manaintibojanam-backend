@@ -14,8 +14,8 @@ import { Loader2, ArrowLeft, Shield, Fingerprint } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import logo from '../assets/logo.webp';
-import BiometricPrompt from '../components/BiometricPrompt';
-import { isBiometricSupported, loginWithBiometric, hasBiometricsEnabledLocally } from '../services/biometrics';
+import { useBiometrics } from '../hooks/useBiometrics';
+import BiometricModal from '../components/BiometricModal';
 
 const AppleIcon = () => (
   <svg viewBox="0 0 384 512" width="20" height="20" fill="currentColor">
@@ -30,17 +30,27 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   
-  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
-  const [biometricsSupported, setBiometricsSupported] = useState(false);
-  const [hasLocalBiometrics, setHasLocalBiometrics] = useState(false);
-  const [biometricLoading, setBiometricLoading] = useState(false);
-  
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
 
+  const { 
+    isSupported: biometricsSupported, 
+    isEnabled: hasLocalBiometrics, 
+    authenticate: bioLogin, 
+    enroll: bioEnroll,
+    biometryType,
+    loading: bioLoading,
+    refreshStatus
+  } = useBiometrics();
+
+  const [showBiometricOnboarding, setShowBiometricOnboarding] = useState(false);
+
   // Handle redirect result for PWA standalone mode
   React.useEffect(() => {
+    // Wake up backend to avoid cold-start delays on Render
+    fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
+    
     const handleRedirectResult = async () => {
       // Check if we just returned from a redirect
       const hasRedirected = sessionStorage.getItem('auth_redirecting') === 'true';
@@ -53,8 +63,8 @@ const Login: React.FC = () => {
         
         if (result?.user) {
           toast.success('Sign-in successful!', { id: toastId });
-          if (await isBiometricSupported() && !hasBiometricsEnabledLocally()) {
-            setShowBiometricPrompt(true);
+          if (biometricsSupported && !hasLocalBiometrics) {
+            setShowBiometricOnboarding(true);
           } else {
             navigate(redirectUrl);
           }
@@ -80,28 +90,11 @@ const Login: React.FC = () => {
     handleRedirectResult();
   }, [navigate, redirectUrl]);
 
-  React.useEffect(() => {
-    isBiometricSupported().then(supported => {
-      setBiometricsSupported(supported);
-      setHasLocalBiometrics(hasBiometricsEnabledLocally());
-    });
-  }, []);
 
   const handleBiometricLogin = async () => {
-    if (biometricLoading) return;
-    setBiometricLoading(true);
-    try {
-      const success = await loginWithBiometric();
-      if (success) {
-        toast.success('Logged in successfully!');
-        navigate(redirectUrl);
-      }
-    } catch (error: any) {
-      if (!error.message?.includes('cancelled')) {
-        toast.error('Face ID / Fingerprint failed. Please login manually.');
-      }
-    } finally {
-      setBiometricLoading(false);
+    const success = await bioLogin();
+    if (success) {
+      navigate(redirectUrl);
     }
   };
 
@@ -133,8 +126,18 @@ const Login: React.FC = () => {
         const result = await signInWithPopup(auth, provider);
         if (result.user) {
           toast.success('Sign-in successful!');
-          if (biometricsSupported && !hasLocalBiometrics) {
-            setShowBiometricPrompt(true);
+          
+          let currentSupported = biometricsSupported;
+          let currentEnabled = hasLocalBiometrics;
+          
+          if (bioLoading) {
+            const status = await refreshStatus();
+            currentSupported = status.supported;
+            currentEnabled = status.enabled;
+          }
+
+          if (currentSupported && !currentEnabled) {
+            setShowBiometricOnboarding(true);
           } else {
             setTimeout(() => navigate(redirectUrl), 500);
           }
@@ -177,8 +180,19 @@ const Login: React.FC = () => {
     try {
       await confirmationResult?.confirm(otp);
       toast.success('Logged in successfully!');
-      if (biometricsSupported && !hasLocalBiometrics) {
-        setShowBiometricPrompt(true);
+      // On native platforms, check if we should show biometric onboarding
+      // We check biometricsSupported but also hasLocalBiometrics
+      let currentSupported = biometricsSupported;
+      let currentEnabled = hasLocalBiometrics;
+      
+      if (bioLoading) {
+        const status = await refreshStatus();
+        currentSupported = status.supported;
+        currentEnabled = status.enabled;
+      }
+
+      if (currentSupported && !currentEnabled) {
+        setShowBiometricOnboarding(true);
       } else {
         navigate(redirectUrl);
       }
@@ -242,15 +256,15 @@ const Login: React.FC = () => {
             <div className="mb-6">
               <button
                 onClick={handleBiometricLogin}
-                disabled={biometricLoading}
+                disabled={bioLoading}
                 className="w-full bg-gradient-to-r from-[#ff6b35] to-[#ff9f1c] hover:opacity-90 text-white rounded-[20px] py-4 flex items-center justify-center gap-3 shadow-[0_10px_20px_rgba(255,107,53,0.3)] transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {biometricLoading ? (
+                {bioLoading ? (
                   <Loader2 className="animate-spin w-6 h-6" />
                 ) : (
                   <>
                     <Fingerprint className="w-6 h-6" />
-                    <span className="font-bold text-base tracking-wide">Login with Face ID</span>
+                    <span className="font-bold text-base tracking-wide">Login with {biometryType || 'Biometrics'}</span>
                   </>
                 )}
               </button>
@@ -374,12 +388,21 @@ const Login: React.FC = () => {
         By continuing, you agree to our Terms of Service <br /> Privacy Policy • Content Policies
       </div>
       
-      <BiometricPrompt 
-        isOpen={showBiometricPrompt} 
+      <BiometricModal 
+        isOpen={showBiometricOnboarding} 
         onClose={() => {
-          setShowBiometricPrompt(false);
+          setShowBiometricOnboarding(false);
           navigate(redirectUrl);
         }} 
+        onConfirm={async () => {
+          const success = await bioEnroll();
+          if (success) {
+            setShowBiometricOnboarding(false);
+            navigate(redirectUrl);
+          }
+        }}
+        type="onboarding"
+        biometryType={biometryType}
       />
     </div>
   );

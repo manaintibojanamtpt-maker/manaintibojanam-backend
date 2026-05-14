@@ -18,6 +18,9 @@ const AIAssistant: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { cart } = useCart();
+  
+  // Check if AI is enabled (has API key)
+  const isAIEnabled = !!import.meta.env.VITE_GEMINI_API_KEY;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,7 +65,11 @@ const AIAssistant: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+      if (!apiKey) {
+        throw new Error("Gemini API Key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.");
+      }
+      const ai = new GoogleGenAI(apiKey);
       const model = "gemini-3-flash-preview";
       
       const systemInstruction = `
@@ -97,9 +104,15 @@ const AIAssistant: React.FC = () => {
 
       const assistantMessage = response.text || "I'm sorry, I'm having a bit of trouble thinking right now. Could you try again?";
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI Error:", err);
-      toast.error("AI assistant is currently unavailable");
+      // Suppress technical credential errors from showing to users
+      const errMsg = err.message || "";
+      if (errMsg.includes('credentials') || errMsg.includes('API key') || errMsg.includes('default')) {
+        console.warn("AI Assistant: Configuration issue detected (missing API Key).");
+      } else {
+        toast.error("AI assistant is currently unavailable");
+      }
     } finally {
       setIsTyping(false);
     }
@@ -107,15 +120,17 @@ const AIAssistant: React.FC = () => {
 
   return (
     <>
-      {/* Floating Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-red-700 transition-colors"
-      >
-        <Sparkles size={28} />
-      </motion.button>
+      {/* Floating Button - Only show if AI is configured */}
+      {isAIEnabled && (
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-red-700 transition-colors"
+        >
+          <Sparkles size={28} />
+        </motion.button>
+      )}
 
       {/* Chat Window */}
       <AnimatePresence>

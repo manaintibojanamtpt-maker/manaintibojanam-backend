@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { formatPrice } from '../lib/utils';
+import { formatPrice, cn } from '../lib/utils';
 import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
@@ -95,10 +95,11 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   return (
     <motion.article 
       id={`menu-item-${item.id}`}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
-      className="relative flex justify-between gap-4 py-5 px-4 bg-dark-bg border-b border-white/5 last:border-b-0 transition-[box-shadow] duration-500"
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3), ease: [0.22, 1, 0.36, 1] }}
+      className="relative flex justify-between gap-4 py-4 px-4 bg-dark-bg border-b border-white/5 last:border-b-0 transition-colors active:bg-white/[0.02]"
     >
       {/* Left Info Column */}
       <div className="flex-1 min-w-0 pr-2 flex flex-col justify-start">
@@ -119,12 +120,12 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           )}
         </div>
         
-        <h3 className="text-[15px] sm:text-base font-bold text-white tracking-tight leading-snug line-clamp-2">
+        <h3 className="text-[16px] sm:text-lg font-bold text-white tracking-tight leading-snug line-clamp-2 mb-0.5">
           {item.name}
         </h3>
         
         <div className="flex items-center gap-2 mt-1 mb-2">
-          <span className="font-bold text-sm text-white/90">{formatPrice(item.price)}</span>
+          <span className="font-extrabold text-base text-white">{formatPrice(item.price)}</span>
           {rating > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); onViewReviews?.(item); }}
@@ -136,21 +137,28 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           )}
         </div>
 
-        <p className="text-[11px] sm:text-xs text-white/40 line-clamp-2 leading-relaxed font-medium">
+        <p className="text-[12px] sm:text-sm text-white/50 line-clamp-2 leading-relaxed font-medium tracking-wide">
           {item.description}
         </p>
       </div>
 
       {/* Right Image & CTA Column */}
       <div className="relative flex flex-col items-center flex-shrink-0 mb-3 ml-2">
-        <div className="w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-2xl bg-white/5 overflow-hidden shadow-lg border border-white/5">
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-2xl bg-white/5 overflow-hidden shadow-lg border border-white/5 relative group"
+        >
           {!imageLoaded && <div className="absolute inset-0 bg-white/5 shimmer z-0" />}
           <img
             src={imageUrl}
             alt={item.name}
             loading={index < 4 ? "eager" : "lazy"}
             onLoad={() => setImageLoaded(true)}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={cn(
+              "w-full h-full object-cover transition-all duration-700",
+              imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'
+            )}
             style={{ aspectRatio: '1/1' }}
             onError={(event) => {
               const target = event.currentTarget as HTMLImageElement;
@@ -158,7 +166,8 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               target.src = fallbackImage;
             }}
           />
-        </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        </motion.div>
         
         {/* Floating Add Button */}
         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 w-[85%]">
@@ -170,29 +179,43 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               <Check size={18} className="text-emerald-400" strokeWidth={3} />
             </motion.div>
           ) : quantity > 0 && !(item.addons && item.addons.length > 0) ? (
-            <div className="h-9 w-full bg-black/60 backdrop-blur-md rounded-full flex items-center justify-between px-1 shadow-lg border border-orange-500/30">
-              <button
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="h-9 w-full bg-dark-surface/90 backdrop-blur-xl rounded-full flex items-center justify-between px-1 shadow-[0_8px_20px_-8px_rgba(255,107,53,0.4)] border border-orange-500/30"
+            >
+              <motion.button
+                whileTap={{ scale: 0.8 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerHaptic('light');
                   updateQuantity(item.id, quantity - 1);
                 }}
-                className="w-7 h-7 flex items-center justify-center active:bg-white/10 rounded-full transition-colors"
+                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
               >
-                <Minus size={14} className="text-orange-400" strokeWidth={2.5} />
-              </button>
-              <span className="text-sm font-bold text-white">{quantity}</span>
-              <button
+                <Minus size={14} className="text-orange-400" strokeWidth={3} />
+              </motion.button>
+              <motion.span 
+                key={quantity}
+                initial={{ y: 5, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="text-sm font-black text-white tabular-nums"
+              >
+                {quantity}
+              </motion.span>
+              <motion.button
+                whileTap={{ scale: 0.8 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerHaptic('medium');
                   addToCart(item);
                 }}
-                className="w-7 h-7 flex items-center justify-center active:bg-white/10 rounded-full transition-colors"
+                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
               >
-                <Plus size={14} className="text-orange-400" strokeWidth={2.5} />
-              </button>
-            </div>
+                <Plus size={14} className="text-orange-400" strokeWidth={3} />
+              </motion.button>
+            </motion.div>
           ) : (
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -230,10 +253,17 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               className="bg-gray-900 sm:border border-gray-800 rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl relative" 
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mt-4 mb-2 sm:hidden" />
-              <div className="p-5 sm:p-6 border-b border-gray-800 shrink-0">
-                <h3 className="text-xl font-bold text-white tracking-tight">Customise {item.name}</h3>
-                <p className="text-xs text-gray-400 mt-1 font-medium">Select add-ons</p>
+              <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-1 sm:hidden" />
+              <div className="px-6 py-5 border-b border-white/5 shrink-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`h-3 w-3 rounded-[3px] border bg-black/40 ${
+                    item.type === 'veg' ? 'border-emerald-500/80' : 'border-red-500/80'
+                  }`}>
+                    <span className={`h-1 w-1 rounded-full ${item.type === 'veg' ? 'bg-emerald-500' : 'bg-red-500'} m-0.5 block`} />
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Customisation</span>
+                </div>
+                <h3 className="text-xl font-black text-white tracking-tight">{item.name}</h3>
               </div>
               
               <div className="p-5 sm:p-6 overflow-y-auto space-y-3 overscroll-contain flex-1">

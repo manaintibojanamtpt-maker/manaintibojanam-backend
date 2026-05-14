@@ -4,6 +4,8 @@ import { Home, ShoppingBag, User, Utensils } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
+import ActiveOrderStrip from './ActiveOrderStrip';
+import { cn } from '../lib/utils';
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -63,41 +65,62 @@ const BottomNav = () => {
         className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4 pointer-events-none"
         style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="mib-glass max-w-lg mx-auto rounded-[2rem] px-2 py-2 flex items-center justify-around shadow-2xl relative overflow-hidden pointer-events-auto">
+        <ActiveOrderStrip />
+        <div className="max-w-lg mx-auto bg-black/80 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] px-2 py-2 flex items-center justify-around shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden pointer-events-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
-            const displayBadge = item.label === 'Orders' ? 0 : (item.label === 'Menu' ? 0 : 0); // Logic can be expanded
 
             return (
               <button
                 key={item.path}
                 onClick={() => {
-                  triggerHaptic('light');
-                  navigate(item.path);
+                  if (!isActive) {
+                    triggerHaptic('light');
+                    navigate(item.path);
+                  }
                 }}
-                className="relative flex flex-col items-center justify-center w-16 h-12 transition-all duration-300"
+                className="relative flex flex-col items-center justify-center w-16 h-12 group"
               >
                 {isActive && (
                   <motion.div
-                    layoutId="navPill"
-                    className="absolute inset-0 bg-white/10 rounded-2xl"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    layoutId="activeBar"
+                    className="absolute -bottom-1 w-1 h-1 bg-orange-500 rounded-full"
+                    transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
                   />
                 )}
                 
-                <div className="relative z-10 flex flex-col items-center gap-1">
-                  <div className={`relative transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100 opacity-60'}`}>
+                <div className="relative z-10 flex flex-col items-center gap-1.5">
+                  <motion.div 
+                    animate={{ 
+                      y: isActive ? -2 : 0,
+                      scale: isActive ? 1.15 : 1
+                    }}
+                    className={cn(
+                      "transition-colors duration-300",
+                      isActive ? 'text-orange-500' : 'text-white/40 group-active:text-white/60'
+                    )}
+                  >
                     <Icon 
                       size={20} 
                       strokeWidth={isActive ? 2.5 : 2}
-                      className={isActive ? 'text-orange-500' : 'text-white'} 
                     />
-                  </div>
-                  <span className={`text-[9px] font-black tracking-widest uppercase transition-all duration-300 ${isActive ? 'text-white opacity-100' : 'text-white/40 opacity-100'}`}>
+                  </motion.div>
+                  <span className={cn(
+                    "text-[8px] font-black tracking-[0.2em] uppercase transition-all duration-300",
+                    isActive ? 'text-white' : 'text-white/20'
+                  )}>
                     {item.label}
                   </span>
                 </div>
+
+                {isActive && (
+                   <motion.div
+                     layoutId="navGlow"
+                     className="absolute inset-0 bg-orange-500/5 blur-xl rounded-full"
+                     transition={{ duration: 1 }}
+                   />
+                )}
               </button>
             );
           })}
