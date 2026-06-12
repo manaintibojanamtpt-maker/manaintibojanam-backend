@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, 
@@ -16,7 +16,8 @@ import {
   X,
   CreditCard,
   ShieldAlert,
-  ServerCrash
+  ServerCrash,
+  Filter
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -59,6 +60,14 @@ interface ReconciliationEntry {
   status: 'PROMOTED' | 'FAILED';
 }
 
+interface PendingDraft {
+  id: string;
+  orderId: string;
+  amount: number;
+  createdAt: string;
+  status: 'PENDING_PAYMENT' | 'PAYMENT_CAPTURED' | 'ABANDONED';
+}
+
 interface OutboxItem {
   id: string;
   channel: 'EMAIL' | 'WHATSAPP' | 'FCM';
@@ -84,8 +93,8 @@ const useMockSystemHealth = () => {
     summary: {
       openIncidents: 2,
       reconciliationsToday: 48,
-      pendingDrafts: 12,
-      retryingNotifications: 5,
+      pendingDrafts: 2,
+      retryingNotifications: 3,
       deadLetterNotifications: 1,
       deliverySuccessRate: 99.2
     },
@@ -100,6 +109,10 @@ const useMockSystemHealth = () => {
       { id: 'rec_3', orderId: 'ord_1003', draftId: 'draft_1003', source: 'CLIENT_CALLBACK', confirmedAt: '2026-06-12T10:20:00Z', razorpayOrderId: 'order_ghi789', status: 'PROMOTED' },
       { id: 'rec_4', orderId: 'ord_1004', draftId: 'draft_1004', source: 'WEBHOOK_RECOVERY', confirmedAt: '2026-06-12T11:05:00Z', razorpayOrderId: 'order_jkl012', status: 'PROMOTED' }
     ] as ReconciliationEntry[],
+    pendingDraftsList: [
+      { id: 'draft_2001', orderId: 'ord_2001', amount: 350, createdAt: '2026-06-12T12:00:00Z', status: 'PENDING_PAYMENT' },
+      { id: 'draft_2002', orderId: 'ord_2002', amount: 800, createdAt: '2026-06-12T12:15:00Z', status: 'PAYMENT_CAPTURED' }
+    ] as PendingDraft[],
     outbox: {
       retrying: [
         { id: 'out_1', channel: 'WHATSAPP', recipient: '+919876543210', status: 'RETRY_PENDING', failureType: 'RETRYABLE', attempts: 2, maxAttempts: 5, nextRetryAt: '2026-06-12T12:20:00Z', lastError: '429 Too Many Requests', correlationId: 'req-x1', relatedEntity: 'ord_1001' },
@@ -145,9 +158,9 @@ const formatDate = (isoString: string) => {
 const StatusBadge = ({ status }: { status: string }) => {
   let color = "bg-gray-100 text-gray-800 border-gray-200";
   
-  if (['RESOLVED', 'VERIFIED', 'DELIVERED', 'PROMOTED'].includes(status)) color = "bg-green-100 text-green-800 border-green-200";
-  if (['DETECTED', 'RETRY_PENDING', 'PROCESSING', 'RUNNING'].includes(status)) color = "bg-amber-100 text-amber-800 border-amber-200";
-  if (['ESCALATED', 'DEAD_LETTER', 'FAILED', 'NON_RETRYABLE'].includes(status)) color = "bg-red-100 text-red-800 border-red-200";
+  if (['RESOLVED', 'VERIFIED', 'DELIVERED', 'PROMOTED', 'PAYMENT_CAPTURED'].includes(status)) color = "bg-green-100 text-green-800 border-green-200";
+  if (['DETECTED', 'RETRY_PENDING', 'PROCESSING', 'RUNNING', 'PENDING_PAYMENT'].includes(status)) color = "bg-amber-100 text-amber-800 border-amber-200";
+  if (['ESCALATED', 'DEAD_LETTER', 'FAILED', 'NON_RETRYABLE', 'ABANDONED'].includes(status)) color = "bg-red-100 text-red-800 border-red-200";
   if (['CLIENT_CALLBACK', 'WEBHOOK_RECOVERY'].includes(status)) color = "bg-blue-100 text-blue-800 border-blue-200";
 
   return (
@@ -157,10 +170,16 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "text-gray-900" }: any) => (
+const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "text-gray-900", isActive, onClick }: any) => (
   <motion.div 
-    whileHover={{ y: -2 }}
-    className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between"
+    whileHover={{ y: -2, scale: 1.01 }}
+    whileTap={{ scale: 0.98 }}
+    onClick={onClick}
+    className={`bg-white p-5 rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+      isActive 
+        ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/20' 
+        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+    }`}
   >
     <div className="flex justify-between items-start mb-4">
       <div className={`p-2 rounded-lg bg-gray-50 ${colorClass}`}>
@@ -198,9 +217,139 @@ const ChannelIcon = ({ channel }: { channel: string }) => {
 export default function SystemHealth() {
   const data = useMockSystemHealth();
   const [selectedIncident, setSelectedIncident] = useState<SystemIncident | null>(null);
-  const [incidentFilter, setIncidentFilter] = useState('ALL');
+  
+  // KPI Filtering State
+  const [activeKpi, setActiveKpi] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const filteredIncidents = data.incidents.filter(i => incidentFilter === 'ALL' || i.status === incidentFilter);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Derived filter logic based on KPI
+  const filteredIncidents = data.incidents.filter(i => {
+    if (activeKpi === 'OPEN_INCIDENTS') {
+      return ['DETECTED', 'RUNNING', 'ESCALATED'].includes(i.status);
+    }
+    return true; // default show all
+  });
+
+  const handleKpiClick = (kpiId: string, sectionId: string) => {
+    if (activeKpi === kpiId) {
+      setActiveKpi(null); // toggle off
+      return;
+    }
+    setActiveKpi(kpiId);
+    
+    // Smooth scroll on Desktop
+    if (window.innerWidth >= 1024) {
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
+
+  const clearFilters = () => setActiveKpi(null);
+
+  // Content renderers for Mobile Drawer
+  const renderMobileDrawerContent = () => {
+    switch (activeKpi) {
+      case 'OPEN_INCIDENTS':
+        return (
+          <div className="space-y-4">
+            {filteredIncidents.length === 0 ? <p className="text-gray-500 text-sm">No open incidents.</p> : null}
+            {filteredIncidents.map(inc => (
+              <div key={inc.id} onClick={() => setSelectedIncident(inc)} className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center cursor-pointer">
+                <div>
+                  <div className="font-medium text-sm">{inc.type.replace(/_/g, ' ')}</div>
+                  <div className="text-xs text-gray-500 mt-1">{formatDate(inc.updatedAt)}</div>
+                </div>
+                <StatusBadge status={inc.status} />
+              </div>
+            ))}
+          </div>
+        );
+      case 'RECONCILED_TODAY':
+        return (
+          <div className="space-y-4">
+            {data.reconciliations.map(rec => (
+              <div key={rec.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center">
+                <div>
+                  <div className="font-medium text-sm">{rec.orderId}</div>
+                  <div className="text-xs text-gray-500 mt-1">{rec.source.replace(/_/g, ' ')}</div>
+                </div>
+                <StatusBadge status={rec.status} />
+              </div>
+            ))}
+          </div>
+        );
+      case 'PENDING_DRAFTS':
+        return (
+          <div className="space-y-4">
+             {data.pendingDraftsList.map(draft => (
+              <div key={draft.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center">
+                <div>
+                  <div className="font-medium text-sm">{draft.orderId}</div>
+                  <div className="text-xs text-gray-500 mt-1 font-mono">₹{draft.amount}</div>
+                </div>
+                <StatusBadge status={draft.status} />
+              </div>
+            ))}
+          </div>
+        );
+      case 'NOTIFICATION_RETRIES':
+        return (
+          <div className="space-y-4">
+            {data.outbox.retrying.map(item => (
+               <div key={item.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <ChannelIcon channel={item.channel} />
+                      <span className="font-medium text-sm">{item.recipient}</span>
+                    </div>
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <p className="text-xs text-red-500 truncate">{item.lastError}</p>
+               </div>
+            ))}
+          </div>
+        );
+      case 'DEAD_LETTER':
+        return (
+          <div className="space-y-4">
+            {data.outbox.deadLetter.map(item => (
+               <div key={item.id} className="p-4 bg-red-50 rounded-lg border border-red-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <ChannelIcon channel={item.channel} />
+                      <span className="font-medium text-sm">{item.recipient}</span>
+                    </div>
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <p className="text-xs text-red-600 truncate">{item.lastError}</p>
+               </div>
+            ))}
+          </div>
+        );
+      case 'DELIVERY_RATE':
+        return (
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-600 mb-4">Focusing on chart delivery metrics is best viewed on desktop.</p>
+            <div className="text-2xl font-bold text-emerald-600">{data.summary.deliverySuccessRate}%</div>
+            <p className="text-xs text-gray-500">Success rate over 24h</p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pb-20">
@@ -230,40 +379,77 @@ export default function SystemHealth() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
+        {/* ACTIVE FILTER BAR */}
+        <AnimatePresence>
+          {activeKpi && !isMobile && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
+              animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
+              className="overflow-hidden"
+            >
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-2 text-indigo-800 text-sm font-medium">
+                  <Filter className="w-4 h-4" />
+                  Filtering by: {activeKpi.replace(/_/g, ' ')}
+                </div>
+                <button 
+                  onClick={clearFilters} 
+                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1 bg-white px-2 py-1 rounded shadow-sm border border-indigo-100 transition-colors"
+                >
+                  <X className="w-4 h-4" /> Clear Filter
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* 2. SUMMARY KPI ROW */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <MetricCard 
             title="Open Incidents" value={data.summary.openIncidents} subtitle="Requires attention" 
             icon={AlertTriangle} colorClass={data.summary.openIncidents > 0 ? "text-amber-500 bg-amber-50" : "text-gray-500"} 
+            isActive={activeKpi === 'OPEN_INCIDENTS'}
+            onClick={() => handleKpiClick('OPEN_INCIDENTS', 'section-incidents')}
           />
           <MetricCard 
             title="Reconciled Today" value={data.summary.reconciliationsToday} subtitle="Successful payments" 
             icon={CheckCircle} colorClass="text-green-600 bg-green-50" trend={12}
+            isActive={activeKpi === 'RECONCILED_TODAY'}
+            onClick={() => handleKpiClick('RECONCILED_TODAY', 'section-reconciliation')}
           />
           <MetricCard 
             title="Pending Drafts" value={data.summary.pendingDrafts} subtitle="Awaiting webhook/client" 
             icon={Clock} colorClass="text-blue-500 bg-blue-50" 
+            isActive={activeKpi === 'PENDING_DRAFTS'}
+            onClick={() => handleKpiClick('PENDING_DRAFTS', 'section-reconciliation')}
           />
           <MetricCard 
             title="Notification Retries" value={data.summary.retryingNotifications} subtitle="In outbox queue" 
             icon={RefreshCcw} colorClass="text-indigo-500 bg-indigo-50" 
+            isActive={activeKpi === 'NOTIFICATION_RETRIES'}
+            onClick={() => handleKpiClick('NOTIFICATION_RETRIES', 'section-outbox')}
           />
           <MetricCard 
             title="Dead-Letter Items" value={data.summary.deadLetterNotifications} subtitle="Permanent failures" 
             icon={FileWarning} colorClass={data.summary.deadLetterNotifications > 0 ? "text-red-500 bg-red-50" : "text-gray-500"} 
+            isActive={activeKpi === 'DEAD_LETTER'}
+            onClick={() => handleKpiClick('DEAD_LETTER', 'section-outbox')}
           />
           <MetricCard 
             title="Delivery Rate" value={`${data.summary.deliverySuccessRate}%`} subtitle="Last 24 hours" 
             icon={Activity} colorClass="text-emerald-500 bg-emerald-50" 
+            isActive={activeKpi === 'DELIVERY_RATE'}
+            onClick={() => handleKpiClick('DELIVERY_RATE', 'section-outbox')}
           />
         </section>
 
         {/* 3. MAIN CONTENT GRID */}
         
         {/* A. INCIDENTS */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <section id="section-incidents" className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-colors duration-300 ${activeKpi === 'OPEN_INCIDENTS' && !isMobile ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
           <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -271,21 +457,11 @@ export default function SystemHealth() {
               </h2>
               <p className="text-sm text-gray-500">Anomalies detected across all backend services.</p>
             </div>
-            <div className="flex gap-2">
-              {['ALL', 'DETECTED', 'ESCALATED', 'RESOLVED'].map(filter => (
-                <button
-                  key={filter}
-                  onClick={() => setIncidentFilter(filter)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    incidentFilter === filter 
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+            {!isMobile && activeKpi === 'OPEN_INCIDENTS' && (
+              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full border border-amber-200 flex items-center gap-1">
+                <Filter className="w-3 h-3" /> Filtered to Actionable
+              </span>
+            )}
           </div>
           
           <div className="overflow-x-auto">
@@ -333,12 +509,14 @@ export default function SystemHealth() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* B. PAYMENT RECONCILIATION */}
-          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-gray-500" /> Payment Recovery
-              </h2>
-              <p className="text-sm text-gray-500">Webhook fallback vs Client promotions.</p>
+          <section id="section-reconciliation" className={`bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col transition-colors duration-300 ${['RECONCILED_TODAY', 'PENDING_DRAFTS'].includes(activeKpi || '') && !isMobile ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-gray-500" /> Payment Recovery
+                </h2>
+                <p className="text-sm text-gray-500">Webhook fallback vs Client promotions.</p>
+              </div>
             </div>
             
             <div className="p-6 border-b border-gray-200 bg-gray-50/50">
@@ -361,37 +539,74 @@ export default function SystemHealth() {
             </div>
 
             <div className="overflow-x-auto flex-1">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 font-medium">Order / Draft</th>
-                    <th className="px-6 py-3 font-medium">Source</th>
-                    <th className="px-6 py-3 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data.reconciliations.map((rec) => (
-                    <tr key={rec.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3">
-                        <div className="font-medium text-gray-900">{rec.orderId}</div>
-                        <div className="text-xs text-gray-400">{rec.draftId}</div>
-                      </td>
-                      <td className="px-6 py-3"><StatusBadge status={rec.source} /></td>
-                      <td className="px-6 py-3"><StatusBadge status={rec.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {activeKpi === 'PENDING_DRAFTS' && !isMobile ? (
+                <>
+                  <div className="px-6 py-2 bg-indigo-50 border-b border-indigo-100 text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                    Filtered: Pending Drafts
+                  </div>
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 font-medium">Draft ID</th>
+                        <th className="px-6 py-3 font-medium">Created</th>
+                        <th className="px-6 py-3 font-medium">Amount</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {data.pendingDraftsList.map((draft) => (
+                        <tr key={draft.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-3 font-medium text-gray-900">{draft.orderId}</td>
+                          <td className="px-6 py-3 text-gray-500">{formatDate(draft.createdAt)}</td>
+                          <td className="px-6 py-3 font-mono text-gray-600">₹{draft.amount}</td>
+                          <td className="px-6 py-3"><StatusBadge status={draft.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              ) : (
+                <>
+                  {activeKpi === 'RECONCILED_TODAY' && !isMobile && (
+                    <div className="px-6 py-2 bg-indigo-50 border-b border-indigo-100 text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                      Filtered: Today's Reconciliations
+                    </div>
+                  )}
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 font-medium">Order / Draft</th>
+                        <th className="px-6 py-3 font-medium">Source</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {data.reconciliations.map((rec) => (
+                        <tr key={rec.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-3">
+                            <div className="font-medium text-gray-900">{rec.orderId}</div>
+                            <div className="text-xs text-gray-400">{rec.draftId}</div>
+                          </td>
+                          <td className="px-6 py-3"><StatusBadge status={rec.source} /></td>
+                          <td className="px-6 py-3"><StatusBadge status={rec.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
             </div>
           </section>
 
           {/* C. NOTIFICATION OUTBOX */}
-          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Mail className="w-5 h-5 text-gray-500" /> Notification Outbox
-              </h2>
-              <p className="text-sm text-gray-500">Retry queues and dead-letter dropoffs.</p>
+          <section id="section-outbox" className={`bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col transition-colors duration-300 ${['NOTIFICATION_RETRIES', 'DEAD_LETTER', 'DELIVERY_RATE'].includes(activeKpi || '') && !isMobile ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-gray-500" /> Notification Outbox
+                </h2>
+                <p className="text-sm text-gray-500">Retry queues and dead-letter dropoffs.</p>
+              </div>
             </div>
 
             <div className="p-6 border-b border-gray-200 bg-gray-50/50">
@@ -412,38 +627,42 @@ export default function SystemHealth() {
             </div>
 
             <div className="overflow-x-auto flex-1">
-              <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Active Retries
-              </div>
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <tbody className="divide-y divide-gray-200">
-                  {data.outbox.retrying.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <ChannelIcon channel={item.channel} />
-                          <span className="font-medium text-gray-900">{item.recipient}</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
-                          {item.lastError}
-                        </div>
-                      </td>
-                      <td className="px-6 py-3">
-                        <div className="text-xs text-gray-500">Attempt {item.attempts}/{item.maxAttempts}</div>
-                        <div className="text-xs font-medium text-amber-600 mt-0.5">Next: {item.nextRetryAt ? formatDate(item.nextRetryAt) : 'Now'}</div>
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <StatusBadge status={item.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {data.outbox.deadLetter.length > 0 && (
+              {activeKpi === 'DEAD_LETTER' && !isMobile ? null : (
                 <>
-                  <div className="px-6 py-2 bg-red-50 border-y border-red-100 text-xs font-semibold text-red-800 uppercase tracking-wider flex justify-between">
-                    <span>Dead Letters</span>
+                  <div className={`px-6 py-2 border-b border-gray-200 text-xs font-semibold uppercase tracking-wider ${activeKpi === 'NOTIFICATION_RETRIES' ? 'bg-indigo-50 text-indigo-800' : 'bg-gray-50 text-gray-500'}`}>
+                    Active Retries {activeKpi === 'NOTIFICATION_RETRIES' && '(Filtered)'}
+                  </div>
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <tbody className="divide-y divide-gray-200">
+                      {data.outbox.retrying.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <ChannelIcon channel={item.channel} />
+                              <span className="font-medium text-gray-900">{item.recipient}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
+                              {item.lastError}
+                            </div>
+                          </td>
+                          <td className="px-6 py-3">
+                            <div className="text-xs text-gray-500">Attempt {item.attempts}/{item.maxAttempts}</div>
+                            <div className="text-xs font-medium text-amber-600 mt-0.5">Next: {item.nextRetryAt ? formatDate(item.nextRetryAt) : 'Now'}</div>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <StatusBadge status={item.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {data.outbox.deadLetter.length > 0 && activeKpi !== 'NOTIFICATION_RETRIES' && (
+                <>
+                  <div className={`px-6 py-2 border-y text-xs font-semibold uppercase tracking-wider flex justify-between ${activeKpi === 'DEAD_LETTER' ? 'bg-red-100 border-red-200 text-red-900' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                    <span>Dead Letters {activeKpi === 'DEAD_LETTER' && '(Filtered)'}</span>
                     <span className="bg-red-200 text-red-900 px-2 py-0.5 rounded-full">{data.outbox.deadLetter.length}</span>
                   </div>
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -473,18 +692,49 @@ export default function SystemHealth() {
         </div>
       </main>
 
-      {/* 4. INCIDENT DETAIL DRAWER (MODAL) */}
+      {/* 4. MOBILE KPI BOTTOM DRAWER */}
+      <AnimatePresence>
+        {isMobile && activeKpi && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={clearFilters}
+              className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-40 lg:hidden"
+            />
+            <motion.div 
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} 
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-x-0 bottom-0 max-h-[85vh] bg-white rounded-t-2xl shadow-2xl z-50 flex flex-col border-t border-gray-200 lg:hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-indigo-500" /> 
+                  {activeKpi.replace(/_/g, ' ')}
+                </h3>
+                <button onClick={clearFilters} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-white">
+                {renderMobileDrawerContent()}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 5. INCIDENT DETAIL DRAWER (MODAL) */}
       <AnimatePresence>
         {selectedIncident && (
           <>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSelectedIncident(null)}
-              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50"
             />
             <motion.div 
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200"
+              className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-[60] flex flex-col border-l border-gray-200"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
