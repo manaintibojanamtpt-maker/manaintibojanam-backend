@@ -797,6 +797,45 @@ const getTransporter = () => {
   });
 };
 
+const classifyError = (channel: string, err: any): 'RETRYABLE' | 'NON_RETRYABLE' => {
+  const code = err.code || err.message || '';
+  if (channel === 'EMAIL') {
+    if (code.includes('EAUTH') || code.includes('invalid email') || err.status === 400) return 'NON_RETRYABLE';
+    return 'RETRYABLE';
+  }
+  if (channel === 'WHATSAPP') {
+    if (err.status === 400 || err.status === 401 || err.status === 404) return 'NON_RETRYABLE';
+    return 'RETRYABLE';
+  }
+  if (channel === 'FCM') {
+    if (code.includes('invalid-registration-token') || code.includes('registration-token-not-registered') || code.includes('invalid-argument')) return 'NON_RETRYABLE';
+    return 'RETRYABLE';
+  }
+  return 'RETRYABLE';
+};
+
+const enqueueNotification = async (payload: any) => {
+  try {
+    if (!_db) return;
+    const { randomUUID } = await import('crypto');
+    const delaySec = 60 + Math.floor(Math.random() * 15);
+    const nextRetryAt = new Date(Date.now() + delaySec * 1000);
+    
+    await _db.collection('notification_outbox').doc(randomUUID()).set({
+      ...payload,
+      status: 'RETRY_PENDING',
+      lockedUntil: null,
+      attemptCount: 1,
+      maxAttempts: 5,
+      nextRetryAt: nextRetryAt.toISOString(), // Firestore doesn't like Date objects natively without Timestamp conversion sometimes, but ISO string is safe
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  } catch (err: any) {
+    console.error("Failed to enqueue notification:", err.message);
+  }
+};
+
 async function sendEmailNotification(to: string, subject: string, body: string) {
   try {
     const transporter = getTransporter();
@@ -822,6 +861,17 @@ async function sendEmailNotification(to: string, subject: string, body: string) 
     if (err.code === 'EAUTH') {
       console.error("🔑 Authentication failed. Please check your EMAIL_USER and EMAIL_PASS (App Password).");
     }
+    
+    await enqueueNotification({
+      channel: 'EMAIL',
+      recipient: to,
+      messagePayload: { subject, body },
+      correlationId: `email-${Date.now()}`,
+      relatedEntities: {},
+      failureType: classifyError('EMAIL', err),
+      lastError: err.message || String(err),
+      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }]
+    });
   }
 }
 
@@ -877,6 +927,16 @@ async function sendWhatsAppNotification(to: string, message: string) {
     console.log(`WhatsApp notification sent to ${normalizedPhone}`);
   } catch (err: any) {
     console.error(`WhatsApp notification error for ${normalizedPhone}:`, err.message);
+    await enqueueNotification({
+      channel: 'WHATSAPP',
+      recipient: normalizedPhone,
+      messagePayload: { body: message },
+      correlationId: `whatsapp-${Date.now()}`,
+      relatedEntities: {},
+      failureType: classifyError('WHATSAPP', err),
+      lastError: err.message || String(err),
+      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }]
+    });
   }
 }
 
@@ -989,8 +1049,125 @@ async function sendPushNotificationToUser(userId: string, title: string, body: s
     console.log(`Push notification result for ${userId}: ${response.successCount}/${tokens.length} sent.`);
   } catch (err: any) {
     console.error(`Push notification error for ${userId}:`, err.message);
+    await enqueueNotification({
+      channel: 'FCM',
+      recipient: userId,
+      messagePayload: { title, body, data },
+      correlationId: `fcm-${Date.now()}`,
+      relatedEntities: { userId },
+      failureType: classifyError('FCM', err),
+      lastError: err.message || String(err),
+      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }]
+    });
   }
 }
+
+// ================= NOTIFICATION OUTBOX WORKER =================
+const processOutboxBatch = async () => {
+  if (!_db) return;
+  try {
+    const now = new Date();
+    
+    // 1. Fetch pending notifications
+    const snapshot = await _db.collection('notification_outbox')
+      .where('status', '==', 'RETRY_PENDING')
+      .where('nextRetryAt', '<=', now.toISOString())
+      .limit(20)
+      .get();
+      
+    if (snapshot.empty) return;
+
+    for (const docSnapshot of snapshot.docs) {
+      const data = docSnapshot.data();
+      
+      // 2. Acquire Lease
+      const lockTime = new Date(now.getTime() + 5 * 60000).toISOString();
+      try {
+        await docSnapshot.ref.update({
+          status: 'PROCESSING',
+          lockedUntil: lockTime
+        });
+      } catch (lockErr) {
+        continue; // Someone else grabbed it or doc changed
+      }
+
+      // 3. Process
+      let success = false;
+      let currentError = null;
+      const startTime = Date.now();
+
+      try {
+        if (data.channel === 'EMAIL') {
+          await sendEmailNotification(data.recipient, data.messagePayload.subject, data.messagePayload.body);
+        } else if (data.channel === 'WHATSAPP') {
+          await sendWhatsAppNotification(data.recipient, data.messagePayload.body);
+        } else if (data.channel === 'FCM') {
+          await sendPushNotificationToUser(data.recipient, data.messagePayload.title, data.messagePayload.body, data.messagePayload.data || {});
+        }
+        success = true;
+      } catch (sendErr: any) {
+        currentError = sendErr;
+        // Specifically handle FCM Token Cleanup for Non-Retryable errors caught in the worker
+        if (data.channel === 'FCM' && (sendErr.message.includes('invalid-registration-token') || sendErr.message.includes('registration-token-not-registered'))) {
+          try {
+            await _db.collection("users").doc(data.recipient).set({
+              deviceTokens: FieldValue.arrayRemove(data.messagePayload.token), // If we knew the token, but we send to userId
+              fcmTokens: FieldValue.arrayRemove(data.messagePayload.token)
+            }, { merge: true });
+          } catch(e) {}
+        }
+      }
+
+      const durationMs = Date.now() - startTime;
+      
+      // 4. Resolve State
+      if (success) {
+        // Hard delete DELIVERED items to save space
+        await docSnapshot.ref.delete();
+      } else {
+        const failureType = classifyError(data.channel, currentError);
+        const attemptCount = (data.attemptCount || 1) + 1;
+        const attempts = data.attempts || [];
+        attempts.push({
+          timestamp: new Date().toISOString(),
+          errorReason: currentError?.message || String(currentError),
+          durationMs
+        });
+
+        if (failureType === 'NON_RETRYABLE' || attemptCount > (data.maxAttempts || 5)) {
+          await docSnapshot.ref.update({
+            status: 'DEAD_LETTER',
+            lockedUntil: null,
+            failureType,
+            lastError: currentError?.message || String(currentError),
+            attempts
+          });
+        } else {
+          // Calculate Capped Exponential Backoff with Jitter
+          const BASE_DELAY_SEC = 60;
+          const MAX_BACKOFF_SEC = 3600;
+          const JITTER_MAX_SEC = 15;
+          
+          const boundedAttempt = Math.min(attemptCount, 10);
+          const rawBackoff = BASE_DELAY_SEC * Math.pow(2, boundedAttempt - 1);
+          const jitter = Math.floor(Math.random() * JITTER_MAX_SEC);
+          const delaySec = Math.min(rawBackoff, MAX_BACKOFF_SEC) + jitter;
+          
+          await docSnapshot.ref.update({
+            status: 'RETRY_PENDING',
+            lockedUntil: null,
+            attemptCount,
+            nextRetryAt: new Date(Date.now() + delaySec * 1000).toISOString(),
+            lastError: currentError?.message || String(currentError),
+            attempts
+          });
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error("Outbox Processing Error:", err.message);
+  }
+};
 
 async function notifyCustomer(order: any, status: string) {
   const statusMessages: Record<string, string> = {
@@ -2193,6 +2370,39 @@ app.post("/api/auth/biometric/verify", async (req, res) => {
   }
 });
 
+// ================= OUTBOX CRON / WORKER =================
+app.post("/api/cron/process-outbox", async (req, res) => {
+  // Simple auth via cron secret (configure CRON_SECRET in environment)
+  const authHeader = req.headers.authorization;
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    await processOutboxBatch();
+    res.json({ success: true, message: "Outbox processed" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+let outboxInterval: NodeJS.Timeout | null = null;
+const startOutboxWorker = () => {
+  if (outboxInterval) return;
+  // Run every 60 seconds
+  outboxInterval = setInterval(async () => {
+    try {
+      // Optional feature flag check if needed
+      const settings = await getSettings();
+      if (settings.workflow?.autoRetryWorker !== false) {
+        await processOutboxBatch();
+      }
+    } catch (err) {
+      console.error("Outbox worker interval error:", err);
+    }
+  }, 60000);
+};
+
 async function startServer() {
   // ================= FRONTEND =================
   if (process.env.NODE_ENV !== "production") {
@@ -2237,6 +2447,8 @@ async function startServer() {
       console.log("✅ Menu and Categories seeding check bypassed");
       // startAutoWorkflow();
       console.log("✅ Auto Workflow worker bypassed");
+      startOutboxWorker();
+      console.log("✅ Outbox worker initialized");
     } catch (err) {
       console.error("❌ Seeding failed:", err);
     }
