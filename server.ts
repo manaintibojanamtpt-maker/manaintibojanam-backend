@@ -2568,7 +2568,7 @@ app.post("/api/ai/chat", strictLimiter, async (req, res) => {
     }
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash", // Upgraded to stable tool-calling model
+      model: "gemini-2.5-flash", // Upgraded to stable tool-calling model
       contents,
       config: {
         systemInstruction,
