@@ -912,6 +912,7 @@ export default function AdminPanel() {
               <SidebarLink icon={<MessageSquare size={20}/>} label="Support" active={tab === "support"} onClick={() => setTab("support")} />
               <SidebarLink icon={<TrendingUp size={20}/>} label="Analytics" active={tab === "analytics"} onClick={() => setTab("analytics")} />
               <SidebarLink icon={<Settings size={20}/>} label="Settings" active={tab === "pricing"} onClick={() => setTab("pricing")} />
+              <SidebarLink icon={<ShieldCheck size={20}/>} label="System Health" active={false} onClick={() => window.open("/admin/system-health", "_blank")} />
             </nav>
 
             <div className="p-6 border-t border-gray-100 dark:border-gray-800">

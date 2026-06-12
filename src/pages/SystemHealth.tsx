@@ -1,0 +1,566 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Activity, 
+  AlertTriangle, 
+  CheckCircle, 
+  RefreshCcw, 
+  FileWarning, 
+  Mail, 
+  MessageSquare, 
+  Bell, 
+  Clock, 
+  Copy,
+  Info,
+  ArrowUpRight,
+  X,
+  CreditCard,
+  ShieldAlert,
+  ServerCrash
+} from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer, 
+  Legend
+} from 'recharts';
+import toast from 'react-hot-toast';
+
+// ============================================================================
+// TYPES & MOCK DATA
+// ============================================================================
+
+interface SystemIncident {
+  id: string;
+  type: 'PAYMENT_ORPHANED' | 'NOTIFICATION_FAILED' | 'WEBHOOK_TIMEOUT' | 'UNKNOWN';
+  status: 'DETECTED' | 'RUNNING' | 'VERIFIED' | 'RESOLVED' | 'ESCALATED';
+  correlationId: string;
+  relatedEntity: string;
+  createdAt: string;
+  updatedAt: string;
+  payload: any;
+}
+
+interface ReconciliationEntry {
+  id: string;
+  orderId: string;
+  draftId: string;
+  source: 'CLIENT_CALLBACK' | 'WEBHOOK_RECOVERY';
+  confirmedAt: string;
+  razorpayOrderId: string;
+  status: 'PROMOTED' | 'FAILED';
+}
+
+interface OutboxItem {
+  id: string;
+  channel: 'EMAIL' | 'WHATSAPP' | 'FCM';
+  recipient: string;
+  status: 'RETRY_PENDING' | 'PROCESSING' | 'DELIVERED' | 'DEAD_LETTER';
+  failureType: 'RETRYABLE' | 'NON_RETRYABLE';
+  attempts: number;
+  maxAttempts: number;
+  nextRetryAt?: string;
+  lastError: string;
+  correlationId: string;
+  relatedEntity: string;
+}
+
+// Data to plug in later:
+// - useSystemHealthSummary(): Fetch aggregated counts from Firestore (count queries or cloud function aggregates)
+// - useIncidentFeed(): onSnapshot from `system_incidents`
+// - usePaymentRecoveryMetrics(): Aggregated metrics from `orders` and `order_drafts`
+// - useNotificationOutbox(): onSnapshot from `notification_outbox`
+
+const useMockSystemHealth = () => {
+  return {
+    summary: {
+      openIncidents: 2,
+      reconciliationsToday: 48,
+      pendingDrafts: 12,
+      retryingNotifications: 5,
+      deadLetterNotifications: 1,
+      deliverySuccessRate: 99.2
+    },
+    incidents: [
+      { id: 'inc_1', type: 'PAYMENT_ORPHANED', status: 'RESOLVED', correlationId: 'req-a1b2', relatedEntity: 'user_x99', createdAt: '2026-06-12T10:15:00Z', updatedAt: '2026-06-12T10:16:30Z', payload: { amount: 500, draftId: 'draft_112' } },
+      { id: 'inc_2', type: 'NOTIFICATION_FAILED', status: 'DETECTED', correlationId: 'req-b3c4', relatedEntity: 'order_555', createdAt: '2026-06-12T11:30:00Z', updatedAt: '2026-06-12T11:30:00Z', payload: { channel: 'WHATSAPP', error: 'Rate limit exceeded' } },
+      { id: 'inc_3', type: 'WEBHOOK_TIMEOUT', status: 'ESCALATED', correlationId: 'req-d5e6', relatedEntity: 'draft_888', createdAt: '2026-06-11T14:20:00Z', updatedAt: '2026-06-11T15:00:00Z', payload: { gateway: 'razorpay' } }
+    ] as SystemIncident[],
+    reconciliations: [
+      { id: 'rec_1', orderId: 'ord_1001', draftId: 'draft_1001', source: 'CLIENT_CALLBACK', confirmedAt: '2026-06-12T09:00:00Z', razorpayOrderId: 'order_abc123', status: 'PROMOTED' },
+      { id: 'rec_2', orderId: 'ord_1002', draftId: 'draft_1002', source: 'WEBHOOK_RECOVERY', confirmedAt: '2026-06-12T09:45:00Z', razorpayOrderId: 'order_def456', status: 'PROMOTED' },
+      { id: 'rec_3', orderId: 'ord_1003', draftId: 'draft_1003', source: 'CLIENT_CALLBACK', confirmedAt: '2026-06-12T10:20:00Z', razorpayOrderId: 'order_ghi789', status: 'PROMOTED' },
+      { id: 'rec_4', orderId: 'ord_1004', draftId: 'draft_1004', source: 'WEBHOOK_RECOVERY', confirmedAt: '2026-06-12T11:05:00Z', razorpayOrderId: 'order_jkl012', status: 'PROMOTED' }
+    ] as ReconciliationEntry[],
+    outbox: {
+      retrying: [
+        { id: 'out_1', channel: 'WHATSAPP', recipient: '+919876543210', status: 'RETRY_PENDING', failureType: 'RETRYABLE', attempts: 2, maxAttempts: 5, nextRetryAt: '2026-06-12T12:20:00Z', lastError: '429 Too Many Requests', correlationId: 'req-x1', relatedEntity: 'ord_1001' },
+        { id: 'out_2', channel: 'EMAIL', recipient: 'customer@example.com', status: 'RETRY_PENDING', failureType: 'RETRYABLE', attempts: 1, maxAttempts: 5, nextRetryAt: '2026-06-12T12:05:00Z', lastError: 'ETIMEDOUT', correlationId: 'req-y2', relatedEntity: 'ord_1002' },
+        { id: 'out_3', channel: 'FCM', recipient: 'user_abc', status: 'PROCESSING', failureType: 'RETRYABLE', attempts: 3, maxAttempts: 5, lastError: 'messaging/internal-error', correlationId: 'req-z3', relatedEntity: 'ord_1003' }
+      ] as OutboxItem[],
+      deadLetter: [
+        { id: 'out_4', channel: 'FCM', recipient: 'user_xyz', status: 'DEAD_LETTER', failureType: 'NON_RETRYABLE', attempts: 1, maxAttempts: 5, lastError: 'messaging/invalid-registration-token', correlationId: 'req-w4', relatedEntity: 'ord_999' },
+      ] as OutboxItem[]
+    },
+    charts: {
+      reconciliationTrend: [
+        { time: '08:00', client: 10, webhook: 0 },
+        { time: '09:00', client: 15, webhook: 2 },
+        { time: '10:00', client: 8, webhook: 1 },
+        { time: '11:00', client: 22, webhook: 4 },
+        { time: '12:00', client: 12, webhook: 0 }
+      ],
+      outboxDistribution: [
+        { time: '08:00', pending: 2, processing: 0, dead: 0 },
+        { time: '09:00', pending: 5, processing: 1, dead: 0 },
+        { time: '10:00', pending: 1, processing: 0, dead: 1 },
+        { time: '11:00', pending: 8, processing: 2, dead: 1 },
+        { time: '12:00', pending: 3, processing: 1, dead: 1 }
+      ]
+    }
+  };
+};
+
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
+
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text);
+  toast.success('Copied to clipboard', { style: { background: '#333', color: '#fff' }});
+};
+
+const formatDate = (isoString: string) => {
+  return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+  let color = "bg-gray-100 text-gray-800 border-gray-200";
+  
+  if (['RESOLVED', 'VERIFIED', 'DELIVERED', 'PROMOTED'].includes(status)) color = "bg-green-100 text-green-800 border-green-200";
+  if (['DETECTED', 'RETRY_PENDING', 'PROCESSING', 'RUNNING'].includes(status)) color = "bg-amber-100 text-amber-800 border-amber-200";
+  if (['ESCALATED', 'DEAD_LETTER', 'FAILED', 'NON_RETRYABLE'].includes(status)) color = "bg-red-100 text-red-800 border-red-200";
+  if (['CLIENT_CALLBACK', 'WEBHOOK_RECOVERY'].includes(status)) color = "bg-blue-100 text-blue-800 border-blue-200";
+
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${color}`}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
+};
+
+const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "text-gray-900" }: any) => (
+  <motion.div 
+    whileHover={{ y: -2 }}
+    className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between"
+  >
+    <div className="flex justify-between items-start mb-4">
+      <div className={`p-2 rounded-lg bg-gray-50 ${colorClass}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      {trend && (
+        <span className={`text-xs font-medium ${trend > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+          {trend > 0 ? '+' : ''}{trend}%
+        </span>
+      )}
+    </div>
+    <div>
+      <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
+      <div className="flex items-baseline gap-2 mt-1">
+        <span className="text-2xl font-bold text-gray-900">{value}</span>
+      </div>
+      <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
+    </div>
+  </motion.div>
+);
+
+const ChannelIcon = ({ channel }: { channel: string }) => {
+  switch (channel) {
+    case 'EMAIL': return <Mail className="w-4 h-4 text-gray-500" />;
+    case 'WHATSAPP': return <MessageSquare className="w-4 h-4 text-green-600" />;
+    case 'FCM': return <Bell className="w-4 h-4 text-amber-500" />;
+    default: return <Activity className="w-4 h-4 text-gray-500" />;
+  }
+};
+
+// ============================================================================
+// MAIN PAGE
+// ============================================================================
+
+export default function SystemHealth() {
+  const data = useMockSystemHealth();
+  const [selectedIncident, setSelectedIncident] = useState<SystemIncident | null>(null);
+  const [incidentFilter, setIncidentFilter] = useState('ALL');
+
+  const filteredIncidents = data.incidents.filter(i => incidentFilter === 'ALL' || i.status === incidentFilter);
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900 pb-20">
+      
+      {/* 1. TOP HEADER */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-6 h-6 text-indigo-600" />
+              <h1 className="text-2xl font-bold text-gray-900">System Health</h1>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              Operational control surface for incidents, payment recovery, and notification resilience.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            System Operational
+            <span className="mx-2 text-gray-300">|</span>
+            <Clock className="w-4 h-4" />
+            Last updated: Just now
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        {/* 2. SUMMARY KPI ROW */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <MetricCard 
+            title="Open Incidents" value={data.summary.openIncidents} subtitle="Requires attention" 
+            icon={AlertTriangle} colorClass={data.summary.openIncidents > 0 ? "text-amber-500 bg-amber-50" : "text-gray-500"} 
+          />
+          <MetricCard 
+            title="Reconciled Today" value={data.summary.reconciliationsToday} subtitle="Successful payments" 
+            icon={CheckCircle} colorClass="text-green-600 bg-green-50" trend={12}
+          />
+          <MetricCard 
+            title="Pending Drafts" value={data.summary.pendingDrafts} subtitle="Awaiting webhook/client" 
+            icon={Clock} colorClass="text-blue-500 bg-blue-50" 
+          />
+          <MetricCard 
+            title="Notification Retries" value={data.summary.retryingNotifications} subtitle="In outbox queue" 
+            icon={RefreshCcw} colorClass="text-indigo-500 bg-indigo-50" 
+          />
+          <MetricCard 
+            title="Dead-Letter Items" value={data.summary.deadLetterNotifications} subtitle="Permanent failures" 
+            icon={FileWarning} colorClass={data.summary.deadLetterNotifications > 0 ? "text-red-500 bg-red-50" : "text-gray-500"} 
+          />
+          <MetricCard 
+            title="Delivery Rate" value={`${data.summary.deliverySuccessRate}%`} subtitle="Last 24 hours" 
+            icon={Activity} colorClass="text-emerald-500 bg-emerald-50" 
+          />
+        </section>
+
+        {/* 3. MAIN CONTENT GRID */}
+        
+        {/* A. INCIDENTS */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <ServerCrash className="w-5 h-5 text-gray-500" /> System Incidents
+              </h2>
+              <p className="text-sm text-gray-500">Anomalies detected across all backend services.</p>
+            </div>
+            <div className="flex gap-2">
+              {['ALL', 'DETECTED', 'ESCALATED', 'RESOLVED'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setIncidentFilter(filter)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    incidentFilter === filter 
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Type</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
+                  <th className="px-6 py-3 font-medium">Correlation ID</th>
+                  <th className="px-6 py-3 font-medium">Related Entity</th>
+                  <th className="px-6 py-3 font-medium">Updated At</th>
+                  <th className="px-6 py-3 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredIncidents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                      No incidents found for this filter.
+                    </td>
+                  </tr>
+                ) : filteredIncidents.map((inc) => (
+                  <tr key={inc.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedIncident(inc)}>
+                    <td className="px-6 py-4 font-medium text-gray-900">{inc.type.replace(/_/g, ' ')}</td>
+                    <td className="px-6 py-4"><StatusBadge status={inc.status} /></td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); copyToClipboard(inc.correlationId); }}
+                        className="flex items-center gap-1.5 text-gray-500 hover:text-indigo-600 transition-colors font-mono text-xs bg-gray-100 px-2 py-1 rounded"
+                      >
+                        {inc.correlationId.slice(0, 8)}... <Copy className="w-3 h-3" />
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">{inc.relatedEntity}</td>
+                    <td className="px-6 py-4 text-gray-500">{formatDate(inc.updatedAt)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <ArrowUpRight className="w-4 h-4 text-gray-400 inline" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* B. PAYMENT RECONCILIATION */}
+          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-gray-500" /> Payment Recovery
+              </h2>
+              <p className="text-sm text-gray-500">Webhook fallback vs Client promotions.</p>
+            </div>
+            
+            <div className="p-6 border-b border-gray-200 bg-gray-50/50">
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.charts.reconciliationTrend} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                    <RechartsTooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ stroke: '#E5E7EB', strokeWidth: 2 }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Line type="monotone" name="Client Callback" dataKey="client" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" name="Webhook Recovery" dataKey="webhook" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto flex-1">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 font-medium">Order / Draft</th>
+                    <th className="px-6 py-3 font-medium">Source</th>
+                    <th className="px-6 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {data.reconciliations.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-3">
+                        <div className="font-medium text-gray-900">{rec.orderId}</div>
+                        <div className="text-xs text-gray-400">{rec.draftId}</div>
+                      </td>
+                      <td className="px-6 py-3"><StatusBadge status={rec.source} /></td>
+                      <td className="px-6 py-3"><StatusBadge status={rec.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* C. NOTIFICATION OUTBOX */}
+          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Mail className="w-5 h-5 text-gray-500" /> Notification Outbox
+              </h2>
+              <p className="text-sm text-gray-500">Retry queues and dead-letter dropoffs.</p>
+            </div>
+
+            <div className="p-6 border-b border-gray-200 bg-gray-50/50">
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.charts.outboxDistribution} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                    <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Area type="monotone" name="Retrying" dataKey="pending" stackId="1" stroke="#F59E0B" fill="#FEF3C7" />
+                    <Area type="monotone" name="Processing" dataKey="processing" stackId="1" stroke="#3B82F6" fill="#DBEAFE" />
+                    <Area type="monotone" name="Dead Letter" dataKey="dead" stackId="1" stroke="#EF4444" fill="#FEE2E2" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto flex-1">
+              <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Active Retries
+              </div>
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <tbody className="divide-y divide-gray-200">
+                  {data.outbox.retrying.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <ChannelIcon channel={item.channel} />
+                          <span className="font-medium text-gray-900">{item.recipient}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
+                          {item.lastError}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="text-xs text-gray-500">Attempt {item.attempts}/{item.maxAttempts}</div>
+                        <div className="text-xs font-medium text-amber-600 mt-0.5">Next: {item.nextRetryAt ? formatDate(item.nextRetryAt) : 'Now'}</div>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <StatusBadge status={item.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {data.outbox.deadLetter.length > 0 && (
+                <>
+                  <div className="px-6 py-2 bg-red-50 border-y border-red-100 text-xs font-semibold text-red-800 uppercase tracking-wider flex justify-between">
+                    <span>Dead Letters</span>
+                    <span className="bg-red-200 text-red-900 px-2 py-0.5 rounded-full">{data.outbox.deadLetter.length}</span>
+                  </div>
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <tbody className="divide-y divide-gray-200">
+                      {data.outbox.deadLetter.map((item) => (
+                         <tr key={item.id} className="hover:bg-red-50/50">
+                         <td className="px-6 py-3">
+                           <div className="flex items-center gap-2">
+                             <ChannelIcon channel={item.channel} />
+                             <span className="font-medium text-gray-900">{item.recipient}</span>
+                           </div>
+                           <div className="text-xs text-red-500 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
+                             {item.lastError}
+                           </div>
+                         </td>
+                         <td className="px-6 py-3 text-right">
+                           <StatusBadge status={item.status} />
+                         </td>
+                       </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* 4. INCIDENT DETAIL DRAWER (MODAL) */}
+      <AnimatePresence>
+        {selectedIncident && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setSelectedIncident(null)}
+              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
+            />
+            <motion.div 
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Info className="w-5 h-5 text-indigo-500" /> Incident Details
+                </h3>
+                <button onClick={() => setSelectedIncident(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Overview</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Status</span>
+                      <StatusBadge status={selectedIncident.status} />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Type</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedIncident.type.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Created</span>
+                      <span className="text-sm text-gray-900">{new Date(selectedIncident.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Traceability</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-100">
+                    <div>
+                      <span className="text-sm text-gray-500 block mb-1">Correlation ID</span>
+                      <div className="flex items-center justify-between bg-white border border-gray-200 px-3 py-2 rounded-md">
+                        <span className="text-sm font-mono text-gray-600 truncate">{selectedIncident.correlationId}</span>
+                        <button onClick={() => copyToClipboard(selectedIncident.correlationId)} className="text-gray-400 hover:text-indigo-600">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500 block mb-1">Related Entity</span>
+                      <div className="flex items-center justify-between bg-white border border-gray-200 px-3 py-2 rounded-md">
+                        <span className="text-sm font-mono text-gray-600 truncate">{selectedIncident.relatedEntity}</span>
+                        <button onClick={() => copyToClipboard(selectedIncident.relatedEntity)} className="text-gray-400 hover:text-indigo-600">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">JSON Payload</h4>
+                  <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto border border-gray-800">
+                    <pre className="text-xs text-green-400 font-mono leading-relaxed">
+                      {JSON.stringify(selectedIncident.payload, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <button 
+                  onClick={() => toast('Read-only view. Actions are disabled.', { icon: 'ℹ️' })}
+                  className="w-full bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Acknowledge Incident
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

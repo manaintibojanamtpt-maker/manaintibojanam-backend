@@ -43,6 +43,7 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const CancellationPolicy = lazy(() => import('./pages/CancellationPolicy'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
@@ -207,6 +208,14 @@ const AppContent: React.FC = () => {
               element={
                 <ProtectedRoute adminOnly>
                   <AdminPanel />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/system-health" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <SystemHealth />
                 </ProtectedRoute>
               } 
             />

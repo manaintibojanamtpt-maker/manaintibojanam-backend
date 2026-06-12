@@ -92,6 +92,12 @@ service cloud.firestore {
       );
     }
 
+    match /order_drafts/{draftId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true; // Allowing updates if the user wants to amend the draft before payment
+    }
+
     match /adminSettings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
