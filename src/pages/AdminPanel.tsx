@@ -884,7 +884,7 @@ export default function AdminPanel() {
             initial={typeof window !== 'undefined' && window.innerWidth < 768 ? { x: -300 } : false}
             animate={{ x: 0 }}
             exit={{ x: -300 }}
-            className={`fixed md:sticky top-0 left-0 h-screen w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-[70] md:z-auto shadow-2xl md:shadow-none ${!isSidebarOpen && 'hidden'}`}
+            className={`fixed md:sticky top-0 left-0 h-screen w-80 bg-brand-bg dark:bg-dark-bg border-r border-gray-200 dark:border-white/5 flex flex-col z-[70] md:z-auto shadow-2xl md:shadow-none ${!isSidebarOpen && 'hidden'}`}
           >
             <div className="p-8 border-b border-gray-100 dark:border-gray-800">
               <h1 className="text-2xl font-black text-red-600 tracking-tighter leading-snug py-1">MANA INTI<br/>BOJANAM</h1>
