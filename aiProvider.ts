@@ -25,6 +25,11 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
 
   // 2. Strict Priority-Based Intent Classifier (Deterministic Router)
   
+  // Priority 0: Greetings
+  if (/^\s*(hi|hello|hey|greetings|sup|how are you|good morning|good evening)\s*$/i.test(lastMessage)) {
+    return { success: true, text: "Hi! Welcome to Mana Inti Bojanam. How can I help you today? You can ask me to show the menu, or ask about our delivery and timings." };
+  }
+
   // Priority 1: Store Hours & Status
   if (/(open|close|hours|time|timing|when do you)/i.test(lastMessage) && !/(schedule|tomorrow|later)/i.test(lastMessage)) {
     if (isStoreOpen) {
