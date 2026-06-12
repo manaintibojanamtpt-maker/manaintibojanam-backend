@@ -19,6 +19,7 @@ const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [fallbackCount, setFallbackCount] = useState(0);
   
   // Tool Execution State
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
@@ -73,7 +74,7 @@ const AIAssistant: React.FC = () => {
       if (call.name === 'searchMenu') {
         const { query, maxPrice, isVeg } = call.args;
         let results = menuItems.filter(item => item.isAvailable !== false);
-        if (query) {
+        if (query && typeof query === 'string') {
           const q = query.toLowerCase();
           results = results.filter(i => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q));
         }
@@ -168,6 +169,7 @@ const AIAssistant: React.FC = () => {
         Help users find dishes, manage their cart, and answer questions.
         Store Status: ${isStoreOpen ? 'OPEN' : 'CLOSED'}.
         Current Cart: ${cart.length} items (Total: ₹${total}).
+        Fallback Count: ${fallbackCount}.
         Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFromCart, clearCart.
         Rules: Keep answers brief, warm, and mobile-friendly. NEVER invent prices. Use tools for actions.
       `;
@@ -183,6 +185,12 @@ const AIAssistant: React.FC = () => {
       
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to fetch response");
+
+      if (data.isFallback) {
+        setFallbackCount(prev => prev + 1);
+      } else {
+        setFallbackCount(0);
+      }
 
       if (data.toolCall) {
         await executeTool(data.toolCall);

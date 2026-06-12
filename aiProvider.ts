@@ -15,15 +15,18 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
   const isStoreOpen = systemInstruction.includes("Store Status: OPEN");
   const cartMatch = systemInstruction.match(/Current Cart: (\d+) items/);
   const cartItemsCount = cartMatch ? parseInt(cartMatch[1], 10) : 0;
+  
+  const fallbackMatch = systemInstruction.match(/Fallback Count: (\d+)/);
+  const fallbackCount = fallbackMatch ? parseInt(fallbackMatch[1], 10) : 0;
 
   // Extract latest user message
   const lastMessage = contents[contents.length - 1]?.parts?.[0]?.text?.trim().toLowerCase() || "";
-  logger.info({ message: "AI Intent Routing", userMessage: lastMessage });
+  logger.info({ message: "AI Intent Routing", userMessage: lastMessage, fallbackCount });
 
   // 2. Strict Priority-Based Intent Classifier (Deterministic Router)
   
-  // Priority 1: Store Hours
-  if (/(open|close|hours|time|timing|when do you)/i.test(lastMessage)) {
+  // Priority 1: Store Hours & Status
+  if (/(open|close|hours|time|timing|when do you)/i.test(lastMessage) && !/(schedule|tomorrow|later)/i.test(lastMessage)) {
     if (isStoreOpen) {
       return { success: true, text: "Yes, we are currently OPEN and accepting orders! What would you like to have?" };
     } else {
@@ -31,12 +34,39 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
     }
   }
 
-  // Priority 2: Delivery Area
+  // Priority 2: Delivery Area / Serviceability
   if (/(deliver|area|location|kharadi|pincode|where|ship)/i.test(lastMessage)) {
     return { success: true, text: "We serve selected areas around Pune. Please enter your address at checkout to confirm exact delivery availability." };
   }
 
-  // Priority 2.5: Add to Cart Exact Match (Quantity Aware)
+  // Priority 3: Scheduling / Pre-orders
+  if (/(schedule|pre-order|tomorrow|later|specific time|can i order for)/i.test(lastMessage)) {
+    return { 
+      success: true, 
+      text: "Yes, you can schedule your order! Just add your items to the cart, proceed to checkout, and select 'Scheduled Delivery' to pick your preferred time slot." 
+    };
+  }
+
+  // Priority 4: Payment Queries
+  if (/(pay|cash|upi|card|cc|gpay|payment)/i.test(lastMessage)) {
+    return { success: true, text: "We accept UPI, Credit/Debit cards, Netbanking, and Wallets. Cash on Delivery may be available depending on your location." };
+  }
+
+  // Priority 5: Remove from Cart
+  if (/(remove|delete|drop|cancel).*(cart)?/i.test(lastMessage)) {
+    return { success: true, text: "You can remove items by tapping the trash icon next to the item in your cart.", toolCall: { name: 'getCartStatus', args: {} } };
+  }
+
+  // Priority 6: Checkout Guidance
+  if (/(checkout|pay now|how to order|proceed)/i.test(lastMessage)) {
+    if (cartItemsCount > 0) {
+      return { success: true, text: "You have items in your cart. Just tap the Cart icon to proceed to checkout!" };
+    } else {
+      return { success: true, text: "Your cart is empty. Browse the menu to add some delicious food first." };
+    }
+  }
+
+  // Priority 7: Add to Cart Exact Match (Quantity Aware)
   const addMatch = lastMessage.match(/(?:add|get|want|order)\s+(\d+)?\s*(.+)/i);
   if (addMatch) {
     const qty = addMatch[1] ? parseInt(addMatch[1], 10) : 1;
@@ -58,15 +88,17 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
         toolCall: { name: 'addToCart', args: { itemId: item.id, quantity: qty } },
         text
       };
+    } else if (matchedItems.length === 1 && !matchedItems[0].isAvailable) {
+      return { success: true, text: `Sorry, ${matchedItems[0].name} is currently unavailable. Would you like to try something else?` };
     }
   }
 
-  // Priority 3: Menu Search (Trigger frontend tool deterministically)
-  if (/(menu|show|what do you have|food|dishes)/i.test(lastMessage)) {
+  // Priority 8: Menu Search
+  if (/(menu|show|what do you have|food|dishes)/i.test(lastMessage) && !addMatch) {
     return { success: true, toolCall: { name: 'searchMenu', args: {} } };
   }
 
-  // Priority 3.5: Entity Match Search (If they mentioned specific food)
+  // Priority 9: Entity Match Search (If they mentioned specific food like "veg meals" or "biryani")
   const searchItems = brain.findMenuItems(lastMessage);
   if (searchItems.length > 0) {
     return { 
@@ -75,8 +107,8 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
     };
   }
 
-  // Priority 4: Cart Action
-  if (/(cart|total|checkout|basket|pay)/i.test(lastMessage)) {
+  // Priority 10: Cart Action
+  if (/(cart|total|basket)/i.test(lastMessage)) {
     if (cartItemsCount > 0) {
       return { success: true, toolCall: { name: 'getCartStatus', args: {} } };
     } else {
@@ -84,24 +116,32 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
     }
   }
 
-  // Priority 5: FAQ & Support
+  // Priority 11: FAQ & Support
   if (/(help|support|contact|call|phone|issue|problem)/i.test(lastMessage)) {
     return { success: true, text: "If you need immediate help with an order, please contact our support team from the menu or call our restaurant directly." };
   }
 
-  // Priority 6: Conversational Fallback (Local Ollama)
-  return await callOllama(lastMessage);
+  // Priority 12: Structured LLM Extraction (Ollama)
+  return await callOllama(lastMessage, fallbackCount);
 };
 
-// Fallback to local Ollama via HTTP API (Phase C: Schema-based extraction)
-async function callOllama(prompt: string) {
+// Fallback to local Ollama via HTTP API
+async function callOllama(prompt: string, fallbackCount: number) {
   const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const model = process.env.OLLAMA_MODEL || "llama3.2"; // lightweight model preference
+  const model = process.env.OLLAMA_MODEL || "llama3.2";
 
   const schema = {
     type: "object",
     properties: {
-      intent: { type: "string", enum: ["recommendation", "store_query", "conversational", "support", "cart_action"] },
+      intent: { 
+        type: "string", 
+        enum: [
+          "store_status", "store_timing", "delivery_query", "scheduling_query", 
+          "payment_query", "menu_search", "recommendation", "item_details", 
+          "cart_status", "add_to_cart", "remove_from_cart", "checkout_guidance", 
+          "support_query", "conversational_smalltalk"
+        ] 
+      },
       entities: {
         type: "object",
         properties: {
@@ -124,7 +164,7 @@ async function callOllama(prompt: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: model,
-        prompt: `You are a food ordering concierge for Mana Inti Bojanam. The user said: "${prompt}". Extract the intent. Keep the conversational_reply warm and under 2 sentences.`,
+        prompt: `You are a food ordering concierge for Mana Inti Bojanam. The user said: "${prompt}". Extract the intent into strict JSON. Keep the conversational_reply warm, professional, and under 2 sentences.`,
         format: schema,
         stream: false
       }),
@@ -141,32 +181,48 @@ async function callOllama(prompt: string) {
     if (data.response) {
       try {
         const parsed = JSON.parse(data.response);
+        logger.info({ message: "Ollama parsed", parsed });
         
-        // Map structured intent to tool calls
-        if (parsed.intent === "recommendation") {
-          let isVeg;
-          if (parsed.entities?.food_type === "veg") isVeg = true;
-          else if (parsed.entities?.food_type === "non-veg") isVeg = false;
+        // Map structured intent to tool calls or fallback logic
+        switch (parsed.intent) {
+          case "recommendation":
+          case "menu_search":
+            let isVeg;
+            if (parsed.entities?.food_type === "veg") isVeg = true;
+            else if (parsed.entities?.food_type === "non-veg") isVeg = false;
 
-          return {
-            success: true,
-            text: parsed.conversational_reply,
-            toolCall: { 
-              name: 'searchMenu', 
-              args: { 
-                query: parsed.entities?.query || "", 
-                maxPrice: parsed.entities?.max_price, 
-                isVeg 
-              } 
+            return {
+              success: true,
+              text: parsed.conversational_reply,
+              toolCall: { 
+                name: 'searchMenu', 
+                args: { query: parsed.entities?.query || "", maxPrice: parsed.entities?.max_price, isVeg } 
+              }
+            };
+          
+          case "add_to_cart":
+            if (parsed.entities?.query) {
+              const items = brain.findMenuItems(parsed.entities.query);
+              if (items.length === 1 && items[0].isAvailable) {
+                return { 
+                  success: true, 
+                  text: parsed.conversational_reply, 
+                  toolCall: { name: 'addToCart', args: { itemId: items[0].id, quantity: 1 } } 
+                };
+              }
             }
-          };
-        } else if (parsed.intent === "cart_action") {
-          return { success: true, text: parsed.conversational_reply, toolCall: { name: 'getCartStatus', args: {} } };
-        } else if (parsed.intent === "support") {
-          return { success: true, text: parsed.conversational_reply, toolCall: { name: 'escalateToSupport', args: {} } };
-        }
+            return { success: true, text: parsed.conversational_reply, toolCall: { name: 'searchMenu', args: { query: parsed.entities?.query || "" } } };
 
-        return { success: true, text: parsed.conversational_reply };
+          case "cart_status":
+          case "checkout_guidance":
+            return { success: true, text: parsed.conversational_reply, toolCall: { name: 'getCartStatus', args: {} } };
+
+          case "support_query":
+            return { success: true, text: parsed.conversational_reply, toolCall: { name: 'escalateToSupport', args: {} } };
+
+          default:
+            return { success: true, text: parsed.conversational_reply };
+        }
       } catch (parseErr) {
         logger.warn({ message: "Ollama response was not valid JSON", raw: data.response });
         return { success: true, text: data.response };
@@ -178,10 +234,19 @@ async function callOllama(prompt: string) {
   } catch (error: any) {
     logger.warn({ message: "Ollama fallback failed or timed out", error: error.message });
     
-    // Graceful Degradation
+    // Guided Degraded Fallback with Loop Prevention
+    if (fallbackCount >= 2) {
+      return { 
+        success: true, 
+        text: "I'm having a little trouble understanding. Here's our menu so you can see all our dishes directly!",
+        toolCall: { name: 'searchMenu', args: {} }
+      };
+    }
+
     return { 
       success: true, 
-      text: "I'm having trouble connecting to my brain right now, but you can still use the app! Try browsing the Menu or viewing your Cart." 
+      text: "I couldn't quite catch that. Are you looking for a specific dish, or do you have a question about delivery/store hours?",
+      isFallback: true
     };
   }
 }

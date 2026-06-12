@@ -87,12 +87,15 @@ export class StoreBrain {
       }
     }
 
-    // 2. Substring or Alias match
+    // 2. Substring or Alias or Type match
     const results: BrainMenuItem[] = [];
     for (const item of this.menu.values()) {
-      if (q === "veg" || q === "non-veg") {
-        if (item.type === q) results.push(item);
-      } else if (item.name.toLowerCase().includes(q) || item.aliases.some(a => q.includes(a) || a.includes(q))) {
+      if (
+        (q.includes("veg") && !q.includes("non-veg") && item.type === "veg") ||
+        (q.includes("non-veg") && item.type === "non-veg") ||
+        item.name.toLowerCase().includes(q) || 
+        item.aliases.some(a => q.includes(a) || a.includes(q))
+      ) {
         results.push(item);
       }
     }
