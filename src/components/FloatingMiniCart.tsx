@@ -53,8 +53,8 @@ const FloatingMiniCart: React.FC = () => {
 
   return (
     <div 
-      className="fixed left-1/2 -translate-x-1/2 z-[70] w-full max-w-[360px] px-4 pointer-events-none"
-      style={{ bottom: 'calc(80px + max(12px, env(safe-area-inset-bottom)))' }}
+      className="fixed left-1/2 -translate-x-1/2 z-[90] w-full max-w-[360px] px-4 pointer-events-none"
+      style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="relative flex flex-col items-center">
         
@@ -116,14 +116,14 @@ const FloatingMiniCart: React.FC = () => {
               borderRadius: snapState === 'collapsed' ? 32 : 24,
             }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="h-14 bg-black dark:bg-white text-white dark:text-black shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex items-center overflow-hidden cursor-pointer group"
+            className="h-14 bg-[#120D0A]/90 backdrop-blur-xl border border-white/10 text-white shadow-[0_12px_40px_-10px_rgba(0,0,0,0.5)] flex items-center overflow-hidden cursor-pointer group"
             onClick={toggleExpand}
           >
             <div className="flex items-center w-full px-4">
               {/* Icon & Count Badge */}
               <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
-                <ShoppingBag size={20} strokeWidth={2.5} className="text-orange-500" />
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-white dark:bg-black text-black dark:text-white text-[9px] font-black border border-orange-500/50">
+                <ShoppingBag size={20} strokeWidth={2.5} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 text-white text-[9px] font-black shadow-sm">
                   {itemCount}
                 </span>
               </div>
@@ -138,20 +138,20 @@ const FloatingMiniCart: React.FC = () => {
                     className="flex-1 flex items-center justify-between ml-3 overflow-hidden"
                   >
                     <div className="min-w-0 mr-4">
-                      <p className="text-[10px] font-black uppercase tracking-tighter opacity-50 leading-none mb-0.5">Subtotal</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-orange-200/60 leading-none mb-0.5">Subtotal</p>
                       <p className="text-sm font-black tracking-tight">{formatPrice(total)}</p>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); setSnapState(snapState === 'active' ? 'expanded' : 'active'); }}
-                        className="p-2 bg-white/10 dark:bg-black/10 rounded-full"
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
                       >
-                        {snapState === 'active' ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                        {snapState === 'active' ? <ChevronDown size={14} className="text-white/70" /> : <ChevronUp size={14} className="text-white/70" />}
                       </button>
                       <button 
                         onClick={handleCheckout}
-                        className="bg-orange-600 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-orange-600/20 active:scale-95 transition-transform"
+                        className="bg-gradient-to-br from-[#ff6b35] to-[#ff9f1c] hover:from-[#ff8a65] hover:to-[#ffb366] text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_8px_16px_-6px_rgba(255,107,53,0.5)] active:scale-95 transition-all"
                       >
                         Checkout
                         <ArrowRight size={12} strokeWidth={3} />

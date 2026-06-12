@@ -48,7 +48,7 @@ import {
   serverTimestamp,
   limit
 } from "firebase/firestore";
-import { getDb } from "../firebase";
+import { getDb } from '../lib/firebase-db';
 import { 
   fetchMenu, 
   updateOrderStatus as apiUpdateOrderStatus, 

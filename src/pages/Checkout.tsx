@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, ShieldCheck, X, ArrowRight } from 'lucide-react';
+import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
 import { useCheckoutState } from '../hooks/useCheckoutState';
 import { createOrder } from '../services/api';
 import LocationPicker from '../components/LocationPicker';
@@ -9,7 +9,7 @@ import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
@@ -458,6 +458,9 @@ const Checkout: React.FC = () => {
         };
 
         try {
+          if (typeof (window as any).Razorpay === 'undefined') {
+            throw new Error("Razorpay SDK failed to load. Please disable your adblocker or try Cash on Delivery.");
+          }
           const rzp = new (window as any).Razorpay(options);
           rzp.on('payment.failed', function (response: any) {
             toast.error('Payment failed: ' + response.error.description);
@@ -466,7 +469,7 @@ const Checkout: React.FC = () => {
           rzp.open();
         } catch (rzpErr: any) {
           console.error("Razorpay SDK Error:", rzpErr);
-          toast.error("Could not open payment window. Please check your phone/email.");
+          toast.error(rzpErr.message || "Could not open payment window. Please check your phone/email.");
           setIsPlacingOrder(false);
         }
         
@@ -567,7 +570,7 @@ const Checkout: React.FC = () => {
   const selectedSavedAddress = state.userProfile?.savedAddresses?.find(a => a.id === state.selectedAddressId);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-[calc(8rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 sticky top-0 z-30 shadow-sm border-b border-gray-100 dark:border-gray-800" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center px-4 py-4 gap-3">
@@ -869,7 +872,7 @@ const Checkout: React.FC = () => {
                   <input 
                     type="text" placeholder="e.g. Viswa Teja" 
                     autoComplete="off"
-                    className={`w-full p-3.5 rounded-xl border ${!state.name && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
+                    className={`w-full p-3.5 rounded-xl border ${!state.name && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-base font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
                     value={state.name || ''} 
                     onChange={(e) => state.setName(e.target.value)} 
                   />
@@ -880,7 +883,7 @@ const Checkout: React.FC = () => {
                   <input 
                     type="tel" placeholder="10-digit mobile number" 
                     autoComplete="off"
-                    className={`w-full p-3.5 rounded-xl border ${!state.phone && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
+                    className={`w-full p-3.5 rounded-xl border ${!state.phone && isPlacingOrder ? 'border-red-500 bg-red-50/50' : 'border-gray-100 dark:border-white/5'} bg-gray-50 dark:bg-gray-950 text-base font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500 transition-all`} 
                     value={state.phone || ''} 
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -990,7 +993,7 @@ const Checkout: React.FC = () => {
       {/* Trust Badges */}
       <div className="max-w-lg mx-auto px-6 pb-32 pt-4 space-y-4">
         <div className="flex items-center gap-4 bg-green-50/50 dark:bg-green-900/10 p-3 rounded-2xl border border-green-100 dark:border-green-900/20">
-          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">🛡️</div>
+          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0"><Lock size={20} className="text-green-600" /></div>
           <div><p className="text-sm font-black text-green-900 dark:text-green-400">100% Safe & Secure Payments</p><p className="text-[10px] font-bold text-green-600/80 uppercase tracking-widest">PCI DSS Compliant</p></div>
         </div>
         <div className="flex items-center gap-4 bg-orange-50/50 dark:bg-orange-900/10 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/20">
@@ -1000,7 +1003,7 @@ const Checkout: React.FC = () => {
       </div>
 
       {/* STICKY BOTTOM ACTION */}
-      <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 safe-area-bottom">
+      <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-lg mx-auto flex items-center gap-4">
            <div className="flex flex-col">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod.toUpperCase()}</p>
@@ -1009,7 +1012,7 @@ const Checkout: React.FC = () => {
            
            <div className="flex-1 relative">
              <motion.div
-               className="relative h-14 bg-gray-900 dark:bg-white rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center group"
+               className="relative h-14 rounded-2xl overflow-hidden flex items-center justify-center group shadow-[0_12px_24px_-12px_rgba(255,107,53,0.5)]"
              >
                <AnimatePresence mode="wait">
                  {isPlacingOrder ? (
@@ -1017,9 +1020,9 @@ const Checkout: React.FC = () => {
                      key="loading"
                      initial={{ opacity: 0 }}
                      animate={{ opacity: 1 }}
-                     className="flex items-center gap-3 text-white dark:text-black font-black uppercase tracking-widest text-xs"
+                     className="flex items-center gap-3 w-full h-full bg-gradient-to-br from-orange-500 to-red-600 text-white font-black uppercase tracking-widest text-xs justify-center"
                    >
-                     <div className="w-4 h-4 border-2 border-white/20 dark:border-black/20 border-t-white dark:border-t-black rounded-full animate-spin" />
+                     <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                      Securing Order...
                    </motion.div>
                  ) : (
@@ -1031,7 +1034,7 @@ const Checkout: React.FC = () => {
                         triggerHaptic('medium');
                         handlePlaceOrder();
                      }}
-                     className="w-full h-full text-white dark:text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-active:scale-95 transition-all"
+                     className="w-full h-full bg-gradient-to-br from-[#ff6b35] to-[#ff9f1c] hover:from-[#ff8a65] hover:to-[#ffb366] text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-active:scale-95 transition-all"
                    >
                      {hasSubscription ? 'Pay & Subscribe' : 'Place Order'}
                      <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />

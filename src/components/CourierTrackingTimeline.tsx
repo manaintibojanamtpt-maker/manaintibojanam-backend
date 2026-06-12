@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Order, CourierDispatch } from '../types';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { getCourierAdapter } from '../services/courierAdapters';
 

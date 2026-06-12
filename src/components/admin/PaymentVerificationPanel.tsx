@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, X } from 'lucide-react';
-import { getDb } from '../../firebase';
+import { getDb } from '../../lib/firebase-db';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { paymentVerificationService } from '../../services/PaymentVerificationService';
 import { updateOrderStatus, updatePaymentStatus } from '../../services/api';

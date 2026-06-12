@@ -36,6 +36,13 @@ export const useBiometrics = () => {
 
   useEffect(() => {
     checkStatus();
+    
+    // Safety fallback: ensure loading is always resolved even if checkStatus hangs mysteriously
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+    
+    return () => clearTimeout(safetyTimeout);
   }, [checkStatus]);
 
   /**
@@ -57,8 +64,15 @@ export const useBiometrics = () => {
       return success;
     } catch (e: any) {
       console.error('Enrollment error:', e);
-      toast.error(e.message || 'Could not enable biometrics.');
-      return false;
+      const errorMsg = e.message || 'Could not enable biometrics.';
+      if (errorMsg.includes('already registered')) {
+        setIsEnabled(true);
+        toast.success(errorMsg);
+        return true;
+      } else {
+        toast.error(errorMsg);
+        return false;
+      }
     } finally {
       setEnrollLoading(false);
     }
@@ -70,12 +84,18 @@ export const useBiometrics = () => {
   const authenticate = async () => {
     setLoading(true);
     try {
-      const result = await BiometricService.authenticate();
+      const isLocalUnlock = !!currentUser;
+      const result = await BiometricService.authenticate(isLocalUnlock);
       if (result) {
-        const userCredential = await signInWithCustomToken(auth, result.token);
-        if (userCredential.user) {
-          login(userCredential.user);
-          return true;
+        if (currentUser) {
+          return true; // Already logged in, just unlocking
+        }
+        if ('token' in result) {
+          const userCredential = await signInWithCustomToken(auth, result.token);
+          if (userCredential.user) {
+            login(userCredential.user);
+            return true;
+          }
         }
       }
     } catch (e) {

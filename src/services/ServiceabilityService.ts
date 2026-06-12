@@ -1,5 +1,5 @@
 import { doc, getDoc } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 
 export interface ServiceabilityResult {
   isServiceable: boolean;

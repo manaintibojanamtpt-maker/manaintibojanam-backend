@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, ArrowRight, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
+const logo = "/logo-v20-final.png";
 
 const Login: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');

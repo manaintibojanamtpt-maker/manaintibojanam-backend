@@ -18,8 +18,8 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.ts',
-        registerType: 'prompt', // We will manually prompt the user
-        injectRegister: false, // We'll handle registration manually in main.tsx
+        registerType: 'prompt', // Wait for the user to explicitly accept the update
+        injectRegister: 'auto',
         devOptions: {
           enabled: false // Disable in dev to prevent caching issues while coding
         },
@@ -43,9 +43,20 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       cssCodeSplit: false,
+      modulePreload: {
+        resolveDependencies: (_filename, deps, context) => {
+          if (context.hostType !== 'html') {
+            return deps;
+          }
+
+          return deps.filter((dependency) => {
+            return !/(admin-panel|checkout|my-orders|payment-success|order-success|subscription|vendor-motion)/.test(dependency);
+          });
+        },
+      },
       target: 'es2020',
       minify: 'esbuild',
-      brotliSize: true,
+      brotliSize: false,
       chunkSizeWarningLimit: 700,
       rollupOptions: {
         output: {
@@ -58,8 +69,6 @@ export default defineConfig(({ mode }) => {
               if (normalizedId.includes('/framer-motion/')) {
                 return 'vendor-motion';
               }
-              // Group everything else in node_modules into a single vendor chunk to prevent circular dependencies
-              return 'vendor';
             }
             if (normalizedId.includes('/src/pages/AdminPanel.tsx')) {
               return 'admin-panel';

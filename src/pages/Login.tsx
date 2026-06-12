@@ -16,6 +16,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import logo from '../assets/logo.webp';
 import { useBiometrics } from '../hooks/useBiometrics';
 import BiometricModal from '../components/BiometricModal';
+import { useAuth } from '../context/AuthContext';
 
 const AppleIcon = () => (
   <svg viewBox="0 0 384 512" width="20" height="20" fill="currentColor">
@@ -33,6 +34,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
+  const { currentUser } = useAuth();
 
   const { 
     isSupported: biometricsSupported, 
@@ -89,6 +91,17 @@ const Login: React.FC = () => {
     };
     handleRedirectResult();
   }, [navigate, redirectUrl]);
+
+  // Auto-redirect if user is already logged in
+  React.useEffect(() => {
+    if (currentUser && !bioLoading) {
+      if (biometricsSupported && !hasLocalBiometrics) {
+        setShowBiometricOnboarding(true);
+      } else {
+        navigate(redirectUrl);
+      }
+    }
+  }, [currentUser, bioLoading, biometricsSupported, hasLocalBiometrics, navigate, redirectUrl]);
 
 
   const handleBiometricLogin = async () => {

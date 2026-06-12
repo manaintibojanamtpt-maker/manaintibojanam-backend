@@ -6,14 +6,14 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0C0C0C",
-  "theme_color": "#0C0C0C",
+  "background_color": "#1A0505",
+  "theme_color": "#1A0505",
   "orientation": "portrait",
   "categories": ["food", "lifestyle"],
   "icons": [
     {
-      "src": "/logo-v20-final.png",
-      "sizes": "any",
+      "src": "/icon-v20-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },

@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 const DesktopSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userProfile, logout } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
@@ -62,21 +62,43 @@ const DesktopSidebar: React.FC = () => {
 
       <div className="p-6 space-y-4">
         <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 font-black">
-              {userProfile?.name?.charAt(0) || 'U'}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-black text-gray-900 dark:text-white truncate">{userProfile?.name || 'User'}</p>
-              <p className="text-[10px] font-bold text-gray-400 truncate">{userProfile?.phone || 'No Phone'}</p>
-            </div>
-          </div>
-          <button 
-            onClick={logout}
-            className="w-full flex items-center justify-center gap-2 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest"
-          >
-            <LogOut size={14} /> Logout
-          </button>
+          {currentUser ? (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 font-black">
+                  {userProfile?.name?.charAt(0) || 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-gray-900 dark:text-white truncate">{userProfile?.name || 'User'}</p>
+                  <p className="text-[10px] font-bold text-gray-400 truncate">{userProfile?.phone || currentUser.email || 'No Phone'}</p>
+                </div>
+              </div>
+              <button 
+                onClick={logout}
+                className="w-full flex items-center justify-center gap-2 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest"
+              >
+                <LogOut size={14} /> Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 font-black">
+                  <User size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-gray-900 dark:text-white truncate">Guest</p>
+                  <p className="text-[10px] font-bold text-gray-400 truncate">Sign in to sync</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate('/login')}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white hover:bg-red-700 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20"
+              >
+                <User size={14} /> Login
+              </button>
+            </>
+          )}
         </div>
       </div>
     </aside>

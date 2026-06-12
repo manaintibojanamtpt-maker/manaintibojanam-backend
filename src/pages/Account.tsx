@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { useBiometrics } from '../hooks/useBiometrics';
 import { Fingerprint } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -24,13 +24,11 @@ const Account: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-    } else {
+    if (currentUser) {
       // Wake up backend to avoid cold-start delays on Render
       fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
     }
-  }, [currentUser, navigate]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (userProfile && activeModal !== 'edit') {
@@ -38,8 +36,6 @@ const Account: React.FC = () => {
       setEditPhone(userProfile.phone || '');
     }
   }, [userProfile, activeModal]);
-
-  if (!currentUser) return null;
 
   const handleLogout = async () => {
     await logout();
@@ -147,28 +143,42 @@ const Account: React.FC = () => {
           <div className="flex items-center gap-5">
             <div className="relative">
               <div className="w-20 h-20 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-full flex items-center justify-center text-white font-black text-3xl shadow-[0_8px_32px_-8px_rgba(255,107,53,0.6)]">
-                {initial}
+                {currentUser ? initial : <User size={32} className="text-white" />}
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-[3px] border-dark-bg flex items-center justify-center">
-                <Sparkles size={10} className="text-white" />
-              </div>
+              {currentUser && (
+                <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-[3px] border-dark-bg flex items-center justify-center">
+                  <Sparkles size={10} className="text-white" />
+                </div>
+              )}
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-black tracking-tight">{name}</h2>
-              <p className="text-sm font-medium text-white/50">{userProfile?.phone || currentUser?.email}</p>
-              <button 
-                onClick={() => setActiveModal('edit')}
-                className="mt-2 text-[11px] font-black uppercase tracking-wider text-orange-400 flex items-center gap-1 active:scale-95 transition-transform"
-              >
-                Edit Profile <ChevronRight size={12} />
-              </button>
+              <h2 className="text-2xl font-black tracking-tight">{currentUser ? name : 'Guest'}</h2>
+              <p className="text-sm font-medium text-white/50">
+                {currentUser ? (userProfile?.phone || currentUser?.email) : 'Sign in to save your progress'}
+              </p>
+              {currentUser ? (
+                <button 
+                  onClick={() => setActiveModal('edit')}
+                  className="mt-2 text-[11px] font-black uppercase tracking-wider text-orange-400 flex items-center gap-1 active:scale-95 transition-transform"
+                >
+                  Edit Profile <ChevronRight size={12} />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="mt-2 text-[11px] font-black uppercase tracking-wider text-orange-400 flex items-center gap-1 active:scale-95 transition-transform"
+                >
+                  Sign In <ChevronRight size={12} />
+                </button>
+              )}
             </div>
           </div>
         </motion.div>
 
         {/* ORDERS */}
-        <motion.div variants={itemVariants} className="mb-6">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Food Orders</h3>
+        {currentUser && (
+          <motion.div variants={itemVariants} className="mb-6">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Food Orders</h3>
           <div className="bg-white/5 rounded-[1.75rem] border border-white/10 overflow-hidden backdrop-blur-md">
             <Link to="/my-orders" className="flex items-center gap-4 p-4 active:bg-white/10 transition-colors">
               <div className="w-10 h-10 rounded-2xl bg-orange-500/15 flex items-center justify-center text-orange-400">
@@ -193,8 +203,10 @@ const Account: React.FC = () => {
             </Link>
           </div>
         </motion.div>
+        )}
 
         {/* ACCOUNT */}
+        {currentUser && (
         <motion.div variants={itemVariants} className="mb-6">
           <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Account Settings</h3>
           <div className="bg-white/5 rounded-[1.75rem] border border-white/10 overflow-hidden backdrop-blur-md">
@@ -298,6 +310,7 @@ const Account: React.FC = () => {
             )}
           </div>
         </motion.div>
+        )}
 
         {/* SUPPORT */}
         <motion.div variants={itemVariants} className="mb-8">
@@ -327,13 +340,23 @@ const Account: React.FC = () => {
 
         {/* ACTION */}
         <motion.div variants={itemVariants}>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-4 rounded-[1.5rem] bg-white/5 border border-white/10 text-red-400 font-bold active:bg-red-500/10 active:border-red-500/30 transition-all active:scale-[0.98]"
-          >
-            <LogOut size={18} />
-            Log Out
-          </button>
+          {currentUser ? (
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 p-4 rounded-[1.5rem] bg-white/5 border border-white/10 text-red-400 font-bold active:bg-red-500/10 active:border-red-500/30 transition-all active:scale-[0.98]"
+            >
+              <LogOut size={18} />
+              Log Out
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')}
+              className="w-full flex items-center justify-center gap-2 p-4 rounded-[1.5rem] bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/20 active:bg-orange-600 transition-all active:scale-[0.98]"
+            >
+              <User size={18} />
+              Sign In to Continue
+            </button>
+          )}
           
           <p className="text-center mt-6 text-[10px] font-bold tracking-widest uppercase text-white/20">
             App Version 2.0.0

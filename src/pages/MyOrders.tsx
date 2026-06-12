@@ -13,7 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 import { addDoc, serverTimestamp, collection, doc, updateDoc } from "firebase/firestore";
-import { getDb } from "../firebase";
+import { getDb } from '../lib/firebase-db';
 import DigitalInvoice from "../components/DigitalInvoice";
 import { formatPrice, safeParseDate } from "../lib/utils";
 

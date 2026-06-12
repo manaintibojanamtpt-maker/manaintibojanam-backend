@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { app, getDb } from '../firebase';
+import { app } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { doc, setDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { emitNotchNotification } from '../components/NotchNotification';
 

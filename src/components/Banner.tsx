@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { useNavigate } from 'react-router-dom';
 
 interface BannerData {

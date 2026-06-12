@@ -6,6 +6,7 @@ interface BiometricModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onFallback?: () => void;
   type: 'onboarding' | 'unlock';
   biometryType?: any;
 }
@@ -14,6 +15,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
   isOpen, 
   onClose, 
   onConfirm, 
+  onFallback,
   type,
   biometryType 
 }) => {
@@ -100,7 +102,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
                   </button>
                 ) : (
                   <button
-                    onClick={() => window.location.href = '/login'}
+                    onClick={onFallback || (() => window.location.href = '/login')}
                     className="w-full rounded-2xl border border-zinc-800 py-4 font-bold text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
                     Use Another Method

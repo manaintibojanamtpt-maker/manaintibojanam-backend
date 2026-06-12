@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { doc, Timestamp } from 'firebase/firestore';
 import { paymentVerificationService } from '../services/PaymentVerificationService';
 import { updateOrderStatus, updatePaymentStatus } from '../services/api';

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Plus, Trash2, Edit2, ArrowLeft } from 'lucide-react';
 import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 

@@ -22,7 +22,7 @@
   --color-dark-card: #120D0A;
   --color-dark-surface: #0E0A08;
   --color-dark-text: #FFFAF3;
-  --color-dark-text-secondary: #B9ADA1;
+  --color-dark-text-secondary: #D0C4B5; /* Better contrast */
 
   /* HSL Tokens for dynamic layering */
   --mib-orange: 25, 100%, 50%;
@@ -112,11 +112,13 @@ body {
   input, textarea {
     user-select: text;
     -webkit-user-select: text;
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
   }
 
   input, button, textarea, select {
     line-height: 1.2;
     outline: none;
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -143,7 +145,7 @@ body {
     --mib-border: rgba(255, 255, 255, 0.05);
     --mib-border-strong: rgba(255, 170, 95, 0.12);
     --mib-text: #fffaf3;
-    --mib-muted: #b9ada1;
+    --mib-muted: #d0c4b5; /* Improved contrast */
     --mib-primary: #ff6b35;
     --mib-primary-2: #ff9f1c;
     --mib-success: #10b981;
@@ -206,7 +208,7 @@ body {
   }
 
   .btn-orange {
-    @apply bg-gradient-to-br from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white px-6 py-3 rounded-2xl font-bold text-sm uppercase tracking-wider shadow-md shadow-red-500/15 dark:shadow-red-600/20 active:scale-95 transition-all flex items-center justify-center gap-2;
+    @apply bg-gradient-to-br from-[#ff6b35] to-[#ff9f1c] hover:from-[#ff8a65] hover:to-[#ffb366] text-white px-6 py-3 rounded-2xl font-bold text-sm uppercase tracking-wider shadow-[0_12px_24px_-12px_rgba(255,107,53,0.5)] active:scale-95 transition-all flex items-center justify-center gap-2;
   }
 
   .btn-premium {
@@ -254,10 +256,10 @@ body {
 
   .mib-glass {
     background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
-      rgba(18, 13, 10, 0.86);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+      linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+      rgba(18, 13, 10, 0.90);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--mib-border);
     box-shadow: var(--mib-shadow-card);
   }
@@ -344,7 +346,7 @@ body {
 
   .mib-primary-action {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold uppercase tracking-wider text-white transition-all active:scale-95;
-    background: linear-gradient(135deg, var(--mib-primary), #f04438 52%, var(--mib-primary-2));
+    background: linear-gradient(135deg, var(--mib-primary), #ff9f1c 52%, var(--mib-primary-2));
     box-shadow: 0 12px 24px -12px rgba(255, 107, 53, 0.5);
   }
 

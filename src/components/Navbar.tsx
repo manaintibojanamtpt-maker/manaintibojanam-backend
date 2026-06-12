@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 
 import { isStoreOpenNow, getClosingSoonStatus } from '../lib/storeUtils';
 
@@ -99,7 +99,7 @@ const Navbar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className={`flex items-center w-full transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${isScrolled ? 'h-[48px] md:h-[56px]' : 'h-[56px] md:h-[68px]'}`}>
+      <div className={`flex items-center w-full transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${isScrolled ? 'h-[44px] md:h-[56px]' : 'h-[50px] md:h-[68px]'}`}>
         <div className="w-full px-3 md:px-6 flex justify-between items-center">
           
           {/* LOGO & LOCATION */}
@@ -120,7 +120,7 @@ const Navbar: React.FC = () => {
 
             {isHome && (
               <div 
-                className={`hidden lg:flex items-center gap-2 pl-4 border-l transition-all hover:opacity-100 group ${isScrolled || !isHome ? 'border-gray-100 dark:border-white/5' : 'border-white/10'}`}
+                className={`flex items-center gap-2 pl-3 md:pl-4 border-l transition-all hover:opacity-100 group ${isScrolled || !isHome ? 'border-gray-100 dark:border-white/5' : 'border-white/10'}`}
               >
                 <div className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 ${isScrolled || !isHome ? 'bg-red-50 text-red-600 shadow-inner' : 'bg-white/10 text-white backdrop-blur-md'}`}>
                   <MapPin size={14} />

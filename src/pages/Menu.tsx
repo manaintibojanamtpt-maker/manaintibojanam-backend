@@ -30,7 +30,7 @@ import { MenuItem } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import MenuItemCard from '../components/MenuItemCard';
 import Banner from '../components/Banner';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { collection, query, where, orderBy, onSnapshot, doc, limit, getDocs, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AiOrderingWidget from '../components/AiOrderingWidget';
 import HelpMeChooseModal from '../components/HelpMeChooseModal';
@@ -501,75 +501,7 @@ const Menu: React.FC = () => {
           style={{ transformOrigin: "top center", borderRadius: isCategorySheetOpen ? '2rem' : '0', overflow: 'hidden' }}
           className="min-h-screen bg-dark-bg pb-6 transition-all"
         >
-      {/* CATEGORY FAB (Swiggy Style) */}
-      <motion.button
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: showFAB ? 0 : 100, opacity: showFAB ? 1 : 0 }}
-        onClick={() => {
-          triggerHaptic('medium');
-          setIsCategorySheetOpen(true);
-        }}
-        className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-[60] bg-black text-white px-6 py-3.5 rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.5)] border border-white/10 flex items-center gap-2.5 active:scale-95 transition-all"
-      >
-        <MenuIcon size={18} strokeWidth={2.5} />
-        <span className="text-[11px] font-black uppercase tracking-[0.2em]">Browse Menu</span>
-      </motion.button>
 
-      {/* CATEGORY BOTTOM SHEET */}
-      <AnimatePresence>
-        {isCategorySheetOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCategorySheetOpen(false)}
-              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 inset-x-0 z-[101] bg-dark-bg border-t border-white/10 rounded-t-[3rem] p-8 max-h-[80vh] overflow-y-auto no-scrollbar"
-            >
-              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8" />
-              <div className="flex flex-col gap-6">
-                <button
-                  onClick={() => {
-                    setCategory('all');
-                    setIsCategorySheetOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="flex items-center justify-between group"
-                >
-                  <span className={cn("text-lg font-black tracking-tight transition-colors", category === 'all' ? "text-orange-500" : "text-white/60")}>Full Menu</span>
-                  <div className={cn("w-2 h-2 rounded-full", category === 'all' ? "bg-orange-500" : "bg-transparent")} />
-                </button>
-                {categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setCategory(cat.name);
-                      setIsCategorySheetOpen(false);
-                      const id = `category-${encodeURIComponent(cat.name)}`;
-                      const element = document.getElementById(id);
-                      if (element) {
-                        const y = element.getBoundingClientRect().top + window.scrollY - 160;
-                        window.scrollTo({ top: y, behavior: 'smooth' });
-                      }
-                    }}
-                    className="flex items-center justify-between group"
-                  >
-                    <span className={cn("text-lg font-black tracking-tight transition-colors", category === cat.name ? "text-orange-500" : "text-white/60")}>{cat.name}</span>
-                    <div className={cn("w-2 h-2 rounded-full", category === cat.name ? "bg-orange-500" : "bg-transparent")} />
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* ULTRA-COMPACT STICKY HEADER */}
       <div className="sticky top-0 z-40 border-b border-white/5 bg-dark-bg/95 backdrop-blur-xl mib-premium-sticky shadow-sm">

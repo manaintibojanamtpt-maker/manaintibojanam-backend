@@ -1,5 +1,5 @@
 import { collection, getDocs, writeBatch, doc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { getDb } from './firebase';
+import { getDb } from './lib/firebase-db';
 
 const categorySeedData = [
   { name: "Veg Thali (South Indian Meals)", image: "🍛", priority: 1, isActive: true, showOnHome: true },

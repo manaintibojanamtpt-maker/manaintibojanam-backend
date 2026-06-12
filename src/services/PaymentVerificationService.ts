@@ -4,7 +4,7 @@
  * Prevents "I have paid" fraud by requiring proof submission and admin verification
  */
 
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, getDoc, Timestamp } from 'firebase/firestore';
 
 export interface PaymentProofSubmission {

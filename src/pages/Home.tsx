@@ -34,9 +34,10 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
+import { useTimeBasedSection } from '../hooks/useTimeBasedSection';
 import toast from 'react-hot-toast';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import MenuItemCard from '../components/MenuItemCard';
 import Testimonials from '../components/Testimonials';
 import ReferralBanner from '../components/ReferralBanner';
@@ -56,6 +57,8 @@ const Home: React.FC = () => {
   ];
   const [trendingItems, setTrendingItems] = useState<any[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<any[]>([]);
+  const [timeBasedItems, setTimeBasedItems] = useState<any[]>([]);
+  const [specialItems, setSpecialItems] = useState<any[]>([]);
   const [orderAgainItems, setOrderAgainItems] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
@@ -75,6 +78,7 @@ const Home: React.FC = () => {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   const [deliveryState, setDeliveryState] = useDeliveryState();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const timeBasedHeader = useTimeBasedSection();
 
   useEffect(() => {
     if (!authLoading && currentUser && userProfile?.role === 'admin') {
@@ -99,9 +103,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     const locationStatus = localStorage.getItem('locationStatus');
-    if (!locationStatus) {
-      setTimeout(() => setShowLocationPrompt(true), 2000);
-    }
+    // Removed automatic location prompt to defer until user intent is shown
 
     const fetchCategories = async () => {
       try {
@@ -165,36 +167,69 @@ const Home: React.FC = () => {
       try {
         const menuRef = collection(getDb(), "menu");
         
-        // Trending: Most ordered (order by itemOrderCount desc)
-        const trendingQuery = query(menuRef, orderBy("itemOrderCount", "desc"), limit(6));
-        const trendingSnap = await getDocs(trendingQuery);
-        
-        // Recommended: High rating (order by rating desc)
-        const recommendedQuery = query(menuRef, orderBy("rating", "desc"), limit(10));
-        const recommendedSnap = await getDocs(recommendedQuery);
+        // Fetch ALL items to do complex client-side filtering 
+        const allItemsSnap = await getDocs(query(menuRef));
+        const allItems = allItemsSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
+          .filter(item => item.isAvailable !== false && item.isActive !== false);
 
-        // Budget Meals: Price <= 149
-        const budgetQuery = query(menuRef, where("price", "<=", 149), limit(6));
-        const budgetSnap = await getDocs(budgetQuery);
+        // 1. Trending Now (top 8 by orderCount)
+        const sortedByOrder = [...allItems].sort((a, b) => (b.itemOrderCount || 0) - (a.itemOrderCount || 0));
+        setTrendingItems(sortedByOrder.slice(0, 8));
 
-        if (trendingSnap.empty && recommendedSnap.empty) {
-          setTrendingItems([]);
-          setRecommendedItems([]);
-          setBudgetMeals([]);
-          setUsingFallback(false);
-        } else {
-          const tItems = trendingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((item: any) => item.isAvailable !== false && item.isActive !== false);
-          const rItems = recommendedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((item: any) => item.isAvailable !== false && item.isActive !== false);
-          const bItems = budgetSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((item: any) => item.isAvailable !== false && item.isActive !== false);
-          setTrendingItems(tItems);
-          setRecommendedItems(rItems);
-          setBudgetMeals(bItems);
-          setUsingFallback(false);
+        // 2. Today's Specials
+        let specials = allItems.filter(item => item.isSpecial === true);
+        if (specials.length === 0) {
+          specials = [...allItems].sort((a, b) => (b.prepCount || 0) - (a.prepCount || 0)).slice(0, 6);
         }
+        setSpecialItems(specials.slice(0, 6));
+
+        // 3. Recommended for You
+        let recommended: any[] = [];
+        const anyUserProfile = userProfile as any;
+        if (currentUser && anyUserProfile?.orderHistory && anyUserProfile.orderHistory.length > 0) {
+          const userCats = new Set<string>();
+          anyUserProfile.orderHistory.forEach((oh: any) => {
+             if (oh.categories) oh.categories.forEach((c: string) => userCats.add(c));
+          });
+          if (userCats.size > 0) {
+            recommended = allItems.filter(item => userCats.has(item.category));
+          }
+        }
+        if (recommended.length === 0) {
+          recommended = [...allItems].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        }
+        setRecommendedItems(recommended.slice(0, 9));
+
+        // 4. Time-based items
+        const hour = new Date().getHours();
+        let timeBased: any[] = [];
+        if (hour >= 5 && hour < 11.5) {
+          timeBased = allItems.filter(item => item.availability?.morning === true || ['Idli', 'Dosa', 'Breakfast Combos', 'Tiffins'].includes(item.category));
+        } else if (hour >= 11.5 && hour < 16) {
+          timeBased = allItems.filter(item => item.availability?.lunch === true || ['Meals', 'Biryani', 'Veg Meals'].includes(item.category));
+        } else if (hour >= 16 && hour < 22) {
+          timeBased = allItems.filter(item => item.availability?.evening === true || ['Starters', 'Biryani', 'Combos'].includes(item.category));
+        } else {
+          timeBased = allItems.filter(item => item.availability?.lateNight === true || ['Desserts', 'Biryani'].includes(item.category));
+        }
+        
+        if (timeBased.length === 0) {
+          timeBased = sortedByOrder.slice(0, 6);
+        }
+        setTimeBasedItems(timeBased.slice(0, 6));
+
+        // Budget Meals (Price <= 149)
+        const bItems = allItems.filter(item => item.price <= 149);
+        setBudgetMeals(bItems.slice(0, 6));
+
+        setUsingFallback(false);
       } catch (e) {
         console.error('Failed to load menu from database', e);
         setTrendingItems([]);
         setRecommendedItems([]);
+        setSpecialItems([]);
+        setTimeBasedItems([]);
         setBudgetMeals([]);
         setUsingFallback(false);
       } finally {
@@ -311,11 +346,11 @@ const Home: React.FC = () => {
         {/* ABSOLUTE TOP NAVIGATION */}
         <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-center" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Brand Logo */}
-          <div className="mib-glass flex items-center gap-2.5 rounded-2xl py-2 pl-2 pr-5 shadow-2xl border border-white/10">
-            <img src="/logo-v20-final.png" alt="MIB" className="w-9 h-9 object-contain rounded-full bg-black/40 p-1" />
-            <div className="flex flex-col -gap-0.5">
-              <span className="text-white font-black text-[9px] tracking-[0.3em] uppercase opacity-50 leading-none">Authentic</span>
-              <span className="text-white font-black text-[13px] tracking-tight leading-none mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>Mana Inti Bojanam</span>
+          <div className="mib-glass flex items-center gap-2.5 rounded-3xl py-2 pl-2 pr-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 backdrop-blur-xl bg-black/30">
+            <img src="/logo-v20-final.png" alt="MIB" className="w-10 h-10 object-contain rounded-full bg-black/60 p-1.5" />
+            <div className="flex flex-col -gap-1">
+              <span className="text-orange-300 font-black text-[9px] tracking-[0.3em] uppercase leading-none mb-0.5">Premium</span>
+              <span className="text-white font-black text-[14px] tracking-tight leading-none font-serif">Mana Inti Bojanam</span>
             </div>
           </div>
           
@@ -329,78 +364,79 @@ const Home: React.FC = () => {
         </div>
 
         {/* MAIN CONTENT LAYER - CENTERED FOR PREMIUM FEEL */}
-        <div className="relative z-20 flex flex-1 flex-col justify-center items-center text-center px-6 mt-12 mb-[120px]">
+        <div className="relative z-20 flex flex-1 flex-col justify-center items-center text-center px-6 pt-24 pb-8">
           
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2.5 mb-6 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full"
-          >
-            <Sparkles size={14} className="text-orange-500" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400">Authentic Andhra Home Kitchen</span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-[3.5rem] sm:text-7xl md:text-8xl font-black tracking-tight leading-[0.95] text-white drop-shadow-2xl mb-6"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            Freshly <br />
-            <span className="text-[5rem] sm:text-[7rem] md:text-[8rem] text-transparent bg-clip-text bg-gradient-to-r from-white via-orange-100 to-orange-400 drop-shadow-[0_0_20px_rgba(255,107,53,0.3)] block py-2" style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 400 }}>
-              Cooked
-            </span>
-            for You
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-white/70 font-bold text-base sm:text-lg leading-relaxed max-w-[28ch] mb-10"
-          >
-            Experience the soul of Telugu cuisine, prepared with love and zero preservatives.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex flex-col items-center gap-6 w-full max-w-sm"
-          >
-            <button
-              onClick={() => {
-                triggerHaptic('medium');
-                navigate('/menu');
-              }}
-              className="group relative flex items-center justify-center gap-3 bg-white text-black px-10 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
+          <div className="flex flex-col items-center justify-center flex-1 w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-orange-500/10 border border-orange-500/20 rounded-full"
             >
-              <span>Explore Menu</span>
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </motion.div>
-        </div>
+              <Sparkles size={14} className="text-orange-500 shrink-0" />
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-orange-400 whitespace-nowrap">Authentic Andhra Home Kitchen</span>
+            </motion.div>
 
-        {/* FLOATING STATS */}
-        <div className="absolute bottom-[100px] left-0 right-0 z-30 px-6">
-           <div className="flex justify-center gap-8">
-              <div className="text-center">
-                <p className="text-white font-black text-xl leading-none">4.9/5</p>
-                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Rating</p>
-              </div>
-              <div className="w-px h-8 bg-white/10"></div>
-              <div className="text-center">
-                <p className="text-white font-black text-xl leading-none">100%</p>
-                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Hygienic</p>
-              </div>
-              <div className="w-px h-8 bg-white/10"></div>
-              <div className="text-center">
-                <p className="text-white font-black text-xl leading-none">0</p>
-                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Chemicals</p>
-              </div>
-           </div>
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="text-[3.5rem] sm:text-7xl md:text-8xl font-black tracking-tight leading-[0.95] text-white drop-shadow-2xl mb-6 font-serif"
+            >
+              Freshly <br />
+              <span className="text-[5rem] sm:text-[7rem] md:text-[8rem] text-transparent bg-clip-text bg-gradient-to-r from-orange-200 via-orange-400 to-red-500 drop-shadow-[0_0_30px_rgba(255,107,53,0.5)] block py-2" style={{ fontFamily: "'Great Vibes', cursive", fontWeight: 400 }}>
+                Cooked
+              </span>
+              for You
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-white/70 font-bold text-base sm:text-lg leading-relaxed max-w-[28ch] mb-8"
+            >
+              Experience the soul of Telugu cuisine, prepared with love and zero preservatives.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-col items-center gap-6 w-full max-w-xs sm:max-w-sm mb-6"
+            >
+              <button
+                onClick={() => {
+                  triggerHaptic('medium');
+                  navigate('/menu');
+                }}
+                className="group relative flex items-center justify-center gap-3 bg-white text-black px-8 sm:px-10 py-4 sm:py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
+              >
+                <span>Explore Menu</span>
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </motion.div>
+          </div>
+
+          {/* FLOATING STATS - NO LONGER ABSOLUTE TO PREVENT OVERLAP */}
+          <div className="w-full mt-auto pb-4">
+             <div className="flex justify-center items-center gap-4 sm:gap-8 max-w-md mx-auto">
+                <div className="text-center flex-1">
+                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md">4.9/5</p>
+                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Rating</p>
+                </div>
+                <div className="w-px h-8 bg-white/20"></div>
+                <div className="text-center flex-1">
+                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md">100%</p>
+                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Hygienic</p>
+                </div>
+                <div className="w-px h-8 bg-white/20"></div>
+                <div className="text-center flex-1">
+                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md text-green-400">NO</p>
+                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Preservatives</p>
+                </div>
+             </div>
+          </div>
         </div>
       </section>
 
@@ -451,42 +487,48 @@ const Home: React.FC = () => {
 
       {/* DYNAMIC TIME-BASED SECTION */}
       <div className="w-full px-4 sm:px-6">
-        <section className="mb-14">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="inline-flex items-center gap-2 text-orange-500 mb-2">
-                <Timer size={16} strokeWidth={3} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Based on your clock</span>
+        {(loading || timeBasedItems.length > 0) && (
+          <section className="mb-14">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+              <div>
+                <div className="inline-flex items-center gap-2 text-orange-500 mb-2">
+                  <Timer size={16} strokeWidth={3} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Based on your clock</span>
+                </div>
+                <h2 className="text-3xl font-black text-white tracking-tight">
+                  {timeBasedHeader} Favorites
+                </h2>
               </div>
-              <h2 className="text-3xl font-black text-white tracking-tight">
-                {new Date().getHours() < 12 ? 'Morning Favorites' : (new Date().getHours() < 17 ? 'Lunch Comforts' : 'Evening Cravings')}
-              </h2>
+              <Link to="/menu" className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+                Explore More <ChevronRight size={16} />
+              </Link>
             </div>
-            <Link to="/menu" className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
-              Explore More <ChevronRight size={16} />
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendedItems.slice(0, 3).map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <MenuItemCard 
-                  item={item} 
-                  addToCart={addToCart}
-                  updateQuantity={updateQuantity}
-                  getItemQuantity={getItemQuantity}
-                  isStoreOpenNow={() => isStoreOpen}
-                />
-              </motion.div>
-            ))}
-          </div>
-        </section>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {loading ? (
+                Array(3).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
+              ) : (
+                timeBasedItems.slice(0, 3).map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <MenuItemCard 
+                      item={item} 
+                      addToCart={addToCart}
+                      updateQuantity={updateQuantity}
+                      getItemQuantity={getItemQuantity}
+                      isStoreOpenNow={() => isStoreOpen}
+                    />
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
         {/* PREMIUM MEAL SUBSCRIPTION BANNER */}
         <section className="mb-14">
@@ -515,17 +557,51 @@ const Home: React.FC = () => {
           </div>
         </section>
 
-        <section className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-200">
-              <Sparkles size={20} />
-            </span>
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Today's Specials</h2>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-orange-100/55">Freshly prepared comfort meals</p>
+        {/* TODAY'S SPECIALS */}
+        {(loading || specialItems.length > 0) && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-red-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
+                    <Sparkles size={22} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Today's Specials</h3>
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Freshly prepared comfort meals</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loading ? (
+                Array(3).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
+              ) : (
+                specialItems.slice(0, 6).map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.1 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                  >
+                    <MenuItemCard 
+                      item={item} 
+                      index={index}
+                      addToCart={addToCart}
+                      updateQuantity={updateQuantity}
+                      getItemQuantity={getItemQuantity}
+                      isStoreOpenNow={() => isStoreOpen}
+                      storeOpenTime={storeOpenTime}
+                    />
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ORDER AGAIN (IF LOGGED IN) */}
         {currentUser && orderAgainItems.length > 0 && (
@@ -559,88 +635,92 @@ const Home: React.FC = () => {
         )}
 
         {/* TRENDING NOW */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-orange-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
-                  <TrendingUp size={22} />
+        {(loading || trendingItems.length > 0) && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-orange-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
+                    <TrendingUp size={22} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Trending Now</h3>
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
                 </div>
               </div>
+              <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
+                View All <ChevronRight size={14} strokeWidth={3} />
+              </Link>
+            </div>
+            
+            {loading ? (
+              <HomeBentoSkeleton />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trendingItems.slice(0, 4).map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.1 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    className={cn(
+                      "relative",
+                      index === 0 && "sm:col-span-2 lg:col-span-2"
+                    )}
+                  >
+                    <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2.5 py-1 rounded-3xl shadow-xl border border-white/20">
+                      Highly Ordered
+                    </div>
+                    <MenuItemCard 
+                      item={item} 
+                      index={index}
+                      addToCart={addToCart}
+                      updateQuantity={updateQuantity}
+                      getItemQuantity={getItemQuantity}
+                      isStoreOpenNow={() => isStoreOpen}
+                      storeOpenTime={storeOpenTime}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* RECOMMENDED FOR YOU */}
+        {(loading || recommendedItems.length > 0) && (
+          <section className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-white/5 rounded-xl flex items-center justify-center text-orange-200 border border-white/10">
+                <Heart size={16} />
+              </div>
               <div>
-                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Trending Now</h3>
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
+                <h3 className="text-lg font-bold text-white tracking-tight">Recommended for You</h3>
+                <p className="text-[9px] font-bold text-white/45 uppercase tracking-wider">Homestyle flavors we think you'll love</p>
               </div>
             </div>
-            <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
-              View All <ChevronRight size={14} strokeWidth={3} />
-            </Link>
-          </div>
-          
-          {loading ? (
-            <HomeBentoSkeleton />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {trendingItems.slice(0, 4).map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.1 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className={cn(
-                    "relative",
-                    index === 0 && "sm:col-span-2 lg:col-span-2"
-                  )}
-                >
-                  <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2.5 py-1 rounded-3xl shadow-xl border border-white/20">
-                    Highly Ordered
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              {loading ? (
+                Array(4).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
+              ) : (
+                recommendedItems.map((item) => (
                   <MenuItemCard 
+                    key={`rec-${item.id}`}
                     item={item} 
-                    index={index}
                     addToCart={addToCart}
                     updateQuantity={updateQuantity}
                     getItemQuantity={getItemQuantity}
                     isStoreOpenNow={() => isStoreOpen}
                     storeOpenTime={storeOpenTime}
                   />
-                </motion.div>
-              ))}
+                ))
+              )}
             </div>
-          )}
-        </section>
-
-        {/* RECOMMENDED FOR YOU */}
-        <section className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-white/5 rounded-xl flex items-center justify-center text-orange-200 border border-white/10">
-              <Heart size={16} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Recommended for You</h3>
-              <p className="text-[9px] font-bold text-white/45 uppercase tracking-wider">Homestyle flavors we think you'll love</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-            {loading ? (
-              Array(4).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
-            ) : (
-              recommendedItems.map((item) => (
-                <MenuItemCard 
-                  key={`rec-${item.id}`}
-                  item={item} 
-                  addToCart={addToCart}
-                  updateQuantity={updateQuantity}
-                  getItemQuantity={getItemQuantity}
-                  isStoreOpenNow={() => isStoreOpen}
-                  storeOpenTime={storeOpenTime}
-                />
-              ))
-            )}
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* BUDGET FRIENDLY MEALS */}
         {budgetMeals.length > 0 && (

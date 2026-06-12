@@ -34,7 +34,11 @@ export class BiometricService {
       
       if (webSupported) {
         try {
-          const isUVPAA = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          // Add a timeout because isUserVerifyingPlatformAuthenticatorAvailable can hang on some mobile browsers
+          const isUVPAA = await Promise.race([
+            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 1500))
+          ]);
           console.log(`[BiometricService] UVPAA check: ${isUVPAA}`);
           return isUVPAA;
         } catch (e) {
@@ -203,7 +207,17 @@ export class BiometricService {
     } catch (e: any) {
       console.error('[BiometricService] Web enrollment error:', e);
       if (e.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+      
+      // Handle already registered authenticators gracefully
+      if (e.name === 'InvalidStateError' || (e.message && e.message.toLowerCase().includes('previously registered'))) {
+        // If it's already registered, we can just mark it as enabled locally!
+        await Preferences.set({ key: STORAGE_KEY_ENABLED, value: 'true' });
+        await Preferences.set({ key: STORAGE_KEY_USER_ID, value: userId });
+        throw new Error('This device is already registered for passkeys! We have re-enabled it for you.');
+      }
+
       if (e.name === 'NotAllowedError') throw new Error('Biometric permission was denied or cancelled.');
+      
       throw e;
     }
   }
@@ -211,16 +225,35 @@ export class BiometricService {
   /**
    * Authenticate using biometrics
    */
-  static async authenticate(): Promise<{ token: string } | null> {
+  static async authenticate(isLocalUnlock: boolean = false): Promise<{ token: string } | { local: true } | null> {
     if (Capacitor.isNativePlatform()) {
-      return this.authenticateNative();
+      return this.authenticateNative(isLocalUnlock);
     } else {
-      return this.authenticateWeb();
+      return this.authenticateWeb(isLocalUnlock);
     }
   }
 
-  private static async authenticateNative(): Promise<{ token: string } | null> {
+  private static async authenticateNative(isLocalUnlock?: boolean): Promise<{ token: string } | { local: true } | null> {
     try {
+      if (isLocalUnlock) {
+        try {
+          await NativeBiometric.verifyIdentity({
+            reason: "Verify your identity to unlock",
+            title: "App Locked",
+            subtitle: "Please verify to continue",
+            description: "Verify your identity to unlock Mana Inti Bojanam"
+          });
+          await Haptics.impact({ style: ImpactStyle.Light });
+          return { local: true };
+        } catch (e) {
+          console.warn("[BiometricService] NativeBiometric.verifyIdentity failed, falling back to getCredentials", e);
+          const credentials = await NativeBiometric.getCredentials({ server: SECRET_KEY });
+          if (!credentials) return null;
+          await Haptics.impact({ style: ImpactStyle.Light });
+          return { local: true };
+        }
+      }
+
       // 1. Get secret from hardware storage (triggers biometric prompt)
       const credentials = await NativeBiometric.getCredentials({
         server: SECRET_KEY,
@@ -246,8 +279,25 @@ export class BiometricService {
     }
   }
 
-  private static async authenticateWeb(): Promise<{ token: string } | null> {
+  private static async authenticateWeb(isLocalUnlock?: boolean): Promise<{ token: string } | { local: true } | null> {
     try {
+      if (isLocalUnlock && !!window.PublicKeyCredential) {
+        try {
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+          
+          const cred = await navigator.credentials.get({
+            publicKey: {
+              challenge: challenge,
+              userVerification: "required"
+            }
+          });
+          if (cred) return { local: true };
+        } catch (e) {
+          console.warn("[BiometricService] Local WebAuthn check failed, falling back to server", e);
+        }
+      }
+
       // 1. Get auth options
       const resp = await fetch(`${API_URL}/api/auth/generate-authentication-options`, {
         method: 'POST',

@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { isStoreOpenNow } from '../lib/storeUtils';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const AIAssistant: React.FC = () => {

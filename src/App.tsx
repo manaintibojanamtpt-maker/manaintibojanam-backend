@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from './assets/logo.webp';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useFirestoreConnection, forceOnline } from './firebase';
+import { useFirestoreConnection, forceOnline } from './lib/firebase-db';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -47,11 +47,11 @@ const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
   if (!currentUser) return <Navigate to="/login" />;
   if (adminOnly) {
     if (!userProfile) {
-      return <div className="min-h-screen flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+      return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
     }
     if (userProfile.role !== 'admin') return <Navigate to="/" />;
   }
@@ -59,43 +59,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
   return <>{children}</>;
 };
 
-const SplashScreen: React.FC<{ onComplete: () => void; isReady: boolean }> = ({ onComplete, isReady }) => {
-  useEffect(() => {
-    if (!isReady) return;
-    const timer = setTimeout(onComplete, 200); // Reduced min branding time for snappier feel
-    return () => clearTimeout(timer);
-  }, [isReady, onComplete]);
-
-  return (
-    <motion.div 
-      initial={{ opacity: 1 }} 
-      exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
-      transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-      className="fixed inset-0 z-[99999] bg-[#0A0A0A] flex flex-col items-center justify-center pointer-events-none transform-gpu"
-    >
-      <div className="absolute inset-0 mib-hero-grain opacity-20 pointer-events-none" />
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0 }} 
-        animate={{ scale: 1, opacity: 1 }} 
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="flex flex-col items-center"
-      >
-        <div className="relative mb-4">
-          <div className="absolute inset-0 bg-orange-500/10 blur-3xl rounded-full scale-150"></div>
-          <img 
-            src="/logo-v20-final.png" 
-            alt="Mana Inti Bojanam" 
-            className="w-48 h-48 relative z-10 rounded-full shadow-[0_0_50px_rgba(255,122,0,0.3)] border border-white/10 object-cover" 
-            loading="eager" 
-          />
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
+// Native HTML splash screen is used instead of React-based one to prevent double splash
 
 const AppContent: React.FC = () => {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, logout } = useAuth();
   const { connected, loading: firestoreLoading, retry } = useFirestoreConnection();
   const { fcmInitialized, initializing: fcmInitializing } = useFCMInitialization();
 
@@ -103,13 +70,42 @@ const AppContent: React.FC = () => {
   const [debugStatus, setDebugStatus] = React.useState<string>("");
 
   useEffect(() => {
-    // Remove initial loader from index.html
-    const loader = document.getElementById('initial-loader');
-    if (loader) {
-      loader.style.opacity = '0';
-      setTimeout(() => loader.remove(), 500);
-    }
+    const handleGlobalError = (event: ErrorEvent) => {
+      fetch('/api/client-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: event.message, info: event.error?.stack })
+      }).catch(() => {});
+    };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      fetch('/api/client-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Unhandled Rejection', info: String(event.reason) })
+      }).catch(() => {});
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
+
+  useEffect(() => {
+    // Only remove the native splash screen once the app is fully authenticated/loaded
+    if (!authLoading) {
+      // Add a tiny delay to ensure the initial React render is painted
+      setTimeout(() => {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          loader.style.opacity = '0';
+          setTimeout(() => loader.remove(), 500);
+        }
+      }, 300);
+    }
+  }, [authLoading]);
 
   useEffect(() => {
     if (!authLoading && connected) {
@@ -124,7 +120,7 @@ const AppContent: React.FC = () => {
   }, [authLoading, connected]);
 
   // Biometric Lock Logic
-  const { isEnabled: biometricsEnabled, authenticate: bioAuth, isSupported: bioSupported, biometryType } = useBiometrics();
+  const { isEnabled: biometricsEnabled, authenticate: bioAuth, disable: bioDisable, isSupported: bioSupported, biometryType } = useBiometrics();
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [hasCheckedLock, setHasCheckedLock] = useState(false);
 
@@ -140,6 +136,12 @@ const AppContent: React.FC = () => {
     if (success) {
       setIsAppLocked(false);
     }
+  };
+
+  const handleFallback = async () => {
+    // If the user can't unlock with biometrics, clear the lock and force re-login
+    setIsAppLocked(false);
+    await logout();
   };
 
   const GlobalLoading = () => (
@@ -185,17 +187,11 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const [showSplash, setShowSplash] = useState(true);
-  
-  // Data is ready when Auth and Firestore stop loading
-  const isDataReady = !authLoading && !firestoreLoading;
-
+  // Data is ready when Auth stops loading (Don't block on Firestore connection)
+  const isDataReady = !authLoading;
 
   return (
     <Router>
-      <AnimatePresence>
-        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} isReady={isDataReady} />}
-      </AnimatePresence>
       <div className="flex-1 flex flex-col w-full h-full bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
         {/* Connectivity Status (Native Style) */}
         <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
@@ -266,6 +262,7 @@ const AppContent: React.FC = () => {
           isOpen={isAppLocked}
           onClose={() => {}} // User must unlock
           onConfirm={handleUnlock}
+          onFallback={handleFallback}
           type="unlock"
           biometryType={biometryType}
         />
@@ -352,6 +349,14 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    const nativeSplash = document.getElementById('mib-splash-screen');
+    if (nativeSplash) {
+      nativeSplash.classList.add('hide');
+      setTimeout(() => nativeSplash.remove(), 1000);
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

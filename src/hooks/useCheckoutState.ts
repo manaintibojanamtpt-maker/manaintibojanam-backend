@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { onSnapshot, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { calculateDeliveryFee as apiCalculateDeliveryFee } from '../services/api';
 
 export function useCheckoutState() {
@@ -73,9 +73,9 @@ export function useCheckoutState() {
       if (!phone) setPhone(userProfile.phone || '');
       if (!email) setEmail(userProfile.email || currentUser.email || '');
 
-      if (userProfile.preferences?.lastPaymentMethod) {
-        setPaymentMethod(userProfile.preferences.lastPaymentMethod);
-      }
+      // if (userProfile.preferences?.lastPaymentMethod) {
+      //   setPaymentMethod(userProfile.preferences.lastPaymentMethod);
+      // }
 
       if (deliveryState.selectedAddress) {
         setSelectedAddressId(deliveryState.selectedAddress.id);
@@ -103,11 +103,11 @@ export function useCheckoutState() {
 
   const { calculatedFee, cheapestPartner, displayFee } = useMemo(() => {
     try {
-      if (orderType === 'pickup' || !deliveryState.selectedAddress?.distanceKm) {
+      if (orderType === 'pickup') {
         return { calculatedFee: 0, cheapestPartner: null, displayFee: 0 };
       }
       
-      let fee = deliveryState.selectedAddress.deliveryFee ?? (globalDeliveryFee !== undefined && globalDeliveryFee !== null ? Number(globalDeliveryFee) : 30);
+      let fee = deliveryState.selectedAddress?.deliveryFee ?? (globalDeliveryFee !== undefined && globalDeliveryFee !== null ? Number(globalDeliveryFee) : 30);
       let appliedModifiers = [];
       
       const hour = new Date().getHours();
@@ -122,17 +122,9 @@ export function useCheckoutState() {
         if (surgeMultiplier > 1) appliedModifiers.push(`surge(${surgeMultiplier.toFixed(1)}x)`);
       }
 
-      const distanceKm = deliveryState.selectedAddress.distanceKm;
-      const rapido = 25 + distanceKm * 8;
-      const porter = 30 + distanceKm * 10;
-      const uber = 35 + distanceKm * 12;
-      
-      const costs = { rapido, porter, uber };
-      const cheapest = Object.entries(costs).sort((a, b) => a[1] - b[1])[0];
-      const partnerCost = cheapest ? cheapest[1] : 0;
-
-      const margin = 10;
-      const finalDeliveryFee = Math.max(fee, partnerCost + margin, 30);
+      const finalDeliveryFee = Math.max(fee, 30);
+      const partnerCost = 0;
+      const cheapest = ['native'];
       
       const safeFee = Math.round(finalDeliveryFee);
       const cappedDisplayFee = Math.min(safeFee, maxDeliveryFeeCap);

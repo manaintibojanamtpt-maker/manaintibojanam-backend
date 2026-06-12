@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { updateOrderStatus, updatePaymentStatus } from '../services/api';

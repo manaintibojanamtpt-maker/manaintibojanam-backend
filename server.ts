@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { createHmac } from "crypto";
 import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, initializeFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import Razorpay from "razorpay";
@@ -16,6 +16,39 @@ import {
   verifyAuthenticationResponse 
 } from "@simplewebauthn/server";
 import base64url from "base64url";
+import winston from "winston";
+
+// ================= LOGGING SETUP =================
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console()
+  ]
+});
+
+// Write to system_incidents safely
+const writeSystemIncident = async (type: string, status: string, payload: any, correlationId?: string) => {
+  try {
+    if (!_db) return;
+    const { randomUUID } = await import('crypto');
+    await _db.collection("system_incidents").doc(randomUUID()).set({
+      type,
+      status,
+      payload,
+      correlationId: correlationId || "none",
+      retryCount: 0,
+      maxRetries: 3,
+      createdAt: new Date().toISOString()
+    });
+    logger.info({ message: "System incident logged", type, status, correlationId });
+  } catch (err: any) {
+    logger.error({ message: "Failed to write system incident", err: err.message, correlationId });
+  }
+};
 
 // ================= CONFIG =================
 const PORT = Number(process.env.PORT) || 8080;
@@ -37,6 +70,7 @@ const configProjectId = firebaseConfig.projectId;
 // Prioritize config project ID as it's the one explicitly provisioned for the app
 const projectId = configProjectId || ambientProjectId || 'mana-inti-bojanam-pune-492610'; 
 const databaseId = firebaseConfig.firestoreDatabaseId || "ai-studio-3efd2980-c2f3-4286-8dff-afeca044d855"; 
+const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 
 console.log("--- Firebase Admin Initialization ---");
 console.log(`Ambient Project ID: ${ambientProjectId || 'not set'}`);
@@ -89,7 +123,9 @@ try {
 let _db: any;
 const initFirestoreInstance = (app: any, dbId: string) => {
   try {
-    const dbInstance = (dbId && dbId !== "(default)") ? getFirestore(app, dbId) : getFirestore(app);
+    const dbInstance = (dbId && dbId !== "(default)")
+      ? initializeFirestore(app, { preferRest: true }, dbId)
+      : initializeFirestore(app, { preferRest: true });
     console.log(`✅ [Firestore Admin] Initialized instance for database: ${dbId || '(default)'}`);
     return dbInstance;
   } catch (err: any) {
@@ -112,7 +148,7 @@ export const db = new Proxy({} as any, {
         // Try named database first if available
         if (databaseId && databaseId !== "(default)") {
           try {
-            _db = getFirestore(app, databaseId);
+            _db = initializeFirestore(app, { preferRest: true }, databaseId);
             console.log(`✅ [Firestore Proxy] Emergency init successful with named database: ${databaseId}`);
           } catch (e) {
             _db = getFirestore(app);
@@ -150,6 +186,30 @@ const logConnection = (msg: string) => {
   if (connectionLogs.length > 100) connectionLogs.shift();
 };
 
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs = FIRESTORE_READ_TIMEOUT_MS
+): Promise<T> => {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
+const isFirestorePermissionError = (err: any) =>
+  err?.code === 7 || String(err?.message || '').includes("PERMISSION_DENIED");
+
+const isFirestoreNotFoundError = (err: any) =>
+  err?.code === 5 || String(err?.message || '').includes("NOT_FOUND");
+
 // Test connection and handle fallback
 const verifyConnection = async () => {
   const testConnection = async (dbInstance: any, label: string) => {
@@ -177,7 +237,7 @@ const verifyConnection = async () => {
       
       // Try named database
       if (databaseId && databaseId !== "(default)") {
-        const dbNamed = getFirestore(app, databaseId);
+        const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
         if (await testConnection(dbNamed, "Ambient Proj + Named DB")) {
           _db = dbNamed; appAdmin = app; return;
         }
@@ -199,7 +259,7 @@ const verifyConnection = async () => {
       
       // Try named database
       if (databaseId && databaseId !== "(default)") {
-        const dbNamed = getFirestore(app, databaseId);
+        const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
         if (await testConnection(dbNamed, "Config Proj + Named DB")) {
           _db = dbNamed; appAdmin = app; return;
         }
@@ -219,7 +279,7 @@ const verifyConnection = async () => {
     const app = initializeApp({}, `verify-pure-ambient-${Date.now()}`);
     
     if (databaseId && databaseId !== "(default)") {
-      const dbNamed = getFirestore(app, databaseId);
+      const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
       if (await testConnection(dbNamed, "Pure Ambient + Named DB")) {
         _db = dbNamed; appAdmin = app; return;
       }
@@ -242,7 +302,7 @@ const verifyConnection = async () => {
       _db = dbDefault; appAdmin = app; return;
     }
     if (databaseId && databaseId !== "(default)") {
-      const dbNamed = getFirestore(app, databaseId);
+      const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
       if (await testConnection(dbNamed, `Existing App (${app.name}) + Named DB`)) {
         _db = dbNamed; appAdmin = app; return;
       }
@@ -282,7 +342,57 @@ const app = express();
 
 // ================= MIDDLEWARE =================
 app.use(cors());
+
+// Webhook Scaffold (Must be before bodyParser.json)
+app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), async (req, res) => {
+  const correlationId = req.headers["x-correlation-id"] || "webhook-" + Date.now();
+  const signature = req.headers["x-razorpay-signature"];
+  const eventId = req.headers["x-razorpay-event-id"] || "unknown";
+
+  try {
+    if (!signature || !isRazorpayConfigured) {
+      return res.status(400).send("Invalid signature or configuration");
+    }
+
+    const hmac = createHmac("sha256", RAZORPAY_KEY_SECRET);
+    hmac.update(req.body); // req.body is a Buffer here
+    const generatedSignature = hmac.digest("hex");
+
+    if (generatedSignature !== signature) {
+      logger.error({ message: "Webhook signature mismatch", eventId, correlationId });
+      return res.status(400).send("Signature mismatch");
+    }
+
+    const payload = JSON.parse(req.body.toString());
+    
+    // DETECT-ONLY MODE
+    logger.info({ message: "Razorpay Webhook Received", eventId, type: payload.event, correlationId });
+    await writeSystemIncident("WEBHOOK_RECEIVED", "DETECTED", {
+      event: payload.event,
+      eventId,
+      payload: payload.payload
+    }, correlationId as string);
+
+    res.status(200).json({ status: "ok" });
+  } catch (err: any) {
+    logger.error({ message: "Webhook processing error", err: err.message, correlationId });
+    res.status(500).send("Webhook error");
+  }
+});
+
 app.use(bodyParser.json());
+
+// Correlation ID Middleware
+app.use(async (req: any, res, next) => {
+  let correlationId = req.headers["x-correlation-id"];
+  if (!correlationId) {
+    const { randomUUID } = await import('crypto');
+    correlationId = randomUUID();
+  }
+  req.correlationId = correlationId;
+  res.setHeader("X-Correlation-ID", correlationId as string);
+  next();
+});
 
 // SERVER TIME
 app.get("/api/server-time", (req, res) => {
@@ -358,12 +468,30 @@ app.get("/api/firestore-debug", async (_, res) => {
 // FIRESTORE STATUS (OLD)
 app.get("/api/firestore-status", async (_, res) => {
   try {
-    const collections = await db.listCollections();
+    const settingsDoc: any = await withTimeout(
+      db.collection("adminSettings").doc("global").get(),
+      "firestore-status adminSettings/global read"
+    );
+    const menuSnapshot: any = await withTimeout(
+      db.collection("menu").limit(1).get(),
+      "firestore-status menu limit(1) read"
+    );
+
     res.json({
       success: true,
       databaseId: db.databaseId || "(default)",
-      collections: collections.map(c => c.id),
-      projectId: projectId
+      projectId: projectId,
+      checks: {
+        adminSettingsGlobal: {
+          ok: true,
+          exists: settingsDoc.exists,
+        },
+        menuLimit1: {
+          ok: true,
+          size: menuSnapshot.size,
+          empty: menuSnapshot.empty,
+        },
+      },
     });
   } catch (err: any) {
     res.status(500).json({
@@ -383,6 +511,19 @@ const sanitizeData = (data: any): any => {
     return value === undefined ? null : value;
   }));
 };
+
+// Client Errors Endpoint
+app.post("/api/client-errors", (req: any, res) => {
+  const { error, info } = req.body;
+  logger.error({ message: "Client React Error", error, info, correlationId: req.correlationId });
+  res.json({ status: "logged" });
+});
+
+// Global Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error({ message: "Unhandled Express Error", err: err.message, stack: err.stack, correlationId: req.correlationId });
+  res.status(500).json({ success: false, error: "Internal Server Error" });
+});
 
 const seedMenu = async () => {
   const snapshot = await db.collection("menu").limit(1).get();
@@ -449,7 +590,10 @@ const getSettings = async () => {
         }
       };
     }
-    const doc = await db.collection("adminSettings").doc("global").get();
+    const doc: any = await withTimeout(
+      db.collection("adminSettings").doc("global").get(),
+      "adminSettings/global read"
+    );
     if (!doc.exists) {
       const defaultSettings = {
         gst: 5,
@@ -467,7 +611,10 @@ const getSettings = async () => {
       };
       // Don't block on setting defaults if it fails
       try {
-        await db.collection("adminSettings").doc("global").set(defaultSettings);
+        await withTimeout(
+          db.collection("adminSettings").doc("global").set(defaultSettings),
+          "adminSettings/global default write"
+        );
       } catch (e: any) {
         console.warn("⚠️ Failed to save default settings (might be read-only):", e.message);
       }
@@ -476,7 +623,7 @@ const getSettings = async () => {
     return doc.data();
   } catch (err: any) {
     // If it's code 5 (NOT_FOUND), it just means the document doesn't exist yet
-    if (err.code === 5 || err.message?.includes("NOT_FOUND")) {
+    if (isFirestoreNotFoundError(err)) {
       const defaultSettings = {
         gst: 5,
         packingFee: 10,
@@ -495,7 +642,7 @@ const getSettings = async () => {
     }
 
     // Handle PERMISSION_DENIED
-    if (err.code === 7 || err.message?.includes("PERMISSION_DENIED")) {
+    if (isFirestorePermissionError(err)) {
       console.warn("⚠️ [Firestore Admin] Permission denied in getSettings.");
       
       // Return defaults instead of crashing
@@ -1119,9 +1266,11 @@ app.post("/api/create-razorpay-order", async (req, res) => {
       receipt: `receipt_${Date.now()}`,
     };
     const order = await razorpay.orders.create(options);
+    logger.info({ message: "Razorpay order created", amount, orderId: order.id, correlationId: (req as any).correlationId });
     res.json({ success: true, order, key: RAZORPAY_KEY_ID });
   } catch (err: any) {
-    console.error("Razorpay Order Creation Error:", err);
+    const correlationId = (req as any).correlationId;
+    logger.error({ message: "Razorpay Order Creation Error", err: err.error?.description || err.message, correlationId });
     const errorMessage = err.error?.description || err.message || "Failed to create Razorpay order";
     res.status(500).json({ 
       success: false, 
@@ -1184,12 +1333,46 @@ app.post("/api/admin/notify-registration", async (req, res) => {
 // GET MENU
 app.get("/api/menu", async (_, res) => {
   try {
-    const snapshot = await db.collection("menu").get();
+    const snapshot: any = await withTimeout(db.collection("menu").get(), "menu collection read");
     const menu = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     res.json({ success: true, data: menu });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Failed to fetch menu" });
+  } catch (err: any) {
+    console.error("Menu read error:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch menu",
+      detail: err.message,
+      code: err.code,
+      databaseId: _db?.databaseId || "(default)",
+      projectId: projectId || "unknown",
+    });
+  }
+});
+
+// LIGHTWEIGHT MENU DIAGNOSTIC
+app.get("/api/menu-ping", async (_, res) => {
+  try {
+    const snapshot: any = await withTimeout(
+      db.collection("menu").limit(1).get(),
+      "menu limit(1) read"
+    );
+    res.json({
+      success: true,
+      size: snapshot.size,
+      empty: snapshot.empty,
+      databaseId: _db?.databaseId || "(default)",
+      projectId: projectId || "unknown",
+    });
+  } catch (err: any) {
+    console.error("Menu ping error:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to read menu limit(1)",
+      detail: err.message,
+      code: err.code,
+      databaseId: _db?.databaseId || "(default)",
+      projectId: projectId || "unknown",
+    });
   }
 });
 
@@ -1198,9 +1381,15 @@ app.get("/api/admin/settings", async (_, res) => {
   try {
     const settings = await getSettings();
     res.json({ success: true, data: settings });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Failed to fetch settings" });
+  } catch (err: any) {
+    console.error("Settings read error:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch settings",
+      detail: process.env.NODE_ENV === 'production' ? undefined : err.message,
+      databaseId: _db?.databaseId || "(default)",
+      projectId: projectId || "unknown",
+    });
   }
 });
 

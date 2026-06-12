@@ -4,8 +4,7 @@ import {
   signOut, 
   User as FirebaseUser 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, getDb, firestoreConnectionPromise } from '../firebase';
+import { auth } from '../firebase';
 import { BiometricService } from '../services/biometric.service';
 
 interface SavedAddress {
@@ -36,42 +35,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      try {
-        setCurrentUser(user);
-        
-        if (unsubProfile) {
-          unsubProfile();
-          unsubProfile = null;
-        }
+    // Safety fallback: if Firebase Auth takes too long (e.g. IndexedDB corrupted), force load
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[AuthContext] Auth initialization timed out. Forcing load to prevent splash screen hang.');
+      setLoading(false);
+    }, 3000);
 
-        if (user) {
-          // Auto-save user on login if not exists
-          const profile = await saveUserIfNotExists({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            phone: user.phoneNumber
-          });
-          
-          // Set initial profile
-          setUserProfile(profile);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      clearTimeout(safetyTimeout);
+      setCurrentUser(user);
+      setLoading(false); // Resolve loading immediately so splash screen drops
 
-          // Real-time sync for profile
-          const userRef = doc(getDb(), 'users', user.uid);
-          unsubProfile = onSnapshot(userRef, (doc) => {
-            if (doc.exists()) {
-              setUserProfile({ userId: doc.id, ...doc.data() } as unknown as UserProfile);
-            }
-          });
-        } else {
-          setUserProfile(null);
+      // Run profile sync in background
+      (async () => {
+        try {
+          if (unsubProfile) {
+            unsubProfile();
+            unsubProfile = null;
+          }
+
+          if (user) {
+            // Auto-save user on login if not exists
+            const profile = await saveUserIfNotExists({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              phone: user.phoneNumber
+            });
+            
+            // Set initial profile if snapshot hasn't triggered yet
+            setUserProfile((prev) => prev ? prev : profile);
+
+            // Real-time sync for profile (Dynamically import Firestore)
+            const { getDb } = await import('../lib/firebase-db');
+            const { doc, onSnapshot } = await import('firebase/firestore');
+
+            const userRef = doc(getDb(), 'users', user.uid);
+            unsubProfile = onSnapshot(userRef, (docSnap) => {
+              if (docSnap.exists()) {
+                setUserProfile({ userId: docSnap.id, ...docSnap.data() } as unknown as UserProfile);
+              }
+            });
+          } else {
+            setUserProfile(null);
+          }
+        } catch (err) {
+          console.error("Auth Profile Error:", err);
         }
-      } catch (err) {
-        console.error("Auth Profile Error:", err);
-      } finally {
-        setLoading(false);
-      }
+      })();
     });
 
     return () => {

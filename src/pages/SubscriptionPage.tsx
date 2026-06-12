@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Info, Sparkles, ArrowRight, Loader2, Star, Gift, ShieldCheck, ChevronLeft, PauseCircle, PlayCircle, Utensils } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -422,7 +422,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg dark:bg-dark-bg pb-12 flex flex-col">
+    <div className="min-h-screen bg-brand-bg dark:bg-dark-bg pb-[calc(140px+env(safe-area-inset-bottom))] flex flex-col">
       {/* Mobile-first standalone header */}
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">

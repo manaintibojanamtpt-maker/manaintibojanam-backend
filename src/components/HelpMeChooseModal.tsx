@@ -5,6 +5,7 @@ import { MenuItem } from '../types';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../lib/utils';
 import toast from 'react-hot-toast';
+import BottomSheet from './BottomSheet';
 
 interface Props {
   isOpen: boolean;
@@ -118,48 +119,22 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.2}
-        onDragEnd={(e, info) => {
-          if (info.offset.y > 100 || info.velocity.y > 500) {
-            onClose();
-          }
-        }}
-        className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-      >
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-              <Sparkles size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-none">Mana AI Guide</h2>
-              <p className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-1">Let's find your perfect meal</p>
-            </div>
+    <BottomSheet 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title="Mana AI Guide"
+    >
+      <div className="w-full max-w-md mx-auto flex flex-col">
+        <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-4 rounded-2xl">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
+            <Sparkles size={20} />
           </div>
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white shadow-sm"
-          >
-            <X size={18} />
-          </button>
+          <div>
+            <p className="text-xs font-bold text-orange-600 dark:text-orange-400">Let's find your perfect meal</p>
+          </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="flex-1">
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
@@ -173,7 +148,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     <button
                       key={opt.id}
                       onClick={() => handleSelect('hunger', opt.id)}
-                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left"
+                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left w-full"
                     >
                       <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
                         <opt.icon size={24} />
@@ -201,7 +176,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     <button
                       key={opt.id}
                       onClick={() => handleSelect('spice', opt.id)}
-                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left"
+                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left w-full"
                     >
                       <div className={`w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800 ${opt.color} flex items-center justify-center mr-4 group-hover:scale-110 transition-transform`}>
                         <opt.icon size={24} />
@@ -228,7 +203,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     <button
                       key={opt.id}
                       onClick={() => handleSelect('diet', opt.id)}
-                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left"
+                      className="flex items-center p-4 rounded-2xl border-2 border-gray-100 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all group text-left w-full"
                     >
                       <div className={`w-12 h-12 rounded-xl ${opt.bg} ${opt.color} flex items-center justify-center mr-4 group-hover:scale-110 transition-transform`}>
                         <opt.icon size={24} />
@@ -267,7 +242,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                         </div>
                         
                         {(item as any)._aiReason && (
-                          <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-bold px-3 py-2 rounded-lg mb-4 flex items-center gap-2">
+                           <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-bold px-3 py-2 rounded-lg mb-4 flex items-center gap-2">
                             <Sparkles size={14} />
                             {(item as any)._aiReason}
                           </div>
@@ -287,7 +262,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
             )}
           </AnimatePresence>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </BottomSheet>
   );
 }

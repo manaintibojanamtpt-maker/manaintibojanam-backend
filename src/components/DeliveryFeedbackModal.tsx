@@ -10,7 +10,7 @@ import { Order, OrderStatus } from '../types';
 import { Star, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 
 interface DeliveryFeedbackModalProps {
   order: Order | null;

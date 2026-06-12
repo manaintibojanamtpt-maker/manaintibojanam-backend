@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "framer-motion";
 import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { getDb, handleFirestoreError, OperationType } from "../firebase";
+import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
 import { OrderStatus } from "../types";
 import toast from "react-hot-toast";
 import DigitalInvoice from "./DigitalInvoice";
@@ -332,7 +332,7 @@ export default function OrderTracking() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <Link to="/my-orders" className="p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
             <ArrowLeft size={24} className="text-gray-900 dark:text-white" />
           </Link>
@@ -340,12 +340,12 @@ export default function OrderTracking() {
         </div>
 
         {/* Service Status Card */}
-        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-6 text-white shadow-xl shadow-red-600/20 mb-6">
+        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-6 text-white shadow-xl shadow-red-600/20 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 size={24} className="text-white" />
             <h2 className="text-xl font-black tracking-tight">Your Monthly Meal Plan is Active!</h2>
           </div>
-          <p className="text-orange-100 text-sm font-semibold mb-6">
+          <p className="text-orange-100 text-sm font-semibold mb-4">
             Day 1 of 30 - Today's {order.deliveryTimeSlot || 'meal'} is arriving based on your schedule.
           </p>
 
@@ -417,21 +417,21 @@ export default function OrderTracking() {
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative overflow-hidden"
+              className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 right-0 h-2 bg-red-600" />
               
               {!reviewSubmitted ? (
                 <>
-                  <div className="text-center mb-8">
-                    <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <div className="text-center mb-5">
+                    <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
                       <Utensils size={40} className="text-red-600" />
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Rate Your Meal</h2>
                     <p className="text-gray-500 font-medium">How was the food from Mana Inti Bojanam?</p>
                   </div>
 
-                  <div className="flex justify-center gap-3 mb-8">
+                  <div className="flex justify-center gap-3 mb-5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
@@ -446,7 +446,7 @@ export default function OrderTracking() {
                     ))}
                   </div>
 
-                  <div className="space-y-4 mb-8">
+                  <div className="space-y-4 mb-5">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Your Feedback</label>
                     <textarea
                       value={reviewText}
@@ -480,7 +480,7 @@ export default function OrderTracking() {
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
                     <CheckCircle2 size={40} className="text-green-600" />
                   </div>
                   <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Thank You!</h2>
@@ -541,14 +541,14 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      <div className="px-2 sm:px-3 mt-5 sm:mt-7 lg:max-w-3xl lg:mx-auto">
-        <div className="pointer-events-none absolute inset-x-0 top-[84px] -z-10 mx-auto h-40 max-w-3xl bg-gradient-to-b from-red-50 to-transparent blur-2xl opacity-70" />
+      <div className="px-2 sm:px-3 mt-2 lg:max-w-3xl lg:mx-auto">
+        
         {/* LIVE STATUS HERO */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24 }}
-          className="mb-6 rounded-[2rem] border border-red-100 bg-white p-5 shadow-sm"
+          className="mb-4 rounded-2xl border border-red-100 bg-white p-4 shadow-sm"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -605,7 +605,7 @@ export default function OrderTracking() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-red-600 text-white rounded-[2rem] p-8 shadow-xl shadow-red-600/20 mb-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+              className="bg-red-600 text-white rounded-2xl p-8 shadow-xl shadow-red-600/20 mb-5 flex flex-col sm:flex-row items-center justify-between gap-6"
             >
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl font-black">
@@ -627,7 +627,7 @@ export default function OrderTracking() {
         </AnimatePresence>
 
         {/* STATUS TIMELINE */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 mb-4">
           {displayState.phase === 'cancelled' ? (
             <div className="text-center py-8 text-lg font-bold text-red-600">
               Order Cancelled ❌
@@ -635,7 +635,7 @@ export default function OrderTracking() {
           ) : (
             <>
               {displayState.isInvalidPayment && (
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="bg-red-50 dark:bg-red-900/10 rounded-xl px-4 py-4 shadow-sm border border-red-100 dark:border-red-900/30 inline-flex flex-col items-center gap-1 mx-auto max-w-sm">
                     <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">{displayState.customerTitle}</span>
                     <p className="text-xs text-red-700 dark:text-red-300 text-center">{displayState.customerSubtitle}</p>
@@ -644,30 +644,30 @@ export default function OrderTracking() {
               )}
 
               {displayState.showScheduledLabel && !displayState.isInvalidPayment && (
-                <div className="mb-8">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-[2rem] px-5 py-6 shadow-sm border border-yellow-100 dark:border-yellow-900/30 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
+                <div className="mb-5">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-2xl p-4 shadow-sm border border-yellow-100 dark:border-yellow-900/30 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
                     <span className="text-[11px] font-black text-amber-700 uppercase tracking-[0.24em]">Scheduled Delivery</span>
-                    <h2 className="text-4xl sm:text-5xl font-black text-amber-600 tracking-tight">{displayState.customerTitle}</h2>
+                    <h2 className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">{displayState.customerTitle}</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 text-center">{displayState.customerSubtitle}</p>
                   </div>
                 </div>
               )}
 
               {order.deliveryType === 'scheduled' ? (
-                <div className="mb-8">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-[2rem] px-5 py-4 shadow-sm border border-yellow-100 dark:border-yellow-900/30 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
+                <div className="mb-5">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-2xl p-4 shadow-sm border border-yellow-100 dark:border-yellow-900/30 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
                     <span className="text-[11px] font-black text-amber-700 uppercase tracking-[0.24em]">Scheduled Delivery</span>
-                    <h2 className="text-4xl sm:text-5xl font-black text-amber-600 tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">
                       Delivery at {safeParseDate(order.scheduledTime || order.scheduledFor).toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Your delivery is scheduled for the selected time slot.</p>
                   </div>
                 </div>
               ) : displayState.showEta && etaRemaining !== null ? (
-                <div className="mb-8">
-                  <div className="bg-white dark:bg-gray-900 rounded-[2rem] px-5 py-4 shadow-sm border border-gray-100 dark:border-gray-800 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
+                <div className="mb-5">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 inline-flex flex-col items-center gap-2 mx-auto max-w-md">
                     <span className="text-[11px] font-black text-gray-500 uppercase tracking-[0.24em]">Estimated Delivery</span>
-                    <h2 className="text-4xl sm:text-5xl font-black text-red-600 tracking-tight">Arriving in {Math.max(0, etaRemaining)} mins</h2>
+                    <h2 className="text-2xl sm:text-3xl font-black text-red-600 tracking-tight">Arriving in {Math.max(0, etaRemaining)} mins</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Delivered fresh to your doorstep soon.</p>
                   </div>
                 </div>
@@ -688,18 +688,18 @@ export default function OrderTracking() {
                       transition={{ duration: 0.22, delay: Math.min(index * 0.05, 0.25) }}
                     >
                       {!isLast && (
-                        <div className={`absolute left-4 top-8 bottom-[-24px] w-0.5 ${isCompleted ? 'bg-red-500' : 'bg-gray-100 dark:bg-gray-800'}`}></div>
+                        <div className={`absolute left-4 top-6 bottom-[-16px] w-0.5 ${isCompleted ? 'bg-red-500' : 'bg-gray-100 dark:bg-gray-800'}`}></div>
                       )}
                       
-                      <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
+                      <div className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
                         isCompleted ? 'bg-red-500 text-white shadow-sm' : 
                         isCurrent ? 'bg-red-600 text-white ring-4 ring-red-50 dark:ring-red-900/20' : 
                         'bg-gray-50 dark:bg-gray-800 text-gray-300 border border-gray-100 dark:border-gray-700'
                       }`}>
-                        {isCompleted ? <CheckCircle2 size={16} /> : React.cloneElement(step.icon as React.ReactElement, { size: 16 } as any)}
+                        {isCompleted ? <CheckCircle2 size={16} /> : React.cloneElement(step.icon as React.ReactElement, { size: 12 } as any)}
                       </div>
 
-                      <div className="flex-1 pt-1.5 min-w-0">
+                      <div className="flex-1 pt-0.5 min-w-0">
                         <h3 className={`text-sm font-bold truncate ${isCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
                           {step.label}
                         </h3>
@@ -716,10 +716,10 @@ export default function OrderTracking() {
         </div>
 
         {/* ORDER DETAILS */}
-        <div id="order-details" className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
+        <div id="order-details" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
           <h3 className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-wider">Order Summary</h3>
           
-          <div className="space-y-4 mb-6">
+          <div className="space-y-4 mb-4">
             {order.items.map((item: any, idx: number) => {
               const unitPrice = Number(item.unitPrice ?? item.finalPrice ?? item.price ?? 0);
               const itemTotal = Number(item.lineTotal ?? unitPrice * Number(item.quantity));
@@ -762,7 +762,7 @@ export default function OrderTracking() {
 
           <div className="mt-6 pt-6 border-t border-gray-50 grid grid-cols-1 gap-6">
             {order.deliveryPartner && (
-              <div className="flex gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+              <div className="flex gap-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0 shadow-sm">
                    <Bike size={20} />
                 </div>
@@ -795,9 +795,9 @@ export default function OrderTracking() {
               </div>
             )}
             
-            <div className="flex flex-col gap-4 bg-gray-50 p-4 rounded-xl">
+            <div className="flex flex-col gap-4 bg-gray-50/50 p-3 rounded-xl">
               <div className="flex gap-3">
-                <div className="w-8 h-8 bg-white border border-gray-100 rounded flex items-center justify-center text-gray-400 flex-shrink-0">
+                <div className="w-6 h-6 bg-white border border-gray-100 rounded flex items-center justify-center text-gray-400 flex-shrink-0">
                   <MapPin size={16} />
                 </div>
                 <div>
@@ -806,7 +806,7 @@ export default function OrderTracking() {
                 </div>
               </div>
               <div className="flex gap-3 pt-3 border-t border-gray-200">
-                <div className="w-8 h-8 bg-white border border-gray-100 rounded flex items-center justify-center text-gray-400 flex-shrink-0">
+                <div className="w-6 h-6 bg-white border border-gray-100 rounded flex items-center justify-center text-gray-400 flex-shrink-0">
                   <Phone size={16} />
                 </div>
                 <div>
@@ -820,9 +820,9 @@ export default function OrderTracking() {
 
 
         {/* CANCELLATION & REFUND INFO */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-500">
+            <div className="w-6 h-6 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-500">
               <AlertCircle size={16} />
             </div>
             <div>
@@ -840,7 +840,7 @@ export default function OrderTracking() {
               </p>
             </div>
             <div className="flex gap-4">
-              <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 flex-shrink-0">
+              <div className="w-6 h-6 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 flex-shrink-0">
                 <RefreshCcw size={16} />
               </div>
               <p className="text-sm text-gray-600 font-medium leading-relaxed">
@@ -871,7 +871,7 @@ export default function OrderTracking() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[2rem] p-8 w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl p-8 w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <DigitalInvoice order={order} onClose={() => setShowInvoice(false)} />

@@ -12,12 +12,36 @@ import {
   onSnapshot,
   arrayUnion
 } from 'firebase/firestore';
-import { getDb, handleFirestoreError, OperationType } from '../firebase';
+import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
 import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent } from '../types';
 import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
 
 const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
+
+// Correlation ID wrapper for fetch
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  const generateId = () => {
+    try { return crypto.randomUUID(); } 
+    catch(e) { return 'flow-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9); }
+  };
+  let sessionCorrelationId = generateId();
+
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : input.toString());
+    
+    if (url.includes(API_BASE_URL) || url.startsWith('/api/')) {
+      const headers = new Headers(init?.headers || {});
+      if (!headers.has('X-Correlation-ID')) {
+        headers.set('X-Correlation-ID', sessionCorrelationId);
+      }
+      return originalFetch.call(window, input, { ...init, headers });
+    }
+    
+    return originalFetch.call(window, input, init);
+  };
+}
 
 export const pingBackend = () => {
   fetch(`${API_BASE_URL}/api/health`).catch(() => {});

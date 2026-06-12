@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { getDb } from '../firebase';
+import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus } from '../types';
 import { Clock, CheckCircle2, Package, Truck, Sparkles, X } from 'lucide-react';
@@ -71,7 +71,7 @@ const ActiveOrderStrip: React.FC = () => {
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (activeOrder) {
-      localStorage.setItem(`active_order_seen_${activeOrder.id}`, activeOrder.status);
+      // Replaced strict hiding logic
       setIsDismissed(true);
     }
   };
@@ -109,7 +109,7 @@ const ActiveOrderStrip: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
         onClick={() => {
-          localStorage.setItem(`active_order_seen_${activeOrder.id}`, activeOrder.status);
+          // Replaced strict hiding logic
           navigate(`/order/${activeOrder.id}`);
         }}
         className="pointer-events-auto mb-3 cursor-pointer group"
