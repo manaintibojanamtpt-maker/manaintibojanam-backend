@@ -19,6 +19,8 @@ import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDispla
 
 const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
 
+import { auth } from '../firebase';
+
 // Correlation ID wrapper for fetch
 if (typeof window !== 'undefined') {
   const originalFetch = window.fetch;
@@ -36,6 +38,17 @@ if (typeof window !== 'undefined') {
       if (!headers.has('X-Correlation-ID')) {
         headers.set('X-Correlation-ID', sessionCorrelationId);
       }
+      
+      // Attach Firebase ID Token
+      if (auth.currentUser) {
+        try {
+          const token = await auth.currentUser.getIdToken();
+          headers.set('Authorization', `Bearer ${token}`);
+        } catch (e) {
+          console.warn("Failed to get Firebase token for API request", e);
+        }
+      }
+      
       return originalFetch.call(window, input, { ...init, headers });
     }
     

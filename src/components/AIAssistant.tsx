@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Sparkles, Bot, User, Utensils, ShoppingCart, Clock } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { isStoreOpenNow } from '../lib/storeUtils';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
@@ -19,8 +18,8 @@ const AIAssistant: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { cart } = useCart();
   
-  // Check if AI is enabled (has API key)
-  const isAIEnabled = !!import.meta.env.VITE_GEMINI_API_KEY;
+  // AI is now enabled by default, configured via backend
+  const isAIEnabled = true;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,13 +64,6 @@ const AIAssistant: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-      if (!apiKey) {
-        throw new Error("Gemini API Key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.");
-      }
-      const ai = new GoogleGenAI(apiKey);
-      const model = "gemini-3-flash-preview";
-      
       const systemInstruction = `
         You are a helpful and friendly AI food assistant for "Mana Inti Bojanam", a premium Andhra home-style cloud kitchen.
         Your goal is to help users find dishes they'll love and encourage them to order.
@@ -93,23 +85,23 @@ const AIAssistant: React.FC = () => {
         - Use emojis related to food (🍛, 🍗, 🌶️, 🥘).
       `;
 
-      const response = await ai.models.generateContent({
-        model,
-        contents: [...messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), { role: 'user', parts: [{ text: userMessage }] }],
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        }
+      const res = await fetch('https://manaintibojanam-backend.onrender.com/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, userMessage, systemInstruction })
       });
+      
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch response");
+      }
 
-      const assistantMessage = response.text || "I'm sorry, I'm having a bit of trouble thinking right now. Could you try again?";
-      setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
     } catch (err: any) {
       console.error("AI Error:", err);
-      // Suppress technical credential errors from showing to users
-      const errMsg = err.message || "";
-      if (errMsg.includes('credentials') || errMsg.includes('API key') || errMsg.includes('default')) {
-        console.warn("AI Assistant: Configuration issue detected (missing API Key).");
+      if (err.message.includes('not configured')) {
+        console.warn("AI Assistant: Configuration issue detected on backend.");
+        toast.error("AI assistant is not configured.");
       } else {
         toast.error("AI assistant is currently unavailable");
       }
