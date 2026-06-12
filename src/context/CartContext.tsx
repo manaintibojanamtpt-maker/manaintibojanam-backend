@@ -12,6 +12,8 @@ interface CartContextType {
   itemCount: number;
   flyToCartParams: { imageUrl: string, startX: number, startY: number, id: number } | null;
   triggerFlyToCart: (imageUrl: string, startX: number, startY: number) => void;
+  aiAssisted: boolean;
+  setAiAssisted: (val: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, loading } = useAuth();
   const [flyToCartParams, setFlyToCartParams] = useState<{ imageUrl: string, startX: number, startY: number, id: number } | null>(null);
+  const [aiAssisted, setAiAssisted] = useState(false);
   
   const triggerFlyToCart = (imageUrl: string, startX: number, startY: number) => {
     setFlyToCartParams({ imageUrl, startX, startY, id: Date.now() });

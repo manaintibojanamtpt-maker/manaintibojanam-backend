@@ -1,110 +1,199 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Sparkles, Bot, User, Utensils, ShoppingCart, Clock } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Bot, User, Utensils, ShoppingCart, Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import { isStoreOpenNow } from '../lib/storeUtils';
 import { useCart } from '../context/CartContext';
+import { fetchMenu } from '../services/api';
 import toast from 'react-hot-toast';
 import { getDb } from '../lib/firebase-db';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useAIAnalytics } from '../hooks/useAIAnalytics';
+import { MenuItem } from '../types';
+
+type Message = { role: 'user' | 'assistant' | 'system', content: string };
+type ToolCall = { name: string, args: any };
 
 const AIAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState<any>(null);
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([
-    { role: 'assistant', content: "Hi! I'm your Mana Inti Bojanam AI assistant. I can help you find the perfect dish, recommend something based on your mood, or answer questions about our menu. What are you craving today?" }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { cart } = useCart();
   
-  // AI is now enabled by default, configured via backend
-  const isAIEnabled = true;
+  // Tool Execution State
+  const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { cart, addToCart, removeFromCart, clearCart, total, setAiAssisted } = useCart();
+  const { logEvent } = useAIAnalytics();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Load Menu and Settings
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    fetchMenu().then(items => setMenuItems(items));
 
-  useEffect(() => {
     const unsubscribe = onSnapshot(doc(getDb(), "adminSettings", "global"), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings(data);
-        
-        // Update initial message if store is closed
         const open = isStoreOpenNow(data);
-        if (!open) {
-          setMessages(prev => {
-            if (prev.length === 1 && prev[0].role === 'assistant') {
-              return [{ 
-                role: 'assistant', 
-                content: "Hi! I'm your Mana Inti Bojanam AI assistant. We are currently closed and not taking orders, but I can still help you browse our menu or answer questions for your next meal! What would you like to know?" 
-              }];
-            }
-            return prev;
-          });
-        }
+        setMessages([
+          { 
+            role: 'assistant', 
+            content: open 
+              ? "Hi! I'm your Mana Inti Concierge. What are you craving today?" 
+              : "Hi! I'm your Mana Inti Concierge. We're currently closed, but I can help you explore our menu for later!" 
+          }
+        ]);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const isStoreOpen = isStoreOpenNow(settings);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+  useEffect(() => { scrollToBottom(); }, [messages, pendingToolCall, isTyping]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  const handleOpen = () => {
+    setIsOpen(true);
+    logEvent('ai_session_started');
+  };
 
-    const userMessage = input.trim();
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
+  const executeTool = async (call: ToolCall) => {
+    logEvent('ai_tool_invoked', { tool: call.name, args: call.args });
+    let toolResult: any = { success: true };
+    let replyText = "";
+
+    try {
+      if (call.name === 'searchMenu') {
+        const { query, maxPrice, isVeg } = call.args;
+        let results = menuItems.filter(item => item.isAvailable !== false);
+        if (query) {
+          const q = query.toLowerCase();
+          results = results.filter(i => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q));
+        }
+        if (maxPrice) results = results.filter(i => i.price <= maxPrice);
+        if (isVeg !== undefined) results = results.filter(i => i.isVegetarian === isVeg);
+        
+        toolResult = { items: results.slice(0, 5).map(i => ({ id: i.id, name: i.name, price: i.price })) };
+        replyText = `I found ${results.length} items.`;
+      } 
+      else if (call.name === 'getItemDetails') {
+        const item = menuItems.find(i => i.id === call.args.itemId);
+        if (!item) throw new Error("Item not found");
+        toolResult = { item };
+        replyText = `Here are the details for ${item.name}.`;
+      }
+      else if (call.name === 'getCartStatus') {
+        toolResult = { cart, total };
+        replyText = `You have ${cart.length} items totaling ₹${total}.`;
+      }
+      else if (call.name === 'addToCart') {
+        const item = menuItems.find(i => i.id === call.args.itemId);
+        if (!item) throw new Error("Item not found or unavailable");
+        if (item.isAvailable === false) throw new Error("Item is currently out of stock");
+        const qty = Math.min(call.args.quantity || 1, 10);
+        
+        // Add to cart multiple times if qty > 1
+        for (let i = 0; i < qty; i++) {
+          addToCart(item); 
+        }
+        setAiAssisted(true);
+        replyText = `Added ${qty}x ${item.name} to your cart!`;
+      }
+      else if (call.name === 'removeFromCart') {
+        removeFromCart(call.args.cartItemId);
+        replyText = `Removed item from your cart.`;
+      }
+      else if (['clearCart', 'applyCoupon', 'escalateToSupport'].includes(call.name)) {
+        // High Risk: Requires Confirmation
+        setPendingToolCall(call);
+        return; // Pause execution
+      }
+      else {
+        throw new Error("Unknown tool");
+      }
+
+      // If we reach here, a silent/low-risk tool executed successfully
+      setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
+      
+      // Send result back to model silently for context?
+      // For V1, simply returning text to user is enough for low-risk actions.
+      
+    } catch (err: any) {
+      logEvent('ai_tool_failed', { tool: call.name, reason: err.message });
+      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, I couldn't do that: ${err.message}` }]);
+    }
+  };
+
+  const confirmTool = (confirm: boolean) => {
+    if (!pendingToolCall) return;
+    const call = pendingToolCall;
+    setPendingToolCall(null);
+
+    if (confirm) {
+      logEvent('ai_action_confirmed', { tool: call.name });
+      if (call.name === 'clearCart') {
+        clearCart();
+        setMessages(prev => [...prev, { role: 'assistant', content: "I have cleared your cart." }]);
+      } else if (call.name === 'applyCoupon') {
+        setMessages(prev => [...prev, { role: 'assistant', content: "Coupon applied! (Feature coming soon)" }]);
+      } else if (call.name === 'escalateToSupport') {
+        setMessages(prev => [...prev, { role: 'assistant', content: "A support agent will contact you shortly." }]);
+      }
+    } else {
+      logEvent('ai_action_cancelled', { tool: call.name });
+      setMessages(prev => [...prev, { role: 'assistant', content: "Okay, I've cancelled that action." }]);
+    }
+  };
+
+  const handleSendMessage = async (msgText: string = input) => {
+    if (!msgText.trim()) return;
+
+    const userMessage = msgText.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);
+    logEvent('ai_message_sent', { length: userMessage.length });
 
     try {
+      const isStoreOpen = isStoreOpenNow(settings);
       const systemInstruction = `
-        You are a helpful and friendly AI food assistant for "Mana Inti Bojanam", a premium Andhra home-style cloud kitchen.
-        Your goal is to help users find dishes they'll love and encourage them to order.
-        
-        Current Store Status: ${isStoreOpen ? 'OPEN' : 'CLOSED'}
-        ${!isStoreOpen ? 'IMPORTANT: The kitchen is currently CLOSED. Inform the user that we are not taking orders right now but they can still browse the menu for later.' : 'The kitchen is OPEN and taking orders.'}
-
-        Context:
-        - The app name is "Mana Inti Bojanam".
-        - We specialize in authentic Andhra home-style meals (Biryani, Thalis, Curries).
-        - Current cart items: ${cart.map(i => `${i.name} (x${i.quantity})`).join(', ') || 'Empty'}.
-        
-        Guidelines:
-        - Be warm, hospitable, and professional.
-        - Recommend dishes based on user mood or preferences.
-        - If the user is unsure, suggest popular items like Chicken Biryani or Veg Thali.
-        - Mention that everything is prepared with fresh, home-style ingredients.
-        - Keep responses concise and engaging.
-        - Use emojis related to food (🍛, 🍗, 🌶️, 🥘).
+        You are "Mana Inti Concierge", a premium AI assistant for Mana Inti Bojanam cloud kitchen.
+        Help users find dishes, manage their cart, and answer questions.
+        Store Status: ${isStoreOpen ? 'OPEN' : 'CLOSED'}.
+        Current Cart: ${cart.length} items (Total: ₹${total}).
+        Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFromCart, clearCart.
+        Rules: Keep answers brief, warm, and mobile-friendly. NEVER invent prices. Use tools for actions.
       `;
+
+      // Build simplified message history for API
+      const history = messages.filter(m => m.role !== 'system').slice(-6);
 
       const res = await fetch('https://manaintibojanam-backend.onrender.com/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, userMessage, systemInstruction })
+        body: JSON.stringify({ contents: [...history.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), { role: 'user', parts: [{ text: userMessage }] }], systemInstruction })
       });
       
       const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || "Failed to fetch response");
+      if (!data.success) throw new Error(data.error || "Failed to fetch response");
+
+      if (data.toolCall) {
+        await executeTool(data.toolCall);
+      } else if (data.text) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
     } catch (err: any) {
       console.error("AI Error:", err);
-      if (err.message.includes('not configured')) {
-        console.warn("AI Assistant: Configuration issue detected on backend.");
-        toast.error("AI assistant is not configured.");
-      } else {
-        toast.error("AI assistant is currently unavailable");
-      }
+      toast.error("AI assistant is currently unavailable");
+      setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting right now. Please try again later." }]);
     } finally {
       setIsTyping(false);
     }
@@ -112,112 +201,147 @@ const AIAssistant: React.FC = () => {
 
   return (
     <>
-      {/* Floating Button - Only show if AI is configured */}
-      {isAIEnabled && (
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-red-700 transition-colors"
-        >
-          <Sparkles size={28} />
-        </motion.button>
-      )}
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleOpen}
+        className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-black transition-colors"
+      >
+        <Sparkles size={24} />
+      </motion.button>
 
-      {/* Chat Window */}
+      {/* Bottom Sheet Modal */}
       <AnimatePresence>
         {isOpen && (
+          <>
             <motion.div
-            initial={{ opacity: 0, y: 100, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 100, scale: 0.8 }}
-            className="fixed bottom-24 right-6 z-[60] w-[90vw] md:w-[400px] h-[600px] max-h-[80vh] bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-gray-100"
-          >
-            {/* Header */}
-            <div className="bg-red-600 p-6 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                  <Bot size={24} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-black tracking-tight">AI Assistant</h3>
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-1.5 h-1.5 ${isStoreOpen ? 'bg-green-400' : 'bg-red-400'} rounded-full animate-pulse`} />
-                    <span className="text-red-100 text-[10px] font-bold uppercase tracking-widest">{isStoreOpen ? 'Online' : 'Resting'}</span>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_, info) => { if (info.offset.y > 100) handleClose(); }}
+              className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-white dark:bg-[#070504] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex-none p-4 flex items-center justify-between border-b border-gray-100 dark:border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600">
+                    <Bot size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white">Mana Inti Concierge</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">AI Ordering Assistant</p>
                   </div>
                 </div>
-              </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsOpen(false);
-                }} 
-                className="text-white hover:text-white transition-colors p-2 bg-white/10 hover:bg-white/20 rounded-xl z-[70]"
-                aria-label="Close Assistant"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${m.role === 'user' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
-                      {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                    </div>
-                    <div className={`p-4 rounded-2xl text-sm font-medium leading-relaxed ${
-                      m.role === 'user' 
-                        ? 'bg-red-600 text-white rounded-tr-none' 
-                        : 'bg-gray-50 text-gray-800 rounded-tl-none'
-                    }`}>
-                      {m.content}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="flex gap-3 max-w-[85%]">
-                    <div className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center">
-                      <Bot size={16} />
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-2xl rounded-tl-none flex gap-1">
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.2s]" />
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.4s]" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="p-6 border-t border-gray-100 bg-white">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Ask me anything..."
-                  className="w-full pl-6 pr-14 py-4 bg-gray-50 border-none rounded-2xl font-medium focus:ring-2 focus:ring-red-500 outline-none transition-all"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!input.trim() || isTyping}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center hover:bg-red-700 transition-colors disabled:opacity-50 disabled:scale-95"
-                >
-                  <Send size={18} />
+                <button onClick={handleClose} aria-label="Close assistant" className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full bg-gray-100 dark:bg-white/5">
+                  <X size={20} />
                 </button>
               </div>
-              <p className="text-[10px] text-center text-gray-400 font-bold uppercase tracking-widest mt-4">
-                Powered by Gemini AI
-              </p>
-            </div>
-          </motion.div>
+
+              {/* Chat Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-transparent">
+                {messages.map((msg, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[85%] rounded-2xl p-4 ${
+                      msg.role === 'user' 
+                        ? 'bg-red-600 text-white rounded-br-none' 
+                        : 'bg-white dark:bg-[#151515] text-gray-800 dark:text-gray-200 shadow-sm border border-gray-100 dark:border-white/5 rounded-bl-none'
+                    }`}>
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Interactive Confirmation Card */}
+                {pendingToolCall && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-[85%] bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-500 font-bold mb-2">
+                      <AlertTriangle size={18} />
+                      Action Required
+                    </div>
+                    <p className="text-sm text-yellow-900 dark:text-yellow-400 mb-4">
+                      {pendingToolCall.name === 'clearCart' && "Are you sure you want to clear your entire cart?"}
+                      {pendingToolCall.name === 'escalateToSupport' && "Would you like me to open a support ticket?"}
+                      {pendingToolCall.name === 'applyCoupon' && `Apply coupon ${pendingToolCall.args.code}?`}
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => confirmTool(true)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-2 rounded-lg transition-colors">Yes, do it</button>
+                      <button onClick={() => confirmTool(false)} className="flex-1 bg-white dark:bg-black border border-yellow-200 dark:border-yellow-900/50 text-gray-700 dark:text-gray-300 text-sm font-bold py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                    <div className="bg-white dark:bg-[#151515] shadow-sm border border-gray-100 dark:border-white/5 rounded-2xl rounded-bl-none p-4 flex gap-1.5">
+                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                    </div>
+                  </motion.div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Quick Actions / Suggestions */}
+              {!isTyping && !pendingToolCall && messages.length < 3 && (
+                <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-transparent">
+                  {["Recommend a Biryani", "Is the store open?", "Clear my cart"].map(chip => (
+                    <button key={chip} onClick={() => handleSendMessage(chip)} className="flex-none whitespace-nowrap bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-bold px-4 py-2 rounded-full hover:border-red-500 dark:hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Input Area */}
+              <div className="p-4 bg-white dark:bg-[#070504] border-t border-gray-100 dark:border-white/5">
+                <div className="flex items-end gap-2 bg-gray-50 dark:bg-[#151515] p-2 rounded-2xl border border-gray-200 dark:border-white/5 focus-within:border-red-500/50 dark:focus-within:border-red-500/50 transition-colors">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!isTyping && !pendingToolCall) handleSendMessage();
+                      }
+                    }}
+                    placeholder={pendingToolCall ? "Please confirm action above..." : "Message Concierge..."}
+                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[44px] py-3 px-3 text-sm text-gray-900 dark:text-white disabled:opacity-50"
+                    rows={1}
+                    disabled={isTyping || !!pendingToolCall}
+                  />
+                  <button
+                    onClick={() => handleSendMessage()}
+                    disabled={!input.trim() || isTyping || !!pendingToolCall}
+                    className="flex-none w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:bg-gray-300 dark:disabled:bg-white/10 transition-colors mb-1 mr-1"
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+                <div className="text-center mt-2">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Google Gemini</span>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>

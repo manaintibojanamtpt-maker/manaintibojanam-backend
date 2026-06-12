@@ -22,6 +22,7 @@ import { seedMenuItems } from './populateData';
 import NetworkAwareness from './components/NetworkAwareness';
 import { useBiometrics } from './hooks/useBiometrics';
 import BiometricModal from './components/BiometricModal';
+import AIAssistant from './components/AIAssistant';
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -352,6 +353,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <div className="lg:hidden">
           {!isFullScreen && <BottomNav />}
         </div>
+        {!isFullScreen && <AIAssistant />}
       </div>
     </div>
   );

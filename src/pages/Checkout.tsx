@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
 import { useCheckoutState } from '../hooks/useCheckoutState';
+import CheckoutSummary from '../components/checkout/CheckoutSummary';
+import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
 import LocationPicker from '../components/LocationPicker';
 import { OrderStatus } from '../types';
@@ -19,6 +21,7 @@ import { Skeleton } from '../components/SkeletonSystem';
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const state = useCheckoutState();
+  const { logEvent } = useAIAnalytics();
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -401,6 +404,7 @@ const Checkout: React.FC = () => {
               });
             }
             state.clearCart();
+            if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId: draftId, method: 'online' });
             if (hasSubscription) navigate('/subscription?new=true');
             else navigate(`/payment-success?orderId=${draftId}`);
             return;
@@ -444,6 +448,7 @@ const Checkout: React.FC = () => {
                 if (hasSubscription) {
                   navigate('/subscription?new=true');
                 } else {
+                  if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId: draftId, method: 'online' });
                   navigate(`/payment-success?orderId=${draftId}`);
                 }
               } else {
@@ -491,6 +496,7 @@ const Checkout: React.FC = () => {
         }
 
         state.clearCart();
+        if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'cod' });
         navigate(`/order-success?orderId=${orderId}`);
         setIsPlacingOrder(false);
       }

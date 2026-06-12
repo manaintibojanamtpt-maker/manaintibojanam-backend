@@ -7,7 +7,7 @@ import { getDb } from '../lib/firebase-db';
 import { calculateDeliveryFee as apiCalculateDeliveryFee } from '../services/api';
 
 export function useCheckoutState() {
-  const { cart, total, clearCart, updateQuantity, removeFromCart, addToCart } = useCart();
+  const { cart, total, clearCart, updateQuantity, removeFromCart, addToCart, aiAssisted } = useCart();
   const { currentUser, userProfile } = useAuth();
   const [deliveryState, setDeliveryState] = useDeliveryState();
 
@@ -168,7 +168,7 @@ export function useCheckoutState() {
   const finalTotal = Number(Math.max(0, total + gstAmount + packingFee + deliveryFee - discountAmount).toFixed(2));
 
   return {
-    cart, total, clearCart, updateQuantity, removeFromCart, addToCart, currentUser, userProfile,
+    cart, total, clearCart, updateQuantity, removeFromCart, addToCart, currentUser, userProfile, aiAssisted,
     name, setName, phone, setPhone, email, setEmail,
     selectedAddressId, setSelectedAddressId, addressText, setAddressText,
     paymentMethod, setPaymentMethod, agreedToTerms, setAgreedToTerms,
