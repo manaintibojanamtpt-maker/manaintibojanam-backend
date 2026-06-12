@@ -169,7 +169,7 @@ async function callOllama(prompt: string, fallbackCount: number) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: model,
-        prompt: `You are a food ordering concierge for Mana Inti Bojanam. The user said: "${prompt}". Extract the intent into strict JSON. Keep the conversational_reply warm, professional, and under 2 sentences.`,
+        prompt: `${systemInstruction}\n\nUser Message: "${prompt}"\n\nBased on the rules above, extract the user's intent into strict JSON. Ensure the conversational_reply follows the requested TONE and RULES exactly.`,
         format: schema,
         stream: false
       }),
