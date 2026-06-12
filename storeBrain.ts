@@ -1,4 +1,4 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { db } from "./server";
 import winston from "winston";
 
 const logger = winston.createLogger({
@@ -43,7 +43,6 @@ export class StoreBrain {
   public async refresh() {
     logger.info("StoreBrain: Refreshing cache from Firestore...");
     try {
-      const db = getFirestore();
       const menuSnap = await db.collection("menu").get();
       
       this.menu.clear();
