@@ -100,7 +100,7 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
 
   // Priority 9: Entity Match Search (If they mentioned specific food like "veg meals" or "biryani")
   const searchItems = brain.findMenuItems(lastMessage);
-  if (searchItems.length > 0) {
+  if (searchItems.length > 0 && !/^(hi|hello|hey|greetings|sup)$/i.test(lastMessage)) {
     return { 
       success: true, 
       toolCall: { name: 'searchMenu', args: { query: lastMessage } } 

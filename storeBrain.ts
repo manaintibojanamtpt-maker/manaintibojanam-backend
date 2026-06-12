@@ -77,7 +77,7 @@ export class StoreBrain {
 
   public findMenuItems(query: string): BrainMenuItem[] {
     const q = query.toLowerCase().trim();
-    if (!q) return [];
+    if (!q || q.length < 3) return []; // Ignore very short queries to prevent accidental broad matches like "hi"
     
     // 1. Strict exact match
     for (const item of this.menu.values()) {
