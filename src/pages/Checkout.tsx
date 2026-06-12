@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
 import { useCheckoutState } from '../hooks/useCheckoutState';
-import { createOrder } from '../services/api';
+import { createOrder, stageOrderDraft } from '../services/api';
 import LocationPicker from '../components/LocationPicker';
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
@@ -345,10 +345,31 @@ const Checkout: React.FC = () => {
         // Fallback to Render backend if VITE_API_URL is not set
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
         
+        let subscriptionData = null;
+        if (hasSubscription && subscriptionItem && state.currentUser) {
+          subscriptionData = {
+            userId: state.currentUser.uid,
+            planType: subscriptionItem.id,
+            price: subscriptionItem.price,
+            finalPrice: state.finalTotal,
+            startDate: new Date(subStartDate),
+            endDate: new Date(new Date(subStartDate).getTime() + (subFrequency === 'daily' ? 30 : 22) * 24 * 60 * 60 * 1000),
+            mealsPerDay: subscriptionItem.id === '1_meal' ? 1 : 2,
+            mealPreference: subscriptionItem.subscriptionDetails?.preference || 'veg',
+            deliverySlot: subSlot,
+            frequency: subFrequency,
+            status: 'active',
+            usedReferral: false
+          };
+        }
+
+        // BATCH 2: Stage Draft Order
+        const draftId = await stageOrderDraft(orderData, subscriptionData);
+        
         const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: orderData.totalAmount })
+          body: JSON.stringify({ amount: orderData.totalAmount, draftId, userId: state.currentUser?.uid })
         });
         const createData = await createRes.json();
         
@@ -359,19 +380,31 @@ const Checkout: React.FC = () => {
         // Handle Mock Payment in development environments if keys are missing
         if (createData.isMock) {
           toast.success('Test Mode: Payment simulated');
-          orderData.paymentStatus = 'success';
-          orderData.razorpayOrderId = createData.order.id;
-          const orderId = await createOrder(orderData);
           
-          if (state.currentUser) {
-            await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
-              'preferences.lastPaymentMethod': state.paymentMethod
-            });
+          // Mock verification calls canonical promotion on backend
+          const verifyRes = await fetch(`${API_BASE_URL}/api/verify-razorpay-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              razorpay_order_id: createData.order.id, 
+              razorpay_payment_id: 'mock_payment', 
+              razorpay_signature: 'mock_signature',
+              draftId 
+            })
+          });
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.success) {
+            if (state.currentUser) {
+              await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
+                'preferences.lastPaymentMethod': state.paymentMethod
+              });
+            }
+            state.clearCart();
+            if (hasSubscription) navigate('/subscription?new=true');
+            else navigate(`/payment-success?orderId=${draftId}`);
+            return;
           }
-          
-          state.clearCart();
-          navigate(`/payment-success?orderId=${orderId}`);
-          return;
         }
 
         const options = {
@@ -396,49 +429,22 @@ const Checkout: React.FC = () => {
               const verifyRes = await fetch(`${API_BASE_URL}/api/verify-razorpay-payment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(response)
+                body: JSON.stringify({ ...response, draftId })
               });
               const verifyData = await verifyRes.json();
               
               if (verifyData.success) {
-                orderData.paymentStatus = 'success';
-                orderData.razorpayOrderId = response.razorpay_order_id;
-                orderData.razorpayPaymentId = response.razorpay_payment_id;
-                const orderId = await createOrder(orderData);
-                
                 if (state.currentUser) {
                   await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
                     'preferences.lastPaymentMethod': state.paymentMethod
                   });
-
-                  if (hasSubscription && subscriptionItem) {
-                    try {
-                      await addDoc(collection(getDb(), 'subscriptions'), {
-                        userId: state.currentUser.uid,
-                        planType: subscriptionItem.id,
-                        price: subscriptionItem.price,
-                        finalPrice: state.finalTotal,
-                        startDate: new Date(subStartDate),
-                        endDate: new Date(new Date(subStartDate).getTime() + (subFrequency === 'daily' ? 30 : 22) * 24 * 60 * 60 * 1000),
-                        mealsPerDay: subscriptionItem.id === '1_meal' ? 1 : 2,
-                        mealPreference: subscriptionItem.subscriptionDetails?.preference || 'veg',
-                        deliverySlot: subSlot,
-                        frequency: subFrequency,
-                        status: 'active',
-                        usedReferral: false,
-                        createdAt: serverTimestamp()
-                      });
-                    } catch (e) {
-                      console.error("Failed to create subscription record", e);
-                    }
-                  }
                 }
                 
                 state.clearCart();
                 if (hasSubscription) {
                   navigate('/subscription?new=true');
                 } else {
-                  navigate(`/payment-success?orderId=${orderId}`);
+                  navigate(`/payment-success?orderId=${draftId}`);
                 }
               } else {
                 toast.error('Payment verification failed');

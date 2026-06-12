@@ -178,25 +178,59 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
 // --- ORDER API ---
 
+export const prepareOrderBlueprint = (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const scheduledForIso = orderData.scheduledFor ? safeParseDate(orderData.scheduledFor).toISOString() : null;
+  const isScheduled = String(orderData.orderType || orderData.deliveryType || '').toLowerCase() === 'scheduled';
+
+  if (isScheduled && !scheduledForIso) {
+    throw new Error('Scheduled orders must include a valid scheduledFor timestamp.');
+  }
+
+  return {
+    ...orderData,
+    orderType: orderData.orderType || (isScheduled ? 'scheduled' : 'instant'),
+    isScheduled,
+    scheduledFor: scheduledForIso,
+    scheduledTime: isScheduled ? safeParseDate(scheduledForIso).toISOString() : null,
+    scheduledDate: scheduledForIso ? safeParseDate(scheduledForIso).toISOString().split('T')[0] : null,
+    prepAlertSent: orderData.prepAlertSent ?? false,
+  };
+};
+
+export const stageOrderDraft = async (
+  orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>,
+  subscriptionData?: any
+): Promise<string> => {
+  const path = 'order_drafts';
+  try {
+    const draftRef = doc(collection(getDb(), path));
+    const orderPayload = prepareOrderBlueprint(orderData);
+    
+    const expiresAtDate = new Date();
+    expiresAtDate.setHours(expiresAtDate.getHours() + 24);
+
+    await setDoc(draftRef, {
+      id: draftRef.id,
+      orderPayload,
+      subscriptionPayload: subscriptionData || null,
+      status: 'pending_payment',
+      createdAt: serverTimestamp(),
+      expiresAt: expiresAtDate
+    });
+    
+    return draftRef.id;
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw new Error('Failed to stage order. Please try again.');
+  }
+};
+
 export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   const path = 'orders';
   try {
     const orderRef = doc(collection(getDb(), path));
-    const scheduledForIso = orderData.scheduledFor ? safeParseDate(orderData.scheduledFor).toISOString() : null;
-    const isScheduled = String(orderData.orderType || orderData.deliveryType || '').toLowerCase() === 'scheduled';
-
-    if (isScheduled && !scheduledForIso) {
-      throw new Error('Scheduled orders must include a valid scheduledFor timestamp.');
-    }
-
     const newOrder = {
-      ...orderData,
-      orderType: orderData.orderType || (isScheduled ? 'scheduled' : 'instant'),
-      isScheduled,
-      scheduledFor: scheduledForIso,
-      scheduledTime: isScheduled ? safeParseDate(scheduledForIso).toISOString() : null,
-      scheduledDate: scheduledForIso ? safeParseDate(scheduledForIso).toISOString().split('T')[0] : null,
-      prepAlertSent: orderData.prepAlertSent ?? false,
+      ...prepareOrderBlueprint(orderData),
       id: orderRef.id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

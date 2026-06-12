@@ -50,6 +50,76 @@ const writeSystemIncident = async (type: string, status: string, payload: any, c
   }
 };
 
+// ================= PAYMENT RECONCILIATION =================
+const promoteDraftTransaction = async (
+  draftId: string,
+  paymentDetails: { razorpayOrderId: string, razorpayPaymentId: string },
+  reconciliationSource: 'client_callback' | 'webhook_recovery',
+  eventId?: string | null
+): Promise<boolean> => {
+  if (!_db) throw new Error("Firestore not initialized");
+  
+  try {
+    await _db.runTransaction(async (transaction) => {
+      const draftRef = _db!.collection('order_drafts').doc(draftId);
+      const draftSnap = await transaction.get(draftRef);
+      
+      if (!draftSnap.exists) {
+        throw new Error(`Draft ${draftId} does not exist.`);
+      }
+      
+      const draftData = draftSnap.data()!;
+      if (draftData.status === 'promoted') {
+        logger.info({ message: "Draft already promoted", draftId, reconciliationSource });
+        return; // Already processed
+      }
+
+      if (eventId) {
+        const eventRef = _db!.collection('webhook_events').doc(eventId);
+        const eventSnap = await transaction.get(eventRef);
+        if (eventSnap.exists) {
+          logger.info({ message: "Webhook event already processed", eventId, draftId });
+          return;
+        }
+        transaction.set(eventRef, {
+          id: eventId,
+          draftId,
+          processedAt: FieldValue.serverTimestamp(),
+          status: 'success'
+        });
+      }
+
+      const orderRef = _db!.collection('orders').doc(draftId); // Draft ID becomes Order ID
+      transaction.set(orderRef, {
+        ...draftData.orderPayload,
+        status: draftData.subscriptionPayload ? 'active' : 'PLACED',
+        paymentStatus: 'success',
+        razorpayOrderId: paymentDetails.razorpayOrderId,
+        razorpayPaymentId: paymentDetails.razorpayPaymentId,
+        confirmedAt: FieldValue.serverTimestamp(),
+        reconciliationSource,
+        reconciliationEventId: eventId || null
+      });
+
+      if (draftData.subscriptionPayload) {
+        const subRef = _db!.collection('subscriptions').doc();
+        transaction.set(subRef, {
+          ...draftData.subscriptionPayload,
+          createdAt: FieldValue.serverTimestamp()
+        });
+      }
+
+      transaction.update(draftRef, { status: 'promoted' });
+    });
+    
+    logger.info({ message: "Draft successfully promoted to order", draftId, reconciliationSource });
+    return true;
+  } catch (error: any) {
+    logger.error({ message: "Draft promotion failed", draftId, error: error.message });
+    throw error;
+  }
+};
+
 // ================= CONFIG =================
 const PORT = Number(process.env.PORT) || 8080;
 const DIST_PATH = path.join(process.cwd(), "dist");
@@ -365,13 +435,35 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
 
     const payload = JSON.parse(req.body.toString());
     
-    // DETECT-ONLY MODE
+    // DETECT-ONLY MODE Logging
     logger.info({ message: "Razorpay Webhook Received", eventId, type: payload.event, correlationId });
     await writeSystemIncident("WEBHOOK_RECEIVED", "DETECTED", {
       event: payload.event,
       eventId,
       payload: payload.payload
     }, correlationId as string);
+
+    // BATCH 2: RECONCILIATION PROMOTION
+    if (payload.event === 'payment.captured' || payload.event === 'order.paid') {
+      const paymentEntity = payload.payload?.payment?.entity;
+      const draftId = paymentEntity?.notes?.draftId;
+      
+      if (draftId) {
+        try {
+          await promoteDraftTransaction(
+            draftId,
+            { 
+              razorpayOrderId: paymentEntity.order_id, 
+              razorpayPaymentId: paymentEntity.id 
+            },
+            'webhook_recovery',
+            eventId as string
+          );
+        } catch (promoErr: any) {
+          logger.error({ message: "Webhook Promotion Failed", draftId, eventId, err: promoErr.message });
+        }
+      }
+    }
 
     res.status(200).json({ status: "ok" });
   } catch (err: any) {
@@ -1229,30 +1321,27 @@ app.post("/api/reviews/submit", async (req, res) => {
 // ================= RAZORPAY APIs =================
 app.post("/api/create-razorpay-order", async (req, res) => {
   try {
-    const { amount } = req.body;
-    const numericAmount = Number(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      return res.status(400).json({ success: false, error: 'Invalid payment amount. Please update your cart before retrying.' });
+    const { amount, draftId, userId } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
     
-    if (!isRazorpayConfigured) {
-      const message = 'Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your environment.';
-      console.warn(`⚠️ ${message}`);
+    if (!draftId) {
+      return res.status(400).json({ success: false, error: 'draftId is required for payment generation' });
+    }
 
+    if (!isRazorpayConfigured) {
+      const message = 'Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.';
+      console.warn(`⚠️ ${message}`);
+      
       if (process.env.NODE_ENV !== 'production') {
         return res.json({ 
           success: true, 
           isMock: true,
-          key: "rzp_test_mock_key",
           order: {
             id: `mock_order_${Date.now()}`,
             amount: Math.round(amount * 100),
             currency: "INR"
-          },
-          prefill: {
-            name: (req.body.name || '').trim(),
-            email: (req.body.email || '').trim().toLowerCase(),
-            contact: (req.body.phone || '').replace(/\D/g, '').slice(-10)
           },
         });
       }
@@ -1264,9 +1353,13 @@ app.post("/api/create-razorpay-order", async (req, res) => {
       amount: Math.round(amount * 100), // amount in the smallest currency unit
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
+      notes: {
+        draftId,
+        userId: userId || 'anonymous'
+      }
     };
     const order = await razorpay.orders.create(options);
-    logger.info({ message: "Razorpay order created", amount, orderId: order.id, correlationId: (req as any).correlationId });
+    logger.info({ message: "Razorpay order created", amount, orderId: order.id, draftId, correlationId: (req as any).correlationId });
     res.json({ success: true, order, key: RAZORPAY_KEY_ID });
   } catch (err: any) {
     const correlationId = (req as any).correlationId;
@@ -1281,9 +1374,9 @@ app.post("/api/create-razorpay-order", async (req, res) => {
 
 app.post("/api/verify-razorpay-payment", async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ success: false, error: 'Missing payment verification parameters.' });
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, draftId } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !draftId) {
+      return res.status(400).json({ success: false, error: 'Missing payment verification parameters or draftId.' });
     }
 
     if (!isRazorpayConfigured) {
@@ -1300,7 +1393,14 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
       return res.status(400).json({ success: false, verified: false, error: 'Razorpay payment signature verification failed.' });
     }
 
-    res.json({ success: true, verified: true });
+    // Call Canonical Promotion Flow
+    await promoteDraftTransaction(
+      draftId,
+      { razorpayOrderId: razorpay_order_id, razorpayPaymentId: razorpay_payment_id },
+      'client_callback'
+    );
+
+    res.json({ success: true, verified: true, orderId: draftId });
   } catch (err: any) {
     console.error("Razorpay Payment Verification Error:", err);
     const errorMessage = err.message || "Failed to verify Razorpay payment.";
