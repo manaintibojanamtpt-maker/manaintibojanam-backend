@@ -2567,8 +2567,11 @@ app.post("/api/ai/chat", strictLimiter, async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing or invalid 'contents' array." });
     }
     
+// Set trust proxy for Render to allow rate limiting
+app.set('trust proxy', 1);
+
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Upgraded to stable tool-calling model
+      model: "gemini-2.0-flash", // Upgraded to stable tool-calling model
       contents,
       config: {
         systemInstruction,
@@ -2589,7 +2592,7 @@ app.post("/api/ai/chat", strictLimiter, async (req, res) => {
     res.json({ success: true, text: response.text });
   } catch (err: any) {
     logger.error({ message: "AI Error", error: err.message, stack: err.stack });
-    res.status(500).json({ success: false, error: "AI processing failed." });
+    res.status(500).json({ success: false, error: err.message || "AI processing failed." });
   }
 });
 
