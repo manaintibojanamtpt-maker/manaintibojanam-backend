@@ -70,7 +70,7 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
   const addMatch = lastMessage.match(/(?:add|get|want|order)\s+(\d+)?\s*(.+)/i);
   if (addMatch) {
     const qty = addMatch[1] ? parseInt(addMatch[1], 10) : 1;
-    const itemName = addMatch[2].trim();
+    const itemName = addMatch[2].replace(/(?:to|in|into)?\s*(?:the\s+)?cart|from\s+(?:the\s+)?menu/i, '').trim();
     const matchedItems = brain.findMenuItems(itemName);
     
     if (matchedItems.length === 1 && matchedItems[0].isAvailable) {
