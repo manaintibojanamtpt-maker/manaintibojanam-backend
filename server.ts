@@ -136,9 +136,7 @@ const validateSecrets = () => {
     logger.warn("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing. Online payments disabled.");
   }
   
-  if (!process.env.GEMINI_API_KEY) {
-    logger.warn("GEMINI_API_KEY missing. AI Assistant will be disabled.");
-  }
+
   
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     logger.warn("EMAIL_USER or EMAIL_PASS missing. Reports and email notifications disabled.");
@@ -442,6 +440,7 @@ const verifyRazorpaySignature = (orderId: string, paymentId: string, signature: 
 
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ================= MIDDLEWARE =================
 // Rate Limiting
@@ -1138,6 +1137,62 @@ async function sendPushNotificationToUser(userId: string, title: string, body: s
     });
   }
 }
+
+// ================= PREP ALERTS WORKER =================
+const processPrepAlertsBatch = async () => {
+  if (!_db) return;
+  try {
+    const now = Date.now();
+    
+    // Find scheduled orders that are ACCEPTED and haven't had prep alerts sent
+    const snapshot = await _db.collection('orders')
+      .where('deliveryType', '==', 'scheduled')
+      .where('status', '==', 'ACCEPTED')
+      .where('prepAlertSent', '==', false)
+      .limit(50)
+      .get();
+      
+    if (snapshot.empty) return;
+
+    for (const docSnapshot of snapshot.docs) {
+      const order = docSnapshot.data();
+      const scheduledMs = order.scheduledTime ? new Date(order.scheduledTime).getTime() : 0;
+      
+      if (!scheduledMs || Number.isNaN(scheduledMs)) continue;
+      
+      const prepStart = scheduledMs - 60 * 60000; // 60 minutes before scheduled time
+      if (now >= prepStart) {
+        // Time to prepare!
+        try {
+          await docSnapshot.ref.update({
+            status: 'PREPARING',
+            prepAlertSent: true,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          logger.info({ message: "Order transitioned to PREPARING", orderId: docSnapshot.id });
+          
+          if (order.userId) {
+            await enqueueNotification({
+              channel: 'FCM',
+              recipient: order.userId,
+              messagePayload: {
+                title: "Order Preparing 🍲",
+                body: `Your scheduled order #${order.orderNumber || docSnapshot.id.slice(-4)} is now being prepared!`,
+                data: { url: "/my-orders" }
+              },
+              correlationId: `prep-${docSnapshot.id}`,
+              relatedEntities: { orderId: docSnapshot.id, userId: order.userId }
+            });
+          }
+        } catch (err: any) {
+          logger.error({ message: "Failed to process prep alert", orderId: docSnapshot.id, err: err.message });
+        }
+      }
+    }
+  } catch (err: any) {
+    logger.error({ message: "processPrepAlertsBatch error", err: err.message });
+  }
+};
 
 // ================= NOTIFICATION OUTBOX WORKER =================
 const processOutboxBatch = async () => {
@@ -2447,14 +2502,31 @@ app.post("/api/auth/biometric/verify", strictLimiter, async (req, res) => {
   }
 });
 
-// ================= OUTBOX CRON / WORKER =================
-app.post("/api/cron/process-outbox", async (req, res) => {
+// ================= WORKER CRON =================
+app.post("/api/cron/process-workers", async (req, res) => {
   // Simple auth via cron secret (configure CRON_SECRET in environment)
   const authHeader = req.headers.authorization;
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  try {
+    await Promise.all([
+      processOutboxBatch(),
+      processPrepAlertsBatch()
+    ]);
+    res.json({ success: true, message: "Workers processed successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Alias for backward compatibility if external services already hit this endpoint
+app.post("/api/cron/process-outbox", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   try {
     await processOutboxBatch();
     res.json({ success: true, message: "Outbox processed" });
@@ -2473,6 +2545,7 @@ const startOutboxWorker = () => {
       const settings = await getSettings();
       if (settings.workflow?.autoRetryWorker !== false) {
         await processOutboxBatch();
+        await processPrepAlertsBatch();
       }
     } catch (err) {
       console.error("Outbox worker interval error:", err);
@@ -2537,59 +2610,26 @@ startServer();
 
 
 // ================= AI ASSISTANT =================
-import { GoogleGenAI } from "@google/genai";
-
-const aiTools = [{
-  functionDeclarations: [
-    { name: 'searchMenu', description: 'Search the menu for items by name or category', parameters: { type: 'OBJECT', properties: { query: { type: 'STRING' }, maxPrice: { type: 'NUMBER' }, isVeg: { type: 'BOOLEAN' } } } },
-    { name: 'getItemDetails', description: 'Get details about a menu item including price and addons', parameters: { type: 'OBJECT', properties: { itemId: { type: 'STRING' } }, required: ['itemId'] } },
-    { name: 'getCartStatus', description: 'Get current cart items, quantities, and total', parameters: { type: 'OBJECT', properties: {} } },
-    { name: 'addToCart', description: 'Add an item to the cart', parameters: { type: 'OBJECT', properties: { itemId: { type: 'STRING' }, quantity: { type: 'NUMBER' }, addonIds: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['itemId', 'quantity'] } },
-    { name: 'removeFromCart', description: 'Remove an item from the cart', parameters: { type: 'OBJECT', properties: { cartItemId: { type: 'STRING' } }, required: ['cartItemId'] } },
-    { name: 'clearCart', description: 'Ask user to confirm clearing the entire cart', parameters: { type: 'OBJECT', properties: {} } },
-    { name: 'applyCoupon', description: 'Ask user to confirm applying a coupon code', parameters: { type: 'OBJECT', properties: { code: { type: 'STRING' } }, required: ['code'] } },
-    { name: 'escalateToSupport', description: 'Ask user to confirm creating a support ticket', parameters: { type: 'OBJECT', properties: { topic: { type: 'STRING' }, summary: { type: 'STRING' } }, required: ['topic', 'summary'] } }
-  ]
-}];
+import { processAIRequest } from "./aiProvider";
 
 app.post("/api/ai/chat", strictLimiter, async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(503).json({ success: false, error: "AI Assistant is not configured on this server." });
-    }
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // We expect the frontend to pass the fully formed 'contents' array in the GenAI format
     const { contents, systemInstruction } = req.body;
     
     if (!contents || !Array.isArray(contents)) {
       return res.status(400).json({ success: false, error: "Missing or invalid 'contents' array." });
     }
     
-// Set trust proxy for Render to allow rate limiting
-app.set('trust proxy', 1);
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", // Upgraded to stable tool-calling model
-      contents,
-      config: {
-        systemInstruction,
-        temperature: 0.2, // Lower temp for more deterministic tool usage
-        tools: aiTools,
-      }
-    });
+    const result = await processAIRequest(contents, systemInstruction || "");
     
-    // Check if the response contains function calls
-    const call = response.functionCalls?.[0];
-    if (call) {
+    if (result.toolCall) {
       return res.json({ 
         success: true, 
-        toolCall: { name: call.name, args: call.args } 
+        toolCall: { name: result.toolCall.name, args: result.toolCall.args } 
       });
     }
     
-    res.json({ success: true, text: response.text });
+    res.json({ success: true, text: result.text });
   } catch (err: any) {
     logger.error({ message: "AI Error", error: err.message, stack: err.stack });
     res.status(500).json({ success: false, error: err.message || "AI processing failed." });

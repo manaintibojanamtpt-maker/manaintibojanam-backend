@@ -206,7 +206,7 @@ const AIAssistant: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleOpen}
-        className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-black transition-colors"
+        className={`fixed ${cart.length > 0 ? 'bottom-48 sm:bottom-28' : 'bottom-24'} right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-black transition-all duration-300`}
       >
         <Sparkles size={24} />
       </motion.button>
@@ -220,7 +220,7 @@ const AIAssistant: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleClose}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
             />
             <motion.div
               initial={{ y: "100%" }}
@@ -231,7 +231,7 @@ const AIAssistant: React.FC = () => {
               dragConstraints={{ top: 0 }}
               dragElastic={0.2}
               onDragEnd={(_, info) => { if (info.offset.y > 100) handleClose(); }}
-              className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-white dark:bg-[#070504] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
+              className="fixed bottom-0 left-0 right-0 z-[200] h-[85vh] bg-white dark:bg-[#070504] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
             >
               {/* Header */}
               <div className="flex-none p-4 flex items-center justify-between border-b border-gray-100 dark:border-white/5">
@@ -337,7 +337,7 @@ const AIAssistant: React.FC = () => {
                   </button>
                 </div>
                 <div className="text-center mt-2">
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Google Gemini</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Local AI</span>
                 </div>
               </div>
             </motion.div>
