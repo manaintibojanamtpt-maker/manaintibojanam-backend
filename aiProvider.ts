@@ -1,4 +1,5 @@
 import winston from "winston";
+import { brain } from "./storeBrain";
 
 const logger = winston.createLogger({
   level: "info",
@@ -35,17 +36,42 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
     return { success: true, text: "We serve selected areas around Pune. Please enter your address at checkout to confirm exact delivery availability." };
   }
 
-  // Priority 3: Menu Search (Trigger frontend tool)
-  if (/(menu|show|veg|non-veg|food|dishes|chicken|paneer|biryani|roti)/i.test(lastMessage)) {
-    let query = "";
-    if (lastMessage.includes("veg") && !lastMessage.includes("non-veg")) query = "veg";
-    else if (lastMessage.includes("chicken")) query = "chicken";
-    else if (lastMessage.includes("paneer")) query = "paneer";
-    else if (lastMessage.includes("biryani")) query = "biryani";
+  // Priority 2.5: Add to Cart Exact Match (Quantity Aware)
+  const addMatch = lastMessage.match(/(?:add|get|want|order)\s+(\d+)?\s*(.+)/i);
+  if (addMatch) {
+    const qty = addMatch[1] ? parseInt(addMatch[1], 10) : 1;
+    const itemName = addMatch[2].trim();
+    const matchedItems = brain.findMenuItems(itemName);
+    
+    if (matchedItems.length === 1 && matchedItems[0].isAvailable) {
+      const item = matchedItems[0];
+      let text = `Added ${qty} ${item.name} to your cart.`;
+      
+      // Phase D: Premium Upsell Logic
+      if (item.name.toLowerCase().includes('biryani') || item.category.toLowerCase().includes('main')) {
+          text += " Would you like a cold beverage or dessert to complete your meal?";
+      }
 
+      // Confident exact match -> Direct to cart
+      return { 
+        success: true, 
+        toolCall: { name: 'addToCart', args: { itemId: item.id, quantity: qty } },
+        text
+      };
+    }
+  }
+
+  // Priority 3: Menu Search (Trigger frontend tool deterministically)
+  if (/(menu|show|what do you have|food|dishes)/i.test(lastMessage)) {
+    return { success: true, toolCall: { name: 'searchMenu', args: {} } };
+  }
+
+  // Priority 3.5: Entity Match Search (If they mentioned specific food)
+  const searchItems = brain.findMenuItems(lastMessage);
+  if (searchItems.length > 0) {
     return { 
       success: true, 
-      toolCall: { name: 'searchMenu', args: { query, isVeg: query === "veg" } } 
+      toolCall: { name: 'searchMenu', args: { query: lastMessage } } 
     };
   }
 
@@ -67,10 +93,27 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
   return await callOllama(lastMessage);
 };
 
-// Fallback to local Ollama via HTTP API
+// Fallback to local Ollama via HTTP API (Phase C: Schema-based extraction)
 async function callOllama(prompt: string) {
   const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
   const model = process.env.OLLAMA_MODEL || "llama3.2"; // lightweight model preference
+
+  const schema = {
+    type: "object",
+    properties: {
+      intent: { type: "string", enum: ["recommendation", "store_query", "conversational", "support", "cart_action"] },
+      entities: {
+        type: "object",
+        properties: {
+          food_type: { type: "string", enum: ["veg", "non-veg", "any"] },
+          query: { type: "string" },
+          max_price: { type: "number" }
+        }
+      },
+      conversational_reply: { type: "string" }
+    },
+    required: ["intent", "conversational_reply"]
+  };
 
   try {
     const controller = new AbortController();
@@ -81,7 +124,8 @@ async function callOllama(prompt: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: model,
-        prompt: `You are a friendly food ordering assistant for Mana Inti Bojanam. Keep answers under 2 short sentences. The user said: "${prompt}"`,
+        prompt: `You are a food ordering concierge for Mana Inti Bojanam. The user said: "${prompt}". Extract the intent. Keep the conversational_reply warm and under 2 sentences.`,
+        format: schema,
         stream: false
       }),
       signal: controller.signal
@@ -95,7 +139,38 @@ async function callOllama(prompt: string) {
 
     const data = await response.json();
     if (data.response) {
-      return { success: true, text: data.response };
+      try {
+        const parsed = JSON.parse(data.response);
+        
+        // Map structured intent to tool calls
+        if (parsed.intent === "recommendation") {
+          let isVeg;
+          if (parsed.entities?.food_type === "veg") isVeg = true;
+          else if (parsed.entities?.food_type === "non-veg") isVeg = false;
+
+          return {
+            success: true,
+            text: parsed.conversational_reply,
+            toolCall: { 
+              name: 'searchMenu', 
+              args: { 
+                query: parsed.entities?.query || "", 
+                maxPrice: parsed.entities?.max_price, 
+                isVeg 
+              } 
+            }
+          };
+        } else if (parsed.intent === "cart_action") {
+          return { success: true, text: parsed.conversational_reply, toolCall: { name: 'getCartStatus', args: {} } };
+        } else if (parsed.intent === "support") {
+          return { success: true, text: parsed.conversational_reply, toolCall: { name: 'escalateToSupport', args: {} } };
+        }
+
+        return { success: true, text: parsed.conversational_reply };
+      } catch (parseErr) {
+        logger.warn({ message: "Ollama response was not valid JSON", raw: data.response });
+        return { success: true, text: data.response };
+      }
     }
 
     throw new Error("Invalid Ollama response format");

@@ -2599,8 +2599,12 @@ async function startServer() {
       console.log("✅ Auto Workflow worker bypassed");
       startOutboxWorker();
       console.log("✅ Outbox worker initialized");
+      
+      // Initialize StoreBrain locally
+      brain.refresh();
+      console.log("✅ StoreBrain initialized");
     } catch (err) {
-      console.error("❌ Seeding failed:", err);
+      console.error("❌ Seeding/Brain failed:", err);
     }
   });
 }
@@ -2611,6 +2615,7 @@ startServer();
 
 // ================= AI ASSISTANT =================
 import { processAIRequest } from "./aiProvider";
+import { brain } from "./storeBrain";
 
 app.post("/api/ai/chat", strictLimiter, async (req, res) => {
   try {
