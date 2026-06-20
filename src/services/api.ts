@@ -19,6 +19,9 @@ import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDispla
 
 const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
 
+export let activeTenantId = 'mana-inti';
+export const setActiveTenantId = (id: string) => { activeTenantId = id; };
+
 import { auth } from '../firebase';
 
 // Correlation ID wrapper for fetch
@@ -480,7 +483,7 @@ export const updatePaymentStatus = async (
 
 // --- REAL-TIME LISTENERS ---
 
-export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: string) => {
+export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: string, onError?: (error: any) => void) => {
   const path = 'orders';
   let q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
   if (userId) {
@@ -540,6 +543,7 @@ export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: 
     callback(orders);
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, path);
+    if (onError) onError(error);
   });
 };
 
@@ -591,7 +595,48 @@ export const getDisplayStatus = (status: OrderStatus): string => {
     [OrderStatus.DISPATCHED]: 'Dispatched',
     [OrderStatus.COURIER_BOOKED]: 'Courier Booked',
     [OrderStatus.PICKED_UP]: 'Picked Up',
-    [OrderStatus.FAILED_DELIVERY]: 'Failed Delivery'
+    [OrderStatus.FAILED_DELIVERY]: 'Failed Delivery',
+    [OrderStatus.ACTIVE]: 'Active'
   };
   return mapping[status] || status;
+};
+
+export interface RepeatOrderLine { id: string; name: string; quantity: number; price: number; }
+export interface RepeatOrderBundle { id: string; orderId: string; date: string; items: RepeatOrderLine[]; totalAmount: number; }
+export const fetchRepeatOrderRailData = async (userId: string): Promise<any> => ({ items: [], bundles: [] });
+export const buildRepeatOrderLines = (items: any[]) => items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price }));
+
+import { deleteDoc, addDoc } from 'firebase/firestore';
+
+export const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
+  const finalTenantId = (item as any).tenantId || activeTenantId;
+  return addDoc(collection(getDb(), 'menu'), { ...item, tenantId: finalTenantId, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+};
+
+export const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
+  return updateDoc(doc(getDb(), 'menu', id), { ...updates, updatedAt: serverTimestamp() });
+};
+
+export const deleteMenuItem = async (id: string) => {
+  return deleteDoc(doc(getDb(), 'menu', id));
+};
+
+export const fetchAllTenants = async () => {
+  const q = query(collection(getDb(), 'tenants'), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const updateTenantStatus = async (tenantId: string, status: string) => {
+  return updateDoc(doc(getDb(), 'tenants', tenantId), { status, updatedAt: serverTimestamp() });
+};
+
+export const fetchOnboardingLeads = async () => {
+  const q = query(collection(getDb(), 'salesPipeline'), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const updateLeadStage = async (leadId: string, stage: string) => {
+  return updateDoc(doc(getDb(), 'salesPipeline', leadId), { stage, updatedAt: serverTimestamp() });
 };

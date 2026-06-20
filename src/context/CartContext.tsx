@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, MenuItem, Addon } from '../types';
 import { useAuth } from './AuthContext';
+import { useTenant } from './TenantContext';
 
 interface CartContextType {
   cart: CartItem[];
@@ -20,6 +21,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, loading } = useAuth();
+  const { tenantId } = useTenant();
   const [flyToCartParams, setFlyToCartParams] = useState<{ imageUrl: string, startX: number, startY: number, id: number } | null>(null);
   const [aiAssisted, setAiAssisted] = useState(false);
   
@@ -30,36 +32,45 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 700); // clear after animation completes
   };
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const savedCart = localStorage.getItem('cart');
+  const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Load cart when tenantId changes
+  useEffect(() => {
+    if (!tenantId) return;
+    const cartKey = `cart_${tenantId}`;
+    const savedCart = localStorage.getItem(cartKey);
     if (savedCart) {
       try {
-        return JSON.parse(savedCart);
+        setCart(JSON.parse(savedCart));
       } catch (e) {
         console.error('Failed to parse cart from localStorage', e);
-        localStorage.removeItem('cart');
-        return [];
+        localStorage.removeItem(cartKey);
+        setCart([]);
       }
+    } else {
+      setCart([]);
     }
-    return [];
-  });
+  }, [tenantId]);
 
   // Sync cart to localStorage
   useEffect(() => {
+    if (!tenantId) return;
+    const cartKey = `cart_${tenantId}`;
+    // Only clear if we actually have a tenant. If cart is empty, remove it.
     if (cart.length > 0) {
-      localStorage.setItem('cart', JSON.stringify(cart));
+      localStorage.setItem(cartKey, JSON.stringify(cart));
     } else {
-      localStorage.removeItem('cart');
+      localStorage.removeItem(cartKey);
     }
-  }, [cart]);
+  }, [cart, tenantId]);
 
   // Clear cart on logout
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!loading && !currentUser && tenantId) {
       setCart([]);
-      localStorage.removeItem('cart');
+      localStorage.removeItem(`cart_${tenantId}`);
     }
-  }, [currentUser, loading]);
+  }, [currentUser, loading, tenantId]);
 
   const addToCart = (item: MenuItem, selectedAddons?: Addon[]) => {
     setCart(prev => {
@@ -117,7 +128,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total, itemCount, flyToCartParams, triggerFlyToCart }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total, itemCount, flyToCartParams, triggerFlyToCart, aiAssisted, setAiAssisted }}>
       {children}
     </CartContext.Provider>
   );

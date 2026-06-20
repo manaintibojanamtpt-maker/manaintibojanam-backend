@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Info, Sparkles, ArrowRight, Loader2, Star, Gift, ShieldCheck, ChevronLeft, PauseCircle, PlayCircle, Utensils } from 'lucide-react';
+import { activeTenantId } from '../services/api';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import ReferralBanner from '../components/ReferralBanner';
 import { differenceInDays, format, addDays } from 'date-fns';
+import { useTenant } from '../context/TenantContext';
+import { useStoreBranding } from '../hooks/useStoreBranding';
 
 const PLANS = [
   {
@@ -40,6 +43,8 @@ const PLANS = [
 
 export default function SubscriptionPage() {
   const { currentUser, userProfile } = useAuth();
+  const { tenantSlug } = useTenant();
+  const { brandName, subscriptionLabel } = useStoreBranding();
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string>('2_meals');
   const [mealPref, setMealPref] = useState<'veg' | 'egg' | 'nonveg'>('nonveg');
@@ -66,6 +71,7 @@ export default function SubscriptionPage() {
 
     const q = query(
       collection(getDb(), 'subscriptions'), 
+      where('tenantId', '==', activeTenantId),
       where('userId', '==', currentUser.uid),
       where('status', 'in', ['active', 'paused'])
     );
@@ -88,7 +94,7 @@ export default function SubscriptionPage() {
   const handleApplyReferral = async () => {
     if (!currentUser) {
       toast.error('Please login first');
-      navigate('/login');
+      navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login');
       return;
     }
     if (!referralCode.trim()) return;
@@ -240,7 +246,7 @@ export default function SubscriptionPage() {
 
   const handleSubscribe = async () => {
     if (!currentUser) {
-      navigate('/login');
+      navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login');
       return;
     }
     if (existingSubDoc) {
@@ -254,8 +260,6 @@ export default function SubscriptionPage() {
       const endDate = new Date(now);
       endDate.setDate(now.getDate() + 30);
 
-      // 1. Create order on backend for Razorpay
-      // 1. Create order on backend for Razorpay
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
       const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
         method: 'POST',
@@ -268,11 +272,11 @@ export default function SubscriptionPage() {
         throw new Error(createData.error || 'Failed to create secure payment session');
       }
 
-      // Handle Mock Payment in development environments
       if (createData.isMock) {
         toast.success('Test Mode: Subscription simulated');
         await addDoc(collection(getDb(), 'subscriptions'), {
           userId: currentUser.uid,
+          tenantId: activeTenantId,
           planType: selectedPlan,
           price: activePlan.price,
           finalPrice: finalPrice,
@@ -301,13 +305,12 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // 2. Configure Razorpay
       const options = {
         key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
         amount: createData.order.amount,
         currency: 'INR',
-        name: 'Mana Inti Bojanam',
-        description: 'Monthly Meal Subscription',
+        name: brandName,
+        description: subscriptionLabel,
         order_id: createData.order.id,
         prefill: {
           name: currentUser.displayName || '',
@@ -319,7 +322,6 @@ export default function SubscriptionPage() {
           try {
             setIsSubmitting(true);
             
-            // 3. Verify payment on backend
             const verifyRes = await fetch(`${API_BASE_URL}/api/verify-razorpay-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -328,9 +330,9 @@ export default function SubscriptionPage() {
             const verifyData = await verifyRes.json();
             
             if (verifyData.success) {
-              // 4. Create subscription in Firestore ONLY AFTER verification
               await addDoc(collection(getDb(), 'subscriptions'), {
                 userId: currentUser.uid,
+                tenantId: activeTenantId,
                 planType: selectedPlan,
                 price: activePlan.price,
                 finalPrice: finalPrice,

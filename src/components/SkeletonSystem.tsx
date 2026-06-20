@@ -13,7 +13,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   return (
     <div 
       className={cn(
-        "shimmer bg-white/[0.05]",
+        "shimmer bg-gray-200 dark:bg-white/[0.05]",
         variant === 'circular' && "rounded-full",
         variant === 'rounded' && "rounded-2xl",
         className
@@ -23,7 +23,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 export const MenuItemSkeleton = () => (
-  <div className="relative flex justify-between gap-4 py-5 px-4 border-b border-white/5 last:border-b-0">
+  <div className="relative flex justify-between gap-4 py-5 px-4 border-b border-gray-100 dark:border-white/5 last:border-b-0">
     <div className="flex-1 min-w-0 pr-2 flex flex-col justify-start">
       <div className="flex items-center gap-1.5 mb-1.5">
         <Skeleton className="h-4 w-4 rounded-[4px]" />
@@ -55,18 +55,18 @@ export const CategorySkeleton = () => (
 );
 
 export const RecommendedSkeleton = () => (
-  <div className="flex gap-6 items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/10">
-    <Skeleton className="w-32 h-32 rounded-3xl flex-shrink-0" />
+  <div className="flex gap-6 items-center bg-gray-50 dark:bg-white/5 p-6 rounded-2xl border border-gray-100 dark:border-white/10">
+    <Skeleton className="w-32 h-32 rounded-2xl flex-shrink-0" />
     <div className="flex-1 space-y-3">
-      <Skeleton className="h-6 bg-white/10 rounded w-1/2" />
-      <Skeleton className="h-4 bg-white/10 rounded w-1/4" />
-      <Skeleton className="h-10 bg-white/10 rounded w-full" />
+      <Skeleton className="h-6 bg-gray-200 dark:bg-white/10 rounded w-1/2" />
+      <Skeleton className="h-4 bg-gray-200 dark:bg-white/10 rounded w-1/4" />
+      <Skeleton className="h-10 bg-gray-200 dark:bg-white/10 rounded w-full" />
     </div>
   </div>
 );
 
 export const TrendingSkeleton = () => (
-  <div className="flex-shrink-0 w-72 bg-white/5 rounded-[2.5rem] p-4 border border-white/10 flex gap-4 items-center">
+  <div className="flex-shrink-0 w-72 bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-white/10 flex gap-4 items-center">
     <Skeleton className="w-24 h-24 rounded-2xl flex-shrink-0" />
     <div className="flex-1 space-y-2">
       <Skeleton className="h-4 w-3/4 rounded" />
@@ -78,7 +78,7 @@ export const TrendingSkeleton = () => (
 export const HomeBentoSkeleton = () => (
   <div className="grid grid-cols-2 gap-3 mb-6">
     {[1, 2, 3, 4].map((i) => (
-      <div key={i} className="bg-white/5 border border-white/10 rounded-[1.25rem] p-2 flex flex-col">
+      <div key={i} className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-2 flex flex-col">
         <Skeleton className="h-24 w-full rounded-xl mb-2" />
         <Skeleton className="h-4 w-3/4 rounded mb-2" />
         <div className="flex items-center justify-between mt-auto">

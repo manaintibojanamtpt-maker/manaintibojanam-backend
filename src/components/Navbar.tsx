@@ -4,6 +4,7 @@ import { ShoppingCart, User, LogOut, Menu as MenuIcon, X, ChevronDown, LayoutDas
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTenant } from '../context/TenantContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
@@ -16,6 +17,7 @@ const Navbar: React.FC = () => {
   const { cart, total } = useCart();
   const { currentUser, userProfile, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { tenantSlug, tenantInfo } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -60,10 +62,62 @@ const Navbar: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate(tenantSlug ? `/k/${tenantSlug}` : '/');
   };
 
   const isHome = location.pathname === '/';
+
+  const storeName = tenantInfo?.name || 'MANA INTI';
+  const hasCustomLogo = !!tenantInfo?.branding?.logoUrl;
+  const isDefaultStore = !tenantSlug || tenantSlug === 'mana-inti' || storeName === 'MANA INTI';
+
+  const renderBranding = (isMobile = false) => {
+    if (hasCustomLogo) {
+      return (
+        <div className="flex items-center gap-2 md:gap-3 group">
+          <div className="w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-xl shadow-lg group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 bg-white p-1 border border-gray-100 dark:border-white/10">
+            <img src={tenantInfo!.branding!.logoUrl} alt={storeName} className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col">
+            <span className={`font-black ${isMobile ? 'text-lg text-gray-900 dark:text-white' : 'text-sm md:text-base'} leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-gray-900 dark:text-white' : !isMobile ? 'text-gray-900 md:text-white' : ''}`}>
+              {storeName}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    
+    if (isDefaultStore) {
+      return (
+        <div className="flex items-center gap-2 md:gap-3 group">
+          <div className="w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-xl shadow-lg group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 bg-white p-1 border border-gray-100 dark:border-white/10">
+            <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col">
+            <span className={`font-bold ${isMobile ? 'text-lg text-gray-900 dark:text-white' : 'text-sm md:text-base'} leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-gray-900 dark:text-white' : !isMobile ? 'text-gray-900 md:text-white' : ''}`}>
+              MANA INTI
+            </span>
+            <span className={`font-bold text-[7px] md:text-[8px] leading-none tracking-[0.2em] uppercase drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-red-600' : !isMobile ? 'text-red-600 md:text-red-400' : 'text-red-600'}`}>
+              Bojanam
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 md:gap-3 group">
+        <div className="flex flex-col">
+          <span className={`font-serif italic font-black ${isMobile ? 'text-xl text-gray-900 dark:text-white' : 'text-lg md:text-xl'} leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-gray-900 dark:text-white' : !isMobile ? 'text-gray-900 md:text-white' : ''}`}>
+            {storeName}
+          </span>
+          <span className={`font-bold text-[6px] md:text-[7px] leading-none tracking-[0.3em] uppercase drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-red-600' : !isMobile ? 'text-red-600 md:text-red-400' : 'text-red-600'}`}>
+            Premium Kitchen
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -104,18 +158,8 @@ const Navbar: React.FC = () => {
           
           {/* LOGO & LOCATION */}
           <div className="flex items-center gap-2 md:gap-4">
-            <Link to="/" className="flex items-center gap-2 md:gap-3 group">
-              <div className="w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-xl shadow-lg group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 bg-white p-1 border border-gray-100 dark:border-white/10">
-                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-              </div>
-              <div className="flex flex-col">
-                <span className={`font-bold text-sm md:text-base leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${isScrolled || !isHome ? 'text-gray-900 dark:text-white' : 'text-gray-900 md:text-white'}`}>
-                  MANA INTI
-                </span>
-                <span className={`font-bold text-[7px] md:text-[8px] leading-none tracking-[0.2em] uppercase drop-shadow-sm transition-colors duration-500 ${isScrolled || !isHome ? 'text-red-600' : 'text-red-600 md:text-red-400'}`}>
-                  Bojanam
-                </span>
-              </div>
+            <Link to="/" className="flex items-center">
+              {renderBranding(false)}
             </Link>
 
             {isHome && (
@@ -256,7 +300,7 @@ const Navbar: React.FC = () => {
               </div>
             ) : (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')}
                 className="px-8 py-3 bg-red-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-red-600/30 hover:bg-red-700 hover:scale-105 active:scale-95 transition-all"
               >
                 Login
@@ -273,7 +317,7 @@ const Navbar: React.FC = () => {
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
             <button 
-              onClick={() => navigate('/account')}
+              onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/account` : '/account')}
               className="p-2.5 rounded-2xl transition-all active:scale-90 drop-shadow-sm bg-black/10 backdrop-blur-md text-gray-900 dark:text-white"
               aria-label="Profile"
             >
@@ -310,13 +354,7 @@ const Navbar: React.FC = () => {
             >
               <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl shadow-lg p-1.5 border border-gray-100 dark:border-white/10">
-                    <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white leading-none">MANA INTI</span>
-                    <span className="font-black text-[8px] tracking-[0.2em] uppercase text-red-600 leading-none mt-1">Bojanam</span>
-                  </div>
+                  {renderBranding(true)}
                 </div>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-white dark:bg-gray-800 shadow-lg rounded-xl border border-gray-100 dark:border-white/5 active:scale-90 transition-all">
                   <X size={20} className="text-gray-900 dark:text-white" />
@@ -352,15 +390,15 @@ const Navbar: React.FC = () => {
                         Logout
                       </button>
                     </>
-                  ) : (
-                    <button 
-                      onClick={() => navigate('/login')}
-                      className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-red-600/30 active:scale-95 transition-all mt-2"
-                    >
-                      Login to Order
-                    </button>
-                  )}
-                </div>
+                    ) : (
+                      <button
+                        onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')}
+                        className="w-full mt-auto py-4 bg-red-600 text-white font-bold rounded-2xl uppercase tracking-widest text-sm shadow-xl shadow-red-600/30 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      >
+                        <User size={18} />
+                        Login / Sign Up
+                      </button>
+                    )}</div>
               </div>
 
               <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5">

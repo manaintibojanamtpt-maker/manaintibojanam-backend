@@ -6,6 +6,7 @@ export interface Addon {
 
 export interface MenuItem {
   id: string;
+  tenantId?: string;
   name: string;
   description: string;
   price: number;
@@ -18,6 +19,7 @@ export interface MenuItem {
   isPopular?: boolean;
   isActive?: boolean;
   rating?: number;
+  isVegetarian?: boolean;
   addons?: Addon[];
 }
 
@@ -76,7 +78,9 @@ export interface SavedAddress {
 
 export interface UserProfile {
   userId: string;
+  tenantId?: string;
   name: string;
+  displayName?: string;
   phone: string;
   email: string;
   address: string;
@@ -93,6 +97,8 @@ export interface UserProfile {
   };
   createdAt: any;
   updatedAt: any;
+  isSaaSOwner?: boolean;
+  ownedTenantIds?: string[];
 }
 
 export enum OrderStatus {
@@ -106,6 +112,7 @@ export enum OrderStatus {
   FAILED_DELIVERY = 'FAILED_DELIVERY',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
+  ACTIVE = 'ACTIVE', // For active subscriptions
   // Legacy statuses for backward compatibility
   PLACED = 'PLACED',                  // New alias for PENDING
   ACCEPTED = 'ACCEPTED',              // Admin accepts order
@@ -145,6 +152,7 @@ export interface OrderTimelineEvent {
 
 export interface CourierDispatch {
   id: string;
+  tenantId: string;
   orderId: string;
   courierProvider: 'porter' | 'rapido';
   courierTripId?: string;
@@ -180,6 +188,7 @@ export interface PaymentProof {
  */
 export interface OrderFeedback {
   id: string;
+  tenantId: string;
   orderId: string;
   userId: string;
   rating: number;                    // 1-5 stars
@@ -194,6 +203,7 @@ export interface OrderFeedback {
 
 export interface Order {
   id: string;
+  tenantId: string;
   userId: string;
   customerName: string;
   phone: string;
@@ -242,9 +252,19 @@ export interface Order {
   courierDispatchId?: string; // Reference to CourierDispatch document
   courierProvider?: 'porter' | 'rapido';
   courierTripId?: string;
+  
+  // Phase 7 MVP fields
+  deliveryPartner?: string | {
+    name: string;
+    phone: string;
+  };
   trackingUrl?: string;
   riderName?: string;
   riderPhone?: string;
+  deliveryAssignedAt?: any;
+  deliveryStatus?: string;
+  statusHistory?: any[];
+  
   estimatedDeliveryTime?: any;
   deliveredTime?: any;
   latestCourierStatus?: string;
@@ -257,10 +277,6 @@ export interface Order {
   specialInstructions?: string;      // For delivery or special requests
   
   // Legacy fields for backward compatibility
-  deliveryPartner?: {
-    name: string;
-    phone: string;
-  };
   trackingLink?: string;
   
   address: string;
@@ -283,6 +299,7 @@ export type SupportIssueType = 'order' | 'payment' | 'invoice';
 
 export interface SupportTicket {
   id?: string;
+  tenantId: string;
   orderId: string;
   userId: string;
   userName: string;
@@ -303,6 +320,7 @@ export type SubscriptionStatus = 'active' | 'paused' | 'expired';
 
 export interface Subscription {
   id?: string;
+  tenantId: string;
   userId: string;
   planType: '1_meal' | '2_meals' | '3_meals';
   price: number;
@@ -338,10 +356,35 @@ export interface Subscription {
 
 export interface Referral {
   id?: string;
+  tenantId: string;
   userId: string;
   referralCode: string;
   referredUsers: string[]; // Array of user IDs who used this code
   totalEarnings: number;
   discountGiven: number;
+  createdAt: any;
+}
+
+// ================= BHOJANOS SAAS PLATFORM =================
+
+export interface Tenant {
+  id: string;
+  slug: string;
+  name: string;
+  ownerId: string;
+  status: 'trialing' | 'active' | 'suspended';
+  planId: 'starter' | 'growth' | 'pro' | 'enterprise';
+  trialEndsAt?: any;
+  subscriptionEndsAt?: any;
+  paymentConfig?: {
+    provider: 'razorpay' | 'phonepe';
+    keyId: string;
+    secretRef: string; // Secure reference to the secret key
+    isActive: boolean;
+  };
+  brandConfig?: {
+    logoUrl?: string;
+    primaryColor?: string;
+  };
   createdAt: any;
 }

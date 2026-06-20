@@ -2,13 +2,18 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   subscribeToOrders, 
   updateOrderStatus as apiUpdateOrderStatus, 
-  getDisplayStatus 
+  getDisplayStatus,
+  fetchMenu,
+  buildRepeatOrderLines
 } from "../services/api";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 import { OrderStatus, Order } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useTenant } from "../context/TenantContext";
+import { useCart } from "../context/CartContext";
+import { useStoreBranding } from "../hooks/useStoreBranding";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Clock, ChevronRight, XCircle, RefreshCcw, MapPin, Star, FileText } from "lucide-react";
+import { ShoppingBag, Clock, ChevronRight, XCircle, RefreshCcw, MapPin, Star, FileText, MessageCircle, Share2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -16,8 +21,11 @@ import { addDoc, serverTimestamp, collection, doc, updateDoc } from "firebase/fi
 import { getDb } from '../lib/firebase-db';
 import DigitalInvoice from "../components/DigitalInvoice";
 import { formatPrice, safeParseDate } from "../lib/utils";
+import { buildMenuUrl, buildOrderShareMessage, buildReorderIntentMessage, buildStorefrontUrl, generateWhatsAppLink } from "../utils/whatsapp";
+import { deriveCustomerMemory } from "../utils/customerMemory";
 
 export default function MyOrders() {
+  const { tenantId, tenantSlug, tenantInfo } = useTenant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -56,8 +64,15 @@ export default function MyOrders() {
   const [feedback, setFeedback] = useState("");
   const [showInvoice, setShowInvoice] = useState<any>(null);
   const [now, setNow] = useState(Date.now());
+  const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
   const { currentUser } = useAuth();
+  const { brandName } = useStoreBranding();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
+  const storefrontUrl = buildStorefrontUrl(tenantSlug);
+  const menuUrl = buildMenuUrl(tenantSlug);
+  const tenantWhatsApp = (tenantInfo as any)?.contact?.whatsapp;
+  const customerMemory = useMemo(() => deriveCustomerMemory(orders), [orders]);
 
   const handleRatingSubmit = async () => {
     if (!ratingOrder || !currentUser) return;
@@ -89,7 +104,14 @@ export default function MyOrders() {
   };
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
+    setOrders([]);
+    setLoading(true);
 
     const unsubscribe = subscribeToOrders((ordersList) => {
       setOrders(ordersList);
@@ -97,7 +119,7 @@ export default function MyOrders() {
     }, currentUser.uid);
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, tenantId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -116,6 +138,66 @@ export default function MyOrders() {
       console.error("Cancel error:", err);
       toast.error(err.message || "Failed to cancel order");
     }
+  };
+
+  const handleReorder = async (order: Order) => {
+    try {
+      setReorderingOrderId(order.id);
+      const menuItems = await fetchMenu();
+      const repeatLines = buildRepeatOrderLines(order.items || [], menuItems);
+
+      if (repeatLines.length === 0) {
+        toast.error("This order has no currently available items to add again.");
+        return;
+      }
+
+      repeatLines.forEach((line) => {
+        for (let count = 0; count < line.quantity; count += 1) {
+          addToCart(line.item, line.selectedAddons);
+        }
+      });
+
+      const skippedItems = Math.max((order.items || []).length - repeatLines.length, 0);
+      const skippedAddons = repeatLines.reduce((sum, line) => sum + line.missingAddonNames.length, 0);
+
+      if (skippedItems > 0 || skippedAddons > 0) {
+        toast.success(
+          `${repeatLines.reduce((sum, line) => sum + line.quantity, 0)} items added. ${skippedItems} unavailable items and ${skippedAddons} unavailable add-ons were skipped.`
+        );
+      } else {
+        toast.success("Items added back to cart!");
+      }
+
+      navigate(tenantSlug ? `/k/${tenantSlug}/menu` : '/menu');
+    } catch (err) {
+      console.error("Reorder error:", err);
+      toast.error("Failed to rebuild this order.");
+    } finally {
+      setReorderingOrderId(null);
+    }
+  };
+
+  const openWhatsAppFlow = (message: string, phone?: string) => {
+    const link = generateWhatsAppLink(phone, message);
+    window.open(link, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareOrder = (order: Order) => {
+    const message = buildOrderShareMessage({
+      brandName,
+      storefrontUrl,
+      order
+    });
+    openWhatsAppFlow(message);
+  };
+
+  const handleWhatsAppReorder = (order: Order) => {
+    const message = buildReorderIntentMessage({
+      brandName,
+      menuUrl,
+      order
+    });
+    openWhatsAppFlow(message, tenantWhatsApp);
   };
 
   if (loading) {
@@ -155,12 +237,67 @@ export default function MyOrders() {
             <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed">
               Every great dining experience starts with a first order. Let's make today special.
             </p>
-            <Link to="/menu" className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-xl shadow-red-600/30 transition-transform active:scale-95 w-full max-w-[280px] uppercase tracking-widest text-sm inline-block">
+            <Link to={tenantSlug ? `/k/${tenantSlug}/menu` : '/menu'} className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-xl shadow-red-600/30 transition-transform active:scale-95 w-full max-w-[280px] uppercase tracking-widest text-sm inline-block">
               Browse Menu
             </Link>
           </motion.div>
         ) : (
           <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">Your Usuals</h2>
+                  <p className="text-sm text-gray-500 mt-1">BhojanOS is learning what you come back for most.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {customerMemory.preferredDeliverySlot && (
+                    <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 text-[11px] font-black uppercase tracking-wider">
+                      Prefers {customerMemory.preferredDeliverySlot}
+                    </span>
+                  )}
+                  {customerMemory.lastPaymentPreference && (
+                    <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 text-[11px] font-black uppercase tracking-wider">
+                      {customerMemory.lastPaymentPreference}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400 mb-3">Common Dishes</p>
+                  {customerMemory.topDishes.length === 0 ? (
+                    <p className="text-sm text-gray-500">Your favorites will show up here after a few more orders.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {customerMemory.topDishes.map((dish) => (
+                        <span key={dish.name} className="rounded-full bg-gray-900 text-white px-3 py-2 text-xs font-bold">
+                          {dish.name} x{dish.count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400 mb-3">Recent Memory</p>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>
+                      <span className="font-bold text-gray-900">Repeat orders:</span> {customerMemory.totalOrders}
+                    </p>
+                    {customerMemory.recentNote && (
+                      <p>
+                        <span className="font-bold text-gray-900">Recent note:</span> {customerMemory.recentNote}
+                      </p>
+                    )}
+                    {!customerMemory.recentNote && (
+                      <p>No saved delivery note remembered yet from your previous orders.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {sortedOrders.map((order, index) => {
               const displayState = getOrderDisplayState(order, new Date());
               const itemsText = (order.items || []).map((item: any) => `${item.name} x${item.quantity}`).join(', ');
@@ -178,7 +315,7 @@ export default function MyOrders() {
                     <div className="flex justify-between items-start gap-4 mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1.5">
-                          <h3 className="text-lg font-black text-white tracking-tight">Mana Inti Bojanam</h3>
+                          <h3 className="text-lg font-black text-white tracking-tight">{brandName}</h3>
                           <span className="text-[10px] font-bold bg-white/10 text-gray-300 px-2 py-0.5 rounded-md">#{order.orderNumber}</span>
                         </div>
                         <p className="text-sm font-medium text-gray-400 line-clamp-2 leading-relaxed">{itemsText}</p>
@@ -216,6 +353,17 @@ export default function MyOrders() {
                       >
                         Track Order
                       </Link>
+
+                      {order.status === OrderStatus.OUT_FOR_DELIVERY && order.trackingUrl && (
+                        <a 
+                          href={order.trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-black text-xs transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)] active:scale-95"
+                        >
+                          Live GPS
+                        </a>
+                      )}
                       
                       {order.status === OrderStatus.DELIVERED && !order.rating && (
                         <button 
@@ -227,13 +375,31 @@ export default function MyOrders() {
                       )}
                       
                       <button 
-                        onClick={() => {
-                          toast.success("Items added back to cart!");
-                          navigate('/menu');
-                        }}
+                        onClick={() => handleReorder(order)}
+                        disabled={reorderingOrderId === order.id}
                         className="flex-1 sm:flex-none text-center bg-transparent border-2 border-white/20 text-white hover:border-white/40 hover:bg-white/5 px-6 py-3 rounded-xl font-black text-xs transition-colors active:scale-95"
                       >
-                        Reorder
+                        {reorderingOrderId === order.id ? "Adding..." : "Reorder"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleWhatsAppReorder(order)}
+                        className="flex-1 sm:flex-none text-center bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 px-6 py-3 rounded-xl font-black text-xs transition-colors active:scale-95"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <MessageCircle size={14} />
+                          WhatsApp Reorder
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleShareOrder(order)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Share order on WhatsApp"
+                      >
+                        <Share2 size={16} />
                       </button>
 
                       {order.status === OrderStatus.DELIVERED && (

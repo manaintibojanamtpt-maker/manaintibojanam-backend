@@ -15,14 +15,21 @@ const AdminLogin: React.FC = () => {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const navigate = useNavigate();
   const { currentUser, userProfile, loading: authLoading } = useAuth();
+  
+  const isBhojanOS = window.location.hostname.includes('bhojanos');
+  const displayLogo = isBhojanOS ? '/bhojan-os-icon.png' : '/logo-v20-final.png';
 
-  // Redirect if already logged in as admin
+  // Redirect if already logged in
   useEffect(() => {
     if (authLoading) return;
 
     if (currentUser && userProfile) {
-      if (userProfile.role === 'admin') {
+      if (userProfile.role === 'admin' || userProfile.role === 'superadmin') {
+        // If a superadmin explicitly visits the admin login, allow them into the admin panel 
+        // because superadmins have full rights to the main store as well.
         navigate('/admin');
+      } else if ((userProfile.ownedTenantIds?.length || 0) > 0 || userProfile.role === 'owner') {
+        navigate('/owner/settings');
       } else {
         // If a normal user is here, they might want to login as admin
         // with a different account. We should NOT auto-redirect them 
@@ -37,7 +44,7 @@ const AdminLogin: React.FC = () => {
     setErrorDetails(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast.success('Admin logged in successfully!');
+      toast.success('Logged in successfully!');
     } catch (error: any) {
       console.error('Admin login error:', error);
       
@@ -67,17 +74,20 @@ const AdminLogin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg p-6">
+    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6 flex flex-col">
+      <div className="flex-1 flex flex-col items-center justify-center w-full py-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="inline-block p-1 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl mb-6 overflow-hidden border-2 border-orange-500/10"
+            className={`inline-block p-1 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl mb-6 overflow-hidden ${isBhojanOS ? '' : 'border-2 border-orange-500/10'}`}
           >
-            <img src="/logo-v20-final.png" alt="Logo" className="w-24 h-24 object-contain rounded-3xl shadow-inner" />
+            <img src={displayLogo} alt="Logo" className="w-24 h-24 object-contain rounded-3xl shadow-inner" />
           </motion.div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>Admin Portal</h1>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter" style={{ fontFamily: isBhojanOS ? "'Inter', sans-serif" : "'Playfair Display', serif" }}>
+            {isBhojanOS ? "BHOJANOS" : "Admin Portal"}
+          </h1>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mt-2">Secure Gateway • Authorized Only</p>
         </div>
 
@@ -150,6 +160,7 @@ const AdminLogin: React.FC = () => {
         <p className="text-center mt-8 text-xs text-gray-400 font-medium">
           &copy; {new Date().getFullYear()} Mana Inti Bojanam. All rights reserved.
         </p>
+      </div>
       </div>
     </div>
   );

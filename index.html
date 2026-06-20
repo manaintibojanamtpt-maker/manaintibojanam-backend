@@ -3,26 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Mana Inti Bojanam - Authentic Home-Style Telugu Meals</title>
-    <meta name="description" content="Authentic home-style Telugu meals prepared with love, fresh ingredients, and zero preservatives. Serving fresh in Magarpatta, Pune." />
-    
-    <!-- PWA & Icons -->
-    <link rel="manifest" href="/manifest.json?v=20" />
-    <link rel="icon" href="/favicon.ico?v=20" />
-    <link rel="stylesheet" href="/src/index.css" />
-    <meta name="theme-color" content="#1A0505">
+    <title>BhojanOS - Direct Ordering OS for Food Businesses</title>
+    <meta name="description" content="BhojanOS helps independent food businesses launch direct ordering, repeat customer memory, subscriptions, and owner delivery operations." />
     
     <!-- iOS Specific Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MIB">
-    
-    <!-- iPhone Home Screen Icons (Using strictly text-less v14 emblem) -->
-    <link rel="apple-touch-icon" href="/icon-v20-192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/icon-v20-192.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-v20-512.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/icon-v20-512.png">
+    <link rel="stylesheet" href="/src/index.css" />
+    <meta name="theme-color" content="#1A0505">
+
+    <script>
+      (function() {
+        var isBhojanOS = window.location.hostname.includes('bhojanos');
+        if (isBhojanOS) {
+          document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=3" />');
+          document.write('<link rel="icon" href="/bhojan-os-icon.png?v=3" />');
+          document.write('<link rel="apple-touch-icon" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="152x152" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="180x180" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="167x167" href="/bhojan-os-icon.png">');
+          document.write('<meta name="apple-mobile-web-app-title" content="BhojanOS">');
+          document.title = "BhojanOS - Direct Ordering OS for Food Businesses";
+        } else {
+          document.write('<link rel="manifest" href="/manifest.json?v=3" />');
+          document.write('<link rel="icon" href="/favicon.ico?v=3" />');
+          document.write('<link rel="apple-touch-icon" href="/icon-v20-192.png">');
+          document.write('<link rel="apple-touch-icon" sizes="152x152" href="/icon-v20-192.png">');
+          document.write('<link rel="apple-touch-icon" sizes="180x180" href="/icon-v20-512.png">');
+          document.write('<link rel="apple-touch-icon" sizes="167x167" href="/icon-v20-512.png">');
+          document.write('<meta name="apple-mobile-web-app-title" content="Mana Inti Bojanam">');
+          document.title = "Mana Inti Bojanam - Real Home Food";
+        }
+      })();
+    </script>
     
     <!-- iPhone Splash Screens -->
     <link rel="apple-touch-startup-image" href="/splash-premium.png">
@@ -40,30 +54,133 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
     <style>
-      /* Splash Screen Animations */
-      @keyframes pulseEmblem {
-        0% { transform: scale(0.95); opacity: 0.8; }
-        50% { transform: scale(1.02); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-      
-      @keyframes slideUpFade {
-        0% { transform: translateY(20px); opacity: 0; }
-        100% { transform: translateY(0); opacity: 1; }
-      }
-
       body {
         margin: 0;
         background-color: #0C0C0C;
         overscroll-behavior-y: none; /* iOS bounce fix */
       }
+
+      /* Premium SaaS Splash Screen Animations */
+      
+      /* Phase 1: Dark Reveal (Ambient Light) */
+      .splash-bg {
+        position: absolute;
+        inset: 0;
+        background-color: #080808;
+        z-index: 1;
+      }
+      .splash-ambient-light {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 120vw;
+        height: 120vh;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle at center, rgba(30, 30, 30, 0.7) 0%, transparent 60%);
+        opacity: 0;
+        z-index: 2;
+        animation: splashAmbientEmerges 0.8s ease-in forwards;
+      }
+
+      .splash-logo-container {
+        position: relative;
+        width: 54vw;
+        max-width: 260px;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Phase 2: Outline Trace */
+      .splash-layer-trace {
+        position: absolute;
+        width: 100%;
+        height: auto;
+        filter: url(#splash-edge-trace);
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        animation: 
+          splashTraceReveal 1.2s cubic-bezier(0.65, 0, 0.35, 1) forwards 0.8s,
+          splashTraceFade 0.8s ease-out forwards 2.0s;
+      }
+
+      /* Phase 3 & 4: Color Reveal & Brand Hold */
+      .splash-layer-color {
+        position: relative;
+        width: 100%;
+        height: auto;
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        animation: 
+          splashColorRevealMask 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards 2.0s,
+          splashColorRevealOpacity 0.8s ease-out forwards 2.0s,
+          splashBrandHold 1.2s ease-in-out forwards 2.8s;
+      }
+
+      @keyframes splashAmbientEmerges {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      @keyframes splashTraceReveal {
+        0% { opacity: 1; clip-path: inset(0 100% 0 0); }
+        100% { opacity: 1; clip-path: inset(0 0 0 0); }
+      }
+
+      @keyframes splashTraceFade {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      @keyframes splashColorRevealMask {
+        0% { clip-path: inset(0 100% 0 0); }
+        100% { clip-path: inset(0 0 0 0); }
+      }
+
+      @keyframes splashColorRevealOpacity {
+        0% { opacity: 0; filter: drop-shadow(0 0 10px rgba(255,255,255,0)); }
+        100% { opacity: 1; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); }
+      }
+
+      @keyframes splashBrandHold {
+        0% { transform: scale(1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); }
+        50% { transform: scale(1.02); filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5)); }
+        100% { transform: scale(1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.4)); }
+      }
     </style>
   </head>
 
   <body>
-    <!-- Premium Splash Screen with Baked-In Text Logo -->
-    <div id="initial-loader" style="position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, #1f1f1f 0%, #050505 80%); z-index: 999999; transition: opacity 0.5s ease-out;">
-      <img src="/logo-v20-final.png" alt="Mana Inti Bojanam Logo" style="width: 70vw; max-width: 320px; height: auto; animation: pulseEmblem 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; filter: drop-shadow(0 15px 30px rgba(0,0,0,0.9));" />
+    <script>
+      window.__SPLASH_START_TIME__ = Date.now();
+    </script>
+    
+    <!-- BhojanOS platform splash screen -->
+    <div id="initial-loader" style="position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; transition: opacity 0.8s ease-in-out;">
+      
+      <div class="splash-bg"></div>
+      <div class="splash-ambient-light"></div>
+
+      <div class="splash-logo-container">
+        <!-- SVG Filter for Exact Contour Tracing -->
+        <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+          <filter id="splash-edge-trace" color-interpolation-filters="sRGB">
+            <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="dilated" />
+            <feComposite in="dilated" in2="SourceAlpha" operator="out" result="outlineAlpha" />
+            <feFlood flood-color="#ffffff" flood-opacity="0.9" result="floodColor" />
+            <feComposite in="floodColor" in2="outlineAlpha" operator="in" result="outline" />
+            <feGaussianBlur in="outline" stdDeviation="0.5" result="softOutline" />
+            <feMerge>
+              <feMergeNode in="softOutline" />
+              <feMergeNode in="outline" />
+            </feMerge>
+          </filter>
+        </svg>
+
+        <img class="splash-layer-trace" src="./src/assets/bhojan-os-logo.png" alt="BhojanOS Logo Outline" />
+        <img class="splash-layer-color" src="./src/assets/bhojan-os-logo.png" alt="BhojanOS Logo" />
+      </div>
     </div>
 
     <div id="root"></div>

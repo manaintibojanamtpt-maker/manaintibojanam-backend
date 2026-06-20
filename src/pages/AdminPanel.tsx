@@ -164,40 +164,23 @@ export default function AdminPanel() {
   }, [orders]);
 
   useEffect(() => {
-    const checkPrepAlerts = async () => {
-      if (!orders || orders.length === 0) return;
+    if (!orders || orders.length === 0) return;
 
-      for (const order of orders) {
-        if (
-          order.deliveryType === 'scheduled' &&
-          !order.prepAlertSent &&
-          !prepAlertCacheRef.current.has(order.id)
-        ) {
-          const scheduledMs = safeParseDate(order.scheduledTime).getTime();
-          if (!scheduledMs || Number.isNaN(scheduledMs)) continue;
-
-          const prepStart = scheduledMs - 60 * 60000;
-          if (Date.now() >= prepStart && order.status !== OrderStatus.PREPARING) {
-            prepAlertCacheRef.current.add(order.id);
-            if (orderAudioRef.current) {
-              orderAudioRef.current.play().catch(() => {});
-            }
-            alert(`Start preparing Order #${order.orderNumber || order.id}`);
-            try {
-              await updateDoc(doc(getDb(), 'orders', order.id), {
-                prepAlertSent: true,
-                status: OrderStatus.PREPARING
-              });
-            } catch (err) {
-              console.error('Prep alert update failed for order:', order.id, err);
-            }
-          }
+    for (const order of orders) {
+      if (
+        order.deliveryType === 'scheduled' &&
+        order.status === OrderStatus.PREPARING &&
+        !prepAlertCacheRef.current.has(order.id)
+      ) {
+        // Backend transitioned this to PREPARING
+        prepAlertCacheRef.current.add(order.id);
+        if (orderAudioRef.current && soundEnabled) {
+          orderAudioRef.current.play().catch(() => {});
         }
+        alert(`Time to prepare scheduled Order #${order.orderNumber || order.id.slice(-4)}!`);
       }
-    };
-
-    checkPrepAlerts();
-  }, [orders]);
+    }
+  }, [orders, soundEnabled]);
 
   useEffect(() => {
     // Close sidebar on tab change on mobile
@@ -206,7 +189,7 @@ export default function AdminPanel() {
 
   // ================= ADMIN CHECK =================
   useEffect(() => {
-    if (!authLoading && userProfile && userProfile.role !== 'admin') {
+    if (!authLoading && userProfile && userProfile.role !== 'admin' && userProfile.role !== 'superadmin') {
       toast.error("Unauthorized access");
       navigate('/');
     }
@@ -257,7 +240,7 @@ export default function AdminPanel() {
 
   // ================= REAL-TIME LISTENERS =================
   useEffect(() => {
-    if (authLoading || !userProfile || userProfile.role !== 'admin') return;
+    if (authLoading || !userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'superadmin')) return;
     setLoading(true);
 
     // Menu Listener
@@ -286,6 +269,9 @@ export default function AdminPanel() {
       setOrders(ordersList);
       setLoading(false);
       setLastUpdated(new Date());
+    }, undefined, (err) => {
+      console.error("Orders Listener Error:", err);
+      setLoading(false);
     });
 
     // Coupons Listener
@@ -892,7 +878,7 @@ export default function AdminPanel() {
             </div>
 
             <nav className="flex-1 p-6 space-y-1 overflow-y-auto no-scrollbar">
-              <SidebarLink icon={<Home size={20}/>} label="Back to Home" active={false} onClick={() => navigate("/")} />
+              <SidebarLink icon={<Home size={20}/>} label="Back to Home" active={false} onClick={() => navigate("/?noredirect=true")} />
               <div className="h-4" /> {/* Spacer */}
               <SidebarLink icon={<LayoutDashboard size={20}/>} label="Dashboard" active={tab === "dashboard"} onClick={() => setTab("dashboard")} />
               <SidebarLink 
@@ -973,7 +959,7 @@ export default function AdminPanel() {
               {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} className="text-red-500" />}
             </button>
             <button 
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/?noredirect=true")}
               className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors text-gray-500 dark:text-gray-400"
               title="Back to Home"
             >

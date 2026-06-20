@@ -3,30 +3,37 @@ import { Home, Utensils, ShoppingBag, User, LogOut, Settings, Bell } from 'lucid
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 
 const DesktopSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, userProfile, logout } = useAuth();
+  const { tenantInfo, tenantSlug } = useTenant();
 
   const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'Menu', path: '/menu', icon: Utensils },
-    { name: 'Subscriptions', path: '/subscription', icon: Utensils },
-    { name: 'Orders', path: '/my-orders', icon: ShoppingBag },
-    { name: 'Profile', path: '/account', icon: User },
+    { name: 'Home', path: tenantSlug ? `/k/${tenantSlug}` : '/', icon: Home },
+    { name: 'Menu', path: tenantSlug ? `/k/${tenantSlug}/menu` : '/menu', icon: Utensils },
+    { name: 'Subscriptions', path: tenantSlug ? `/k/${tenantSlug}/subscription` : '/subscription', icon: Utensils },
+    { name: 'Orders', path: tenantSlug ? `/k/${tenantSlug}/my-orders` : '/my-orders', icon: ShoppingBag },
+    { name: 'Profile', path: tenantSlug ? `/k/${tenantSlug}/account` : '/account', icon: User },
   ];
 
   return (
     <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-white/70 dark:bg-black/40 backdrop-blur-xl border-r border-gray-100 dark:border-white/10 z-50">
       <div className="p-8">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:rotate-12 transition-transform">
-            <Utensils size={20} />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">MANA INTI</h1>
-            <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Bojanam</p>
+        <Link to={tenantSlug ? `/k/${tenantSlug}` : '/'} className="flex items-center gap-3 group">
+          {tenantInfo?.branding?.logoUrl ? (
+            <img src={tenantInfo.branding.logoUrl} alt={tenantInfo?.name || 'Store'} className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-red-600/20 group-hover:rotate-12 transition-transform bg-white" />
+          ) : (
+            <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:rotate-12 transition-transform">
+              <Utensils size={20} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter leading-none truncate">
+              {tenantInfo?.name ? tenantInfo.name.toUpperCase() : 'STOREFRONT'}
+            </h1>
           </div>
         </Link>
       </div>
@@ -92,7 +99,7 @@ const DesktopSidebar: React.FC = () => {
                 </div>
               </div>
               <button 
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white hover:bg-red-700 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20"
               >
                 <User size={14} /> Login

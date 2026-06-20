@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { getDb } from '../lib/firebase-db';
 import { 
   Activity, 
   AlertTriangle, 
+  ArrowLeft,
   CheckCircle, 
   RefreshCcw, 
   FileWarning, 
@@ -207,12 +211,42 @@ const ChannelIcon = ({ channel }: { channel: string }) => {
 // ============================================================================
 
 export default function SystemHealth() {
+  const navigate = useNavigate();
   const data = useMockSystemHealth();
+  const [incidents, setIncidents] = useState<SystemIncident[]>(data.incidents);
   const [selectedIncident, setSelectedIncident] = useState<SystemIncident | null>(null);
   
   // KPI Filtering State
   const [activeKpi, setActiveKpi] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    async function fetchIncidents() {
+      try {
+        const q = query(collection(getDb(), 'system_incidents'), orderBy('timestamp', 'desc'), limit(50));
+        const snapshot = await getDocs(q);
+        const fetched = snapshot.docs.map(doc => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            type: 'UNKNOWN',
+            status: d.resolved ? 'RESOLVED' : 'DETECTED',
+            correlationId: doc.id,
+            relatedEntity: d.tenantId || 'Tenant 0',
+            createdAt: d.timestamp?.toDate ? d.timestamp.toDate().toISOString() : new Date().toISOString(),
+            updatedAt: d.timestamp?.toDate ? d.timestamp.toDate().toISOString() : new Date().toISOString(),
+            payload: { message: d.message, context: d.contextSummary, route: d.route }
+          } as SystemIncident;
+        });
+        if (fetched.length > 0) {
+          setIncidents(fetched);
+        }
+      } catch (err) {
+        console.error("Failed to fetch incidents", err);
+      }
+    }
+    fetchIncidents();
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -221,7 +255,7 @@ export default function SystemHealth() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const filteredIncidents = data.incidents.filter(i => {
+  const filteredIncidents = incidents.filter(i => {
     if (activeKpi === 'OPEN_INCIDENTS') {
       return ['DETECTED', 'RUNNING', 'ESCALATED'].includes(i.status);
     }
@@ -344,14 +378,21 @@ export default function SystemHealth() {
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-white pb-20 transition-colors">
       
       {/* 1. TOP HEADER */}
-      <header className="bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-white/5 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-white/5 sticky top-0 z-20 shadow-sm pt-[max(env(safe-area-inset-top),1rem)] sm:pt-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2 sm:mt-0">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 -ml-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <ShieldAlert className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Health</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-none">System Health</h1>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 pl-[44px]">
               Operational control surface for incidents, payment recovery, and notification resilience.
             </p>
           </div>
@@ -398,8 +439,8 @@ export default function SystemHealth() {
         {/* 2. SUMMARY KPI ROW */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <MetricCard 
-            title="Open Incidents" value={data.summary.openIncidents} subtitle="Requires attention" 
-            icon={AlertTriangle} colorClass={data.summary.openIncidents > 0 ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : "text-gray-500 dark:text-gray-400"} 
+            title="Open Incidents" value={incidents.filter(i => !['RESOLVED', 'VERIFIED'].includes(i.status)).length} subtitle="Requires attention" 
+            icon={AlertTriangle} colorClass={incidents.filter(i => !['RESOLVED', 'VERIFIED'].includes(i.status)).length > 0 ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : "text-gray-500 dark:text-gray-400"} 
             isActive={activeKpi === 'OPEN_INCIDENTS'}
             onClick={() => handleKpiClick('OPEN_INCIDENTS', 'section-incidents')}
           />

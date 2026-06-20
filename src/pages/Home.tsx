@@ -35,6 +35,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { useTimeBasedSection } from '../hooks/useTimeBasedSection';
+import { useTenant } from '../context/TenantContext';
+import { activeTenantId as fallbackTenantId } from '../services/api';
 import toast from 'react-hot-toast';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
@@ -76,13 +78,35 @@ const Home: React.FC = () => {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { cart, addToCart, updateQuantity, total } = useCart();
   const { currentUser, userProfile, loading: authLoading } = useAuth();
+  const { tenantId: contextTenantId, tenantInfo } = useTenant();
+  const activeTenantId = contextTenantId || fallbackTenantId;
   const [deliveryState, setDeliveryState] = useDeliveryState();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const timeBasedHeader = useTimeBasedSection();
 
   useEffect(() => {
-    if (!authLoading && currentUser && userProfile?.role === 'admin') {
-      navigate('/admin');
+    // Only redirect if they are on the root URL of bhojanos, not on a specific store URL (/k/...)
+    if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
+      window.location.href = '/onboard';
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('noredirect') === 'true') {
+      sessionStorage.setItem('skipAdminRedirect', 'true');
+      return;
+    }
+    
+    if (sessionStorage.getItem('skipAdminRedirect') === 'true') {
+      return;
+    }
+    
+    if (!authLoading && currentUser) {
+      if (userProfile?.role === 'admin') {
+        navigate('/admin');
+      } else if (userProfile?.role === 'superadmin') {
+        navigate('/super-admin');
+      }
     }
   }, [currentUser, userProfile, authLoading, navigate]);
 
@@ -108,7 +132,7 @@ const Home: React.FC = () => {
     const fetchCategories = async () => {
       try {
         const catRef = collection(getDb(), "categories");
-        const q = query(catRef, where("isActive", "==", true), where("showOnHome", "==", true), orderBy("priority", "desc"));
+        const q = query(catRef, where("tenantId", "==", activeTenantId), where("isActive", "==", true), where("showOnHome", "==", true), orderBy("priority", "desc"));
         const snap = await getDocs(q);
         if (!snap.empty) {
           const cats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -129,7 +153,7 @@ const Home: React.FC = () => {
         } else {
           // Derive categories from menu items to avoid conflict
           const menuRef = collection(getDb(), "menu");
-          const menuSnap = await getDocs(menuRef);
+          const menuSnap = await getDocs(query(menuRef, where("tenantId", "==", activeTenantId)));
           if (!menuSnap.empty) {
             const derived = Array.from(new Set(menuSnap.docs.map(doc => doc.data().category))).filter(Boolean);
             const categoryImages: Record<string, string> = {
@@ -168,7 +192,7 @@ const Home: React.FC = () => {
         const menuRef = collection(getDb(), "menu");
         
         // Fetch ALL items to do complex client-side filtering 
-        const allItemsSnap = await getDocs(query(menuRef));
+        const allItemsSnap = await getDocs(query(menuRef, where("tenantId", "==", activeTenantId)));
         const allItems = allItemsSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as any))
           .filter(item => item.isAvailable !== false && item.isActive !== false);
@@ -257,11 +281,11 @@ const Home: React.FC = () => {
 
       try {
         const ordersRef = collection(getDb(), "orders");
-        const q = query(ordersRef, where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(3));
+        const q = query(ordersRef, where("tenantId", "==", activeTenantId), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(3));
         
         const [snap, menuSnap] = await Promise.all([
           getDocs(q),
-          getDocs(collection(getDb(), "menu"))
+          getDocs(query(collection(getDb(), "menu"), where("tenantId", "==", activeTenantId)))
         ]);
         
         const menuMap = new Map(menuSnap.docs.map(d => [d.id, d.data()]));
@@ -294,7 +318,7 @@ const Home: React.FC = () => {
     fetchMenu();
     fetchSettings();
     fetchOrderAgain();
-  }, [currentUser]);
+  }, [currentUser, activeTenantId]);
 
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1.1, 1]);
@@ -347,10 +371,12 @@ const Home: React.FC = () => {
         <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-center" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Brand Logo */}
           <div className="mib-glass flex items-center gap-2.5 rounded-3xl py-2 pl-2 pr-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 backdrop-blur-xl bg-black/30">
-            <img src="/logo-v20-final.png" alt="MIB" className="w-10 h-10 object-contain rounded-full bg-black/60 p-1.5" />
+            <img src={tenantInfo?.branding?.logoUrl || "/logo-v20-final.png"} alt={tenantInfo?.name || "MIB"} className="w-10 h-10 object-contain rounded-full bg-black/60 p-1.5" />
             <div className="flex flex-col -gap-1">
               <span className="text-orange-300 font-black text-[9px] tracking-[0.3em] uppercase leading-none mb-0.5">Premium</span>
-              <span className="text-white font-black text-[14px] tracking-tight leading-none font-serif">Mana Inti Bojanam</span>
+              <span className="text-white font-black text-[14px] tracking-tight leading-none font-serif truncate max-w-[150px]">
+                {tenantInfo?.name || "Mana Inti Bojanam"}
+              </span>
             </div>
           </div>
           
@@ -531,31 +557,33 @@ const Home: React.FC = () => {
         )}
 
         {/* PREMIUM MEAL SUBSCRIPTION BANNER */}
-        <section className="mb-14">
-          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 to-black rounded-[3rem] p-8 sm:p-12 shadow-2xl border border-indigo-500/20">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-            <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tighter mb-4 leading-[0.9]">
-                  Eat like home, <br />
-                  <span className="text-indigo-400">every single day.</span>
-                </h2>
-                <p className="text-white/60 text-base font-bold mb-8 max-w-md">
-                  Join 200+ foodies who enjoy our monthly meal subscriptions. Zero cooking, zero hassle, pure health.
-                </p>
-                <button 
-                  onClick={() => setShowSubscriptionModal(true)}
-                  className="px-10 py-5 bg-indigo-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-indigo-500/30 active:scale-95 transition-all"
-                >
-                  View Subscription Plans
-                </button>
-              </div>
-              <div className="w-48 h-48 bg-white/5 rounded-[2rem] border border-white/10 p-2 transform rotate-3 hidden lg:block">
-                <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" className="w-full h-full object-cover rounded-[1.5rem]" alt="" />
+        {tenantInfo?.features?.subscriptionEnabled && (
+          <section className="mb-14">
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 to-black rounded-[3rem] p-8 sm:p-12 shadow-2xl border border-indigo-500/20">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 text-center md:text-left">
+                  <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tighter mb-4 leading-[0.9]">
+                    Eat like home, <br />
+                    <span className="text-indigo-400">every single day.</span>
+                  </h2>
+                  <p className="text-white/60 text-base font-bold mb-8 max-w-md">
+                    Join 200+ foodies who enjoy our monthly meal subscriptions. Zero cooking, zero hassle, pure health.
+                  </p>
+                  <button 
+                    onClick={() => setShowSubscriptionModal(true)}
+                    className="px-10 py-5 bg-indigo-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-indigo-500/30 active:scale-95 transition-all"
+                  >
+                    View Subscription Plans
+                  </button>
+                </div>
+                <div className="w-48 h-48 bg-white/5 rounded-[2rem] border border-white/10 p-2 transform rotate-3 hidden lg:block">
+                  <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" className="w-full h-full object-cover rounded-[1.5rem]" alt="" />
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* TODAY'S SPECIALS */}
         {(loading || specialItems.length > 0) && (
@@ -763,7 +791,7 @@ const Home: React.FC = () => {
             <div className="w-full">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">
-                  The <span className="text-orange-600">Mana Inti</span> Promise
+                  The <span className="text-orange-600">{tenantInfo?.name ? tenantInfo.name.split(' ')[0] : "Mana Inti"}</span> Promise
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">
                   We believe food should nourish the soul. Every meal is prepared with the same care as in a mother's kitchen.

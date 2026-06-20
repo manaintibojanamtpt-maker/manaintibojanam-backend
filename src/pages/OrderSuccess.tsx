@@ -6,19 +6,22 @@ import { Order } from '../types';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useTenant } from '../context/TenantContext';
 
 const OrderSuccess: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { clearCart } = useCart();
+  const { tenantSlug } = useTenant();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
 
   useEffect(() => {
     const fetchOrder = async () => {
       const searchParams = new URLSearchParams(location.search);
-      const orderId = searchParams.get('orderId');
+      const stateOrderId = (location.state as { orderId?: string } | null)?.orderId;
+      const orderId = stateOrderId || searchParams.get('orderId');
 
       if (!orderId) {
         setError('Order ID not found');
@@ -43,7 +46,7 @@ const OrderSuccess: React.FC = () => {
     };
 
     fetchOrder();
-  }, [location.search, clearCart]);
+  }, [location.search, location.state, clearCart]);
 
   if (isLoading) {
     return (
@@ -59,7 +62,7 @@ const OrderSuccess: React.FC = () => {
         <AlertCircle size={48} className="text-red-500 mb-4" />
         <h1 className="text-2xl font-black text-white mb-2">Oops!</h1>
         <p className="text-gray-400 mb-8">{error || 'Could not load order details'}</p>
-        <Link to="/" className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold">Back to Menu</Link>
+        <Link to={`${basePath}/menu`} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold">Back to Menu</Link>
       </div>
     );
   }
@@ -106,13 +109,13 @@ const OrderSuccess: React.FC = () => {
         className="w-full max-w-sm flex flex-col gap-3"
       >
         <Link 
-          to={`/order/${order.id}`} 
+          to={`${basePath}/order/${order.id}`} 
           className="w-full py-4 bg-green-500 text-white rounded-2xl font-black text-lg shadow-lg shadow-green-500/30 hover:bg-green-600 transition-all active:scale-[0.98]"
         >
           Track Order
         </Link>
         <Link 
-          to="/" 
+          to={`${basePath}/menu`} 
           className="w-full py-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-2xl font-black text-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-[0.98]"
         >
           Back to Menu

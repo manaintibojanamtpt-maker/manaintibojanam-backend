@@ -10,13 +10,14 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, ArrowLeft, Shield, Fingerprint } from 'lucide-react';
+import { Loader2, ArrowLeft, Shield, Fingerprint, Crown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import logo from '../assets/logo.webp';
 import { useBiometrics } from '../hooks/useBiometrics';
 import BiometricModal from '../components/BiometricModal';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 
 const AppleIcon = () => (
   <svg viewBox="0 0 384 512" width="20" height="20" fill="currentColor">
@@ -35,6 +36,7 @@ const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
   const { currentUser } = useAuth();
+  const { tenantInfo } = useTenant();
 
   const { 
     isSupported: biometricsSupported, 
@@ -248,8 +250,18 @@ const Login: React.FC = () => {
             className="text-center mb-10"
           >
             <div className="inline-block p-1 mb-6">
-              <img src="/logo-v20-final.png" alt="Mana Inti Bojanam Emblem" className="w-24 h-24 object-contain rounded-2xl shadow-xl" loading="eager" />
+              {tenantInfo?.logo ? (
+                <img src={tenantInfo.logo} alt={`${tenantInfo.name} Logo`} className="w-24 h-24 object-contain rounded-2xl shadow-xl" loading="eager" />
+              ) : (
+                <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-3xl font-black text-white">{tenantInfo?.name ? tenantInfo.name.charAt(0) : 'MI'}</span>
+                </div>
+              )}
             </div>
+            {tenantInfo?.name && (
+              <h1 className="text-2xl font-black mb-1">{tenantInfo.name}</h1>
+            )}
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sign in to your account</p>
           </motion.div>
 
           <motion.div 
@@ -388,8 +400,16 @@ const Login: React.FC = () => {
               <button
                 onClick={() => navigate('/admin/login')}
                 className="w-14 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-transparent dark:border-white/5 rounded-[20px] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                title="Admin Login"
               >
                 <Shield size={20} />
+              </button>
+              <button
+                onClick={() => navigate('/super-admin/login')}
+                className="w-14 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-transparent dark:border-white/5 rounded-[20px] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                title="Super Admin Login"
+              >
+                <Crown size={20} />
               </button>
             </div>
           </div>

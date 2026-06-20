@@ -1,13 +1,14 @@
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import logo from './assets/logo.webp';
+import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
+
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useFirestoreConnection, forceOnline } from './lib/firebase-db';
-import { WifiOff, RefreshCw } from 'lucide-react';
+import { useFirestoreConnection } from './lib/firebase-db';
 import { CartProvider } from './context/CartContext';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { TenantProvider, useTenant } from './context/TenantContext';
 import Header from './components/Header';
+import { Store } from 'lucide-react';
 import BottomNav from './components/BottomNav';
 import FloatingMiniCart from './components/FloatingMiniCart';
 import InstallPrompt from './components/InstallPrompt';
@@ -23,15 +24,19 @@ import NetworkAwareness from './components/NetworkAwareness';
 import { useBiometrics } from './hooks/useBiometrics';
 import BiometricModal from './components/BiometricModal';
 import AIAssistant from './components/AIAssistant';
+import OwnerLayout from './components/owner/OwnerLayout';
+import OwnerDashboard from './pages/owner/OwnerDashboard';
+import OwnerMenu from './pages/owner/OwnerMenu';
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
-import Checkout from './pages/Checkout';
-import { useCart } from './context/CartContext';
 
 // Lazy load pages for code splitting
+const Checkout = lazy(() => import('./pages/Checkout'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const BhojanOSSuperAdmin = lazy(() => import('./pages/BhojanOSSuperAdmin'));
+const BhojanOSSuperAdminLogin = lazy(() => import('./pages/BhojanOSSuperAdminLogin'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const MyOrders = lazy(() => import('./pages/MyOrders'));
@@ -45,34 +50,86 @@ const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const CancellationPolicy = lazy(() => import('./pages/CancellationPolicy'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
+const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
+const OwnerOrders = lazy(() => import('./pages/owner/OwnerOrders'));
+const OwnerCustomers = lazy(() => import('./pages/owner/OwnerCustomers'));
+const OwnerSettings = lazy(() => import('./pages/owner/OwnerSettings'));
+const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
-  if (!currentUser) return <Navigate to="/login" />;
-  if (adminOnly) {
-    if (!userProfile) {
-      return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
-    }
-    if (userProfile.role !== 'admin') return <Navigate to="/" />;
+  if (loading) {
+    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  }
+  if (!currentUser) {
+    if (adminOnly) return <Navigate to="/admin/login" />;
+    if (superAdminOnly) return <Navigate to="/super-admin/login" />;
+    return <Navigate to="/login" />;
+  }
+  if (!userProfile) {
+    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  }
+
+  if (superAdminOnly) {
+    if (userProfile.role !== 'superadmin') return <Navigate to="/" />;
+  } else if (adminOnly) {
+    if (userProfile.role !== 'admin' && userProfile.role !== 'superadmin') return <Navigate to="/" />;
   }
 
   return <>{children}</>;
 };
 
-// Native HTML splash screen is used instead of React-based one to prevent double splash
+const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser, userProfile, loading } = useAuth();
+
+  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  if (!currentUser) return <Navigate to="/login" />;
+  
+  if (!userProfile) {
+    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  }
+
+  if (!userProfile?.ownedTenantIds || userProfile.ownedTenantIds.length === 0) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
+};
 
 const AppContent: React.FC = () => {
   const { currentUser, loading: authLoading, logout } = useAuth();
   const { connected, loading: firestoreLoading, retry } = useFirestoreConnection();
-  const { fcmInitialized, initializing: fcmInitializing } = useFCMInitialization();
-
-  const [debugLogs, setDebugLogs] = React.useState<string[]>([]);
-  const [debugStatus, setDebugStatus] = React.useState<string>("");
+  useFCMInitialization();
 
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
+      // Reload automatically if a chunk load fails (or if old chunk returned index.html causing SyntaxError)
+      if (
+        event.message?.includes('Failed to fetch dynamically imported module') ||
+        event.message?.includes('Importing a module script failed') ||
+        event.error?.name === 'ChunkLoadError' ||
+        event.message?.includes('Failed to load module script') ||
+        event.message?.includes('Unable to preload CSS') ||
+        event.message?.includes('Unexpected token') ||
+        event.message?.includes('Unexpected token \'<\'')
+      ) {
+        const lastReload = sessionStorage.getItem('last_chunk_error_reload');
+        const now = Date.now();
+        if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+          sessionStorage.setItem('last_chunk_error_reload', now.toString());
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+              for (let registration of registrations) {
+                registration.unregister();
+              }
+              window.location.reload();
+            }).catch(() => window.location.reload());
+          } else {
+            window.location.reload();
+          }
+        }
+      }
       fetch('/api/client-errors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,16 +153,20 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Only remove the native splash screen once the app is fully authenticated/loaded
     if (!authLoading) {
-      // Add a tiny delay to ensure the initial React render is painted
+      // Ensure the premium splash animation plays for its full duration (4s)
+      const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
+      const elapsed = Date.now() - startTime;
+      const minDuration = 4000;
+      const timeToWait = Math.max(0, minDuration - elapsed);
+
       setTimeout(() => {
         const loader = document.getElementById('initial-loader');
         if (loader) {
           loader.style.opacity = '0';
-          setTimeout(() => loader.remove(), 500);
+          setTimeout(() => loader.remove(), 800);
         }
-      }, 300);
+      }, timeToWait);
     }
   }, [authLoading]);
 
@@ -115,14 +176,11 @@ const AppContent: React.FC = () => {
         seedMenuItems().catch((error) => {
           console.error('Seed menu items failed:', error);
         });
-      } else {
-        console.log('Skipping menu seed because seed marker is already present');
       }
     }
   }, [authLoading, connected]);
 
-  // Biometric Lock Logic
-  const { isEnabled: biometricsEnabled, authenticate: bioAuth, disable: bioDisable, isSupported: bioSupported, biometryType } = useBiometrics();
+  const { isEnabled: biometricsEnabled, authenticate: bioAuth, biometryType } = useBiometrics();
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [hasCheckedLock, setHasCheckedLock] = useState(false);
 
@@ -141,7 +199,6 @@ const AppContent: React.FC = () => {
   };
 
   const handleFallback = async () => {
-    // If the user can't unlock with biometrics, clear the lock and force re-login
     setIsAppLocked(false);
     await logout();
   };
@@ -172,118 +229,90 @@ const AppContent: React.FC = () => {
     </div>
   );
 
-  // Removed authLoading blocking so the app renders instantly
-  // if (authLoading) return <GlobalLoading />;
-
-  const isAdminRoute = window.location.pathname === '/admin';
-
-  const triggerVerification = async () => {
-    setDebugStatus("Verifying...");
-    try {
-      const res = await fetch("/api/admin/verify-connection");
-      const data = await res.json();
-      setDebugLogs(data.logs || []);
-      setDebugStatus(data.status === "ok" ? "SUCCESS" : "FAILED");
-    } catch (err: any) {
-      setDebugStatus(`ERROR: ${err.message}`);
-    }
-  };
-
-  // Data is ready when Auth stops loading (Don't block on Firestore connection)
-  const isDataReady = !authLoading;
+  const mainRoutes = (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/menu" element={<Menu />} />
+      <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+      <Route path="/subscription" element={<SubscriptionPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/cancellation-policy" element={<CancellationPolicy />} />
+      <Route path="/account" element={<Account />} />
+      <Route path="/addresses" element={<Addresses />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/order-success" element={<OrderSuccess />} />
+      <Route 
+        path="/order/:orderId" 
+        element={
+          <ProtectedRoute>
+            <OrderTracking />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/my-orders" 
+        element={
+          <ProtectedRoute>
+            <MyOrders />
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
+  );
 
   return (
-    <Router>
-      <div className="flex-1 flex flex-col w-full h-full bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
-        {/* Connectivity Status (Native Style) */}
-        <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
-        
-        <Suspense fallback={<GlobalLoading />}>
-          <Routes>
-            <Route 
-              path="/admin/login" 
-              element={<AdminLogin />} 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute adminOnly>
-                  <AdminPanel />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/system-health" 
-              element={
-                <ProtectedRoute adminOnly>
-                  <SystemHealth />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="*" 
-              element={
-                <LayoutWrapper>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/menu" element={<Menu />} />
-                    <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
-                    <Route path="/subscription" element={<SubscriptionPage />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="/refund-policy" element={<RefundPolicy />} />
-                    <Route path="/cancellation-policy" element={<CancellationPolicy />} />
-                    <Route path="/account" element={<Account />} />
-                    <Route path="/addresses" element={<Addresses />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/payment-success" element={<PaymentSuccess />} />
-                    <Route path="/order-success" element={<OrderSuccess />} />
-                    <Route 
-                      path="/order/:orderId" 
-                      element={
-                        <ProtectedRoute>
-                          <OrderTracking />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/my-orders" 
-                      element={
-                        <ProtectedRoute>
-                          <MyOrders />
-                        </ProtectedRoute>
-                      } 
-                    />
-                  </Routes>
-                </LayoutWrapper>
-              } 
-            />
-          </Routes>
-        </Suspense>
-        
-        <InstallPrompt />
-        <NotchNotification />
-        <FlyToCartAnimation />
-        <PwaUpdatePrompt />
-        <Toaster position="bottom-center" />
+    <LazyMotion features={domAnimation}>
+      <Router>
+        <div className="flex-1 flex flex-col w-full h-full bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
+          <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
+          
+          <Suspense fallback={<GlobalLoading />}>
+            <Routes>
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/super-admin/login" element={<BhojanOSSuperAdminLogin />} />
+              <Route path="/owner/login" element={<OwnerLogin />} />
+              <Route path="/onboard" element={<OnboardKitchen />} />
+              <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
+              <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
+              <Route path="/admin/system-health" element={<ProtectedRoute adminOnly><SystemHealth /></ProtectedRoute>} />
+              <Route path="/owner/dashboard" element={<OwnerRoute><OwnerLayout><OwnerDashboard /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/menu" element={<OwnerRoute><OwnerLayout><OwnerMenu /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/settings" element={<OwnerRoute><OwnerLayout><OwnerSettings /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/orders" element={<OwnerRoute><OwnerLayout><OwnerOrders /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/customers" element={<OwnerRoute><OwnerLayout><OwnerCustomers /></OwnerLayout></OwnerRoute>} />
+              
+              <Route path="/k/:tenantSlug/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />
+              <Route path="/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />
+            </Routes>
+          </Suspense>
+          
+          <InstallPrompt />
+          <NotchNotification />
+          <FlyToCartAnimation />
+          <PwaUpdatePrompt />
+          <Toaster position="bottom-center" />
 
-        <BiometricModal
-          isOpen={isAppLocked}
-          onClose={() => {}} // User must unlock
-          onConfirm={handleUnlock}
-          onFallback={handleFallback}
-          type="unlock"
-          biometryType={biometryType}
-        />
-      </div>
-    </Router>
+          <BiometricModal
+            isOpen={isAppLocked}
+            onClose={() => {}} 
+            onConfirm={handleUnlock}
+            onFallback={handleFallback}
+            type="unlock"
+            biometryType={biometryType}
+          />
+        </div>
+      </Router>
+    </LazyMotion>
   );
 };
 
 const PageWrapper: React.FC<{ children: React.ReactNode, locationKey: string }> = ({ children, locationKey }) => {
   return (
-    <motion.div
+    <m.div
       key={locationKey}
       initial={{ x: 10, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
@@ -292,31 +321,78 @@ const PageWrapper: React.FC<{ children: React.ReactNode, locationKey: string }> 
       className="w-full h-full"
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 };
 
+const StoreNotFound = () => (
+  <div className="flex-1 flex flex-col items-center justify-center h-full min-h-[100dvh] bg-brand-bg dark:bg-dark-bg p-6 text-center relative overflow-hidden">
+    <div className="absolute inset-0 mib-hero-grain opacity-50" />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-orange-500/20 blur-[100px] rounded-full pointer-events-none" />
+    
+    <m.div 
+      initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+      animate={{ scale: 1, opacity: 1, y: 0 }} 
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="relative z-10 max-w-sm w-full mib-glass p-10 rounded-[2.5rem] flex flex-col items-center border border-white/10"
+    >
+      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-dark-surface to-black border border-white/5 flex items-center justify-center mb-8 shadow-2xl relative premium-card-hover">
+        <div className="absolute inset-0 bg-orange-500/10 blur-2xl rounded-full" />
+        <Store size={40} className="text-orange-400 relative z-10" />
+      </div>
+      
+      <h1 className="text-3xl font-black text-white mb-4 tracking-tighter">Unavailable</h1>
+      <p className="text-white/50 mb-10 text-sm leading-relaxed max-w-[260px]">
+        The curated culinary experience you're looking for doesn't exist or has concluded its service.
+      </p>
+      
+      <a href="/" className="btn-orange w-full group relative overflow-hidden">
+        <span className="relative z-10">Return to Main Store</span>
+        <div className="absolute inset-0 mib-cta-sheen" />
+      </a>
+    </m.div>
+  </div>
+);
+
 const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const isCheckout = location.pathname === '/checkout';
-  const isSubscription = location.pathname === '/subscription';
+  const { tenantNotFound } = useTenant();
+  const path = location.pathname;
+  
+  const isRoute = (targetPath: string) => {
+    if (path === targetPath) return true;
+    const match = path.match(/^\/k\/[^/]+(.*)$/);
+    if (match) {
+      const p = match[1] || '/';
+      return p === targetPath;
+    }
+    return false;
+  };
+
+  const isCheckout = isRoute('/checkout');
+  const isSubscription = isRoute('/subscription');
   const isFullScreen = isCheckout || isSubscription;
   
-  const isMenu = location.pathname === '/menu';
-  const isLogin = location.pathname === '/login';
-  const isAdmin = location.pathname.startsWith('/admin');
-  const isMyOrders = location.pathname === '/my-orders';
-  const isOrderTracking = location.pathname.startsWith('/order/');
+  const isMenu = isRoute('/menu');
+  const isLogin = isRoute('/login') || path === '/owner/login';
+  const isAdmin = path.startsWith('/admin');
+  const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
+  const isMyOrders = isRoute('/my-orders');
+  const isOrderTracking = path.startsWith('/order/') || !!path.match(/^\/k\/[^/]+\/order\//);
   
-  if (isLogin || isAdmin) {
+  if (isLogin || isAdmin || isOwnerRoute) {
     return <>{children}</>;
   }
 
-  const isHome = location.pathname === '/';
-  const isAccount = location.pathname === '/account';
-  const isAddresses = location.pathname === '/addresses';
-  const isOrderSuccess = location.pathname === '/order-success';
-  const isPaymentSuccess = location.pathname === '/payment-success';
+  if (tenantNotFound) {
+    return <StoreNotFound />;
+  }
+
+  const isHome = isRoute('/');
+  const isAccount = isRoute('/account');
+  const isAddresses = isRoute('/addresses');
+  const isOrderSuccess = isRoute('/order-success');
+  const isPaymentSuccess = isRoute('/payment-success');
   
   const hideHeader = isFullScreen || isMenu || isHome || isMyOrders || isOrderTracking || isAccount || isAddresses || isOrderSuccess || isPaymentSuccess;
   const isEdgeToEdge = isFullScreen || isAccount || isOrderSuccess || isPaymentSuccess || isAddresses;
@@ -363,8 +439,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const nativeSplash = document.getElementById('mib-splash-screen');
     if (nativeSplash) {
-      nativeSplash.classList.add('hide');
-      setTimeout(() => nativeSplash.remove(), 1000);
+      const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
+      const elapsed = Date.now() - startTime;
+      const minDuration = 4000;
+      const timeToWait = Math.max(0, minDuration - elapsed);
+
+      setTimeout(() => {
+        nativeSplash.classList.add('hide');
+        setTimeout(() => nativeSplash.remove(), 1000);
+      }, timeToWait);
     }
   }, []);
 
@@ -372,9 +455,11 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <CartProvider>
-            <AppContent />
-          </CartProvider>
+          <TenantProvider>
+            <CartProvider>
+              <AppContent />
+            </CartProvider>
+          </TenantProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -24,6 +24,7 @@ export const saveUserIfNotExists = async (user: {
 
       const newUser: UserProfile = {
         userId: user.uid,
+        tenantId: 'mana-inti',
         name: user.displayName || '',
         phone: user.phone || '',
         email: user.email || '',
@@ -76,6 +77,6 @@ export const saveUserIfNotExists = async (user: {
     return { id: userDoc.id, ...userData } as unknown as UserProfile;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
-    return user as unknown as UserProfile;
+    return { ...user, tenantId: 'mana-inti', role: 'user' } as unknown as UserProfile;
   }
 };

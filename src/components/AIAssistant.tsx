@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { getDb } from '../lib/firebase-db';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
+import { useStoreBranding } from '../hooks/useStoreBranding';
 import { MenuItem } from '../types';
 
 type Message = { role: 'user' | 'assistant' | 'system', content: string };
@@ -24,6 +25,7 @@ const AIAssistant: React.FC = () => {
   // Tool Execution State
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const { brandName, assistantName, cuisineLabel, heroDescription, isDefaultStorefront } = useStoreBranding();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { cart, addToCart, removeFromCart, clearCart, total, setAiAssisted } = useCart();
@@ -42,8 +44,8 @@ const AIAssistant: React.FC = () => {
           { 
             role: 'assistant', 
             content: open 
-              ? "Hi! I'm your Mana Inti Concierge. What are you craving today?" 
-              : "Hi! I'm your Mana Inti Concierge. We're currently closed, but I can help you explore our menu for later!" 
+              ? `Hi! I'm your ${assistantName}. What are you craving today?`
+              : `Hi! I'm your ${assistantName}. We're currently closed, but I can help you explore the menu for later!`
           }
         ]);
       }
@@ -79,7 +81,14 @@ const AIAssistant: React.FC = () => {
           results = results.filter(i => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q));
         }
         if (maxPrice) results = results.filter(i => i.price <= maxPrice);
-        if (isVeg !== undefined) results = results.filter(i => i.isVegetarian === isVeg);
+        if (isVeg !== undefined) {
+          results = results.filter(i => {
+            if (typeof i.isVegetarian === 'boolean') {
+              return i.isVegetarian === isVeg;
+            }
+            return isVeg ? i.type !== 'non-veg' : i.type === 'non-veg';
+          });
+        }
         
         toolResult = { items: results.slice(0, 5).map(i => ({ id: i.id, name: i.name, price: i.price })) };
         if (results.length === 0) {
@@ -169,7 +178,7 @@ const AIAssistant: React.FC = () => {
     try {
       const isStoreOpen = isStoreOpenNow(settings);
       const systemInstruction = `
-You are "Mana Inti Concierge", the AI food-ordering assistant for the cloud kitchen "Mana Inti Bojanam", which serves authentic home-style Andhra/Telugu meals in Pune. Your only job is to help users browse the menu, decide what to eat, and place or manage their orders.
+You are "${assistantName}", the AI food-ordering assistant for "${brandName}". ${isDefaultStorefront ? 'The kitchen serves authentic home-style Andhra/Telugu meals in Pune.' : `Brand context: ${cuisineLabel}. ${heroDescription}`} Your only job is to help users browse the menu, decide what to eat, and place or manage their orders.
 
 # CORE RULES
 1. When a user request involves the menu, cart, or orders, you MUST call the appropriate tool. Never just describe the manual steps if a tool can perform the action.
@@ -178,7 +187,7 @@ You are "Mana Inti Concierge", the AI food-ordering assistant for the cloud kitc
 4. Never show raw errors or stack traces. If a tool fails or returns nothing, ask a clarifying question or suggest alternatives instead of saying "0 items found".
 
 # BEHAVIOR BY INTENT
-- Greeting ("hi", "hello"): One friendly greeting + a quick next step, e.g. "Hi! Welcome to Mana Inti Bojanam. Craving veg, non-veg, or today's specials?"
+- Greeting ("hi", "hello"): One friendly greeting + a quick next step, e.g. "Hi! Welcome to ${brandName}. Craving veg, non-veg, or today's specials?"
 - "show menu" / "what do you have": Call the menu tool, then present items grouped by category (Meals, Tiffins, Curries, Extras). Show a few options and invite refinement. Never reply with only an item count.
 - "add 2 masala dosa to cart": Resolve "Masala Dosa" via search, pick a sensible default variant (and say which), call add_to_cart(item_id, quantity), then confirm: "Added 2 Masala Dosa. Cart total: ₹X. Anything else?"
 - "best / trending / popular non-veg item": Call the trending/recommendation tool with the right filter. Recommend 1-3 dishes with a one-line pitch each and offer to add them. Do NOT route this into plain text search.
@@ -275,7 +284,7 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
                     <Bot size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">Mana Inti Concierge</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{assistantName}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">AI Ordering Assistant</p>
                   </div>
                 </div>

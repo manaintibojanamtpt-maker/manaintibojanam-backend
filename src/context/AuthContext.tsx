@@ -15,6 +15,7 @@ interface SavedAddress {
 }
 
 import { UserProfile } from '../types';
+
 import { saveUserIfNotExists } from '../services/api';
 
 interface AuthContextType {

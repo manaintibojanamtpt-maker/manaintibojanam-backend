@@ -28,9 +28,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { MenuItem } from '../types';
 import { formatPrice, cn } from '../lib/utils';
+import { getDb } from '../lib/firebase-db';
+import { activeTenantId as fallbackTenantId } from '../services/api';
 import MenuItemCard from '../components/MenuItemCard';
 import Banner from '../components/Banner';
-import { getDb } from '../lib/firebase-db';
 import { collection, query, where, orderBy, onSnapshot, doc, limit, getDocs, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AiOrderingWidget from '../components/AiOrderingWidget';
 import HelpMeChooseModal from '../components/HelpMeChooseModal';
@@ -39,8 +40,13 @@ import { MenuItemSkeleton, CategorySkeleton, Skeleton } from '../components/Skel
 
 // SkeletonCard removed in favor of centralized SkeletonSystem
 
+import { useTenant } from '../context/TenantContext';
+
 const Menu: React.FC = () => {
   const navigate = useNavigate();
+  const { tenantSlug, tenantId: contextTenantId } = useTenant();
+  const activeTenantId = contextTenantId || fallbackTenantId;
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const [searchParams, setSearchParams] = useSearchParams();
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -227,8 +233,11 @@ const Menu: React.FC = () => {
       // Fetch all DELIVERED orders for this user
       const ordersQuery = query(
         collection(getDb(), "orders"), 
+        where("tenantId", "==", activeTenantId),
         where("userId", "==", currentUser.uid),
-        where("status", "==", "DELIVERED")
+        where("status", "==", "DELIVERED"),
+        orderBy("createdAt", "desc"),
+        limit(50)
       );
       const snapshot = await getDocs(ordersQuery);
       
@@ -301,7 +310,7 @@ const Menu: React.FC = () => {
   useEffect(() => {
     setLoading(true);
 
-    const unsubscribeMenu = onSnapshot(query(collection(getDb(), "menu"), orderBy("createdAt", "desc")), (snapshot) => {
+    const unsubscribeMenu = onSnapshot(query(collection(getDb(), "menu"), where("tenantId", "==", activeTenantId), orderBy("createdAt", "desc")), (snapshot) => {
       const menuItems = snapshot.docs.map(doc => {
         const data = doc.data() as any;
         return {
@@ -328,7 +337,7 @@ const Menu: React.FC = () => {
     });
 
     // Real-time categories
-    const unsubscribeCategories = onSnapshot(query(collection(getDb(), "categories"), where("isActive", "==", true), orderBy("priority", "desc")), (snapshot) => {
+    const unsubscribeCategories = onSnapshot(query(collection(getDb(), "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true), orderBy("priority", "desc")), (snapshot) => {
       const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCategories(cats);
     }, (err) => {
@@ -349,7 +358,7 @@ const Menu: React.FC = () => {
       unsubscribeCategories();
       unsubscribeSettings();
     };
-  }, []);
+  }, [activeTenantId]);
 
   useEffect(() => {
     if (userPrefs && menu.length > 0) {
@@ -477,9 +486,9 @@ const Menu: React.FC = () => {
           key="loading"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="min-h-screen bg-brand-bg dark:bg-dark-bg pb-32"
+          className="min-h-screen bg-gray-50 dark:bg-[#111111] pb-32"
         >
-          <div className="sticky top-0 z-40 border-b border-white/5 bg-dark-bg/95 px-3 py-4 backdrop-blur-xl sm:px-4">
+          <div className="sticky top-0 z-40 border-b border-gray-200 dark:border-white/5 bg-gray-50/95 dark:bg-[#111111]/95 px-3 py-4 backdrop-blur-xl sm:px-4">
             <Skeleton className="h-14 rounded-2xl" />
           </div>
           <div className="w-full px-3 py-5 sm:px-4">
@@ -499,12 +508,12 @@ const Menu: React.FC = () => {
           animate={{ opacity: 1, scale: isCategorySheetOpen ? 0.96 : 1 }}
           transition={{ duration: 0.3, type: 'spring', bounce: 0, opacity: { duration: 0.2 } }}
           style={{ transformOrigin: "top center", borderRadius: isCategorySheetOpen ? '2rem' : '0', overflow: 'hidden' }}
-          className="min-h-screen bg-dark-bg pb-6 transition-all"
+          className="min-h-screen bg-gray-50 dark:bg-[#111111] pb-32 transition-all"
         >
 
 
       {/* ULTRA-COMPACT STICKY HEADER */}
-      <div className="sticky top-0 z-40 border-b border-white/5 bg-dark-bg/95 backdrop-blur-xl mib-premium-sticky shadow-sm">
+      <div className="sticky top-0 z-40 border-b border-gray-200 dark:border-white/5 bg-gray-50/95 dark:bg-[#111111]/95 backdrop-blur-xl mib-premium-sticky shadow-sm">
         {/* COMPACT STORE STATUS BANNER */}
         {!storeStatus && (
           <div className="bg-orange-500/10 border-b border-orange-500/20 px-4 py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-400">
@@ -516,7 +525,7 @@ const Menu: React.FC = () => {
         <div className="px-3 py-3 sm:px-4 flex flex-col gap-4">
           <div className="flex items-center gap-3">
              <button 
-                onClick={() => navigate('/')}
+                onClick={() => navigate(`${basePath}/`)}
                 className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/5"
              >
                 <ArrowLeft size={20} />
@@ -609,8 +618,7 @@ const Menu: React.FC = () => {
         onClose={() => setShowHelpMeChoose(false)} 
         menuItems={menu} 
       />
-      {/* MAIN CONTENT AREA */}
-      <div id="menu-grid-start" className="px-3 sm:px-4 pb-6">
+      <div id="menu-grid-start" className="px-3 sm:px-4 pb-12">
         <div className="pointer-events-none absolute inset-x-0 top-[240px] -z-10 mx-auto h-64 max-w-4xl bg-gradient-to-b from-orange-500/10 via-red-500/5 to-transparent blur-3xl opacity-70" />
 
         {/* Removed heavy STORE STATUS STRIP */}
@@ -671,7 +679,7 @@ const Menu: React.FC = () => {
                           {catItems.length} items
                         </span>
                       </div>
-                      <div className="flex flex-col bg-dark-bg/50 rounded-2xl overflow-hidden border border-white/5">
+                      <div className="flex flex-col bg-white dark:bg-[#151515] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/5 shadow-sm">
                         {catItems.map((item, index) => (
                           <MenuItemCard 
                             key={item.id}
@@ -996,6 +1004,32 @@ const Menu: React.FC = () => {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* STICKY CART CTA */}
+      <AnimatePresence>
+        {cart.length > 0 && !isCategorySheetOpen && (
+          <motion.div
+            initial={{ y: 150, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 150, opacity: 0 }}
+            className="fixed bottom-24 sm:bottom-6 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-96 z-[60]"
+          >
+            <div 
+              onClick={() => navigate(`${basePath}/checkout`)}
+              className="bg-red-600 shadow-xl rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-95 transition-all"
+            >
+              <div className="flex flex-col">
+                <span className="text-white font-black text-sm uppercase tracking-widest">{cart.reduce((sum, i) => sum + i.quantity, 0)} Items</span>
+                <span className="text-red-100 font-bold text-xs">{formatPrice(cart.reduce((sum, i) => sum + (i.price * i.quantity), 0))}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-black text-sm uppercase tracking-widest">View Cart</span>
+                <ShoppingCart size={18} className="text-white" />
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

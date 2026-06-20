@@ -127,11 +127,11 @@ export const processAIRequest = async (contents: any[], systemInstruction: strin
   }
 
   // Priority 12: Structured LLM Extraction (Ollama)
-  return await callOllama(lastMessage, fallbackCount);
+  return await callOllama(lastMessage, fallbackCount, systemInstruction);
 };
 
 // Fallback to local Ollama via HTTP API
-async function callOllama(prompt: string, fallbackCount: number) {
+async function callOllama(prompt: string, fallbackCount: number, systemInstruction: string) {
   const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
   const model = process.env.OLLAMA_MODEL || "llama3.2";
 

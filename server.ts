@@ -93,7 +93,8 @@ const promoteDraftTransaction = async (
       const orderRef = _db!.collection('orders').doc(draftId); // Draft ID becomes Order ID
       transaction.set(orderRef, {
         ...draftData.orderPayload,
-        status: draftData.subscriptionPayload ? 'active' : 'PLACED',
+        tenantId: draftData.tenantId || 'mana-inti',
+        status: draftData.subscriptionPayload ? 'ACTIVE' : 'PLACED',
         paymentStatus: 'success',
         razorpayOrderId: paymentDetails.razorpayOrderId,
         razorpayPaymentId: paymentDetails.razorpayPaymentId,
@@ -106,6 +107,7 @@ const promoteDraftTransaction = async (
         const subRef = _db!.collection('subscriptions').doc();
         transaction.set(subRef, {
           ...draftData.subscriptionPayload,
+          tenantId: draftData.tenantId || 'mana-inti',
           createdAt: FieldValue.serverTimestamp()
         });
       }
@@ -560,6 +562,60 @@ app.use(async (req: any, res, next) => {
   req.correlationId = correlationId;
   res.setHeader("X-Correlation-ID", correlationId as string);
   next();
+});
+
+// In-memory cache for tenant validation (5 mins)
+const tenantCache: Record<string, { exists: boolean, status?: string, expiresAt: number }> = {};
+
+// Tenant Context Middleware
+app.use(async (req: any, res, next) => {
+  // Extract tenantId from custom header or query param
+  let tenantId = req.headers["x-tenant-id"] || req.query.tenantId;
+  
+  if (!tenantId) {
+    tenantId = "mana-inti";
+  }
+  
+  if (req.path.startsWith('/api/health') || req.path.startsWith('/api/server-time')) {
+    req.tenantId = tenantId;
+    return next();
+  }
+
+  try {
+    const now = Date.now();
+    let cached = tenantCache[tenantId as string];
+    
+    if (!cached || cached.expiresAt < now) {
+      if (_db) {
+        const docSnap = await _db.collection('tenants').doc(tenantId as string).get();
+        if (docSnap.exists) {
+          cached = { exists: true, status: docSnap.data()?.status, expiresAt: now + 300000 };
+        } else {
+          cached = { exists: false, expiresAt: now + 300000 };
+        }
+        tenantCache[tenantId as string] = cached;
+      } else {
+        // DB not initialized yet, allow pass-through
+        req.tenantId = tenantId;
+        return next();
+      }
+    }
+
+    if (!cached.exists) {
+      return res.status(400).json({ success: false, error: "Invalid Tenant ID" });
+    }
+
+    if (cached.status === 'suspended') {
+      return res.status(403).json({ success: false, error: "Tenant account is suspended" });
+    }
+
+    req.tenantId = tenantId;
+    next();
+  } catch (err) {
+    console.error("Tenant validation error:", err);
+    req.tenantId = "mana-inti";
+    next();
+  }
 });
 
 // SERVER TIME
@@ -1144,19 +1200,34 @@ const processPrepAlertsBatch = async () => {
   try {
     const now = Date.now();
     
-    // Find scheduled orders that are ACCEPTED and haven't had prep alerts sent
+    // Find accepted orders first, then detect scheduled shape in code.
+    // Older docs may have orderType/isScheduled instead of deliveryType.
     const snapshot = await _db.collection('orders')
-      .where('deliveryType', '==', 'scheduled')
       .where('status', '==', 'ACCEPTED')
-      .where('prepAlertSent', '==', false)
-      .limit(50)
+      .limit(100)
       .get();
       
     if (snapshot.empty) return;
 
     for (const docSnapshot of snapshot.docs) {
       const order = docSnapshot.data();
-      const scheduledMs = order.scheduledTime ? new Date(order.scheduledTime).getTime() : 0;
+      if (order.prepAlertSent === true) continue;
+
+      const isScheduledOrder =
+        String(order.deliveryType || '').toLowerCase() === 'scheduled' ||
+        String(order.orderType || '').toLowerCase() === 'scheduled' ||
+        String(order.fulfillmentType || '').toLowerCase() === 'scheduled' ||
+        order.isScheduled === true ||
+        Boolean(order.scheduledFor || order.scheduledTime);
+
+      if (!isScheduledOrder) continue;
+
+      const scheduledValue = order.scheduledFor || order.scheduledTime;
+      const scheduledMs = typeof scheduledValue?.toDate === 'function'
+        ? scheduledValue.toDate().getTime()
+        : scheduledValue
+          ? new Date(scheduledValue).getTime()
+          : 0;
       
       if (!scheduledMs || Number.isNaN(scheduledMs)) continue;
       
@@ -1317,7 +1388,7 @@ async function notifyCustomer(order: any, status: string) {
   if (status === 'OUT_FOR_DELIVERY' && order.deliveryPartner) {
     message += `\n\n*Delivery Partner:* ${order.deliveryPartner}`;
     if (order.riderName) message += `\n*Rider:* ${order.riderName} (${order.riderPhone || 'N/A'})`;
-    if (order.trackingLink) message += `\n*Track here:* ${order.trackingLink}`;
+    if (order.trackingUrl || order.trackingLink) message += `\n*Track here:* ${order.trackingUrl || order.trackingLink}`;
   }
 
   const trackingLink = `${process.env.APP_URL || 'http://localhost:3000'}/order/${order.id}`;
@@ -2181,7 +2252,7 @@ app.patch("/api/orders/:id", async (req, res) => {
 // BEST-EFFORT STATUS NOTIFICATION
 // Used by admin/client flows that update Firestore directly and then ask the API
 // to fan out email, WhatsApp, and push notifications without re-writing order data.
-app.post("/api/orders/:id/notify-status", requireAdmin, async (req: any, res: any) => {
+app.post("/api/orders/:id/notify-status", async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -2502,6 +2573,98 @@ app.post("/api/auth/biometric/verify", strictLimiter, async (req, res) => {
   }
 });
 
+// ================= OWNER PORTAL =================
+
+app.get("/api/owner/orders", verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const userDoc = await db.collection("users").doc(userId).get();
+    
+    if (!userDoc.exists) return res.status(403).json({ error: "User not found" });
+    const userData = userDoc.data();
+    
+    if (!userData?.ownedTenantIds || userData.ownedTenantIds.length === 0) {
+      return res.status(403).json({ error: "Unauthorized. Not a tenant owner." });
+    }
+
+    const tenantId = userData.ownedTenantIds[0]; // For Sprint 1, single tenant
+    
+    const snapshot = await db.collection("orders")
+      .where("tenantId", "==", tenantId)
+      .orderBy("createdAt", "desc")
+      .limit(50)
+      .get();
+      
+    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ success: true, orders });
+  } catch (error: any) {
+    console.error("Owner Orders Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put("/api/owner/orders/:id/status", verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const orderId = req.params.id;
+    const { status, deliveryData } = req.body;
+    const userId = req.user.uid;
+    
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (!userData?.ownedTenantIds || userData.ownedTenantIds.length === 0) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderDoc = await orderRef.get();
+    
+    if (!orderDoc.exists) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    
+    if (!userData.ownedTenantIds.includes(orderDoc.data()?.tenantId)) {
+      return res.status(403).json({ error: "Order does not belong to your tenant" });
+    }
+
+    const currentStatus = orderDoc.data()?.status || 'UNKNOWN';
+
+    const updatePayload: any = { 
+      status, 
+      updatedAt: FieldValue.serverTimestamp(),
+      statusHistory: FieldValue.arrayUnion({
+        status,
+        timestamp: new Date().toISOString(),
+        description: `Order moved from ${currentStatus} to ${status}`,
+        metadata: deliveryData || {}
+      })
+    };
+
+    if (deliveryData) {
+      if (deliveryData.deliveryPartner) updatePayload.deliveryPartner = deliveryData.deliveryPartner;
+      if (deliveryData.trackingUrl) updatePayload.trackingUrl = deliveryData.trackingUrl;
+      if (deliveryData.riderName) updatePayload.riderName = deliveryData.riderName;
+      if (deliveryData.riderPhone) updatePayload.riderPhone = deliveryData.riderPhone;
+      if (deliveryData.deliveryAssignedAt) updatePayload.deliveryAssignedAt = deliveryData.deliveryAssignedAt;
+    }
+
+    await orderRef.update(updatePayload);
+    
+    // Notify customer
+    const mergedOrder = { ...orderDoc.data(), ...updatePayload, id: orderId };
+    const shouldNotify = status === 'OUT_FOR_DELIVERY' ? (deliveryData?.notifyCustomer !== false) : true;
+    
+    if (shouldNotify) {
+      notifyCustomer(mergedOrder, status).catch(console.error);
+    }
+    
+    res.json({ success: true, message: `Order marked as ${status}` });
+  } catch (error: any) {
+    console.error("Owner Status Update Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ================= WORKER CRON =================
 app.post("/api/cron/process-workers", async (req, res) => {
   // Simple auth via cron secret (configure CRON_SECRET in environment)
@@ -2634,7 +2797,11 @@ app.post("/api/ai/chat", strictLimiter, async (req, res) => {
       });
     }
     
-    res.json({ success: true, text: result.text });
+    if ('text' in result) {
+      return res.json({ success: true, text: result.text });
+    }
+
+    res.json({ success: true });
   } catch (err: any) {
     logger.error({ message: "AI Error", error: err.message, stack: err.stack });
     res.status(500).json({ success: false, error: err.message || "AI processing failed." });

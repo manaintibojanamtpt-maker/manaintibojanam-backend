@@ -32,6 +32,7 @@ export class OrderStateService {
     
     // Legacy status mappings
     [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.PAYMENT_PENDING, OrderStatus.ACCEPTED],
+    [OrderStatus.ACTIVE]: []
   };
 
   /**
@@ -193,6 +194,11 @@ export class OrderStateService {
         label: 'Expired',
         icon: '⏳',
         color: 'gray',
+      },
+      [OrderStatus.ACTIVE]: {
+        label: 'Active',
+        icon: '🟢',
+        color: 'green',
       },
     };
 

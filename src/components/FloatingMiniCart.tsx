@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ShoppingBag, X, Plus, Minus, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useTenant } from '../context/TenantContext';
 import { formatPrice } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { triggerHaptic } from '../utils/haptics';
@@ -12,6 +13,8 @@ const FloatingMiniCart: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const controls = useAnimation();
+  const { tenantSlug } = useTenant();
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
 
   useEffect(() => {
     const scrollContainer = document.getElementById('main-scroll-container');
@@ -35,7 +38,7 @@ const FloatingMiniCart: React.FC = () => {
   }, [itemCount]);
 
   // Hide on checkout
-  if (itemCount === 0 || location.pathname === '/checkout') return null;
+  if (itemCount === 0 || location.pathname === `${basePath}/checkout`) return null;
 
   const toggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,7 +51,7 @@ const FloatingMiniCart: React.FC = () => {
   const handleCheckout = (e: React.MouseEvent) => {
     e.stopPropagation();
     triggerHaptic('success');
-    navigate('/checkout');
+    navigate(`${basePath}/checkout`);
   };
 
   return (

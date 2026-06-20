@@ -47,9 +47,9 @@ export async function requestNotificationPermission() {
         if (currentUser) {
           // Dynamic import of db to avoid circular/static deps
           const { getDb } = await import('./lib/firebase-db');
-          const { updateDoc, doc } = await import('firebase/firestore');
+          const { updateDoc, doc, arrayUnion } = await import('firebase/firestore');
           await updateDoc(doc(getDb(), 'users', currentUser.uid), {
-            fcmToken: currentToken
+            fcmTokens: arrayUnion(currentToken)
           });
         }
         return currentToken;

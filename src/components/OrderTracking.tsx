@@ -27,6 +27,7 @@ import toast from "react-hot-toast";
 import DigitalInvoice from "./DigitalInvoice";
 import { FileText, Bell, BellOff } from "lucide-react";
 import { notificationService } from "../services/NotificationService";
+import { useStoreBranding } from "../hooks/useStoreBranding";
 import { formatPrice, safeParseDate } from "../lib/utils";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 
@@ -63,6 +64,7 @@ export default function OrderTracking() {
   const [etaRemaining, setEtaRemaining] = useState<number | null>(null);
   const etaIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { brandName } = useStoreBranding();
   const { scrollYProgress } = useScroll();
   const scrollProgress = useSpring(scrollYProgress, { stiffness: 320, damping: 42, mass: 0.7 });
 
@@ -428,7 +430,7 @@ export default function OrderTracking() {
                       <Utensils size={40} className="text-red-600" />
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Rate Your Meal</h2>
-                    <p className="text-gray-500 font-medium">How was the food from Mana Inti Bojanam?</p>
+                    <p className="text-gray-500 font-medium">How was the food from {brandName}?</p>
                   </div>
 
                   <div className="flex justify-center gap-3 mb-5">
@@ -597,6 +599,52 @@ export default function OrderTracking() {
             </div>
           </div>
         </motion.div>
+
+        {/* DELIVERY DETAILS MVP */}
+        {order.deliveryPartner && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Bike className="text-blue-500" size={20} />
+              <h3 className="text-lg font-black text-gray-900">Delivery Information</h3>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Partner</p>
+                <p className="font-semibold text-gray-800">{order.deliveryPartner}</p>
+              </div>
+              {order.riderName && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Rider</p>
+                  <p className="font-semibold text-gray-800">{order.riderName}</p>
+                </div>
+              )}
+              {order.riderPhone && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</p>
+                  <a href={`tel:${order.riderPhone}`} className="font-semibold text-blue-600 flex items-center gap-1">
+                    <Phone size={14} /> {order.riderPhone}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {order.trackingUrl && (
+              <a 
+                href={order.trackingUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <MapPin size={18} /> Track Live Delivery
+              </a>
+            )}
+          </motion.div>
+        )}
 
         {/* CANCELLATION TIMER */}
         <AnimatePresence>

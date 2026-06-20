@@ -2,11 +2,14 @@ import React from 'react';
 import { ChevronLeft, ShoppingCart, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useTenant } from '../context/TenantContext';
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isHome = location.pathname === '/';
+  const { tenantSlug } = useTenant();
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
+  const isHome = location.pathname === '/' || location.pathname === basePath || location.pathname === `${basePath}/`;
   const ControlIcon = isHome ? Menu : ChevronLeft;
   const { itemCount } = useCart();
 
@@ -16,7 +19,7 @@ const Header = () => {
         <div className="flex items-center gap-3 md:gap-4">
           <button 
             type="button"
-            onClick={() => isHome ? navigate('/menu') : navigate(-1)} 
+            onClick={() => isHome ? navigate(`${basePath}/menu`) : navigate(-1)} 
             aria-label={isHome ? 'Open menu' : 'Go back'}
             className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors active:scale-95"
           >
@@ -29,7 +32,7 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate('/checkout')} aria-label="View cart" className="relative w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors">
+          <button type="button" onClick={() => navigate(`${basePath}/checkout`)} aria-label="View cart" className="relative w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors">
             <ShoppingCart size={20} className="text-gray-900 dark:text-white" />
             {itemCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">

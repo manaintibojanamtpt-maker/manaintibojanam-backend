@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "mana-inti-bojanam-pune-492610"
-  }
+  },
+  "targets": {
+    "mana-inti-bojanam-pune-492610": {
+      "hosting": {
+        "storefront": [
+          "mana-inti-bojanam-pune-492610"
+        ],
+        "saas": [
+          "bhojanos"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

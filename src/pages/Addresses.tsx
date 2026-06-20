@@ -6,9 +6,11 @@ import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useTenant } from '../context/TenantContext';
 
 const Addresses: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const { tenantSlug } = useTenant();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
@@ -58,7 +60,7 @@ const Addresses: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <h2 className="text-xl font-black mb-4">Please login to manage addresses</h2>
-        <button onClick={() => navigate('/login')} className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold">Login</button>
+        <button onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')} className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold">Login</button>
       </div>
     );
   }

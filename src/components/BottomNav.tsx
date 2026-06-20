@@ -6,11 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import ActiveOrderStrip from './ActiveOrderStrip';
 import { cn } from '../lib/utils';
+import { useTenant } from '../context/TenantContext';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount } = useCart();
+  const { tenantSlug } = useTenant();
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const [isVisible, setIsVisible] = useState(true);
 
   // Auto-hide navigation on scroll down, show on scroll up
@@ -50,10 +53,10 @@ const BottomNav = () => {
   }, [location.pathname]);
 
   const navItems = [
-    { label: 'Home', path: '/', icon: Home },
-    { label: 'Menu', path: '/menu', icon: Utensils },
-    { label: 'Orders', path: '/my-orders', icon: ShoppingBag, badge: 0 }, // Using 0 for badge as placeholder
-    { label: 'Profile', path: '/account', icon: User },
+    { label: 'Home', path: `${basePath}/`, icon: Home },
+    { label: 'Menu', path: `${basePath}/menu`, icon: Utensils },
+    { label: 'Orders', path: `${basePath}/my-orders`, icon: ShoppingBag, badge: 0 }, // Using 0 for badge as placeholder
+    { label: 'Profile', path: `${basePath}/account`, icon: User },
   ];
 
   return (

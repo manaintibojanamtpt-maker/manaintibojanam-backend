@@ -10,11 +10,13 @@ import { useBiometrics } from '../hooks/useBiometrics';
 import { Fingerprint } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { triggerHaptic } from '../utils/haptics';
+import { useTenant } from '../context/TenantContext';
 
 const Account: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();
   const { isSupported: bioSupported, isEnabled: bioEnabled, enroll: bioEnroll, disable: bioDisable, biometryType, enrollLoading, disableLoading } = useBiometrics();
   const navigate = useNavigate();
+  const { tenantSlug } = useTenant();
   
   const [activeModal, setActiveModal] = useState<string | null>(null);
   
@@ -165,7 +167,7 @@ const Account: React.FC = () => {
                 </button>
               ) : (
                 <button 
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')}
                   className="mt-2 text-[11px] font-black uppercase tracking-wider text-orange-400 flex items-center gap-1 active:scale-95 transition-transform"
                 >
                   Sign In <ChevronRight size={12} />
@@ -350,7 +352,7 @@ const Account: React.FC = () => {
             </button>
           ) : (
             <button 
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/login` : '/login')}
               className="w-full flex items-center justify-center gap-2 p-4 rounded-[1.5rem] bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/20 active:bg-orange-600 transition-all active:scale-[0.98]"
             >
               <User size={18} />

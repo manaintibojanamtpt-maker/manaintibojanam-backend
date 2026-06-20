@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
+import { activeTenantId } from '../services/api';
+import { useTenant } from '../context/TenantContext';
 import { useCheckoutState } from '../hooks/useCheckoutState';
-import CheckoutSummary from '../components/checkout/CheckoutSummary';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
 import LocationPicker from '../components/LocationPicker';
@@ -13,13 +14,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../lib/firebase-db';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { differenceInMinutes } from 'date-fns';
 import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
 
 // Countdown removed by request
 
 const Checkout: React.FC = () => {
+  const { tenantId, tenantSlug } = useTenant();
   const navigate = useNavigate();
+  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const state = useCheckoutState();
   const { logEvent } = useAIAnalytics();
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -55,8 +59,9 @@ const Checkout: React.FC = () => {
       try {
         const q = query(
           collection(getDb(), 'menu'),
+          where('tenantId', '==', activeTenantId),
           where('isAvailable', '==', true),
-          limit(8)
+          limit(20)
         );
         const snapshot = await getDocs(q);
         const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem));
@@ -192,8 +197,9 @@ const Checkout: React.FC = () => {
       return;
     }
     if (!state.currentUser) {
-      toast.error('Please login to save address');
-      navigate('/login?redirect=/checkout');
+      toast.error('Please login');
+      triggerHaptic('warning');
+      navigate(`${basePath}/login?redirect=${basePath}/checkout`);
       return;
     }
 
@@ -282,9 +288,11 @@ const Checkout: React.FC = () => {
     });
 
     const isASAP = state.deliveryTimeSlot === 'Standard Delivery (ASAP)' || state.deliveryTimeSlot === 'ASAP';
+    const scheduledFor = isASAP ? null : getScheduledForTimestamp(state.deliveryTimeSlot);
 
     return {
       orderNumber,
+      tenantId,
       userId: state.currentUser?.uid || null,
       customerName: state.name || null,
       userEmail: state.email || null,
@@ -296,7 +304,7 @@ const Checkout: React.FC = () => {
       packingFee: state.packingFee,
       deliveryFee: state.deliveryFee,
       totalAmount: state.finalTotal,
-      status: hasSubscription ? ('active' as OrderStatus) : OrderStatus.PLACED,
+      status: hasSubscription ? OrderStatus.ACTIVE : OrderStatus.PLACED,
       createdAt: Date.now(),
       paymentMethod: state.paymentMethod === 'online' ? 'razorpay' : 'cod',
       paymentStatus: 'pending',
@@ -312,7 +320,10 @@ const Checkout: React.FC = () => {
       profitMargin: state.deliveryFee - (state.cheapestPartner?.cost || 0),
       isFreeDelivery: state.deliveryFee === 0,
       absorbedCost: state.deliveryFee === 0 ? (state.cheapestPartner?.cost || 0) : 0,
-      scheduledFor: isASAP ? null : getScheduledForTimestamp(state.deliveryTimeSlot),
+      scheduledFor,
+      // Backward-compatible field for the backend prep worker.
+      scheduledTime: scheduledFor,
+      prepAlertSent: isASAP ? null : false,
       isCOD: state.paymentMethod === 'cod',
       deliveryMethod: state.orderType // Passes pickup/delivery flag safely
     };
@@ -320,7 +331,7 @@ const Checkout: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (!state.currentUser) {
-      navigate('/login?redirect=/checkout');
+      navigate(`${basePath}/login?redirect=${basePath}/checkout`);
       return;
     }
     if (!state.addressText || !state.phone || !state.name) {
@@ -405,8 +416,8 @@ const Checkout: React.FC = () => {
             }
             state.clearCart();
             if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId: draftId, method: 'online' });
-            if (hasSubscription) navigate('/subscription?new=true');
-            else navigate(`/payment-success?orderId=${draftId}`);
+            if (hasSubscription) navigate(`${basePath}/subscription?new=true`);
+            else navigate(`${basePath}/payment-success`);
             return;
           }
         }
@@ -445,11 +456,13 @@ const Checkout: React.FC = () => {
                 }
                 
                 state.clearCart();
+                // Store orderId in session to fetch later if needed
+                sessionStorage.setItem('lastPendingOrderId', draftId);
                 if (hasSubscription) {
-                  navigate('/subscription?new=true');
+                  navigate(`${basePath}/subscription?new=true`);
                 } else {
                   if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId: draftId, method: 'online' });
-                  navigate(`/payment-success?orderId=${draftId}`);
+                  navigate(`${basePath}/payment-success`);
                 }
               } else {
                 toast.error('Payment verification failed');
@@ -497,7 +510,7 @@ const Checkout: React.FC = () => {
 
         state.clearCart();
         if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'cod' });
-        navigate(`/order-success?orderId=${orderId}`);
+        navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { orderId } });
         setIsPlacingOrder(false);
       }
     } catch (err: any) {
@@ -539,7 +552,7 @@ const Checkout: React.FC = () => {
 
   if (state.cart.length === 0) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-dark-bg p-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 dark:bg-[#111111] p-6 text-center">
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -554,7 +567,7 @@ const Checkout: React.FC = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-2xl font-black text-white mb-2 tracking-tight"
+          className="text-2xl font-black text-gray-900 dark:text-white mb-2 tracking-tight"
         >
           Your dining table is waiting
         </motion.h2>
@@ -562,7 +575,7 @@ const Checkout: React.FC = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="text-sm font-bold text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed"
+          className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed"
         >
           Let's fill it with some hot, home-style food.
         </motion.p>
@@ -570,7 +583,7 @@ const Checkout: React.FC = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
-          onClick={() => navigate('/menu')} 
+          onClick={() => navigate(tenantSlug ? `/k/${tenantSlug}/menu` : '/menu')} 
           className="mib-primary-action w-full max-w-[280px]"
         >
           Browse Menu
@@ -839,14 +852,14 @@ const Checkout: React.FC = () => {
         
         {/* 3. Delivery / Pickup Toggle - Hide for Subscriptions */}
         {!hasSubscription && (
-          <div className="bg-dark-surface p-1.5 rounded-2xl flex relative border border-white/5 shadow-inner">
+          <div className="bg-gray-100 dark:bg-white/5 p-1.5 rounded-2xl flex relative border border-gray-200 dark:border-white/5 shadow-inner">
             <motion.div
-              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] bg-gradient-to-r from-red-600 to-orange-500 rounded-xl shadow-[0_4px_12px_rgba(239,68,68,0.3)] z-0"
+              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] bg-gradient-to-r from-red-600 to-orange-500 rounded-xl shadow-md z-0"
               animate={{ x: state.orderType === 'pickup' ? '100%' : '0%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
-            <button type="button" onClick={() => state.setOrderType('delivery')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'delivery' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Delivery</button>
-            <button type="button" onClick={() => state.setOrderType('pickup')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'pickup' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Pickup</button>
+            <button type="button" onClick={() => state.setOrderType('delivery')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'delivery' ? 'text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'}`}>Delivery</button>
+            <button type="button" onClick={() => state.setOrderType('pickup')} className={`flex-1 py-3 text-sm font-black z-10 transition-colors duration-300 ${state.orderType === 'pickup' ? 'text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'}`}>Pickup</button>
           </div>
         )}
 

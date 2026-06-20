@@ -100,7 +100,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.1 }}
       transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3), ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex justify-between gap-4 py-4 px-4 bg-dark-bg border-b border-white/5 last:border-b-0 transition-colors active:bg-white/[0.02]"
+      className="relative flex justify-between gap-4 py-4 px-4 bg-gray-50 dark:bg-[#151515] border-b border-gray-200 dark:border-white/5 last:border-b-0 transition-colors active:bg-gray-100 dark:active:bg-white/[0.02]"
     >
       {/* Left Info Column */}
       <div className="flex-1 min-w-0 pr-2 flex flex-col justify-start">
@@ -121,24 +121,24 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           )}
         </div>
         
-        <h3 className="text-[16px] sm:text-lg font-bold text-white tracking-tight leading-snug line-clamp-2 mb-0.5">
+        <h3 className="text-[16px] sm:text-lg font-bold text-gray-900 dark:text-white tracking-tight leading-snug line-clamp-2 mb-0.5">
           {item.name}
         </h3>
         
         <div className="flex items-center gap-2 mt-1 mb-2">
-          <span className="font-extrabold text-base text-white">{formatPrice(item.price)}</span>
+          <span className="font-extrabold text-base text-gray-900 dark:text-white">{formatPrice(item.price)}</span>
           {rating > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); onViewReviews?.(item); }}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-white/10 bg-white/10 active:scale-95 transition-transform"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/10 active:scale-95 transition-transform"
             >
-              <span className="text-[10px] font-bold text-white/80">{rating.toFixed(1)}</span>
+              <span className="text-[10px] font-bold text-gray-700 dark:text-white/80">{rating.toFixed(1)}</span>
               <Star size={10} className="fill-green-500 text-green-500" />
             </button>
           )}
         </div>
 
-        <p className="text-[12px] sm:text-sm text-white/50 line-clamp-2 leading-relaxed font-medium tracking-wide">
+        <p className="text-[12px] sm:text-sm text-gray-500 dark:text-white/50 line-clamp-2 leading-relaxed font-medium tracking-wide">
           {item.description}
         </p>
       </div>
@@ -148,7 +148,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
         <motion.div 
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-2xl bg-white/10 overflow-hidden shadow-lg border border-white/5 relative group"
+          className="w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-xl bg-gray-200 dark:bg-white/10 overflow-hidden shadow-sm border border-gray-200 dark:border-white/5 relative group"
         >
           {!imageLoaded && <div className="absolute inset-0 bg-white/10 shimmer z-0" />}
           <img
@@ -184,7 +184,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="h-10 w-full bg-[#1A1512] rounded-full flex items-center justify-between px-1.5 shadow-[0_8px_20px_-8px_rgba(255,107,53,0.4)] border border-orange-500/40"
+              className="h-10 w-full bg-orange-50 dark:bg-[#2A1A12] rounded-full flex items-center justify-between px-1.5 shadow-sm border border-orange-200 dark:border-orange-500/30"
             >
               <motion.button
                 whileTap={{ scale: 0.85 }}
@@ -193,15 +193,15 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                   triggerHaptic('light');
                   updateQuantity(item.id, quantity - 1);
                 }}
-                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                className="w-7 h-7 flex items-center justify-center hover:bg-orange-200 dark:hover:bg-white/10 rounded-full transition-colors"
               >
-                <Minus size={14} className="text-[#F4C27A]" strokeWidth={3} />
+                <Minus size={14} className="text-orange-600 dark:text-[#F4C27A]" strokeWidth={3} />
               </motion.button>
               <motion.span 
                 key={quantity}
                 initial={{ y: 5, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-sm font-black text-white tabular-nums"
+                className="text-sm font-black text-orange-900 dark:text-white tabular-nums"
               >
                 {quantity}
               </motion.span>
@@ -212,9 +212,9 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                   triggerHaptic('medium');
                   addToCart(item);
                 }}
-                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                className="w-7 h-7 flex items-center justify-center hover:bg-orange-200 dark:hover:bg-white/10 rounded-full transition-colors"
               >
-                <Plus size={14} className="text-[#F4C27A]" strokeWidth={3} />
+                <Plus size={14} className="text-orange-600 dark:text-[#F4C27A]" strokeWidth={3} />
               </motion.button>
             </motion.div>
           ) : (
@@ -229,7 +229,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                   handleAdd(e);
                 }
               }}
-              className="h-10 w-full bg-white text-black hover:bg-gray-100 rounded-full flex items-center justify-center font-black text-xs uppercase tracking-widest shadow-[0_8px_20px_-8px_rgba(255,255,255,0.3)] transition-all"
+              className="h-10 w-full bg-white dark:bg-white text-orange-600 dark:text-black border border-orange-200 dark:border-transparent hover:bg-orange-50 dark:hover:bg-gray-100 rounded-full flex items-center justify-center font-black text-xs uppercase tracking-widest shadow-sm transition-all"
             >
               ADD
               {item.addons && item.addons.length > 0 && (

@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { DeliverySlot, MealPreference } from '../types';
+import { useTenant } from '../context/TenantContext';
 
 interface SubscriptionWizardModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface SubscriptionWizardModalProps {
 const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { tenantId, tenantSlug } = useTenant();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [preference, setPreference] = useState<MealPreference>('veg');
   const [startDate, setStartDate] = useState<string>('');
@@ -40,6 +42,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
   const handleComplete = () => {
     const subscriptionItem = {
       id: 'sub_' + Date.now(),
+      tenantId,
       name: `Monthly Subscription - ${preference.toUpperCase()}`,
       description: `Starts: ${startDate} | Slot: ${slot}`,
       price: getPrice(),
@@ -59,7 +62,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
     addToCart(subscriptionItem);
     toast.success('Subscription plan added to cart!');
     onClose();
-    navigate('/checkout');
+    navigate(tenantSlug ? `/k/${tenantSlug}/checkout` : '/checkout');
     if (typeof window !== 'undefined' && window.navigator?.vibrate) {
       window.navigator.vibrate(50);
     }
