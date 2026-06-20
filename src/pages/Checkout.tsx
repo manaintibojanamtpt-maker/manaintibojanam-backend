@@ -6,6 +6,7 @@ import { useTenant } from '../context/TenantContext';
 import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
+import { saveGuestOrder } from '../lib/guestOrders';
 import LocationPicker from '../components/LocationPicker';
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
@@ -17,6 +18,7 @@ import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, 
 import { differenceInMinutes } from 'date-fns';
 import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
+import { getUpsellRecommendations } from '../services/RecommendationEngine';
 
 // Countdown removed by request
 
@@ -49,6 +51,49 @@ const Checkout: React.FC = () => {
   const [subStartDate, setSubStartDate] = useState<string>(subscriptionItem?.subscriptionDetails?.startDate || new Date().toISOString().split('T')[0]);
   const [subSlot, setSubSlot] = useState<string>(subscriptionItem?.subscriptionDetails?.slot || 'lunch');
   const [subFrequency, setSubFrequency] = useState<'daily' | 'mon-fri' | 'custom'>('daily');
+
+  // ============================
+  // UPSELL ENGINE
+  // ============================
+  const [allMenu, setAllMenu] = useState<MenuItem[]>([]);
+  const [upsellRecommendations, setUpsellRecommendations] = useState<MenuItem[]>([]);
+  
+  useEffect(() => {
+    if (!tenantId) return;
+    const fetchMenu = async () => {
+      try {
+        const q = query(
+          collection(getDb(), 'menu'),
+          where('tenantId', '==', tenantId)
+        );
+        const snapshot = await getDocs(q);
+        const menuItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as MenuItem[];
+        setAllMenu(menuItems);
+      } catch (e) {
+        console.error("Failed to fetch menu for upsells", e);
+      }
+    };
+    fetchMenu();
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!hasSubscription && state.cart.length > 0 && allMenu.length > 0) {
+      const result = getUpsellRecommendations(state.cart, allMenu);
+      setUpsellRecommendations(result.items);
+      if (result.items.length > 0) {
+        trackEvent(tenantId!, 'upsellViewed');
+      }
+    } else {
+      setUpsellRecommendations([]);
+    }
+  }, [state.cart, allMenu, tenantId, hasSubscription]);
+
+  const handleAddUpsell = (item: MenuItem) => {
+    trackEvent(tenantId!, 'upsellClicked', { itemId: item.id });
+    trackEvent(tenantId!, 'upsellAddedToCart', { itemId: item.id });
+    state.addToCart(item);
+    toast.success(`${item.name} added to cart`);
+  };
   
   useEffect(() => {
     // Wake up backend to avoid Razorpay cold-start delays
@@ -501,6 +546,7 @@ const Checkout: React.FC = () => {
         // COD Flow
         const orderId = await createOrder(orderData);
         if (!orderId) throw new Error('Order creation failed');
+        if (!state.currentUser) saveGuestOrder(orderId);
 
         if (state.currentUser) {
           await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
@@ -708,6 +754,50 @@ const Checkout: React.FC = () => {
                   onChange={(e) => state.setSpecialInstructions(e.target.value)}
                 />
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 1.5. Upsell Carousel */}
+        {upsellRecommendations.length > 0 && !hasSubscription && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 p-5"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles size={16} className="text-yellow-500" />
+              <h3 className="font-black text-gray-900 dark:text-white">Complete Your Meal</h3>
+            </div>
+            
+            <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2 snap-x">
+              {upsellRecommendations.map((item) => {
+                const discount = item.discount || 0;
+                const priceAfterDiscount = item.price - (item.price * discount) / 100;
+                
+                return (
+                  <div key={item.id} className="min-w-[200px] bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 flex flex-col justify-between snap-start">
+                    <div className="flex gap-3 mb-3">
+                      <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                        {item.image && <img src={item.image} alt={item.name} className="w-full h-full object-cover" />}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2">{item.name}</h4>
+                        <div className="mt-1">
+                          <span className="font-black text-sm text-gray-900 dark:text-white">{formatPrice(priceAfterDiscount)}</span>
+                          {discount > 0 && <span className="text-[10px] text-red-500 font-bold ml-1">-{discount}%</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddUpsell(item)}
+                      className="w-full py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition"
+                    >
+                      Add
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}

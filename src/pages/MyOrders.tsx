@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { 
   subscribeToOrders, 
+  subscribeToGuestOrders,
   updateOrderStatus as apiUpdateOrderStatus, 
   getDisplayStatus,
   fetchMenu,
@@ -23,6 +24,7 @@ import DigitalInvoice from "../components/DigitalInvoice";
 import { formatPrice, safeParseDate } from "../lib/utils";
 import { buildMenuUrl, buildOrderShareMessage, buildReorderIntentMessage, buildStorefrontUrl, generateWhatsAppLink } from "../utils/whatsapp";
 import { deriveCustomerMemory } from "../utils/customerMemory";
+import { getGuestOrders } from "../lib/guestOrders";
 
 export default function MyOrders() {
   const { tenantId, tenantSlug, tenantInfo } = useTenant();
@@ -105,9 +107,19 @@ export default function MyOrders() {
 
   useEffect(() => {
     if (!currentUser) {
-      setOrders([]);
-      setLoading(false);
-      return;
+      const guestIds = getGuestOrders();
+      if (guestIds.length > 0) {
+        setLoading(true);
+        const unsubscribe = subscribeToGuestOrders(guestIds, (ordersList) => {
+          setOrders(ordersList);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      } else {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
     }
 
     setOrders([]);
@@ -143,7 +155,7 @@ export default function MyOrders() {
   const handleReorder = async (order: Order) => {
     try {
       setReorderingOrderId(order.id);
-      const menuItems = await fetchMenu();
+      const menuItems = await fetchMenu(tenantId || undefined);
       const repeatLines = buildRepeatOrderLines(order.items || [], menuItems);
 
       if (repeatLines.length === 0) {
@@ -218,7 +230,18 @@ export default function MyOrders() {
 
       <div className="max-w-3xl mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">My Orders</h1>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">My Orders</h1>
+        {!currentUser && orders.length > 0 && (
+          <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 rounded-2xl flex items-start gap-3">
+            <div className="text-orange-500 mt-0.5"><Clock size={20} /></div>
+            <div>
+              <p className="text-sm font-bold text-orange-900 dark:text-orange-200">You are tracking as a Guest</p>
+              <p className="text-xs text-orange-700 dark:text-orange-300/70 mt-1">
+                Your order history is saved on this device. <Link to="/account" className="underline font-bold">Login or Create an Account</Link> to save your orders permanently across all devices.
+              </p>
+            </div>
+          </div>
+        )}
           <p className="text-sm text-gray-500 font-medium">Track and manage your past orders</p>
         </div>
 
@@ -346,10 +369,10 @@ export default function MyOrders() {
                     </div>
 
                     {/* Actions Row */}
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 mt-4">
                       <Link 
                         to={`/order/${order.id}`}
-                        className="flex-1 sm:flex-none text-center bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-black text-xs transition-colors shadow-[0_0_15px_rgba(220,38,38,0.3)] active:scale-95"
+                        className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-2 py-3 rounded-xl font-black text-[11px] transition-colors shadow-[0_0_15px_rgba(220,38,38,0.3)] active:scale-95 whitespace-nowrap"
                       >
                         Track Order
                       </Link>
@@ -359,7 +382,7 @@ export default function MyOrders() {
                           href={order.trackingUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-black text-xs transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)] active:scale-95"
+                          className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-2 py-3 rounded-xl font-black text-[11px] transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)] active:scale-95 whitespace-nowrap"
                         >
                           Live GPS
                         </a>
@@ -368,7 +391,7 @@ export default function MyOrders() {
                       {order.status === OrderStatus.DELIVERED && !order.rating && (
                         <button 
                           onClick={() => setRatingOrder(order)}
-                          className="flex-1 sm:flex-none text-center bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 px-6 py-3 rounded-xl font-black text-xs transition-colors active:scale-95"
+                          className="flex items-center justify-center bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 px-2 py-3 rounded-xl font-black text-[11px] transition-colors active:scale-95 whitespace-nowrap"
                         >
                           Rate Order
                         </button>
@@ -377,7 +400,7 @@ export default function MyOrders() {
                       <button 
                         onClick={() => handleReorder(order)}
                         disabled={reorderingOrderId === order.id}
-                        className="flex-1 sm:flex-none text-center bg-transparent border-2 border-white/20 text-white hover:border-white/40 hover:bg-white/5 px-6 py-3 rounded-xl font-black text-xs transition-colors active:scale-95"
+                        className="flex items-center justify-center bg-transparent border border-white/20 text-white hover:border-white/40 hover:bg-white/5 px-2 py-3 rounded-xl font-black text-[11px] transition-colors active:scale-95 whitespace-nowrap"
                       >
                         {reorderingOrderId === order.id ? "Adding..." : "Reorder"}
                       </button>
@@ -385,37 +408,39 @@ export default function MyOrders() {
                       <button
                         type="button"
                         onClick={() => handleWhatsAppReorder(order)}
-                        className="flex-1 sm:flex-none text-center bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 px-6 py-3 rounded-xl font-black text-xs transition-colors active:scale-95"
+                        className="flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 px-2 py-3 rounded-xl font-black text-[11px] transition-colors active:scale-95 whitespace-nowrap"
                       >
-                        <span className="inline-flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5">
                           <MessageCircle size={14} />
-                          WhatsApp Reorder
+                          WhatsApp
                         </span>
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleShareOrder(order)}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                        title="Share order on WhatsApp"
-                      >
-                        <Share2 size={16} />
-                      </button>
-
-                      {order.status === OrderStatus.DELIVERED && (
-                        <button 
-                          onClick={() => setShowInvoice(order)}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                          title="View Invoice"
+                      
+                      <div className="col-span-2 sm:col-span-1 flex gap-2 justify-end mt-2 sm:mt-0">
+                        <button
+                          type="button"
+                          onClick={() => handleShareOrder(order)}
+                          className="flex-1 sm:flex-none h-10 w-10 sm:w-auto flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors px-0 sm:px-3"
+                          title="Share order on WhatsApp"
                         >
-                          <FileText size={16} />
+                          <Share2 size={16} />
                         </button>
-                      )}
+
+                        {order.status === OrderStatus.DELIVERED && (
+                          <button 
+                            onClick={() => setShowInvoice(order)}
+                            className="flex-1 sm:flex-none h-10 w-10 sm:w-auto flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors px-0 sm:px-3"
+                            title="View Invoice"
+                          >
+                            <FileText size={16} />
+                          </button>
+                        )}
+                      </div>
 
                       {(order.status === OrderStatus.PENDING) && ((now - safeParseDate(order.createdAt).getTime()) / 1000 < 60) && (
                         <button 
                           onClick={() => handleCancelOrder(order.id)}
-                          className="text-red-400 hover:text-red-300 text-[10px] uppercase tracking-widest font-black px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors ml-auto active:scale-95"
+                          className="text-red-400 hover:text-red-300 text-[10px] uppercase tracking-widest font-black px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors col-span-2 sm:col-span-1 sm:ml-auto active:scale-95"
                         >
                           Cancel
                         </button>

@@ -30,6 +30,7 @@ import { notificationService } from "../services/NotificationService";
 import { useStoreBranding } from "../hooks/useStoreBranding";
 import { formatPrice, safeParseDate } from "../lib/utils";
 import { getOrderDisplayState } from "../lib/orderDisplay";
+import { useTenant } from '../context/TenantContext';
 
 const toPaise = (rupees: number) => Math.round(rupees * 100);
 const fromPaise = (paise: number) => paise / 100;
@@ -46,6 +47,7 @@ const STATUS_STEPS = [
 ] as const;
 
 export default function OrderTracking() {
+  const { tenantInfo } = useTenant();
   const { orderId } = useParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -327,7 +329,8 @@ export default function OrderTracking() {
   const generateWhatsAppMessage = () => {
     const items = order.items.map((i: any) => `${i.name} x ${i.quantity}`).join(', ');
     const text = `Hello! I'm tracking my order #${order.orderNumber}.\nItems: ${items}\nTotal: ${formatPrice(totalPaid)}\nStatus: ${order.status}`;
-    return `https://wa.me/917666258454?text=${encodeURIComponent(text)}`;
+    const phone = tenantInfo?.contactPhone?.replace(/\D/g, '') || '';
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   };
 
   if (order.orderType === 'subscription_master') {

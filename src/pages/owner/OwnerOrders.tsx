@@ -4,10 +4,11 @@ import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
-import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { auth } from '../../firebase';
+import { recordOrderCompletion } from '../../services/AnalyticsService';
 
 const OWNER_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
 
@@ -29,6 +30,8 @@ const OwnerOrders: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [orderLimit, setOrderLimit] = useState(50);
+  const [hasMore, setHasMore] = useState(true);
 
   // Dispatch Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
@@ -58,7 +61,7 @@ const OwnerOrders: React.FC = () => {
       collection(db, 'orders'),
       where('tenantId', '==', tenantId),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(orderLimit)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -68,6 +71,7 @@ const OwnerOrders: React.FC = () => {
       })) as Order[];
       
       setOrders(fetchedOrders);
+      setHasMore(snapshot.docs.length === orderLimit);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching orders:", error);
@@ -85,7 +89,11 @@ const OwnerOrders: React.FC = () => {
     fetchTenant();
 
     return () => unsubscribe();
-  }, [tenantId]);
+  }, [tenantId, orderLimit]);
+
+  const loadMoreOrders = () => {
+    setOrderLimit(prev => prev + 50);
+  };
 
   const updateOrderStatus = async (orderId: string, status: string, deliveryData?: any): Promise<boolean> => {
     try {
@@ -97,7 +105,8 @@ const OwnerOrders: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': `Bearer ${idToken}`,
+          'x-tenant-id': tenantId || ''
         },
         body: JSON.stringify({ status, deliveryData })
       });
@@ -113,6 +122,15 @@ const OwnerOrders: React.FC = () => {
         )
       );
       toast.success(`Order marked as ${status}`);
+
+      // Update analytics if order is completed
+      if (status === 'DELIVERED') {
+        const completedOrder = orders.find(o => o.id === orderId);
+        if (completedOrder) {
+          recordOrderCompletion(tenantId, completedOrder as any);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error(error);
@@ -146,7 +164,7 @@ const OwnerOrders: React.FC = () => {
   const isSuspended = tenantInfo?.status === 'suspended' || isTrialExpired;
 
   return (
-    <div className="min-h-full bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-8 lg:p-12">
+    <div className="min-h-full bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-8 lg:p-12 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 sm:mb-8 gap-4">
           <div className="flex items-center space-x-3 sm:space-x-4">
@@ -236,6 +254,26 @@ const OwnerOrders: React.FC = () => {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 break-words">
                         {order.customerPhone || order.phone || 'Phone unavailable'} • {order.deliveryAddress?.addressLine1 || order.address || 'No address provided'}
                       </p>
+                      
+                      {/* LIVE SUPPORT CONTACT BUTTONS */}
+                      {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(order.status || '') && (order.customerPhone || order.phone) && (
+                        <div className="flex items-center gap-3 mt-3">
+                          <a 
+                            href={`tel:${order.customerPhone || order.phone}`} 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <Phone className="w-3.5 h-3.5" /> Call Customer
+                          </a>
+                          <a 
+                            href={`https://wa.me/${(order.customerPhone || order.phone)?.replace(/\D/g, '')}?text=Hi%20${order.customerName || 'Customer'}!%20This%20is%20regarding%20your%20recent%20order%20%23${order.id.slice(-6).toUpperCase()}.`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col md:items-end gap-4">
@@ -316,6 +354,17 @@ const OwnerOrders: React.FC = () => {
                 </div>
               )}
             </AnimatePresence>
+            
+            {orders.length > 0 && hasMore && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMoreOrders}
+                  className="px-6 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                >
+                  Load More Orders
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

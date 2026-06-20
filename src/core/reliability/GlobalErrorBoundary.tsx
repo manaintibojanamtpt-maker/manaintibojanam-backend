@@ -24,6 +24,10 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const loader = document.getElementById('initial-loader');
+    if (loader) {
+      loader.remove();
+    }
     if (error.message && (error.message.includes('dynamically imported module') || error.message.includes('Failed to fetch dynamically imported module'))) {
       TelemetryService.logWarn('Chunk load error detected. Attempting recovery.', { context: 'GlobalErrorBoundary' });
       SelfHealingUtils.attemptHardRecovery('chunk_load_error');

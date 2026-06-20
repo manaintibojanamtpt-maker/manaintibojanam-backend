@@ -12,6 +12,7 @@ export interface CustomerMemorySummary {
   lastPaymentPreference: string | null;
   recentNote: string | null;
   totalOrders: number;
+  lifetimeSpend: number;
   latestOrderAt: any;
 }
 
@@ -71,12 +72,15 @@ const summarizeOrders = (orders: Order[]): CustomerMemorySummary => {
   const recentNote =
     sortedOrders.find((order) => String(order.specialInstructions || '').trim().length > 0)?.specialInstructions || null;
 
+  const lifetimeSpend = sortedOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+
   return {
     topDishes,
     preferredDeliverySlot,
     lastPaymentPreference,
     recentNote,
     totalOrders: sortedOrders.length,
+    lifetimeSpend,
     latestOrderAt: sortedOrders[0]?.createdAt || null
   };
 };

@@ -171,7 +171,7 @@ const ambientProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PRO
 const configProjectId = firebaseConfig.projectId;
 // Prioritize config project ID as it's the one explicitly provisioned for the app
 const projectId = configProjectId || ambientProjectId || 'mana-inti-bojanam-pune-492610'; 
-const databaseId = firebaseConfig.firestoreDatabaseId || "ai-studio-3efd2980-c2f3-4286-8dff-afeca044d855"; 
+const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 
 console.log("--- Firebase Admin Initialization ---");

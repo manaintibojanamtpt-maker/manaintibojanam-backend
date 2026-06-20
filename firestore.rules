@@ -25,6 +25,21 @@ service cloud.firestore {
         tenantId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ownedTenantIds
       );
     }
+    
+    function isUnmodified(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+    
+    function isValidOrderStatusTransition(oldStatus, newStatus) {
+      return 
+        (oldStatus in ['CREATED', 'PLACED', 'PENDING'] && newStatus == 'ACCEPTED') ||
+        (oldStatus == 'ACCEPTED' && newStatus == 'PREPARING') ||
+        (oldStatus == 'PREPARING' && newStatus in ['READY', 'OUT_FOR_DELIVERY']) ||
+        (oldStatus == 'READY' && newStatus == 'OUT_FOR_DELIVERY') ||
+        (oldStatus == 'OUT_FOR_DELIVERY' && newStatus == 'DELIVERED') ||
+        (newStatus == 'CANCELLED') ||
+        (newStatus == 'REJECTED');
+    }
 
     // ===============================================================
     // Rules
@@ -59,8 +74,9 @@ service cloud.firestore {
         isTenantOwner(resource.data.tenantId)
       );
       allow create: if isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid);
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
+      allow update: if isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && (
+        (isAdmin() && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
+        (isTenantOwner(resource.data.tenantId) && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
         (
           resource.data.userId == request.auth.uid &&
           (
@@ -182,7 +198,14 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow read: if true;
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow update: if isAuthenticated() && isUnmodified(['createdAt', 'ownerId']);
+      
+      match /analytics/{docId} {
+        allow read: if isAdmin() || isTenantOwner(tenantId);
+        // Allowing create/update for the frontend AnalyticsService for now.
+        // In a strict environment, this should only be writeable by Cloud Functions.
+        allow write: if isAdmin() || isTenantOwner(tenantId) || isAuthenticated();
+      }
     }
 
     match /salesPipeline/{docId} {

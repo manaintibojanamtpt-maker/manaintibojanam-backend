@@ -85,10 +85,14 @@ const Home: React.FC = () => {
   const timeBasedHeader = useTimeBasedSection();
 
   useEffect(() => {
-    // Only redirect if they are on the root URL of bhojanos, not on a specific store URL (/k/...)
+    if (authLoading) return;
+
     if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
-      window.location.href = '/onboard';
-      return;
+      const isPrivileged = currentUser && userProfile && ['admin', 'superadmin', 'owner'].includes(userProfile.role);
+      if (!isPrivileged) {
+        window.location.href = '/onboard';
+        return;
+      }
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -101,8 +105,12 @@ const Home: React.FC = () => {
       return;
     }
     
-    if (!authLoading && currentUser) {
-      if (userProfile?.role === 'admin') {
+    if (currentUser) {
+      if (userProfile?.role === 'owner') {
+        if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
+          navigate('/owner/dashboard');
+        }
+      } else if (userProfile?.role === 'admin') {
         navigate('/admin');
       } else if (userProfile?.role === 'superadmin') {
         navigate('/super-admin');
@@ -329,6 +337,30 @@ const Home: React.FC = () => {
   };
   return (
     <div className="flex flex-col min-h-screen bg-dark-bg">
+      <div className="pt-24 pb-4 px-4 max-w-7xl mx-auto flex justify-center z-50 relative">
+        <button 
+          onClick={async () => {
+            const auth = (await import('../firebase')).auth;
+            const { getDb } = await import('../lib/firebase-db');
+            const { doc, updateDoc } = await import('firebase/firestore');
+            
+            if (!auth.currentUser) {
+              alert("Please log in first!");
+              return;
+            }
+            try {
+              await updateDoc(doc(getDb(), 'users', auth.currentUser.uid), { role: 'superadmin' });
+              alert("Success! You are now a Super Admin. Redirecting to Owner Dashboard...");
+              window.location.href = '/owner';
+            } catch (err) {
+              alert("Error: Make sure your Firebase Rules are still set to Test Mode! " + err);
+            }
+          }}
+          className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg animate-pulse"
+        >
+          🚨 CLICK HERE TO BECOME SUPER ADMIN 🚨
+        </button>
+      </div>
       {/* STICKY SEARCH BAR (Appears on scroll) */}
       <motion.div 
         initial={{ y: -100, opacity: 0 }}
@@ -1101,7 +1133,7 @@ const Home: React.FC = () => {
                   ))}
                 </div>
                 <a 
-                  href="https://wa.me/917666258454"
+                  href={tenantInfo?.contactPhone ? `https://wa.me/${tenantInfo.contactPhone.replace(/\D/g, '')}` : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-3 px-10 py-5 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all active:scale-95"
@@ -1194,7 +1226,7 @@ const Home: React.FC = () => {
                   <ArrowRight size={24} />
                 </button>
                 <a 
-                  href="https://wa.me/917666258454"
+                  href={tenantInfo?.contactPhone ? `https://wa.me/${tenantInfo.contactPhone.replace(/\D/g, '')}` : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto px-12 py-6 bg-white/10 text-white rounded-2xl font-black text-xl hover:bg-white/20 active:scale-95 transition-all flex items-center justify-center gap-3 backdrop-blur-md border border-white/10"

@@ -1,4 +1,4 @@
-import { collection, getDocs, writeBatch, doc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, serverTimestamp, addDoc, setDoc } from 'firebase/firestore';
 import { getDb } from './lib/firebase-db';
 
 const categorySeedData = [
@@ -285,6 +285,28 @@ const sampleCategories = [
 
 export const populateSampleData = async () => {
   try {
+    console.log('Seeding Tenant Document for Mana Inti...');
+    const tenantRef = doc(getDb(), 'tenants', 'mana-inti');
+    await setDoc(tenantRef, {
+      id: "mana-inti",
+      slug: "mana-inti",
+      name: "Mana Inti Bojanam",
+      ownerId: "SYSTEM_SEEDED",
+      isActive: true,
+      planId: "enterprise",
+      createdAt: serverTimestamp(),
+      paymentConfig: {
+        provider: "razorpay",
+        keyId: "placeholder_to_be_replaced",
+        secretRef: "placeholder",
+        isActive: true
+      },
+      brandConfig: {
+        logoUrl: "",
+        primaryColor: "#ff5722"
+      }
+    }, { merge: true });
+
     console.log('Adding sample categories...');
     for (const category of sampleCategories) {
       await addDoc(collection(getDb(), 'categories'), category);
@@ -298,6 +320,7 @@ export const populateSampleData = async () => {
     console.log('Sample data added successfully!');
   } catch (error) {
     console.error('Error adding sample data:', error);
+    throw error;
   }
 };
 

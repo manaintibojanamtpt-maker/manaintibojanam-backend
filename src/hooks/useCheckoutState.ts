@@ -16,14 +16,19 @@ export function useCheckoutState() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   
+  // Try to load from localStorage first
+  const loadStored = (key: string, defaultValue: string) => {
+    try { return localStorage.getItem(key) || defaultValue; } catch { return defaultValue; }
+  };
+
   // Details
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(loadStored('checkout_name', ''));
+  const [phone, setPhone] = useState(loadStored('checkout_phone', ''));
   const [email, setEmail] = useState('');
   
   // Address
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-  const [addressText, setAddressText] = useState(''); // Fallback manual address or structured address
+  const [addressText, setAddressText] = useState(loadStored('checkout_address', '')); // Fallback manual address or structured address
 
   // Preferences
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
@@ -31,13 +36,21 @@ export function useCheckoutState() {
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
   
   // Special Instructions
-  // Special Instructions
   const [specialInstructions, setSpecialInstructions] = useState('');
 
   // Promo Code
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
 
   const hasInitialized = useRef(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    try {
+      if (name) localStorage.setItem('checkout_name', name);
+      if (phone) localStorage.setItem('checkout_phone', phone);
+      if (addressText) localStorage.setItem('checkout_address', addressText);
+    } catch (e) {}
+  }, [name, phone, addressText]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);

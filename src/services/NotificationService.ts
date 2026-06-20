@@ -59,8 +59,20 @@ class NotificationService {
         this.messaging = getMessaging(app);
 
         // Service worker is already registered at app startup in main.tsx
-        // Just get the existing registration for FCM setup
-        const registration = await navigator.serviceWorker.ready;
+        // Just get the existing registration for FCM setup, but with a timeout
+        // because in Dev mode, SW might be disabled causing .ready to hang forever.
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Service Worker ready timeout')), 3000))
+        ]).catch(e => {
+          console.warn('NotificationService: Service Worker not ready (expected in Dev mode):', e.message);
+          return null;
+        });
+
+        if (!registration) {
+          return false;
+        }
+
         console.log('Service Worker ready for FCM:', registration);
 
         // Set up foreground message listener
@@ -437,8 +449,17 @@ export const getNotificationService = (): NotificationService => {
 
 // For backward compatibility - but this will be lazy now
 export const notificationService = new Proxy({} as NotificationService, {
-  get(target, prop) {
-    const service = getNotificationService();
-    return (service as any)[prop];
+  get: (target, prop) => {
+    const instance = getNotificationService();
+    const value = (instance as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  },
+  set: (target, prop, value) => {
+    const instance = getNotificationService();
+    (instance as any)[prop] = value;
+    return true;
   }
 });

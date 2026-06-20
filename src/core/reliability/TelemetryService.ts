@@ -93,14 +93,14 @@ class TelemetryServiceImpl {
     console.error(`[CRITICAL]`, error, meta);
     
     const now = Date.now();
-    // Rate limit: Max 1 write per 5 minutes to prevent Firestore quota exhaustion
-    if (now - this.lastCriticalWriteTime < 300000) {
+    // Rate limit: Max 1 write per 1 minute to prevent Firestore quota exhaustion
+    if (now - this.lastCriticalWriteTime < 60000) {
       return;
     }
 
     try {
       this.lastCriticalWriteTime = now;
-      await addDoc(collection(getDb(), 'system_incidents'), {
+      await addDoc(collection(getDb(), 'client_errors'), {
         level: 'CRITICAL',
         message: sanitizeLogString(msg),
         contextSummary: this.buildContextSummary(),
@@ -113,6 +113,23 @@ class TelemetryServiceImpl {
     } catch (dbErr) {
       console.error("Failed to write critical incident to Firestore", dbErr);
     }
+  }
+
+  public initializeGlobalHandlers() {
+    if (typeof window === 'undefined') return;
+    
+    window.addEventListener('error', (event: ErrorEvent) => {
+      this.logCritical(`Global Error: ${event.message}`, { 
+        route: window.location.pathname,
+        stack: event.error?.stack 
+      });
+    });
+
+    window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+      this.logCritical(`Unhandled Rejection: ${String(event.reason)}`, {
+        route: window.location.pathname
+      });
+    });
   }
 
   public setTenantContext(tenantId: string) {

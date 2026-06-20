@@ -7,7 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { updateOrderStatus, updatePaymentStatus } from '../services/api';
 import { Order, OrderStatus } from '../types';
 import { motion } from 'framer-motion';
-import { CheckCircle2, X, Home, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, ArrowRight, RefreshCw, ShoppingBag, Clock, X, Home } from 'lucide-react';
+import { saveGuestOrder } from '../lib/guestOrders';
 import toast from 'react-hot-toast';
 import { safeParseDate } from '../lib/utils';
 
@@ -33,10 +34,12 @@ const PaymentSuccess: React.FC = () => {
         const stored = localStorage.getItem('manual_payment_order');
         const storedOrder = stored ? JSON.parse(stored) : null;
         const orderId = queryOrderId || storedOrder?.orderId;
-
+        
         if (!orderId) {
-          throw new Error('No payment session found. Please place a new order.');
+          throw new Error('No order ID found');
         }
+
+        saveGuestOrder(orderId);
 
         const orderRef = doc(getDb(), 'orders', orderId);
         const snapshot = await getDoc(orderRef);

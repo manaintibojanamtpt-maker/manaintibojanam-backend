@@ -41,6 +41,8 @@ import { MenuItemSkeleton, CategorySkeleton, Skeleton } from '../components/Skel
 // SkeletonCard removed in favor of centralized SkeletonSystem
 
 import { useTenant } from '../context/TenantContext';
+import { getSmartReorderRecommendations } from '../services/RecommendationEngine';
+import { trackEvent } from '../services/AnalyticsService';
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
@@ -360,6 +362,27 @@ const Menu: React.FC = () => {
     };
   }, [activeTenantId]);
 
+  // SMART REORDER LOGIC
+  useEffect(() => {
+    if (currentUser?.uid && activeTenantId && menu.length > 0) {
+      const fetchReorders = async () => {
+        const result = await getSmartReorderRecommendations(currentUser.uid, activeTenantId, menu);
+        setOrderAgain(result);
+        if (result.length > 0) {
+          trackEvent(activeTenantId, 'reorderViewed');
+        }
+      };
+      fetchReorders();
+    }
+  }, [currentUser?.uid, activeTenantId, menu.length]);
+
+  // Helper functions for tracking
+  const handleReorderAdd = (item: MenuItem) => {
+    trackEvent(activeTenantId, 'reorderClicked', { itemId: item.id });
+    addToCart(item);
+    toast.success(`${item.name} added to cart`);
+  };
+
   useEffect(() => {
     if (userPrefs && menu.length > 0) {
       const favIds = userPrefs.favoriteItems || [];
@@ -618,6 +641,39 @@ const Menu: React.FC = () => {
         onClose={() => setShowHelpMeChoose(false)} 
         menuItems={menu} 
       />
+
+      {/* SMART REORDER: BUY AGAIN CAROUSEL */}
+      {orderAgain.length > 0 && category === 'all' && search === '' && !activeFilters.popular && !activeFilters.veg && !activeFilters.nonVeg && (
+        <div className="px-3 sm:px-4 pt-2 pb-6">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-1.5 h-6 bg-red-500 rounded-full" />
+            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+              Buy Again
+              <span className="bg-red-500/20 text-red-400 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border border-red-500/30">Favorites</span>
+            </h2>
+          </div>
+          <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
+            {orderAgain.map(item => (
+              <div key={`reorder-${item.id}`} className="min-w-[160px] max-w-[160px] bg-white/[0.03] border border-white/5 rounded-2xl p-2 flex flex-col group relative">
+                <div className="h-24 rounded-xl overflow-hidden mb-2 relative">
+                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.name} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <span className="absolute bottom-2 left-2 text-[10px] font-black text-white px-2 py-0.5 bg-black/50 backdrop-blur-md rounded-md">{formatPrice(item.price)}</span>
+                </div>
+                <h3 className="text-[11px] font-bold text-white/90 line-clamp-2 px-1 mb-2 h-8 leading-tight">{item.name}</h3>
+                <button
+                  onClick={() => handleReorderAdd(item)}
+                  className="w-full py-2 rounded-xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main Menu Grid */}
       <div id="menu-grid-start" className="px-3 sm:px-4 pb-12">
         <div className="pointer-events-none absolute inset-x-0 top-[240px] -z-10 mx-auto h-64 max-w-4xl bg-gradient-to-b from-orange-500/10 via-red-500/5 to-transparent blur-3xl opacity-70" />
 

@@ -24,8 +24,11 @@ import { OrderStatus, Order } from '../types';
 import CourierTrackingTimeline from '../components/CourierTrackingTimeline';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 
 const OrderStatusPage: React.FC = () => {
+  const { tenantInfo } = useTenant();
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,8 @@ const OrderStatusPage: React.FC = () => {
     if (!order) return;
     try {
       const message = getWhatsAppMessage(order);
-      const whatsappUrl = `https://wa.me/917666258454?text=${encodeURIComponent(message)}`;
+      const phone = tenantInfo?.contactPhone?.replace(/\D/g, '') || '';
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       const win = window.open(whatsappUrl, '_blank');
       if (!win) {
         throw new Error('Unable to open WhatsApp window. Please allow popups and try again.');

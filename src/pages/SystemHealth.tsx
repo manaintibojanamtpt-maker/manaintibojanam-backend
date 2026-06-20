@@ -223,13 +223,13 @@ export default function SystemHealth() {
   useEffect(() => {
     async function fetchIncidents() {
       try {
-        const q = query(collection(getDb(), 'system_incidents'), orderBy('timestamp', 'desc'), limit(50));
+        const q = query(collection(getDb(), 'client_errors'), orderBy('timestamp', 'desc'), limit(50));
         const snapshot = await getDocs(q);
         const fetched = snapshot.docs.map(doc => {
           const d = doc.data();
           return {
             id: doc.id,
-            type: 'UNKNOWN',
+            type: 'CLIENT_ERROR' as any,
             status: d.resolved ? 'RESOLVED' : 'DETECTED',
             correlationId: doc.id,
             relatedEntity: d.tenantId || 'Tenant 0',

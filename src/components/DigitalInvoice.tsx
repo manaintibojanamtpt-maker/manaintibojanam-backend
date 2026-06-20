@@ -4,12 +4,16 @@ import { Download, Printer, X, CheckCircle2, MapPin, Phone, User, ShoppingBag } 
 
 import { Order, OrderStatus } from '../types';
 
+import { useTenant } from '../context/TenantContext';
+
 interface InvoiceProps {
   order: Order;
   onClose: () => void;
 }
 
 const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
+  const { tenantInfo } = useTenant();
+
   const handlePrint = () => {
     window.print();
   };
@@ -29,8 +33,14 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
         {/* HEADER */}
         <div className="bg-red-600 p-8 text-white flex justify-between items-center print:bg-white print:text-black print:border-b print:border-gray-200">
           <div>
-            <h1 className="text-3xl font-black tracking-tighter">MANA INTI BOJANAM</h1>
-            <p className="text-red-100 font-bold text-sm print:text-gray-500">Authentic Home Style Meals</p>
+            <h1 className="text-3xl font-black tracking-tighter uppercase">{tenantInfo?.name || 'Store'}</h1>
+            <p className="text-red-100 font-bold text-sm print:text-gray-500">{tenantInfo?.description || 'Authentic Meals'}</p>
+            {(tenantInfo?.contactPhone || tenantInfo?.contactEmail) && (
+              <div className="mt-2 text-xs text-red-100 print:text-gray-500 flex flex-col gap-0.5 font-medium">
+                {tenantInfo?.contactPhone && <span>📞 {tenantInfo.contactPhone}</span>}
+                {tenantInfo?.contactEmail && <span>✉️ {tenantInfo.contactEmail}</span>}
+              </div>
+            )}
           </div>
           <div className="flex gap-2 print:hidden">
             <button onClick={handlePrint} className="p-3 bg-white/20 hover:bg-white/30 rounded-2xl transition-all">
@@ -51,14 +61,19 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
               <p className="text-sm text-gray-500 font-medium">Date: {new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-              <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${
-                order.status === OrderStatus.PAYMENT_VERIFICATION || order.status === OrderStatus.PAYMENT_PENDING
-                  ? 'bg-yellow-50 text-yellow-600'
-                  : 'bg-green-50 text-green-600'
-              }`}>
-                <CheckCircle2 size={14} /> 
-                {order.status === OrderStatus.PAYMENT_VERIFICATION ? 'Verification Pending' : order.status === OrderStatus.PAYMENT_PENDING ? 'Payment Pending' : 'Paid'}
-              </div>
+              {['paid', 'success', 'verified'].includes(order.paymentStatus) || (order.paymentMethod === 'cod' && order.status === OrderStatus.DELIVERED) ? (
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-200">
+                  <CheckCircle2 size={14} /> PAID
+                </div>
+              ) : ['failed', 'expired'].includes(order.paymentStatus) ? (
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-200">
+                  <X size={14} /> FAILED
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-200">
+                  <Clock size={14} /> PENDING
+                </div>
+              )}
             </div>
           </div>
 
@@ -126,38 +141,54 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
           </div>
 
           {/* TOTALS */}
-          <div className="bg-gray-50 rounded-3xl p-8 space-y-3 print:bg-white print:border print:border-gray-100">
-            <div className="flex justify-between text-sm font-medium text-gray-500">
-              <span>Subtotal</span>
-              <span>₹{order.subtotal?.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm font-medium text-gray-500">
-              <span>GST</span>
-              <span>₹{order.gst?.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm font-medium text-gray-500">
-              <span>Packing Fee</span>
-              <span>₹{order.packingFee?.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm font-medium text-gray-500">
-              <span>Delivery Fee</span>
-              <span>₹{order.deliveryFee?.toFixed(2)}</span>
-            </div>
-            {order.discountAmount > 0 && (
-              <div className="flex justify-between text-sm font-medium text-emerald-600">
-                <span>Coupon Discount</span>
-                <span>-₹{order.discountAmount?.toFixed(2)}</span>
+          <div className="bg-gray-50 rounded-3xl p-8 space-y-4 print:bg-white print:border print:border-gray-200 print:rounded-none">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium text-gray-500">
+                <span>Subtotal</span>
+                <span>₹{order.subtotal?.toFixed(2)}</span>
               </div>
-            )}
-            <div className="flex justify-between pt-4 border-t border-gray-200 mt-4">
-              <span className="text-xl font-black text-gray-900">Total Amount</span>
-              <span className="text-3xl font-black text-red-600">₹{order.totalAmount?.toFixed(2)}</span>
+              <div className="flex justify-between text-sm font-medium text-gray-500">
+                <span>GST</span>
+                <span>₹{order.gst?.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-medium text-gray-500">
+                <span>Packing Fee</span>
+                <span>₹{order.packingFee?.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-medium text-gray-500">
+                <span>Delivery Fee</span>
+                <span>₹{order.deliveryFee?.toFixed(2)}</span>
+              </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-sm font-medium text-emerald-600">
+                  <span>Coupon Discount</span>
+                  <span>-₹{order.discountAmount?.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="border-t-2 border-dashed border-gray-300 pt-6 mt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xl font-black text-gray-900 flex items-center gap-2">
+                  {['paid', 'success', 'verified'].includes(order.paymentStatus) || (order.paymentMethod === 'cod' && order.status === OrderStatus.DELIVERED) ? (
+                    <>Total Paid <CheckCircle2 size={20} className="text-green-500" /></>
+                  ) : (
+                    'Amount Due'
+                  )}
+                </span>
+                <span className="text-4xl font-black text-red-600 whitespace-nowrap">₹{order.totalAmount?.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
-          <div className="mt-10 text-center">
-            <p className="text-xs text-gray-400 font-medium">Thank you for ordering from Mana Inti Bojanam!</p>
-            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-2">This is a computer generated invoice</p>
+          <div className="mt-12 text-center border-t border-gray-100 pt-8 print:border-gray-200">
+            <p className="text-sm text-gray-600 font-bold mb-1">Thank you for ordering from {tenantInfo?.name || 'us'}!</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-4">This is a computer generated invoice</p>
+            
+            <div className="mt-6 pt-6 border-t border-gray-100/50 print:border-gray-100">
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Powered by BhojanOS</p>
+              <p className="text-[9px] font-bold text-gray-300 tracking-wider">Cloud Kitchen Operating System</p>
+            </div>
           </div>
         </div>
 

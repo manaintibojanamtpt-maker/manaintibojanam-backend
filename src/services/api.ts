@@ -65,14 +65,41 @@ export const pingBackend = () => {
 
 // --- MENU API ---
 
-export const fetchMenu = async (): Promise<MenuItem[]> => {
+export const fetchMenu = async (tenantId?: string): Promise<MenuItem[]> => {
   const path = 'menu';
+  const cacheKey = `mib_menu_${tenantId || 'global'}`;
+  
   try {
-    const q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
+    let q;
+    if (tenantId) {
+      q = query(collection(getDb(), path), where('tenantId', '==', tenantId));
+    } else {
+      q = query(collection(getDb(), path));
+    }
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+    const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+    
+    // Sort in memory to avoid missing field omissions and composite index requirements
+    results.sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(cacheKey, JSON.stringify(results));
+    }
+    return results;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
+    
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        console.warn('Network failed for fetchMenu, serving from local cache');
+        return JSON.parse(cached);
+      }
+    }
     return [];
   }
 };
@@ -483,6 +510,26 @@ export const updatePaymentStatus = async (
 
 // --- REAL-TIME LISTENERS ---
 
+export const subscribeToGuestOrders = (orderIds: string[], callback: (orders: Order[]) => void) => {
+  if (!orderIds || orderIds.length === 0) {
+    callback([]);
+    return () => {};
+  }
+  // chunk orderIds into batches of 10 if necessary, but for now just slice 10
+  const slicedIds = orderIds.slice(0, 10);
+  const q = query(collection(getDb(), 'orders'), where('__name__', 'in', slicedIds));
+  
+  return onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    orders.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return bTime - aTime;
+    });
+    callback(orders);
+  });
+};
+
 export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: string, onError?: (error: any) => void) => {
   const path = 'orders';
   let q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
@@ -604,7 +651,48 @@ export const getDisplayStatus = (status: OrderStatus): string => {
 export interface RepeatOrderLine { id: string; name: string; quantity: number; price: number; }
 export interface RepeatOrderBundle { id: string; orderId: string; date: string; items: RepeatOrderLine[]; totalAmount: number; }
 export const fetchRepeatOrderRailData = async (userId: string): Promise<any> => ({ items: [], bundles: [] });
-export const buildRepeatOrderLines = (items: any[]) => items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price }));
+
+export const buildRepeatOrderLines = (orderItems: any[], menuItems: any[]) => {
+  const lines: any[] = [];
+  orderItems.forEach(orderItem => {
+    const liveItem = menuItems.find((m: any) => m.id === orderItem.id);
+    if (!liveItem) return;
+    if (liveItem.isAvailable === false) return;
+
+    const selectedAddons: any[] = [];
+    const missingAddonNames: string[] = [];
+
+    (orderItem.selectedAddons || []).forEach((addon: any) => {
+      let found = false;
+      if (liveItem.customizations) {
+         liveItem.customizations.forEach((cust: any) => {
+            const opt = cust.options.find((o: any) => o.name === addon.name);
+            if (opt && opt.isAvailable !== false) {
+              selectedAddons.push({
+                 groupId: cust.id,
+                 groupName: cust.name,
+                 id: opt.id,
+                 name: opt.name,
+                 price: opt.price
+              });
+              found = true;
+            }
+         });
+      }
+      if (!found) {
+        missingAddonNames.push(addon.name);
+      }
+    });
+
+    lines.push({
+       item: liveItem,
+       quantity: orderItem.quantity || 1,
+       selectedAddons,
+       missingAddonNames
+    });
+  });
+  return lines;
+};
 
 import { deleteDoc, addDoc } from 'firebase/firestore';
 

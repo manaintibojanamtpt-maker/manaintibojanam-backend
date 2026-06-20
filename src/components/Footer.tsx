@@ -56,13 +56,13 @@ const Footer: React.FC = () => {
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-400 mb-8">Get in Touch</h4>
             <div className="flex flex-col gap-6">
-              <a href="tel:+917666258454" className="flex items-center gap-4 group">
+              <a href={tenantInfo?.contactPhone ? `tel:+${tenantInfo.contactPhone.replace(/\D/g, '')}` : '#'} className="flex items-center gap-4 group">
                 <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform shadow-sm">
                   <Phone size={18} />
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Call Us</span>
-                  <span className="text-sm font-black text-gray-900 dark:text-white">+91 76662 58454</span>
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{tenantInfo?.contactPhone || '+91 76662 58454'}</span>
                 </div>
               </a>
               <a href="mailto:manaintibojanamtpt@gmail.com" className="flex items-center gap-4 group">

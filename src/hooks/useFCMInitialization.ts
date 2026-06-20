@@ -43,7 +43,7 @@ export function useFCMInitialization() {
           }
           console.log('useFCMInitialization: FCM initialized successfully');
         } else {
-          console.warn('useFCMInitialization: FCM initialization failed');
+          console.log('useFCMInitialization: FCM initialization skipped or unavailable (expected in Dev mode).');
         }
       } catch (error) {
         console.error('useFCMInitialization: FCM initialization error:', error);

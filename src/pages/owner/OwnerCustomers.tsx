@@ -111,8 +111,17 @@ const OwnerCustomers: React.FC = () => {
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-white/70">
                       {customer.totalOrders} orders
                     </span>
+                    {customer.totalOrders >= 5 && (
+                      <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-purple-300">
+                        VIP
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-2 text-sm text-white/55">{customer.phone || 'Phone unavailable'}</p>
+                  <div className="mt-2 flex items-center gap-4 text-sm text-white/55">
+                    <p>{customer.phone || 'Phone unavailable'}</p>
+                    <div className="w-1 h-1 rounded-full bg-white/20" />
+                    <p className="font-bold text-green-400">LTV: ₹{(customer.lifetimeSpend || 0).toLocaleString()}</p>
+                  </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     {customer.topDishes.map((dish) => (

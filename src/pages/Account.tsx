@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle } from 'lucide-react';
+import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle, Activity } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
@@ -16,7 +16,7 @@ const Account: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();
   const { isSupported: bioSupported, isEnabled: bioEnabled, enroll: bioEnroll, disable: bioDisable, biometryType, enrollLoading, disableLoading } = useBiometrics();
   const navigate = useNavigate();
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, tenantInfo } = useTenant();
   
   const [activeModal, setActiveModal] = useState<string | null>(null);
   
@@ -176,6 +176,43 @@ const Account: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* BHOJAN LOYALTY WALLET */}
+        {currentUser && (
+          <motion.div variants={itemVariants} className="mb-10">
+            <div className="bg-gradient-to-br from-[#1a1a1f] to-[#141418] rounded-3xl p-6 border border-white/5 relative overflow-hidden shadow-xl">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                    <Sparkles size={14} className="text-purple-400" />
+                  </div>
+                  <h3 className="font-bold text-white tracking-wide">Bhojan<span className="text-purple-400">Points</span></h3>
+                </div>
+                <div className="bg-white/5 px-3 py-1 rounded-full border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Tier: {userProfile?.rewardTier || 'Bronze'}
+                </div>
+              </div>
+
+              <div className="flex items-end gap-2 mb-6 relative z-10">
+                <span className="text-5xl font-black text-white tracking-tighter">{userProfile?.bhojanPoints || 0}</span>
+                <span className="text-sm font-bold text-white/40 pb-1 uppercase tracking-widest">Pts</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 relative z-10">
+                <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors active:scale-95 flex items-center justify-center gap-2">
+                  <ShoppingBag size={14} /> Redeem
+                </button>
+                <button className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-300 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors active:scale-95 flex items-center justify-center gap-2">
+                  <Activity size={14} /> History
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* ORDERS */}
         {currentUser && (
@@ -444,7 +481,7 @@ const Account: React.FC = () => {
             </p>
             <div className="space-y-4">
               <a 
-                href="https://wa.me/917666258454"
+                href={tenantInfo?.contactPhone ? `https://wa.me/${tenantInfo.contactPhone.replace(/\D/g, '')}` : '#'}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-4 p-5 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 rounded-[1.5rem] transition-all active:scale-[0.98]"

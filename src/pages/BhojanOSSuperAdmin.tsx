@@ -43,17 +43,24 @@ export default function BhojanOSSuperAdmin() {
 
   const loadData = async () => {
     setLoading(true);
+    let timeoutId: any;
     try {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("Firestore query timed out! Please check Firebase Security Rules.")), 5000);
+      });
+
       const [tenantsData, leadsData] = await Promise.all([
-        fetchAllTenants(),
-        fetchOnboardingLeads()
+        Promise.race([fetchAllTenants(), timeoutPromise]),
+        Promise.race([fetchOnboardingLeads(), timeoutPromise])
       ]);
+      clearTimeout(timeoutId);
       setTenants(tenantsData);
       setLeads(leadsData);
     } catch (error: any) {
       console.error("Failed to load SuperAdmin data", error);
-      toast.error("Failed to load platform data");
+      toast.error(error.message || "Failed to load platform data");
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -454,7 +461,52 @@ export default function BhojanOSSuperAdmin() {
                               <td colSpan={5} className="px-6 py-16 text-center">
                                 <div className="text-gray-600 mb-4"><Building2 size={40} className="mx-auto" /></div>
                                 <div className="text-base font-bold text-white">No tenants found</div>
-                                <div className="text-sm font-medium text-gray-500 mt-1">Try adjusting your search query</div>
+                                <div className="text-sm text-zinc-400 mt-1 mb-4">Try adjusting your search query</div>
+                                <button 
+                                  onClick={async () => {
+                                    toast.loading("Seeding database... Please wait about 10 seconds.");
+                                    try {
+                                      const { getDb } = await import('../lib/firebase-db');
+                                      const { doc, setDoc, writeBatch } = await import('firebase/firestore');
+                                      const menuData = await import('../../menu.json');
+                                      const accountsData = await import('../../accounts.json');
+                                      const db = getDb();
+                                      
+                                      // 1. Seed Tenant
+                                      const tenantRef = doc(db, 'tenants', 'mana-inti');
+                                      await setDoc(tenantRef, {
+                                        id: 'mana-inti',
+                                        slug: 'mana-inti',
+                                        name: 'Mana Inti Bojanam',
+                                        ownerId: currentUser?.uid || 'admin',
+                                        status: 'active',
+                                        tier: 'premium',
+                                        createdAt: new Date(),
+                                        updatedAt: new Date()
+                                      }, { merge: true });
+
+                                      // 2. Seed Menu
+                                      const menuBatch = writeBatch(db);
+                                      const menuItems = menuData.default || menuData;
+                                      for (const item of (Array.isArray(menuItems) ? menuItems : [])) {
+                                        const itemRef = doc(db, 'menu', item.id);
+                                        menuBatch.set(itemRef, { ...item, tenantId: 'mana-inti' });
+                                      }
+                                      await menuBatch.commit();
+
+                                      toast.dismiss();
+                                      toast.success("Seeding complete! Refreshing...");
+                                      setTimeout(() => window.location.reload(), 1000);
+                                    } catch (err: any) {
+                                      toast.dismiss();
+                                      toast.error("Seeding failed: " + err.message);
+                                      console.error("Seeding error:", err);
+                                    }
+                                  }}
+                                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+                                >
+                                  Seed Default Database
+                                </button>
                               </td>
                             </tr>
                           ) : filteredTenants.map((tenant) => {
@@ -470,6 +522,14 @@ export default function BhojanOSSuperAdmin() {
                                       <div className="font-bold text-white text-base tracking-tight">{tenant.name || 'Unnamed Kitchen'}</div>
                                       <div className="text-xs font-medium text-gray-500 mt-1">Joined {tenant.createdAt?.seconds ? new Date(tenant.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'}) : 'Unknown'}</div>
                                     </div>
+                                    <button
+                                      onClick={() => {
+                                        window.open(`/owner/dashboard`, '_blank');
+                                      }}
+                                      className="ml-3 px-3 py-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded text-sm font-medium transition-colors border border-orange-500/20"
+                                    >
+                                      View Dashboard
+                                    </button>
                                   </div>
                                 </td>
                                 <td className="px-6 py-5">

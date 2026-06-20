@@ -1,22 +1,27 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X } from 'lucide-react';
+import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X, LayoutDashboard, Rocket, BrainCircuit, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userProfile, logout } = useAuth();
+  useOrderAlerts();
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navItems: Array<{ name: string; path: string; icon: any; disabled?: boolean }> = [
-    { name: 'Dashboard', path: '/owner/dashboard', icon: BarChart3 },
-    { name: 'Live Orders', path: '/owner/orders', icon: ShoppingBag },
+  const navItems = [
+    { name: 'Dashboard', path: '/owner/dashboard', icon: LayoutDashboard },
+    { name: 'AI Operations', path: '/owner/operations', icon: BrainCircuit, hideOnMobile: true },
+    { name: 'Active Orders', path: '/owner/orders', icon: ShoppingBag },
     { name: 'Customers', path: '/owner/customers', icon: Users },
     { name: 'Menu Builder', path: '/owner/menu', icon: MenuIcon },
+    { name: 'Recipe Intelligence', path: '/owner/recipes', icon: BookOpen, hideOnMobile: true },
+    { name: 'Marketing', path: '/owner/marketing', icon: Rocket, hideOnMobile: true },
     { name: 'Storefront Settings', path: '/owner/settings', icon: Settings },
   ];
 
@@ -297,7 +302,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0f0f11]/95 px-2 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur-xl lg:hidden">
           <div className="grid grid-cols-5 gap-1">
-            {navItems.map((item) => {
+            {navItems.filter(item => !item.hideOnMobile).map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
 

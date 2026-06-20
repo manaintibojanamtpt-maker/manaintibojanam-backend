@@ -43,17 +43,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       cssCodeSplit: false,
-      modulePreload: {
-        resolveDependencies: (_filename, deps, context) => {
-          if (context.hostType !== 'html') {
-            return deps;
-          }
-
-          return deps.filter((dependency) => {
-            return !/(admin-panel|checkout|my-orders|payment-success|order-success|subscription|vendor-motion)/.test(dependency);
-          });
-        },
-      },
+      modulePreload: false,
       target: 'es2020',
       minify: 'esbuild',
       brotliSize: false,

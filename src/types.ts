@@ -21,6 +21,14 @@ export interface MenuItem {
   rating?: number;
   isVegetarian?: boolean;
   addons?: Addon[];
+  isUpsell?: boolean;
+  upsellPriority?: number;
+  pairWith?: string[];
+  isBestSeller?: boolean;
+  // Inventory Extensions (Phase 6C)
+  stockCount?: number;
+  lowStockThreshold?: number;
+  autoLockEnabled?: boolean;
 }
 
 export interface CartItem {
@@ -99,6 +107,14 @@ export interface UserProfile {
   updatedAt: any;
   isSaaSOwner?: boolean;
   ownedTenantIds?: string[];
+  // Loyalty & CRM Extensions (Phase 6C)
+  bhojanPoints?: number;
+  availablePoints?: number;
+  lifetimePointsEarned?: number;
+  lifetimePointsRedeemed?: number;
+  rewardTier?: string;
+  lifetimeSpend?: number;
+  lastPointsActivityAt?: any;
 }
 
 export enum OrderStatus {
@@ -387,4 +403,67 @@ export interface Tenant {
     primaryColor?: string;
   };
   createdAt: any;
+}
+
+// ==========================================
+// Phase 6D: Recipes & Forecasting Types
+// ==========================================
+
+export interface RecipeIngredient {
+  ingredient: string; // e.g., "Rice", "Chicken"
+  quantity: number;
+  unit: string; // e.g., "grams", "kg", "pieces", "L"
+}
+
+export interface Recipe {
+  id?: string;
+  menuItemId: string; // References MenuItem.id
+  tenantId: string;
+  ingredients: RecipeIngredient[];
+}
+
+export interface Forecast {
+  id?: string;
+  tenantId: string;
+  targetDate: string; // YYYY-MM-DD
+  type: 'daily' | 'weekend' | 'peak_hour';
+  expectedOrders: number;
+  expectedRevenue: number;
+  expectedAOV: number;
+  confidenceScore: 'Low' | 'Medium' | 'High';
+  reasoning: string;
+  createdAt: any;
+  actualOrders?: number;
+  actualRevenue?: number;
+}
+
+export interface ForecastAccuracy {
+  date: string;
+  accuracyPercent: number;
+  variancePercent: number;
+  predictionError: number;
+}
+
+export interface InventoryForecastRequirement {
+  ingredient: string;
+  quantityRequired: number;
+  unit: string;
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  reasoning: string;
+}
+
+export interface AIOperationsInsight {
+  expectedOrders: number;
+  expectedRevenue: number;
+  inventoryRisk: 'Low' | 'Medium' | 'High' | 'Critical';
+  kitchenHealth: number;
+  confidence: 'Low' | 'Medium' | 'High';
+  recommendations: string[];
+}
+
+export interface SimulationResult {
+  action: string;
+  expectedOrderLift: number; // percentage
+  expectedRevenueLift: number; // percentage
+  expectedRepeatLift: number; // percentage
 }

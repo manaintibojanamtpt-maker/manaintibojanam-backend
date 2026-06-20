@@ -410,4 +410,33 @@ body {
       transform: none !important;
     }
   }
+
+  /* --- Global Print Guardrails --- */
+  @media print {
+    /* Hide all typical app UI components */
+    nav, footer, .bottom-nav, .sticky-cart-bar, #ai-assistant-container, .fab, .floating-widgets {
+      display: none !important;
+    }
+
+    /* If the digital invoice is open, ensure it takes full page */
+    body {
+      background: white !important;
+      color: black !important;
+      overflow: visible !important;
+      height: auto !important;
+    }
+
+    /* Hide any direct body children EXCEPT the modal container (which usually holds the invoice) */
+    #root {
+      display: none !important;
+    }
+
+    /* Force the modal overlay (which contains DigitalInvoice) to show and stretch */
+    .fixed.inset-0.z-\[200\] {
+      position: absolute !important;
+      inset: 0 !important;
+      display: block !important;
+      background: white !important;
+    }
+  }
 }

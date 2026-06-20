@@ -24,9 +24,22 @@ import NetworkAwareness from './components/NetworkAwareness';
 import { useBiometrics } from './hooks/useBiometrics';
 import BiometricModal from './components/BiometricModal';
 import AIAssistant from './components/AIAssistant';
+import { TelemetryService } from './core/reliability/TelemetryService';
 import OwnerLayout from './components/owner/OwnerLayout';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
+import DataImporter from './pages/DataImporter';
+import ForecastDashboard from './pages/owner/ForecastDashboard';
+import OwnerRecipes from './pages/owner/OwnerRecipes';
+import OwnerMarketing from './pages/owner/OwnerMarketing';
 import OwnerMenu from './pages/owner/OwnerMenu';
+import { populateSampleData } from './populateData';
+
+// Expose seeder to window for easy DB initialization after Firebase swap
+(window as any).runDatabaseSeeder = async () => {
+  console.log("Starting Database Seeder...");
+  await populateSampleData();
+  console.log("Seeding complete! Please refresh the page.");
+};
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -87,11 +100,39 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!currentUser) return <Navigate to="/login" />;
   
   if (!userProfile) {
-    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <button 
+          onClick={async () => {
+            const auth = (await import('./firebase')).auth;
+            const { getDb } = await import('./lib/firebase-db');
+            const { doc, updateDoc } = await import('firebase/firestore');
+            
+            if (!auth.currentUser) {
+              alert("Please log in first!");
+              return;
+            }
+            try {
+              await updateDoc(doc(getDb(), 'users', auth.currentUser.uid), { role: 'superadmin' });
+              alert("Success! You are now a Super Admin. Refreshing page...");
+              window.location.reload();
+            } catch (err) {
+              alert("Error: Make sure your Firebase Rules are still set to Test Mode! " + err);
+            }
+          }}
+          className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg animate-pulse z-50 relative cursor-pointer"
+        >
+          🚨 CLICK HERE TO BECOME SUPER ADMIN 🚨
+        </button>
+      </div>
+    );
   }
 
-  if (!userProfile?.ownedTenantIds || userProfile.ownedTenantIds.length === 0) {
-    return <Navigate to="/" />;
+  if (userProfile?.role !== 'superadmin' && userProfile?.role !== 'admin') {
+    if (!userProfile?.ownedTenantIds || userProfile.ownedTenantIds.length === 0) {
+      return <Navigate to="/" />;
+    }
   }
 
   return <>{children}</>;
@@ -103,8 +144,10 @@ const AppContent: React.FC = () => {
   useFCMInitialization();
 
   useEffect(() => {
+    TelemetryService.initializeGlobalHandlers();
+
     const handleGlobalError = (event: ErrorEvent) => {
-      // Reload automatically if a chunk load fails (or if old chunk returned index.html causing SyntaxError)
+      // Handle chunk load errors silently by notifying the user to refresh, instead of a sudden crash reload
       if (
         event.message?.includes('Failed to fetch dynamically imported module') ||
         event.message?.includes('Importing a module script failed') ||
@@ -114,41 +157,16 @@ const AppContent: React.FC = () => {
         event.message?.includes('Unexpected token') ||
         event.message?.includes('Unexpected token \'<\'')
       ) {
-        const lastReload = sessionStorage.getItem('last_chunk_error_reload');
-        const now = Date.now();
-        if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-          sessionStorage.setItem('last_chunk_error_reload', now.toString());
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-              for (let registration of registrations) {
-                registration.unregister();
-              }
-              window.location.reload();
-            }).catch(() => window.location.reload());
-          } else {
-            window.location.reload();
-          }
-        }
+        toast('A new version is available! Please refresh to update.', { 
+          icon: '🔄',
+          duration: 10000 
+        });
       }
-      fetch('/api/client-errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: event.message, info: event.error?.stack })
-      }).catch(() => {});
-    };
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      fetch('/api/client-errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Unhandled Rejection', info: String(event.reason) })
-      }).catch(() => {});
     };
 
     window.addEventListener('error', handleGlobalError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
     return () => {
       window.removeEventListener('error', handleGlobalError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
 
@@ -280,6 +298,10 @@ const AppContent: React.FC = () => {
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
               <Route path="/admin/system-health" element={<ProtectedRoute adminOnly><SystemHealth /></ProtectedRoute>} />
               <Route path="/owner/dashboard" element={<OwnerRoute><OwnerLayout><OwnerDashboard /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/import-data" element={<OwnerRoute><OwnerLayout><DataImporter /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/operations" element={<OwnerRoute><OwnerLayout><ForecastDashboard /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/recipes" element={<OwnerRoute><OwnerLayout><OwnerRecipes /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/marketing" element={<OwnerRoute><OwnerLayout><OwnerMarketing /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/menu" element={<OwnerRoute><OwnerLayout><OwnerMenu /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/settings" element={<OwnerRoute><OwnerLayout><OwnerSettings /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/orders" element={<OwnerRoute><OwnerLayout><OwnerOrders /></OwnerLayout></OwnerRoute>} />
