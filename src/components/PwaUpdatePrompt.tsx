@@ -11,6 +11,13 @@ export const PwaUpdatePrompt: React.FC = () => {
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log('[PWA] Service Worker registered:', r);
+      if (r) {
+        // Check for updates every 1 minute
+        setInterval(() => {
+          console.log('[PWA] Checking for updates...');
+          r.update().catch(console.error);
+        }, 60 * 1000);
+      }
     },
     onRegisterError(error: any) {
       console.error('[PWA] Service worker registration error', error);
