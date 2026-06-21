@@ -123,7 +123,7 @@ const OwnerOrders: React.FC = () => {
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
-          order.id === orderId ? { ...order, status } : order
+          order.id === orderId ? { ...order, status, ...deliveryData } : order
         )
       );
       toast.success(`Order marked as ${status}`);
@@ -175,8 +175,8 @@ const OwnerOrders: React.FC = () => {
           <div className="flex items-center space-x-3 sm:space-x-4">
             <img src={logo} alt="BhojanOS" className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Orders Dashboard</h1>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">Manage incoming orders for your kitchen</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Orders Dashboard</h1>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">Manage incoming orders for your kitchen</p>
             </div>
           </div>
           

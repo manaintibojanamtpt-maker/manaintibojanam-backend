@@ -267,19 +267,19 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main className="flex-1 flex flex-col min-w-0 bg-[#050505] relative z-10 h-[100dvh] overflow-hidden">
         
         {/* Topbar */}
-        <header className="h-16 md:h-20 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0">
-          <div className="flex min-w-0 items-center gap-2 text-white/50 text-sm font-medium">
+        <header className="pt-[max(env(safe-area-inset-top),0.5rem)] pb-3 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0 relative z-20">
+          <div className="flex min-w-0 items-center gap-2 text-white/50 text-sm font-bold">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="mr-1 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 lg:hidden"
+              className="mr-1 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 lg:hidden hover:bg-white/10 transition-colors"
               aria-label="Open owner menu"
             >
               <MenuIcon size={18} />
             </button>
-            <span className="hidden lg:inline">BhojanOS</span>
-            <ChevronRight size={14} className="hidden lg:block" />
-            <span className="truncate text-white capitalize font-bold">{currentPage}</span>
+            <span className="hidden lg:inline text-white/40">BhojanOS</span>
+            <ChevronRight size={14} className="hidden lg:block text-white/20" />
+            <span className="truncate text-white capitalize text-lg tracking-tight drop-shadow-sm">{currentPage}</span>
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -300,7 +300,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0f0f11]/95 px-2 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur-xl lg:hidden">
+        <nav className="fixed inset-x-4 bottom-4 z-30 rounded-[2rem] border border-white/10 bg-[#141416]/80 px-2 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden">
           <div className="grid grid-cols-5 gap-1">
             {navItems.filter(item => !item.hideOnMobile).map((item) => {
               const Icon = item.icon;
@@ -312,12 +312,12 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   type="button"
                   onClick={() => !item.disabled && goTo(item.path)}
                   disabled={item.disabled}
-                  className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-[10px] font-black transition-all ${
-                    isActive ? 'bg-red-600/15 text-red-400' : 'text-white/45'
+                  className={`flex min-w-0 flex-col items-center justify-center rounded-[1.5rem] px-1 py-2 text-[10px] font-bold transition-all ${
+                    isActive ? 'bg-red-500/10 text-red-500 scale-105' : 'text-white/40 hover:text-white/70'
                   } ${item.disabled ? 'opacity-40' : ''}`}
                 >
-                  <Icon size={18} className="mb-1" />
-                  <span className="w-full truncate">{item.name.replace('Storefront ', '')}</span>
+                  <Icon size={isActive ? 22 : 20} className={`mb-1 transition-all ${isActive ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`} />
+                  <span className="w-full truncate text-center tracking-tight">{item.name.replace('Storefront ', '')}</span>
                 </button>
               );
             })}

@@ -27,9 +27,7 @@ const OwnerCustomers: React.FC = () => {
 
     const customersQuery = query(
       collection(getDb(), 'orders'),
-      where('tenantId', '==', tenantId),
-      orderBy('createdAt', 'desc'),
-      limit(200)
+      where('tenantId', '==', tenantId)
     );
 
     const unsubscribe = onSnapshot(
@@ -79,8 +77,8 @@ const OwnerCustomers: React.FC = () => {
     <div className="text-white">
       <header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers Lite</h1>
-          <p className="text-white/50 mt-1">A lightweight CRM view of repeat buyers, usuals, and contact context.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Customers Lite</h1>
+          <p className="text-white/50 text-sm mt-1">A lightweight CRM view of repeat buyers, usuals, and contact context.</p>
         </div>
         <div className="relative w-full md:w-[320px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />

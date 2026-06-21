@@ -468,8 +468,8 @@ const OwnerDashboard = () => {
     <div className="text-white">
       <header className="mb-5 sm:mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Welcome back, {tenantName}</h1>
-          <p className="text-sm sm:text-base text-white/50 mt-1">Run today’s kitchen from one place: orders, repeat demand, subscriptions, and share actions.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Welcome back, {tenantName}</h1>
+          <p className="text-xs sm:text-sm text-white/50 mt-1">Run today’s kitchen from one place: orders, repeat demand, subscriptions, and share actions.</p>
         </div>
         <button
           type="button"
