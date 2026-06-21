@@ -105,17 +105,6 @@ const Home: React.FC = () => {
       return;
     }
     
-    if (currentUser) {
-      if (userProfile?.role === 'owner') {
-        if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
-          navigate('/owner/dashboard');
-        }
-      } else if (userProfile?.role === 'admin') {
-        navigate('/admin');
-      } else if (userProfile?.role === 'superadmin') {
-        navigate('/super-admin');
-      }
-    }
   }, [currentUser, userProfile, authLoading, navigate]);
 
   // Update FSSAI in Trust Badges

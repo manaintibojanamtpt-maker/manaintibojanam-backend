@@ -752,17 +752,38 @@ const OwnerDashboard = () => {
                     {todayActiveOrders.slice(0, 6).map((order) => (
                       <div key={order.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                          <div>
-                            <p className="font-bold text-white">#{order.orderNumber || order.id.slice(-4).toUpperCase()} • {order.customerName || 'Guest Customer'}</p>
-                            <p className="mt-1 text-sm text-white/60">
-                              {order.deliveryType === 'scheduled'
-                                ? `Scheduled for ${safeParseDate(order.scheduledTime || order.scheduledFor).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
-                                : `Placed at ${safeParseDate(order.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
-                            </p>
+                          <div className="w-full">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 mb-3">
+                              <div>
+                                <p className="font-bold text-white">#{order.orderNumber || order.id.slice(-4).toUpperCase()} • {order.customerName || 'Guest Customer'}</p>
+                                <p className="mt-1 text-sm text-white/60">
+                                  {order.deliveryType === 'scheduled'
+                                    ? `Scheduled for ${safeParseDate(order.scheduledTime || order.scheduledFor).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+                                    : `Placed at ${safeParseDate(order.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-white/5 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white/70 whitespace-nowrap">
+                                {String(order.status || '').replaceAll('_', ' ')}
+                              </span>
+                            </div>
+
+                            {/* ORDER ITEMS LIST */}
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/5 space-y-2 mt-2">
+                              {order.items?.map((item: any, idx: number) => (
+                                <div key={idx} className="flex justify-between items-start text-sm">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-brand-primary">{item.quantity}x</span>
+                                      <span className="font-medium text-white/90">{item.name}</span>
+                                    </div>
+                                    {item.specialInstructions && (
+                                      <p className="text-xs text-yellow-500/80 mt-0.5 pl-6">Note: {item.specialInstructions}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <span className="rounded-full bg-white/5 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white/70">
-                            {String(order.status || '').replaceAll('_', ' ')}
-                          </span>
                         </div>
                       </div>
                     ))}

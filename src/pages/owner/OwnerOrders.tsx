@@ -281,9 +281,28 @@ const OwnerOrders: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col md:items-end gap-4">
-                      <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                        ₹{order.totalAmount}
+                    <div className="flex flex-col md:items-end gap-4 w-full">
+                      {/* ORDER ITEMS LIST */}
+                      <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
+                        <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest mb-2">Order Items</h4>
+                        {order.items?.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-brand-primary">{item.quantity}x</span>
+                                <span className="font-medium text-white">{item.name}</span>
+                              </div>
+                              {item.specialInstructions && (
+                                <p className="text-sm text-yellow-500/80 mt-1 pl-6">Note: {item.specialInstructions}</p>
+                              )}
+                            </div>
+                            <span className="text-white/70">₹{item.price * item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                        Total: ₹{order.totalAmount}
                       </div>
 
                       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
