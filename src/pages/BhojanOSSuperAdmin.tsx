@@ -847,6 +847,23 @@ export default function BhojanOSSuperAdmin() {
                       </div>
                     </div>
 
+                    {/* Logout Section (Crucial for Mobile) */}
+                    <div className="p-6 sm:p-10 flex flex-col sm:flex-row gap-8 bg-red-950/10">
+                      <div className="sm:w-1/3">
+                        <h3 className="text-sm font-bold text-red-500 mb-1 uppercase tracking-wider">Account Access</h3>
+                        <p className="text-xs font-medium text-gray-500 leading-relaxed">Sign out of your super admin account on this device.</p>
+                      </div>
+                      <div className="sm:w-2/3 flex items-center">
+                        <button
+                          onClick={() => logout()}
+                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-red-600 hover:bg-red-500 rounded-xl text-[13px] font-bold text-white uppercase tracking-wider transition-all shadow-lg"
+                        >
+                          <LogOut size={16} />
+                          Log Out securely
+                        </button>
+                      </div>
+                    </div>
+
                   </motion.div>
                 </motion.div>
               )}

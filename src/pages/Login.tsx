@@ -219,85 +219,79 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#0C0C0C] text-gray-900 dark:text-white flex flex-col justify-between" style={{ backgroundImage: 'radial-gradient(circle at top, rgba(234, 220, 166, 0.03) 0%, transparent 40%)' }}>
+    <div className="h-[100dvh] overflow-y-auto bg-[#fafafa] dark:bg-[#0C0C0C] text-gray-900 dark:text-white flex flex-col justify-between" style={{ backgroundImage: 'radial-gradient(circle at top, rgba(234, 220, 166, 0.03) 0%, transparent 40%)' }}>
       {/* Invisible Recaptcha */}
       <div id="recaptcha-container"></div>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-min py-6">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 mb-2">
+        <div className="flex items-center justify-between px-6 mb-4">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-3xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
           >
             <ArrowLeft size={24} />
           </button>
           <button
             onClick={() => navigate('/')}
-            className="text-sm font-bold bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-3xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="text-xs font-bold uppercase tracking-widest bg-gray-200 dark:bg-gray-800 px-5 py-2.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
           >
             Skip
           </button>
         </div>
 
         {/* Branding & Form Area */}
-        <div className="flex-1 px-6 max-w-md w-full mx-auto flex flex-col justify-center">
+        <div className="flex-1 px-6 max-w-md w-full mx-auto flex flex-col justify-center py-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
-            className="text-center mb-10"
+            className="text-center mb-12"
           >
             <div className="inline-block p-1 mb-6">
               {tenantInfo?.logo ? (
-                <img src={tenantInfo.logo} alt={`${tenantInfo.name} Logo`} className="w-24 h-24 object-contain rounded-2xl shadow-xl" loading="eager" />
+                <img src={tenantInfo.logo} alt={`${tenantInfo.name} Logo`} className="w-28 h-28 object-contain rounded-3xl shadow-2xl" loading="eager" />
               ) : (
-                <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
-                  <span className="text-3xl font-black text-white">{tenantInfo?.name ? tenantInfo.name.charAt(0) : 'MI'}</span>
+                <div className="w-28 h-28 bg-gradient-to-br from-[#D35400] to-[#E67E22] rounded-3xl flex items-center justify-center shadow-2xl">
+                  <span className="text-4xl font-black text-white tracking-tighter">{tenantInfo?.name ? tenantInfo.name.charAt(0) : 'MI'}</span>
                 </div>
               )}
             </div>
             {tenantInfo?.name && (
-              <h1 className="text-2xl font-black mb-1">{tenantInfo.name}</h1>
+              <h1 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight">{tenantInfo.name}</h1>
             )}
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sign in to your account</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sign in to your account</p>
           </motion.div>
 
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-            className="bg-white/80 dark:bg-[#141414]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 shadow-2xl"
+            className="bg-white/90 dark:bg-[#111111]/90 backdrop-blur-2xl border border-gray-200 dark:border-white/5 rounded-[2rem] p-8 shadow-2xl"
           >
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
-            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sign In</span>
-            <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
-          </div>
-
           {hasLocalBiometrics && (
-            <div className="mb-6">
+            <div className="mb-8">
               <button
                 onClick={handleBiometricLogin}
                 disabled={bioLoading}
-                className="w-full bg-gradient-to-r from-[#ff6b35] to-[#ff9f1c] hover:opacity-90 text-white rounded-[20px] py-4 flex items-center justify-center gap-3 shadow-[0_10px_20px_rgba(255,107,53,0.3)] transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-[#D35400] to-[#E67E22] hover:opacity-90 text-white rounded-2xl py-4 flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(211,84,0,0.3)] transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {bioLoading ? (
                   <Loader2 className="animate-spin w-6 h-6" />
                 ) : (
                   <>
                     <Fingerprint className="w-6 h-6" />
-                    <span className="font-bold text-base tracking-wide">Login with {biometryType || 'Biometrics'}</span>
+                    <span className="font-bold text-base tracking-wider uppercase">Use {biometryType || 'Biometrics'}</span>
                   </>
                 )}
               </button>
               
-              <div className="flex items-center gap-4 my-6">
-                <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
-                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Or Use Phone</span>
-                <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
+              <div className="flex items-center gap-4 my-8">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
+                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Or Mobile</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
               </div>
             </div>
           )}
@@ -310,16 +304,16 @@ const Login: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex flex-col gap-4"
+                className="flex flex-col gap-6"
               >
-                <div className="flex items-center bg-gray-100 dark:bg-black/50 border border-transparent dark:border-white/5 rounded-[20px] px-5 py-4 focus-within:border-[#D35400] focus-within:ring-2 focus-within:ring-[#D35400]/20 transition-all shadow-inner group">
-                  <span className="font-bold text-sm text-gray-500 dark:text-gray-400 mr-3 border-r border-gray-300 dark:border-white/10 pr-3">+91</span>
+                <div className="flex items-center bg-gray-100 dark:bg-black/40 border border-transparent dark:border-white/5 rounded-2xl px-6 py-5 focus-within:border-[#D35400] focus-within:ring-4 focus-within:ring-[#D35400]/20 transition-all shadow-inner group">
+                  <span className="font-black text-lg text-gray-500 dark:text-gray-400 mr-4 border-r border-gray-300 dark:border-white/10 pr-4">+91</span>
                   <input
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="Mobile number"
-                    className="flex-1 bg-transparent border-none outline-none text-base font-medium placeholder:text-gray-400 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
+                    className="flex-1 bg-transparent border-none outline-none text-xl font-bold tracking-wider placeholder:text-gray-400 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
                     required
                     inputMode="numeric"
                   />
@@ -328,9 +322,9 @@ const Login: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading || phoneNumber.length !== 10}
-                  className="w-full bg-[#D35400] hover:bg-[#A04000] text-white rounded-[20px] py-4 font-bold text-sm tracking-wider press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-[#D35400]/20"
+                  className="w-full bg-black dark:bg-white text-white dark:text-black rounded-2xl py-5 font-black text-[13px] uppercase tracking-[0.2em] press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl"
                 >
-                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Continue'}
+                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Continue securely'}
                 </button>
               </motion.form>
             ) : (
@@ -340,10 +334,11 @@ const Login: React.FC = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex flex-col gap-4"
+                className="flex flex-col gap-6"
               >
                 <div className="text-center mb-2">
-                  <p className="text-sm text-gray-500">OTP sent to +91 {phoneNumber}</p>
+                  <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Secure code sent to</p>
+                  <p className="text-lg font-black mt-1">+91 {phoneNumber}</p>
                 </div>
                 <input
                   type="text"
@@ -359,14 +354,14 @@ const Login: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading || otp.length !== 6}
-                  className="w-full bg-[#D35400] hover:bg-[#A04000] text-white rounded-[20px] py-4 font-bold text-sm tracking-wider press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-[#D35400]/20"
+                  className="w-full bg-black dark:bg-white text-white dark:text-black rounded-2xl py-5 font-black text-[13px] uppercase tracking-[0.2em] press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl"
                 >
-                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Verify OTP'}
+                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Verify Access Code'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep('phone')}
-                  className="text-gray-500 font-bold py-2 mt-2"
+                  className="text-gray-500 hover:text-black dark:hover:text-white font-bold text-xs uppercase tracking-widest py-2 mt-2 transition-colors"
                 >
                   Change Mobile Number
                 </button>
@@ -374,10 +369,10 @@ const Login: React.FC = () => {
             )}
           </AnimatePresence>
 
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
-            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Or</span>
-            <div className="flex-1 h-px bg-gray-200 dark:bg-white/5"></div>
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
+            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Or Continue With</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
           </div>
 
           <div className="flex flex-col gap-3">
