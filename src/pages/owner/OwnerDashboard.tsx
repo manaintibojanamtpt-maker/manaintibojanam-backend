@@ -258,8 +258,7 @@ const OwnerDashboard = () => {
 
     const ordersQuery = query(
       collection(getDb(), 'orders'), 
-      where('tenantId', '==', tenantId),
-      where('status', 'not-in', ['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'])
+      where('tenantId', '==', tenantId)
     );
     const subscriptionsQuery = query(collection(getDb(), 'subscriptions'), where('tenantId', '==', tenantId));
 
@@ -282,7 +281,9 @@ const OwnerDashboard = () => {
     const unsubscribeOrders = onSnapshot(
       ordersQuery,
       (snapshot) => {
-        setOrders(snapshot.docs.map((snapshotDoc) => ({ id: snapshotDoc.id, ...snapshotDoc.data() } as Order)));
+        let fetchedOrders = snapshot.docs.map((snapshotDoc) => ({ id: snapshotDoc.id, ...snapshotDoc.data() } as Order));
+        fetchedOrders = fetchedOrders.filter(o => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''));
+        setOrders(fetchedOrders);
         markReady();
       },
       (error) => {

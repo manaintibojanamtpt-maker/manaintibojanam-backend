@@ -59,16 +59,21 @@ const OwnerOrders: React.FC = () => {
     const db = getDb();
     const q = query(
       collection(db, 'orders'),
-      where('tenantId', '==', tenantId),
-      orderBy('createdAt', 'desc'),
-      limit(orderLimit)
+      where('tenantId', '==', tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedOrders = snapshot.docs.map(doc => ({
+      let fetchedOrders = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
+      // Sort and limit in memory to avoid needing a composite index
+      fetchedOrders = fetchedOrders.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      }).slice(0, orderLimit);
       
       setOrders(fetchedOrders);
       setHasMore(snapshot.docs.length === orderLimit);
