@@ -56,6 +56,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow update: if isAuthenticated() && (
         isAdmin() || 
+        request.auth.token.email == 'bhojanos26@gmail.com' ||
         (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'ownedTenantIds']))
       );
     }
@@ -198,7 +199,7 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow read: if true;
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && isUnmodified(['createdAt', 'ownerId']);
+      allow update: if isAuthenticated() && (isAdmin() || request.auth.token.email == 'bhojanos26@gmail.com' || isUnmodified(['createdAt', 'ownerId']));
       
       match /analytics/{docId} {
         allow read: if isAdmin() || isTenantOwner(tenantId);

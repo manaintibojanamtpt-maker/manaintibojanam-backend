@@ -35,6 +35,7 @@ import { auth } from '../../firebase';
 import { CustomerSegmentSummary, getCustomerSegmentsSummary } from '../../services/CustomerIntelligenceService';
 import { KitchenHealthResult, calculateKitchenHealth } from '../../services/KitchenHealthService';
 import { Activity, TrendingUp, AlertOctagon, Heart, PackageOpen, Award, Target, PackageX, AlertCircle } from 'lucide-react';
+import { TenantAnalytics, getTenantAnalytics, backfillAnalytics } from '../../services/AnalyticsService';
 
 const OWNER_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
 
