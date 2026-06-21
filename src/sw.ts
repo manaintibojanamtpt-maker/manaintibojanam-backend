@@ -6,7 +6,7 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v23-diagnostic';
+const SW_VERSION = 'v24-diagnostic';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates
