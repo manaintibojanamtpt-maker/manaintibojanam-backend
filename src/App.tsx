@@ -102,29 +102,9 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!userProfile) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-        <button 
-          onClick={async () => {
-            const auth = (await import('./firebase')).auth;
-            const { getDb } = await import('./lib/firebase-db');
-            const { doc, updateDoc } = await import('firebase/firestore');
-            
-            if (!auth.currentUser) {
-              alert("Please log in first!");
-              return;
-            }
-            try {
-              await updateDoc(doc(getDb(), 'users', auth.currentUser.uid), { role: 'superadmin' });
-              alert("Success! You are now a Super Admin. Refreshing page...");
-              window.location.reload();
-            } catch (err) {
-              alert("Error: Make sure your Firebase Rules are still set to Test Mode! " + err);
-            }
-          }}
-          className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg animate-pulse z-50 relative cursor-pointer"
-        >
-          🚨 CLICK HERE TO BECOME SUPER ADMIN 🚨
-        </button>
+        <h2 className="text-2xl font-bold text-white">Unauthorized</h2>
+        <p className="text-white/70">You do not have owner permissions.</p>
+        <button onClick={() => window.location.href = '/login'} className="text-orange-500 underline">Return to Login</button>
       </div>
     );
   }

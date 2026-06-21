@@ -331,36 +331,12 @@ const Home: React.FC = () => {
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1.1, 1]);
 
-  const getItemQuantity = (id: string) => {
+    const getItemQuantity = (id: string) => {
     const cartItem = cart.find(item => item.id === id);
     return cartItem ? cartItem.quantity : 0;
   };
   return (
     <div className="flex flex-col min-h-screen bg-dark-bg">
-      <div className="pt-24 pb-4 px-4 max-w-7xl mx-auto flex justify-center z-50 relative">
-        <button 
-          onClick={async () => {
-            const auth = (await import('../firebase')).auth;
-            const { getDb } = await import('../lib/firebase-db');
-            const { doc, updateDoc } = await import('firebase/firestore');
-            
-            if (!auth.currentUser) {
-              alert("Please log in first!");
-              return;
-            }
-            try {
-              await updateDoc(doc(getDb(), 'users', auth.currentUser.uid), { role: 'superadmin' });
-              alert("Success! You are now a Super Admin. Redirecting to Owner Dashboard...");
-              window.location.href = '/owner';
-            } catch (err) {
-              alert("Error: Make sure your Firebase Rules are still set to Test Mode! " + err);
-            }
-          }}
-          className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg animate-pulse"
-        >
-          🚨 CLICK HERE TO BECOME SUPER ADMIN 🚨
-        </button>
-      </div>
       {/* STICKY SEARCH BAR (Appears on scroll) */}
       <motion.div 
         initial={{ y: -100, opacity: 0 }}
