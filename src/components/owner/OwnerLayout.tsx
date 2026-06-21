@@ -267,7 +267,10 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main className="flex-1 flex flex-col min-w-0 bg-[#050505] relative z-10 h-[100dvh] overflow-hidden">
         
         {/* Topbar */}
-        <header className="pt-[max(env(safe-area-inset-top),0.5rem)] pb-3 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0 relative z-20">
+        <header 
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+          className="pb-3 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0 relative z-20"
+        >
           <div className="flex min-w-0 items-center gap-2 text-white/50 text-sm font-bold">
             <button
               type="button"
@@ -300,7 +303,10 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </div>
 
-        <nav className="fixed inset-x-4 bottom-4 z-30 rounded-[2rem] border border-white/10 bg-[#141416]/80 px-2 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden">
+        <nav 
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}
+          className="fixed inset-x-4 bottom-4 z-30 rounded-[2rem] border border-white/10 bg-[#141416]/80 px-2 pt-2 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden"
+        >
           <div className="grid grid-cols-5 gap-1">
             {navItems.filter(item => !item.hideOnMobile).map((item) => {
               const Icon = item.icon;
