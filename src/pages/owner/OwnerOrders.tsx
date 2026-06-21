@@ -296,7 +296,7 @@ const OwnerOrders: React.FC = () => {
                                 <p className="text-sm text-yellow-500/80 mt-1 pl-6">Note: {item.specialInstructions}</p>
                               )}
                             </div>
-                            <span className="text-white/70">₹{item.price * item.quantity}</span>
+                            <span className="text-white/70">₹{(Number(item.unitPrice ?? item.price ?? 0)) * item.quantity}</span>
                           </div>
                         ))}
                       </div>
