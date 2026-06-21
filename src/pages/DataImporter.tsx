@@ -67,67 +67,70 @@ const DataImporter = () => {
     const db = getDb();
 
     try {
-      // 1. Import Tenant Details
-      setStatus('Seeding Tenant details...');
-      const tenantRef = doc(db, 'tenants', TENANT_ID);
-      await setDoc(tenantRef, {
-        id: TENANT_ID,
-        slug: 'mana-inti',
-        name: 'Mana Inti Bojanam',
-        ownerId: currentUser.uid,
-        status: 'active',
-        tier: 'premium',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }, { merge: true });
+      setStatus('Fetching real backup data...');
+      const response = await fetch('/backup.json');
+      if (!response.ok) throw new Error('Could not load backup.json');
+      const backup = await response.json();
 
-      // 2. Import Menu
-      const menuBatch = writeBatch(db);
-      for (const item of menuData) {
-        const itemRef = doc(db, 'menu', item.id);
-        menuBatch.set(itemRef, { ...item, tenantId: TENANT_ID });
-      }
-      await menuBatch.commit();
-      
-      // 2. Import Users (from accounts.json)
-      setStatus('Importing Users...');
-      const usersList = (accountsData as any).users || [];
-      const userBatch = writeBatch(db);
-      for (const u of usersList) {
-        if (!u.localId) continue;
-        const userRef = doc(db, 'users', u.localId);
-        userBatch.set(userRef, {
-          userId: u.localId,
-          email: u.email || '',
-          name: u.displayName || '',
-          role: 'customer',
-          createdAt: new Date()
-        }, { merge: true });
-      }
-      // Commit in chunks if there are >500 users, but writeBatch limit is 500.
-      // Assuming usersList is small for testing, otherwise we need chunking.
-      if (usersList.length <= 500) {
-        await userBatch.commit();
-      } else {
-        // Chunk it
-        for (let i = 0; i < usersList.length; i += 500) {
-          const chunk = usersList.slice(i, i + 500);
-          const chunkBatch = writeBatch(db);
-          for (const u of chunk) {
-            if (!u.localId) continue;
-            chunkBatch.set(doc(db, 'users', u.localId), {
-              userId: u.localId,
-              email: u.email || '',
-              name: u.displayName || '',
-              role: 'customer',
-              createdAt: new Date()
-            }, { merge: true });
-          }
-          await chunkBatch.commit();
+      const convertTimestamp = (ts: any) => {
+        if (ts && ts._seconds) {
+          return new Date(ts._seconds * 1000);
         }
+        return ts;
+      };
+
+      setStatus('Restoring Menu...');
+      const menuItems = Object.entries(backup.menu || {});
+      for (let i = 0; i < menuItems.length; i += 400) {
+        const chunk = menuItems.slice(i, i + 400);
+        const batch = writeBatch(db);
+        for (const [id, data] of chunk) {
+          const docData: any = { ...data, tenantId: TENANT_ID };
+          if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
+          if (docData.updatedAt) docData.updatedAt = convertTimestamp(docData.updatedAt);
+          batch.set(doc(db, 'menu', id), docData);
+        }
+        await batch.commit();
       }
 
-      setStatus('Successfully imported all data!');
+      setStatus('Restoring Orders...');
+      const orders = Object.entries(backup.orders || {});
+      for (let i = 0; i < orders.length; i += 400) {
+        const chunk = orders.slice(i, i + 400);
+        const batch = writeBatch(db);
+        for (const [id, data] of chunk) {
+          const docData: any = { ...data, tenantId: TENANT_ID };
+          if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
+          if (docData.expiresAt) docData.expiresAt = convertTimestamp(docData.expiresAt);
+          if (docData.scheduledFor) docData.scheduledFor = convertTimestamp(docData.scheduledFor);
+          if (docData.updatedAt) docData.updatedAt = convertTimestamp(docData.updatedAt);
+          if (Array.isArray(docData.timeline)) {
+            docData.timeline = docData.timeline.map((event: any) => {
+              if (event.timestamp) event.timestamp = convertTimestamp(event.timestamp);
+              if (event.metadata?.expiredAt) event.metadata.expiredAt = convertTimestamp(event.metadata.expiredAt);
+              return event;
+            });
+          }
+          batch.set(doc(db, 'orders', id), docData);
+        }
+        await batch.commit();
+      }
+
+      setStatus('Restoring Users...');
+      const users = Object.entries(backup.users || {});
+      for (let i = 0; i < users.length; i += 400) {
+        const chunk = users.slice(i, i + 400);
+        const batch = writeBatch(db);
+        for (const [id, data] of chunk) {
+          const docData: any = { ...data, tenantId: TENANT_ID };
+          if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
+          if (docData.lastLogin) docData.lastLogin = convertTimestamp(docData.lastLogin);
+          batch.set(doc(db, 'users', id), docData, { merge: true });
+        }
+        await batch.commit();
+      }
+
+      setStatus('Successfully imported all real data!');
     } catch (err: any) {
       console.error(err);
       setStatus(`Error: ${err.message}`);
