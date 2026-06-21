@@ -40,7 +40,7 @@ export const PwaUpdatePrompt: React.FC = () => {
               <div className="flex-1">
                 <h3 className="text-white font-bold text-sm mb-1 tracking-wide">Update Available</h3>
                 <p className="text-[#b9ada1] text-xs leading-relaxed">
-                  A new version of Mana Inti Bojanam is ready. Get a faster experience and new improvements!
+                  A new version of BhojanOS is ready. Get a faster experience and new improvements!
                 </p>
               </div>
               <button 
