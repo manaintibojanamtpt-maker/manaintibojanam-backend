@@ -17,6 +17,8 @@ import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 
 // --- Premium UI Components ---
 
+const BrandText = () => <span className="font-bold text-white tracking-tight">Bhojan<span className="text-[#FF6B00]">OS</span></span>;
+
 const springTransition = { type: "spring", stiffness: 100, damping: 25 };
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -133,7 +135,7 @@ const InteractiveCommandCenter = () => {
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Predicted Orders</div>
                     <div className="text-3xl font-black text-white">450 - 480</div>
@@ -336,8 +338,8 @@ const OnboardKitchen = () => {
       <AmbientOrbs />
       
       {/* Sticky Glass Navbar */}
-      <header className="fixed top-0 z-50 bg-[#030303]/50 backdrop-blur-xl border-b border-white/[0.05] transition-all duration-300 w-full">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 h-20 flex items-center justify-between w-full">
+      <header className="fixed top-0 z-50 bg-[#030303]/80 backdrop-blur-xl border-b border-white/[0.05] transition-all duration-300 w-full pt-[env(safe-area-inset-top)]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between w-full">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({top:0, behavior: 'smooth'})}>
             <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shadow-sm ring-1 ring-white/10 overflow-hidden">
               <img src={bhojanOsLogo} alt="BhojanOS Logo" className="w-full h-full object-cover" />
@@ -370,20 +372,20 @@ const OnboardKitchen = () => {
         </div>
       </header>
 
-      <main className="relative z-10 overflow-x-hidden pt-20">
+      <main className="relative z-10 overflow-x-hidden pt-[calc(5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]">
         
         {/* Hero Section */}
-        <section className="pt-32 pb-40 px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center items-center text-center relative">
+        <section className="pt-16 pb-24 md:pt-32 md:pb-40 px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center items-center text-center relative">
           <Spotlight />
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={springTransition} className="max-w-4xl mx-auto relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-8 sm:mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
               <Sparkles size={14} /> The All-In-One Restaurant System
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-[6.5rem] font-black tracking-tighter mb-10 leading-[0.95]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[6.5rem] font-black tracking-tighter mb-8 sm:mb-10 leading-[1] sm:leading-[0.95]">
               Automate Your Kitchen.<br/> Double Your <GradientText>Margins.</GradientText>
             </h1>
-            <div className="text-xl text-gray-400 font-medium leading-relaxed mb-14 max-w-2xl mx-auto space-y-3">
-              <p>BhojanOS replaces your messy POS, delivery tablets, and inventory spreadsheets with a single smart platform that runs your food business on autopilot.</p>
+            <div className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed mb-10 sm:mb-14 max-w-2xl mx-auto space-y-3 px-2">
+              <p><BrandText /> replaces your messy POS, delivery tablets, and inventory spreadsheets with a single smart platform that runs your food business on autopilot.</p>
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-5 max-w-md mx-auto">
               <GradientButton onClick={() => navigate('/owner/register')}>
@@ -397,10 +399,10 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Features / Why Fails */}
-        <section id="features" className="py-40 border-y border-white/[0.05] bg-white/[0.01] relative">
-          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center relative z-10">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Why Cloud Kitchens Switch to BhojanOS</h2>
-            <p className="text-xl text-gray-400 font-medium mb-24 max-w-3xl mx-auto">Stop guessing how much food to prep and start knowing exactly what your kitchen needs.</p>
+        <section id="features" className="py-24 md:py-40 border-y border-white/[0.05] bg-white/[0.01] relative px-4 sm:px-6">
+          <div className="max-w-[1400px] mx-auto lg:px-12 text-center relative z-10">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Why Cloud Kitchens Switch to <BrandText /></h2>
+            <p className="text-lg sm:text-xl text-gray-400 font-medium mb-16 md:mb-24 max-w-3xl mx-auto">Stop guessing how much food to prep and start knowing exactly what your kitchen needs.</p>
             
             <div className="grid md:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                {/* Left: The Old Way (Red) */}
@@ -429,12 +431,12 @@ const OnboardKitchen = () => {
                {/* Right: The New Way (Green/Brand) */}
                <div className="bg-gradient-to-b from-[#0A1A0F] to-[#030303] p-10 md:p-14 text-left relative overflow-hidden">
                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
-                 <div className="flex items-center gap-3 mb-10 relative z-10">
-                   <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                     <Check size={16} className="text-green-400" />
-                   </div>
-                   <h3 className="text-xl font-bold text-white">The BhojanOS Way</h3>
-                 </div>
+                  <div className="flex items-center gap-3 mb-10 relative z-10">
+                    <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center shrink-0">
+                      <Check size={16} className="text-green-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white">The <BrandText /> Way</h3>
+                  </div>
                  <ul className="space-y-8 relative z-10">
                    {[
                      { title: 'One Single Screen', desc: 'All your orders, from every app, managed in one beautiful dashboard.' },
@@ -454,11 +456,11 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Interactive Command Center */}
-        <section id="demo" className="py-40 px-6 lg:px-12 relative overflow-hidden">
+        <section id="demo" className="py-24 md:py-40 px-4 sm:px-6 lg:px-12 relative overflow-hidden">
           <Spotlight className="opacity-30 mix-blend-screen" />
           <div className="text-center relative z-10 mb-10">
-             <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-white">See It In Action</h2>
-             <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto">Click through the tabs to experience how BhojanOS makes running a kitchen effortless.</p>
+             <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-6 text-white">See It In Action</h2>
+             <p className="text-lg sm:text-xl text-gray-400 font-medium max-w-2xl mx-auto">Click through the tabs to experience how <BrandText /> makes running a kitchen effortless.</p>
           </div>
           <InteractiveCommandCenter />
         </section>
@@ -475,7 +477,7 @@ const OnboardKitchen = () => {
                 {[
                   { step: '01', title: 'Connect Your Menu', desc: 'Import your existing menu or let us build it for you. Add your recipes and ingredient costs once.' },
                   { step: '02', title: 'Take Orders', desc: 'Start receiving orders from your storefront, dine-in QR codes, or delivery aggregators instantly.' },
-                  { step: '03', title: 'Run on Autopilot', desc: 'BhojanOS automatically tracks inventory, predicts tomorrow\'s demand, and calculates your profit margins.' }
+                  { step: '03', title: 'Run on Autopilot', desc: <React.Fragment><BrandText /> automatically tracks inventory, predicts tomorrow's demand, and calculates your profit margins.</React.Fragment> }
                 ].map((t, i) => (
                   <div key={i} className="p-10 border border-white/[0.05] bg-[#0A0A0A] rounded-[2rem] flex flex-col relative overflow-hidden group hover:border-[#FF6B00]/30 transition-colors">
                     <div className="text-[120px] font-black text-white/[0.02] absolute -right-4 -bottom-10 group-hover:text-[#FF6B00]/[0.05] transition-colors">{t.step}</div>
@@ -499,7 +501,7 @@ const OnboardKitchen = () => {
              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#FF6B00] to-[#A855F7]" />
              <div className="flex flex-col md:flex-row items-center justify-between gap-12 text-left">
                <div className="flex-1 w-full">
-                 <h3 className="text-3xl font-black text-white mb-2">BhojanOS Pro</h3>
+                 <h3 className="text-3xl font-black text-white mb-2"><BrandText /> Pro</h3>
                  <p className="text-gray-400 mb-8">Unlimited orders, users, and recipes for one cloud kitchen location.</p>
                  <div className="flex items-baseline gap-2 mb-8">
                    <span className="text-5xl font-black text-white">₹1,999</span>
@@ -530,9 +532,9 @@ const OnboardKitchen = () => {
              <div className="w-20 h-20 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-12">
                <Store size={32} className="text-[#FF6B00]" />
              </div>
-             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built from the pain of running a real kitchen.</h2>
-             <div className="text-xl md:text-2xl text-gray-400 font-medium leading-relaxed space-y-8 max-w-4xl mx-auto text-left sm:text-center">
-               <p>BhojanOS wasn't dreamt up in a Silicon Valley boardroom. It was forged in a hot, chaotic cloud kitchen.</p>
+             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built from the pain of running a real kitchen.</h2>
+             <div className="text-lg sm:text-xl md:text-2xl text-gray-400 font-medium leading-relaxed space-y-6 sm:space-y-8 max-w-4xl mx-auto text-left sm:text-center px-2">
+               <p><BrandText /> wasn't dreamt up in a Silicon Valley boardroom. It was forged in a hot, chaotic cloud kitchen.</p>
                <p>We experienced the "tablet hell" of managing multiple delivery aggregators. We felt the margin-crushing pain of guessing tomorrow's prep quantities, and the operational nightmare of finding out we ran out of a critical ingredient mid-service.</p>
                <p>We built internal automation to fix our own problems. Then we realized every food business on earth needs this exact system.</p>
              </div>
@@ -621,26 +623,28 @@ const OnboardKitchen = () => {
               {!demoSubmitted ? (
                 <>
                   <h3 className="text-2xl font-black text-white mb-2">Book a Live Demo</h3>
-                  <p className="text-gray-400 text-sm mb-6">See how BhojanOS can double your kitchen's margins. Pick a time that works for you.</p>
+                  <p className="text-gray-400 text-sm mb-6">See how <BrandText /> can double your kitchen's margins. Pick a time that works for you.</p>
                   
-                  <div className="space-y-4 mb-8">
+                  <form onSubmit={(e) => { e.preventDefault(); setDemoSubmitted(true); }} className="space-y-4 mb-8">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Your Name</label>
-                      <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="John Doe" />
+                      <input required type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="John Doe" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Restaurant Name</label>
-                      <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="Cloud Kitchen 101" />
+                      <input required type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="Cloud Kitchen 101" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Phone Number</label>
-                      <input type="tel" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="+91 99999 99999" />
+                      <input required type="tel" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="+91 99999 99999" />
                     </div>
-                  </div>
-                  
-                  <GradientButton onClick={() => setDemoSubmitted(true)}>
-                    Schedule Demo
-                  </GradientButton>
+                    
+                    <div className="pt-4">
+                      <GradientButton type="submit">
+                        Schedule Demo
+                      </GradientButton>
+                    </div>
+                  </form>
                 </>
               ) : (
                 <div className="text-center py-8">
@@ -648,7 +652,7 @@ const OnboardKitchen = () => {
                     <CheckCircle2 size={32} className="text-green-500" />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-2">Demo Requested!</h3>
-                  <p className="text-gray-400 text-sm mb-8">Our team will contact you shortly to confirm your live walk-through of BhojanOS.</p>
+                  <p className="text-gray-400 text-sm mb-8">Our team will contact you shortly to confirm your live walk-through of <BrandText />.</p>
                   <OutlineButton onClick={() => setShowDemoModal(false)}>Close</OutlineButton>
                 </div>
               )}
