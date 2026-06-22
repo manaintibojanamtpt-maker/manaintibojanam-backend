@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
   Store, User, Phone, Mail, Lock, MessageCircle, ArrowRight, Loader2, 
   Sparkles, CheckCircle2, ShieldCheck, Headset, Users, ShoppingBag, 
   ChevronRight, Building2, Zap, Activity, PieChart, Server,
-  Globe, Database, BarChart3, LineChart, TrendingUp, LockKeyhole, ArrowUpRight, Bell, Network
+  Globe, Database, BarChart3, LineChart, TrendingUp, LockKeyhole, ArrowUpRight, Bell, Network,
+  AlertCircle, ChevronDown, Check, X
 } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -42,21 +43,8 @@ const AmbientOrbs = () => {
   );
 };
 
-// Subtle Spotlight
 const Spotlight = ({ className = '' }: { className?: string }) => (
   <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-white/5 blur-[120px] rounded-full pointer-events-none ${className}`} />
-);
-
-const GlassCard = ({ children, className = '', onClick, variants }: any) => (
-  <motion.div 
-    onClick={onClick}
-    variants={variants}
-    whileHover={onClick ? { scale: 1.02, y: -5 } : {}}
-    transition={springTransition}
-    className={`bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] ${onClick ? 'cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.15] hover:shadow-[0_20px_80px_rgba(255,107,0,0.1)]' : ''} ${className}`}
-  >
-    {children}
-  </motion.div>
 );
 
 const GradientText = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
@@ -86,124 +74,249 @@ const OutlineButton = ({ children, onClick, className = '' }: any) => (
   </button>
 );
 
-const AnimatedCounter = ({ from, to }: { from: number, to: number }) => {
-  const [count, setCount] = useState(from);
-  useEffect(() => {
-    const duration = 2000;
-    const steps = 60;
-    const stepTime = Math.abs(Math.floor(duration / steps));
-    let current = from;
-    const increment = (to - from) / steps;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= to) { clearInterval(timer); setCount(to); }
-      else setCount(Math.floor(current));
-    }, stepTime);
-    return () => clearInterval(timer);
-  }, [from, to]);
-  return <span>{count.toLocaleString()}</span>;
-};
+// --- Interactive Command Center Component ---
 
-// --- Command Center Mockup ---
+const InteractiveCommandCenter = () => {
+  const [activeTab, setActiveTab] = useState('demand');
 
-const CommandCenterMockup = () => {
+  const tabs = [
+    { id: 'demand', label: 'Demand Prediction', icon: <TrendingUp size={16} /> },
+    { id: 'recipe', label: 'Recipe Intelligence', icon: <Database size={16} /> },
+    { id: 'customer', label: 'Customer Graph', icon: <Users size={16} /> },
+    { id: 'health', label: 'Kitchen Health', icon: <Activity size={16} /> },
+  ];
+
   return (
-    <motion.div 
-      initial="hidden"
-      animate="show"
-      variants={staggerContainer}
-      className="relative w-full max-w-4xl mx-auto mt-20 lg:mt-0 perspective-1000"
-    >
-      {/* Main Backing Card (Intelligence Layer) */}
-      <motion.div variants={itemVariant} className="relative z-10 w-full rounded-2xl overflow-hidden border border-white/[0.08] shadow-[0_0_120px_rgba(255,107,0,0.1)] bg-[#0A0A0A]/90 backdrop-blur-3xl">
-        <div className="h-12 bg-white/[0.02] border-b border-white/[0.05] flex items-center px-6 gap-2">
+    <div className="w-full max-w-5xl mx-auto mt-24 relative z-10">
+      <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/[0.08] rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)]">
+        {/* Browser Header */}
+        <div className="h-12 bg-white/[0.02] border-b border-white/[0.05] flex items-center px-6 gap-4">
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-white/20" />
-            <div className="w-3 h-3 rounded-full bg-white/20" />
-            <div className="w-3 h-3 rounded-full bg-white/20" />
+            <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30" />
+            <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/30" />
           </div>
-          <div className="mx-auto px-8 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono text-gray-500 flex items-center gap-2">
+          <div className="flex-1 max-w-md mx-auto h-7 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-[11px] font-mono text-gray-500 gap-2">
             <LockKeyhole size={10} /> bhojanos.com/owner/command-center
           </div>
         </div>
-        <div className="p-8 grid grid-cols-12 gap-6">
-          {/* Main Chart Area */}
-          <div className="col-span-12 md:col-span-8 space-y-6">
-            <div className="flex justify-between items-end">
-               <div>
-                  <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">AI Revenue Forecast</div>
-                  <div className="text-4xl font-black text-white tracking-tighter">₹2,84,500</div>
-               </div>
-               <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold flex items-center gap-1">
-                 <ArrowUpRight size={14}/> 24.5% vs last week
-               </div>
-            </div>
-            {/* Minimalist Chart Bars */}
-            <div className="h-48 w-full flex items-end gap-2 sm:gap-3">
-              {[30, 45, 35, 60, 50, 85, 70, 95].map((h, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ height: 0 }} 
-                  animate={{ height: `${h}%` }} 
-                  transition={{ delay: 0.8 + (i * 0.1), ...springTransition }}
-                  className="flex-1 bg-gradient-to-t from-white/5 to-[#FF6B00]/40 rounded-t-sm relative group"
-                >
-                   <div className="absolute top-0 w-full h-1 bg-[#FF6B00]" />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-          {/* Side Widgets */}
-          <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
-             <div className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl p-5 flex flex-col justify-center">
-                <Activity size={20} className="text-[#FF4D8D] mb-3" />
-                <div className="text-2xl font-bold text-white mb-1">1,204</div>
-                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Customer Graph</div>
-             </div>
-             <div className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl p-5 flex flex-col justify-center">
-                <Store size={20} className="text-[#A855F7] mb-3" />
-                <div className="text-2xl font-bold text-white mb-1">4</div>
-                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Active Nodes</div>
-             </div>
-          </div>
+
+        {/* OS Nav */}
+        <div className="flex overflow-x-auto border-b border-white/[0.05] bg-white/[0.01]">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-8 py-4 text-sm font-bold transition-all whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? 'text-[#FF6B00] border-b-2 border-[#FF6B00] bg-white/[0.02]' 
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.01] border-b-2 border-transparent'
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
-      </motion.div>
 
-      {/* Floating UI Card 1 (Notification) */}
-      <motion.div 
-        variants={itemVariant}
-        className="absolute -right-8 -bottom-8 md:-right-16 md:-bottom-12 z-20 w-72 bg-[#141414]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
-      >
-         <div className="flex gap-4">
-           <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center shrink-0 border border-[#FF6B00]/30">
-             <Bell size={18} className="text-[#FF6B00]" />
-           </div>
-           <div>
-             <div className="text-sm font-bold text-white mb-1">Predictive Supply Alert</div>
-             <div className="text-xs text-gray-400 font-medium">Tomato Puree falling below optimal threshold based on weekend forecast.</div>
-           </div>
-         </div>
-      </motion.div>
+        {/* Tab Content */}
+        <div className="p-8 min-h-[400px] relative bg-black/40">
+          <AnimatePresence mode="wait">
+            {activeTab === 'demand' && (
+              <motion.div key="demand" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="h-full">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Weekend Demand Forecast</h3>
+                    <p className="text-sm text-gray-400">AI projection based on last 4 weekends and current weather patterns.</p>
+                  </div>
+                  <span className="px-3 py-1 bg-[#FF6B00]/10 border border-[#FF6B00]/20 text-[#FF6B00] rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1">
+                    <Sparkles size={12}/> High Confidence
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-6 mb-8">
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Predicted Orders</div>
+                    <div className="text-3xl font-black text-white">450 - 480</div>
+                  </div>
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Peak Hour</div>
+                    <div className="text-3xl font-black text-white">7:30 PM</div>
+                  </div>
+                  <div className="bg-[#FF6B00]/5 border border-[#FF6B00]/20 rounded-xl p-5">
+                    <div className="text-xs font-bold text-[#FF6B00] uppercase tracking-widest mb-1">AI Recommendation</div>
+                    <div className="text-sm font-bold text-white leading-tight">Increase Biryani prep by 20% due to projected surge.</div>
+                  </div>
+                </div>
 
-      {/* Floating UI Card 2 (Active Order) */}
-      <motion.div 
-        variants={itemVariant}
-        className="absolute -left-6 top-16 md:-left-12 md:top-24 z-20 w-64 bg-[#141414]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.6)] hidden sm:block"
-      >
-         <div className="flex items-center justify-between mb-3">
-           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Commerce Engine</span>
-           <span className="text-xs text-[#FF4D8D] font-mono bg-[#FF4D8D]/10 px-2 py-0.5 rounded">#8042</span>
-         </div>
-         <div className="text-sm font-bold text-white mb-1">Zomato Integration</div>
-         <div className="text-xs text-gray-400 font-medium flex justify-between">
-           <span>Syncing</span>
-           <span className="text-white">₹840</span>
-         </div>
-         <div className="mt-3 h-1 w-full bg-white/10 rounded-full overflow-hidden">
-            <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} transition={{ delay: 2, duration: 1 }} className="h-full bg-[#FF4D8D]" />
-         </div>
-      </motion.div>
-    </motion.div>
+                {/* Minimalist Chart */}
+                <div className="h-40 w-full flex items-end gap-2">
+                  {[20, 30, 25, 45, 60, 90, 80, 50, 30, 20].map((h, i) => (
+                    <div key={i} className="flex-1 relative group h-full flex items-end">
+                      <div className="w-full bg-[#FF6B00]/20 rounded-t-sm relative" style={{ height: `${h}%` }}>
+                        <div className="absolute top-0 w-full h-1 bg-[#FF6B00]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'recipe' && (
+              <motion.div key="recipe" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Live Inventory Deduction</h3>
+                    <p className="text-sm text-gray-400">Ingredients automatically sync across the network when an order is received.</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Left: Order Flow */}
+                  <div className="space-y-4">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                           <Check size={16} className="text-green-400" />
+                         </div>
+                         <div>
+                           <div className="text-sm font-bold text-white">Order #1042 Received</div>
+                           <div className="text-xs text-gray-400">2x Chicken Biryani, 1x Coke</div>
+                         </div>
+                      </div>
+                      <span className="text-xs font-mono text-gray-500">Just Now</span>
+                    </div>
+                    
+                    <div className="w-0.5 h-6 bg-white/10 ml-8" />
+                    
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 flex items-center justify-between opacity-80">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                           <Database size={16} className="text-gray-400" />
+                         </div>
+                         <div>
+                           <div className="text-sm font-bold text-white">Looking up Master Recipe</div>
+                           <div className="text-xs text-gray-400">Chicken Biryani (Large)</div>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="w-0.5 h-6 bg-white/10 ml-8" />
+                    
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-[#A855F7]/20 flex items-center justify-center border border-[#A855F7]/30">
+                           <Activity size={16} className="text-[#A855F7]" />
+                         </div>
+                         <div>
+                           <div className="text-sm font-bold text-white">Inventory Impact</div>
+                           <div className="text-xs text-gray-400">Deducting from Central Kitchen</div>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Inventory Status */}
+                  <div className="bg-[#111111] rounded-2xl border border-white/5 p-6">
+                    <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Live Deductions</h4>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                        <span className="text-sm text-white font-medium">Basmati Rice</span>
+                        <div className="text-right">
+                          <span className="text-sm text-red-400 font-mono block">-400g</span>
+                          <span className="text-xs text-gray-500 font-mono">14.2kg remaining</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                        <span className="text-sm text-white font-medium">Chicken (Raw)</span>
+                        <div className="text-right">
+                          <span className="text-sm text-red-400 font-mono block">-600g</span>
+                          <span className="text-xs text-gray-500 font-mono">8.4kg remaining</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-white font-medium">Spices Blend</span>
+                        <div className="text-right">
+                          <span className="text-sm text-red-400 font-mono block">-20g</span>
+                          <span className="text-xs text-gray-500 font-mono">2.1kg remaining</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'customer' && (
+              <motion.div key="customer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+                 <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Customer Graph</h3>
+                    <p className="text-sm text-gray-400">Track retention and purchase patterns across all connected nodes.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 col-span-2 flex items-center justify-between">
+                     <div>
+                       <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Customer Profile: Viswa</div>
+                       <div className="text-2xl font-bold text-white mb-2">High Value / Frequent</div>
+                       <div className="text-sm text-gray-400">Last order: 2 days ago. Favorite: Butter Chicken.</div>
+                     </div>
+                     <div className="w-16 h-16 rounded-full border-4 border-green-500 flex items-center justify-center text-green-400 font-bold text-xl">
+                       98
+                     </div>
+                   </div>
+                   <div className="bg-[#FF4D8D]/5 border border-[#FF4D8D]/20 rounded-xl p-5 flex flex-col justify-center">
+                     <div className="text-xs font-bold text-[#FF4D8D] uppercase tracking-widest mb-2">Churn Risk</div>
+                     <div className="text-sm text-white font-medium">12 high-value customers haven't ordered in 30+ days.</div>
+                     <button className="mt-4 text-xs font-bold bg-[#FF4D8D]/20 text-[#FF4D8D] px-3 py-1.5 rounded-lg w-fit">Create Reactivation Campaign</button>
+                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'health' && (
+              <motion.div key="health" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Kitchen Health Monitoring</h3>
+                    <p className="text-sm text-gray-400">Live operational scoring and bottleneck detection.</p>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Healthy</span>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-6">
+                     <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Preparation Latency</div>
+                     <div className="flex items-end gap-3 mb-2">
+                       <span className="text-4xl font-black text-white">12</span>
+                       <span className="text-lg font-bold text-gray-400 mb-1">min</span>
+                     </div>
+                     <p className="text-sm text-gray-400">Average prep time over the last hour. Operating within SLA.</p>
+                   </div>
+
+                   <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-6">
+                     <div className="flex items-start gap-3">
+                       <AlertCircle className="text-yellow-500 shrink-0 mt-1" size={20} />
+                       <div>
+                         <div className="text-sm font-bold text-white mb-1">Packaging Bottleneck Detected</div>
+                         <p className="text-sm text-gray-400 mb-4">Orders are waiting 4.5 minutes on average at the packing station before handover.</p>
+                         <div className="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-3 py-2 rounded border border-yellow-500/20">
+                           AI Rec: Assign 1 additional staff to packing station for the next 45 minutes.
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -236,10 +349,10 @@ const OnboardKitchen = () => {
           </div>
           
           <div className="hidden md:flex items-center gap-10 text-sm font-semibold text-gray-400">
-            <a href="#category" className="hover:text-white transition-colors">The Category</a>
+            <a href="#why-fail" className="hover:text-white transition-colors">The Problem</a>
             <a href="#command-center" className="hover:text-white transition-colors">Command Center</a>
-            <a href="#framework" className="hover:text-white transition-colors">Intelligence Loop</a>
-            <a href="#enterprise" className="hover:text-white transition-colors">Scale</a>
+            <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
+            <a href="#origin" className="hover:text-white transition-colors">Founder Story</a>
           </div>
 
           <div className="flex items-center gap-6">
@@ -247,7 +360,7 @@ const OnboardKitchen = () => {
                Sign in
             </button>
             <button onClick={() => setStep('services')} className="bg-white text-black hover:bg-gray-200 transition-colors px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-               Initialize Platform
+               Book Demo
             </button>
           </div>
         </div>
@@ -256,196 +369,120 @@ const OnboardKitchen = () => {
       <main className="relative z-10 overflow-x-hidden pt-20">
         
         {/* Hero Section */}
-        <section className="pt-32 pb-40 px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[90vh] flex items-center relative">
+        <section className="pt-32 pb-40 px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center items-center text-center relative">
           <Spotlight />
-          <div className="grid lg:grid-cols-2 gap-20 items-center relative z-10">
-            {/* Left */}
-            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={springTransition} className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
-                <Sparkles size={14} /> Category Defining
-              </div>
-              <h1 className="text-7xl md:text-[6.5rem] lg:text-[7rem] font-black tracking-tighter mb-10 leading-[0.95]">
-                Launch With <br/> Bhojan<GradientText>OS AI</GradientText>
-              </h1>
-              <div className="text-2xl text-gray-400 font-medium leading-relaxed mb-14 space-y-3">
-                <p className="text-white font-bold">This is not restaurant software.</p>
-                <p>This is the AI Operating System for Food Businesses.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-5 max-w-md">
-                <GradientButton onClick={() => setStep('services')}>
-                  Initialize Your OS <ArrowRight size={18} />
-                </GradientButton>
-                <OutlineButton onClick={() => document.getElementById('command-center')?.scrollIntoView({behavior:'smooth'})}>
-                  Explore The Architecture
-                </OutlineButton>
-              </div>
-            </motion.div>
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={springTransition} className="max-w-4xl mx-auto relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
+              <Sparkles size={14} /> The AI Operating System
+            </div>
+            <h1 className="text-6xl md:text-7xl lg:text-[7rem] font-black tracking-tighter mb-10 leading-[0.95]">
+              Stop Managing. <br/> Start <GradientText>Operating.</GradientText>
+            </h1>
+            <div className="text-2xl text-gray-400 font-medium leading-relaxed mb-14 max-w-3xl mx-auto space-y-3">
+              <p className="text-white font-bold">This is not restaurant software.</p>
+              <p>BhojanOS is an AI Operating System that predicts demand, perfectly syncs inventory, and autonomously alerts you to operational bottlenecks before they happen.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-center gap-5 max-w-md mx-auto">
+              <GradientButton onClick={() => setStep('services')}>
+                Book Demo <ArrowRight size={18} />
+              </GradientButton>
+              <OutlineButton onClick={() => setStep('services')}>
+                Start Free Trial
+              </OutlineButton>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Why Existing Restaurant Software Fails */}
+        <section id="why-fail" className="py-40 border-y border-white/[0.05] bg-white/[0.01] relative">
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center relative z-10">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Why Existing Restaurant Software Fails</h2>
+            <p className="text-xl text-gray-400 font-medium mb-24 max-w-3xl mx-auto">Traditional POS systems record what happened. An AI Operating System predicts what happens next.</p>
             
-            {/* Right */}
-            <CommandCenterMockup />
-          </div>
-        </section>
-
-        {/* Trust Metrics */}
-        <section className="border-y border-white/[0.05] bg-white/[0.01] backdrop-blur-3xl py-12 overflow-hidden">
-          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid grid-cols-2 md:grid-cols-4 gap-8 opacity-80">
-             <div className="flex flex-col gap-2">
-               <span className="text-4xl font-black text-white"><AnimatedCounter from={0} to={10000} />+</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Nodes</span>
-             </div>
-             <div className="flex flex-col gap-2">
-               <span className="text-xl font-bold text-white flex items-center gap-2"><Sparkles className="text-[#FF6B00]" size={20}/> Integrated</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Intelligence Layer</span>
-             </div>
-             <div className="flex flex-col gap-2">
-               <span className="text-xl font-bold text-white flex items-center gap-2"><Server className="text-[#A855F7]" size={20}/> Enterprise</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Tenant Isolation</span>
-             </div>
-             <div className="flex flex-col gap-2">
-               <span className="text-xl font-bold text-white flex items-center gap-2"><Activity className="text-[#FF4D8D]" size={20}/> Autonomous</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Commerce Engine</span>
-             </div>
-          </div>
-        </section>
-
-        {/* Category Definition */}
-        <section id="category" className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative">
-           <Spotlight className="opacity-30" />
-           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={springTransition} className="relative z-10">
-             <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-16 text-white">What Is An AI Food Operating System?</h2>
-             
-             <div className="grid md:grid-cols-2 gap-12 text-left">
-               <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-10">
-                 <h3 className="text-gray-500 font-bold uppercase tracking-widest text-sm mb-6">Traditional Software</h3>
-                 <div className="space-y-6 text-xl font-medium text-gray-400">
-                   <p>Manages transactions.</p>
-                   <p>Records what happened.</p>
-                   <p>A reactive tool requiring constant manual input and supervision.</p>
+            <div className="grid md:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+               {/* Left: The Old Way (Red) */}
+               <div className="bg-[#1A0505] p-10 md:p-14 text-left border-b md:border-b-0 md:border-r border-white/5">
+                 <div className="flex items-center gap-3 mb-10">
+                   <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                     <X size={16} className="text-red-500" />
+                   </div>
+                   <h3 className="text-xl font-bold text-red-400">Generic POS Software</h3>
                  </div>
+                 <ul className="space-y-8">
+                   {[
+                     { title: 'Disconnected Tools', desc: 'Separate apps for delivery, dine-in, inventory, and accounting.' },
+                     { title: 'Manual Inventory', desc: 'End-of-day stock counting reliant on human accuracy.' },
+                     { title: 'No Forecasting', desc: 'Prepping based on gut-feeling, leading to massive food waste.' },
+                     { title: 'Reactive Reporting', desc: 'Looking at excel sheets at the end of the month to find out why you lost money.' }
+                   ].map((item, i) => (
+                     <li key={i}>
+                       <span className="text-gray-300 font-bold block mb-1">{item.title}</span>
+                       <span className="text-gray-500 text-sm font-medium">{item.desc}</span>
+                     </li>
+                   ))}
+                 </ul>
                </div>
-               
-               <div className="bg-gradient-to-br from-[#FF6B00]/10 to-[#A855F7]/10 border border-[#FF6B00]/20 rounded-3xl p-10 relative overflow-hidden">
+
+               {/* Right: The New Way (Green/Brand) */}
+               <div className="bg-gradient-to-b from-[#0A1A0F] to-[#030303] p-10 md:p-14 text-left relative overflow-hidden">
                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
-                 <h3 className="text-[#FF6B00] font-bold uppercase tracking-widest text-sm mb-6 relative z-10">The BhojanOS Category</h3>
-                 <div className="space-y-6 text-xl font-medium text-white relative z-10">
-                   <p>Manages decisions.</p>
-                   <p>Predicts what happens next.</p>
-                   <p>A proactive operating system that runs your kitchen autonomously.</p>
+                 <div className="flex items-center gap-3 mb-10 relative z-10">
+                   <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                     <Check size={16} className="text-green-400" />
+                   </div>
+                   <h3 className="text-xl font-bold text-white">BhojanOS Proactive AI</h3>
                  </div>
+                 <ul className="space-y-8 relative z-10">
+                   {[
+                     { title: 'Unified Intelligence', desc: 'One central brain managing all ingest nodes autonomously.' },
+                     { title: 'Predictive Supply', desc: 'Master recipes automatically deduct precise grams per order instantly.' },
+                     { title: 'AI Predictions', desc: 'Forecast demand based on historical trends and external factors.' },
+                     { title: 'Proactive Alerts', desc: 'Get notified of packaging bottlenecks before the customer complains.' }
+                   ].map((item, i) => (
+                     <li key={i}>
+                       <span className="text-green-400 font-bold block mb-1">{item.title}</span>
+                       <span className="text-gray-400 text-sm font-medium">{item.desc}</span>
+                     </li>
+                   ))}
+                 </ul>
                </div>
-             </div>
-           </motion.div>
+            </div>
+          </div>
         </section>
 
-        {/* Intelligence Loop */}
-        <section id="framework" className="py-40 border-y border-white/[0.05] bg-white/[0.01] relative overflow-hidden">
-           <Spotlight className="top-1/2 -translate-y-1/2 opacity-20 mix-blend-screen" />
-           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center relative z-10">
-             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">The BhojanOS Intelligence Loop</h2>
-             <p className="text-xl text-gray-400 font-medium mb-24 max-w-3xl mx-auto">A signature framework designed to continuously optimize your business.</p>
+        {/* Interactive Command Center */}
+        <section id="command-center" className="py-40 px-6 lg:px-12 relative overflow-hidden">
+          <Spotlight className="opacity-30 mix-blend-screen" />
+          <div className="text-center relative z-10 mb-10">
+             <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-white">Interactive Command Center</h2>
+             <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto">Click through the tabs to experience how BhojanOS manages decisions, not just transactions.</p>
+          </div>
+          <InteractiveCommandCenter />
+        </section>
+
+        {/* Technical Architecture Proof */}
+        <section id="architecture" className="py-40 bg-white/[0.02] border-y border-white/[0.05] relative">
+           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
+             <div className="text-center mb-24">
+               <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Enterprise Architecture Proof</h2>
+               <p className="text-xl text-gray-400 font-medium max-w-3xl mx-auto">We don't just build UI. We build highly secure, isolated tenant infrastructure using actual enterprise technologies.</p>
+             </div>
              
-             <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-4 relative">
-               {/* Line connector for desktop */}
-               <div className="hidden md:block absolute top-1/2 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-[#FF6B00]/20 via-[#A855F7]/20 to-[#FF4D8D]/20 -z-10 -translate-y-1/2" />
-               
-               {[
-                 { step: '1', title: 'Capture Demand', desc: 'Ingest signals from all commerce engines.' },
-                 { step: '2', title: 'Predict Consumption', desc: 'Forecast precise order volume with AI.' },
-                 { step: '3', title: 'Optimize Inventory', desc: 'Deduct and reorder via Predictive Supply.' },
-                 { step: '4', title: 'Automate Operations', desc: 'Route tasks instantly via the Command Center.' },
-                 { step: '5', title: 'Increase Profitability', desc: 'Eliminate waste and avoid 30% commissions.' }
-               ].map((item, i) => (
-                 <div key={i} className="flex flex-col items-center flex-1 max-w-[240px] relative group">
-                   <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 flex items-center justify-center text-xl font-black text-white mb-6 relative z-10 shadow-[0_0_30px_rgba(255,255,255,0.05)] group-hover:border-[#FF6B00]/50 group-hover:shadow-[0_0_30px_rgba(255,107,0,0.2)] transition-all duration-300">
-                     {item.step}
-                   </div>
-                   <h4 className="text-lg text-white font-bold mb-2 text-center">{item.title}</h4>
-                   <p className="text-sm text-gray-400 font-medium text-center">{item.desc}</p>
-                 </div>
-               ))}
-             </div>
-           </div>
-        </section>
-
-        {/* AI Command Center */}
-        <section id="command-center" className="py-40 px-6 lg:px-12 max-w-[1400px] mx-auto text-center relative">
-           <Spotlight className="opacity-50" />
-           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={springTransition}>
-             <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-white">AI Command Center</h2>
-             <p className="text-2xl text-gray-400 font-medium max-w-3xl mx-auto mb-24">Everything should feel proactive, not reactive. The OS monitors your kitchen so you don't have to.</p>
-           </motion.div>
-           
-           <div className="relative w-full max-w-5xl mx-auto">
-             <div className="grid md:grid-cols-3 gap-8">
-                {/* Workflow Card 1 */}
-                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group">
-                  <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-8 border border-orange-500/20">
-                    <TrendingUp size={24} className="text-orange-400" />
+             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                  { icon: <Server size={32}/>, title: 'Multi-Tenant Architecture', desc: 'Absolute data isolation. Every kitchen operates within its own securely scoped Firestore tenant environment.' },
+                  { icon: <Database size={32}/>, title: 'Firebase Infrastructure', desc: 'Built on Google\'s globally distributed backend for zero-maintenance scaling and world-class reliability.' },
+                  { icon: <Zap size={32}/>, title: 'Real-Time Synchronization', desc: 'Orders, inventory deductions, and health alerts sync across all devices instantly using live snapshot listeners.' },
+                  { icon: <ShieldCheck size={32}/>, title: 'Role-Based Access', desc: 'Granular security rules governing what Admins, Managers, and Staff can view and mutate.' }
+                ].map((t, i) => (
+                  <div key={i} className="p-10 border border-white/[0.05] bg-[#0A0A0A] rounded-[2rem] flex flex-col">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-8">
+                      {t.icon}
+                    </div>
+                    <h4 className="text-xl text-white font-bold mb-4">{t.title}</h4>
+                    <p className="text-gray-400 font-medium leading-relaxed">{t.desc}</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Demand Prediction</h3>
-                  <p className="text-gray-400 font-medium">Tomorrow's prep list is automatically generated based on historical trends and weather data.</p>
-                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-orange-500/20 blur-3xl rounded-full" />
-                </motion.div>
-
-                {/* Workflow Card 2 */}
-                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group mt-0 md:mt-12">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-8 border border-purple-500/20">
-                    <Activity size={24} className="text-purple-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Kitchen Health</h3>
-                  <p className="text-gray-400 font-medium">Real-time monitoring of operational latencies and bottleneck prevention alerts.</p>
-                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-purple-500/20 blur-3xl rounded-full" />
-                </motion.div>
-
-                {/* Workflow Card 3 */}
-                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} transition={{ delay: 0.2 }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group mt-0 md:mt-24">
-                  <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mb-8 border border-pink-500/20">
-                    <Database size={24} className="text-pink-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Inventory Forecasting</h3>
-                  <p className="text-gray-400 font-medium">Predictive supply alerts fire before you run out of critical ingredients.</p>
-                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-pink-500/20 blur-3xl rounded-full" />
-                </motion.div>
-             </div>
-           </div>
-        </section>
-
-        {/* Enterprise Readiness */}
-        <section id="enterprise" className="py-40 bg-white/[0.02] border-y border-white/[0.05] relative overflow-hidden">
-           <Spotlight className="opacity-30 mix-blend-screen" />
-           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid md:grid-cols-2 gap-24 items-center relative z-10">
-             <div>
-               <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-white">Built For One Kitchen. <br/>Ready For One Thousand.</h2>
-               <p className="text-2xl text-gray-400 font-medium leading-relaxed mb-12">
-                 Scale locations infinitely without upgrading your tech stack. The OS scales with you.
-               </p>
-               <div className="space-y-10">
-                 {[
-                   { title: 'Multi-Location Scaling', desc: 'Deploy new kitchen nodes to your network instantly with inherited configurations.' },
-                   { title: 'Tenant Isolation', desc: 'Enterprise-grade database isolation ensures your operational data is impenetrable.' },
-                   { title: 'Centralized Control', desc: 'Manage menus, prices, and predictive models across 1,000 locations from one Command Center.' }
-                 ].map((item, i) => (
-                   <div key={i} className="flex gap-6">
-                     <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-1 border border-white/20">
-                       <Network size={16} className="text-[#FF6B00]" />
-                     </div>
-                     <div>
-                       <h4 className="text-2xl font-bold text-white mb-3">{item.title}</h4>
-                       <p className="text-gray-400 font-medium text-lg leading-relaxed">{item.desc}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </div>
-             <div className="relative flex justify-center">
-                <div className="aspect-square w-full max-w-md bg-black/50 backdrop-blur-2xl border border-white/[0.08] rounded-[3rem] p-12 flex flex-col justify-center relative overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.15)]">
-                   <div className="absolute inset-0 bg-gradient-to-br from-[#A855F7]/20 to-transparent mix-blend-screen pointer-events-none" />
-                   <div className="text-center z-10">
-                     <Server size={80} className="text-white/80 mx-auto mb-10" strokeWidth={1} />
-                     <div className="text-5xl font-black text-white mb-4 tracking-tighter">Unified Operations</div>
-                     <div className="text-gray-400 font-bold tracking-widest uppercase text-sm">One Central Brain</div>
-                   </div>
-                </div>
+                ))}
              </div>
            </div>
         </section>
@@ -455,33 +492,35 @@ const OnboardKitchen = () => {
            <Spotlight className="top-1/2 -translate-y-1/2 opacity-20" />
            <div className="relative z-10">
              <div className="w-20 h-20 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-12">
-               <Store size={32} className="text-gray-400" />
+               <Store size={32} className="text-[#FF6B00]" />
              </div>
-             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built By Someone Who Ran A Kitchen.</h2>
+             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built from the pain of running a real kitchen.</h2>
              <div className="text-xl md:text-2xl text-gray-400 font-medium leading-relaxed space-y-8 max-w-4xl mx-auto text-left sm:text-center">
-               <p>BhojanOS was not created by software consultants.</p>
-               <p>It was built from the excruciating operational pain experienced while running a real food business.</p>
-               <p>Managing orders across five tablets. Blind inventory tracking. Late deliveries. Demanding customer expectations.</p>
-               <p className="text-white font-bold italic pt-4">The OS exists because food businesses deserve an intelligence layer that actually understands kitchen operations.</p>
+               <p>BhojanOS wasn't dreamt up in a Silicon Valley boardroom. It was forged in a hot, chaotic cloud kitchen.</p>
+               <p>We experienced the "tablet hell" of managing multiple delivery aggregators. We felt the margin-crushing pain of guessing tomorrow's prep quantities, and the operational nightmare of finding out we ran out of a critical ingredient mid-service.</p>
+               <p>We built internal automation to fix our own problems. Then we added AI to predict demand. Then we realized every food business on earth needs this exact system.</p>
+               <p className="text-white font-bold italic pt-4">BhojanOS is the operating system we wish we had on day one.</p>
              </div>
            </div>
         </section>
 
-        {/* Future Vision (Closing) */}
+        {/* Final CTA */}
         <section className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative border-t border-white/[0.05]">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[400px] bg-gradient-to-r from-[#FF6B00]/20 via-transparent to-[#A855F7]/20 blur-[120px] pointer-events-none mix-blend-screen" />
            <h2 className="text-6xl md:text-7xl lg:text-[6rem] font-black tracking-tighter mb-10 text-white relative z-10 leading-[0.95]">
              The Future Of Food Operations Is Autonomous.
            </h2>
            <div className="text-2xl text-gray-400 font-medium mb-16 relative z-10 space-y-3">
-             <p>Today, businesses use software.</p>
-             <p className="text-white font-bold">Tomorrow, software helps run the business.</p>
-             <p className="pt-6">BhojanOS is building that future.</p>
+             <p>This is not another restaurant software product.</p>
+             <p className="text-white font-bold">This is a real AI Operating System.</p>
            </div>
-           <div className="flex justify-center relative z-10 w-full max-w-md mx-auto">
-             <GradientButton onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="py-6 text-xl">
-               Initialize Your OS
+           <div className="flex flex-col sm:flex-row justify-center gap-5 relative z-10 w-full max-w-md mx-auto">
+             <GradientButton onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
+               Book Demo
              </GradientButton>
+             <OutlineButton onClick={() => setStep('services')}>
+               Start Free Trial
+             </OutlineButton>
            </div>
         </section>
 
@@ -503,8 +542,7 @@ const OnboardKitchen = () => {
               <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Platform</h4>
               <ul className="space-y-4 text-base text-gray-400 font-medium">
                 <li><a href="#command-center" className="hover:text-white transition-colors">Command Center</a></li>
-                <li><a href="#framework" className="hover:text-white transition-colors">Intelligence Loop</a></li>
-                <li><a href="#enterprise" className="hover:text-white transition-colors">Enterprise Scaling</a></li>
+                <li><a href="#architecture" className="hover:text-white transition-colors">Architecture Proof</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
               </ul>
             </div>
@@ -515,7 +553,6 @@ const OnboardKitchen = () => {
                 <li><a href="#" className="hover:text-white transition-colors">Developers</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Community</a></li>
               </ul>
             </div>
             
