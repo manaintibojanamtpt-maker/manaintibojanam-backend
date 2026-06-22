@@ -379,10 +379,11 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isLogin = isRoute('/login') || path === '/owner/login';
   const isAdmin = path.startsWith('/admin');
   const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
-  const isMyOrders = isRoute('/my-orders');
+  const isOnboard = path === '/onboard';
+  const isMyOrders = isRoute('/orders'); // also fixing my-orders path since route is /orders
   const isOrderTracking = path.startsWith('/order/') || !!path.match(/^\/k\/[^/]+\/order\//);
   
-  if (isLogin || isAdmin || isOwnerRoute) {
+  if (isLogin || isAdmin || isOwnerRoute || isOnboard) {
     return <>{children}</>;
   }
 
