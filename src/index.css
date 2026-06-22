@@ -98,6 +98,25 @@ body {
   .dark body {
     @apply bg-[#0c0c0c] text-dark-text;
   }
+}
+
+/* Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@layer base {
   #root {
     @apply flex flex-col transition-colors duration-300;
     height: 100%;
