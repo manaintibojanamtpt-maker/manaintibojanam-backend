@@ -129,10 +129,12 @@ const Home: React.FC = () => {
     const fetchCategories = async () => {
       try {
         const catRef = collection(getDb(), "categories");
-        const q = query(catRef, where("tenantId", "==", activeTenantId), where("isActive", "==", true), where("showOnHome", "==", true), orderBy("priority", "desc"));
+        const q = query(catRef, where("tenantId", "==", activeTenantId));
         const snap = await getDocs(q);
         if (!snap.empty) {
-          const cats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+          let cats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+          cats = cats.filter(c => c.isActive && c.showOnHome);
+          cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
           // Add default images for categories if they don't have one
           const categoryImages: Record<string, string> = {
             'Veg Meals': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop',

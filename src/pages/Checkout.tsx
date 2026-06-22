@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../lib/firebase-db';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { trackEvent } from '../services/AnalyticsService';
 import { differenceInMinutes } from 'date-fns';
 import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
