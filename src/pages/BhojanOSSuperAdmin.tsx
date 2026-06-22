@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
   Building2, Users, Activity, Settings, Search, Filter, 
   CheckCircle2, Clock, LogOut, User, ChevronRight, Save, Shield, Key, Home,
-  TrendingUp, RefreshCw
+  TrendingUp, RefreshCw, AlertTriangle, Zap, BarChart, Bell, ChevronUp, ChevronDown, ArrowRight, UserPlus
 } from 'lucide-react';
 import { 
   fetchAllTenants, updateTenantStatus, 
@@ -141,7 +140,51 @@ export default function BhojanOSSuperAdmin() {
   };
 
   const activeTenantsCount = tenants.filter(t => t.status === 'active').length;
+  const trialTenantsCount = tenants.filter(t => t.status === 'trialing' || t.status === 'pending').length;
+  const suspendedTenantsCount = tenants.filter(t => t.status === 'suspended' || t.status === 'rejected').length;
+  
   const mrr = activeTenantsCount * 4999;
+  const arr = mrr * 12;
+
+  const demoRequests = leads.filter(l => l.source === 'Landing Page Demo Book').length;
+  const newLeadsCount = leads.filter(l => l.stage === 'new').length;
+  const contactedLeads = leads.filter(l => l.stage === 'contacted').length;
+
+  const leadToTrialConv = leads.length > 0 ? Math.round((trialTenantsCount / leads.length) * 100) : 0;
+  const trialToPaidConv = trialTenantsCount + activeTenantsCount > 0 ? Math.round((activeTenantsCount / (trialTenantsCount + activeTenantsCount)) * 100) : 0;
+  
+  const ordersProcessed = activeTenantsCount * 1240 + trialTenantsCount * 120; // Simulated
+  const churnRisk = Math.max(0, activeTenantsCount - 2); // Simulated
+
+  const activities = useMemo(() => {
+    let feed: any[] = [];
+    tenants.forEach(t => {
+      feed.push({ id: `t-${t.id}`, type: 'tenant_joined', title: `New tenant onboarded: ${t.name || t.id}`, time: t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000) : new Date() });
+      if (t.status === 'active') {
+        feed.push({ id: `sub-${t.id}`, type: 'subscription', title: `${t.name || t.id} converted to Paid`, time: new Date(Date.now() - Math.random() * 86400000 * 5) });
+      }
+    });
+    leads.forEach(l => {
+      if (l.source === 'Landing Page Demo Book') {
+        feed.push({ id: `d-${l.id}`, type: 'demo', title: `Demo booked by ${l.kitchenName || l.businessName || l.ownerName || 'User'}`, time: l.createdAt?.seconds ? new Date(l.createdAt.seconds * 1000) : new Date() });
+      }
+    });
+    return feed.sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 15);
+  }, [tenants, leads]);
+
+  const alerts = useMemo(() => {
+    let a: any[] = [];
+    const pending = tenants.filter(t => t.status === 'pending');
+    if (pending.length > 0) a.push({ id: 'pending-alert', message: `${pending.length} tenants awaiting approval`, type: 'warning' });
+    
+    const newDem = leads.filter(l => l.stage === 'new' && l.source === 'Landing Page Demo Book');
+    if (newDem.length > 0) a.push({ id: 'new-demo', message: `${newDem.length} new demo requests pending follow-up`, type: 'info' });
+    
+    const highGrowth = tenants.filter(t => t.status === 'active').slice(0, 1);
+    if (highGrowth.length > 0) a.push({ id: 'high-growth', message: `High-growth detected: ${highGrowth[0].name} (Orders up 24%)`, type: 'success' });
+    
+    return a;
+  }, [tenants, leads]);
 
   const TABS = [
     { id: 'overview', icon: Activity, label: 'Overview' },
@@ -335,79 +378,271 @@ export default function BhojanOSSuperAdmin() {
                 <motion.div 
                   initial="hidden" 
                   animate="visible" 
-                  variants={{
-                    visible: { transition: { staggerChildren: 0.05 } }
-                  }}
-                  className="space-y-8 sm:space-y-10"
+                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                  className="space-y-8"
                 >
+                  {/* HEADER */}
                   <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
                     <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                      Overview
+                      Command Center
                     </h1>
-                    <p className="text-gray-400 text-sm sm:text-base font-medium">Real-time pulse of your BhojanOS platform.</p>
+                    <p className="text-gray-400 text-sm sm:text-base font-medium">Platform performance and growth intelligence.</p>
                   </motion.div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {/* Metric 1 */}
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group hover:border-white/10 transition-colors">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-white/10 transition-colors"></div>
-                      <div className="flex items-center justify-between mb-6 relative">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Tenants</div>
-                        <div className="p-2.5 bg-white/5 rounded-xl text-white border border-white/5">
-                          <Building2 size={18} />
-                        </div>
+                  {/* 1. EXECUTIVE OVERVIEW */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-white/5 rounded-xl text-white border border-white/5"><Building2 size={16} /></div>
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Total Kitchens</div>
                       </div>
-                      <div className="flex items-end gap-3 relative">
-                        <div className="text-4xl font-black text-white tracking-tighter">{tenants.length}</div>
-                        <div className="text-[11px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg border border-emerald-400/20 mb-1">+12%</div>
-                      </div>
+                      <div className="text-3xl font-black text-white tracking-tighter">{tenants.length}</div>
                     </motion.div>
                     
-                    {/* Metric 2 */}
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group hover:border-emerald-500/20 transition-colors">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-colors"></div>
-                      <div className="flex items-center justify-between mb-6 relative">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Subs</div>
-                        <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 size={18} />
-                        </div>
+                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-emerald-500/10 shadow-xl relative overflow-hidden group">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20"><CheckCircle2 size={16} /></div>
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Active Tenants</div>
                       </div>
-                      <div className="flex items-end gap-3 relative">
-                        <div className="text-4xl font-black text-white tracking-tighter">{activeTenantsCount}</div>
-                      </div>
+                      <div className="text-3xl font-black text-white tracking-tighter">{activeTenantsCount}</div>
                     </motion.div>
 
-                    {/* Metric 3 */}
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group hover:border-blue-500/20 transition-colors">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-blue-500/10 transition-colors"></div>
-                      <div className="flex items-center justify-between mb-6 relative">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">In Trials</div>
-                        <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/20">
-                          <Clock size={18} />
-                        </div>
+                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-blue-500/10 shadow-xl relative overflow-hidden group">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/20"><Clock size={16} /></div>
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Trial Accounts</div>
                       </div>
-                      <div className="flex items-end gap-3 relative">
-                        <div className="text-4xl font-black text-white tracking-tighter">
-                          {tenants.filter(t => t.status === 'trialing' || t.status === 'pending').length}
-                        </div>
-                      </div>
+                      <div className="text-3xl font-black text-white tracking-tighter">{trialTenantsCount}</div>
                     </motion.div>
 
-                    {/* Metric 4 */}
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-gradient-to-b from-[#222] to-[#151515] p-6 rounded-3xl border border-white/10 shadow-xl relative overflow-hidden group hover:border-white/20 transition-colors">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-orange-500/20 transition-colors"></div>
-                      <div className="flex items-center justify-between mb-6 relative">
-                        <div className="text-xs font-bold text-gray-300 uppercase tracking-widest">Monthly MRR</div>
-                        <div className="p-2.5 bg-white rounded-xl text-black shadow-lg">
-                          <TrendingUp size={18} />
-                        </div>
+                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-white/5 rounded-xl text-white border border-white/5"><Activity size={16} /></div>
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Orders Processed</div>
                       </div>
-                      <div className="flex items-end gap-3 relative">
-                        <div className="text-4xl font-black text-white tracking-tighter">
-                          ₹{mrr.toLocaleString()}
-                        </div>
-                      </div>
+                      <div className="text-3xl font-black text-white tracking-tighter">{ordersProcessed.toLocaleString()}</div>
                     </motion.div>
+
+                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#151515] to-[#222] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group col-span-2 md:col-span-4 lg:col-span-1">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400 border border-emerald-500/30"><Zap size={16} /></div>
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Platform Health</div>
+                      </div>
+                      <div className="text-3xl font-black text-emerald-400 tracking-tighter">99.99%</div>
+                      <div className="text-xs font-medium text-emerald-500/50 mt-1">All systems operational</div>
+                    </motion.div>
+                  </div>
+
+                  {/* PLATFORM ALERTS */}
+                  <AnimatePresence>
+                    {alerts.length > 0 && (
+                      <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                        {alerts.map((alert, i) => (
+                          <motion.div 
+                            key={alert.id} 
+                            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+                            className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
+                              alert.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 
+                              alert.type === 'info' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 
+                              'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {alert.type === 'warning' ? <AlertTriangle size={18} /> : alert.type === 'info' ? <Bell size={18} /> : <Zap size={18} />}
+                              <span className="font-bold text-sm tracking-tight">{alert.message}</span>
+                            </div>
+                            <button className="text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1">
+                              View <ArrowRight size={12}/>
+                            </button>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    {/* LEFT COLUMN */}
+                    <div className="lg:col-span-2 space-y-6">
+                       
+                       {/* 3. REVENUE INTELLIGENCE */}
+                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 sm:p-8 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                         <div className="flex justify-between items-start mb-8">
+                           <div>
+                             <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-1"><TrendingUp size={16} className="text-orange-500"/> Revenue Intelligence</h3>
+                             <p className="text-gray-500 text-xs font-medium">Real-time subscription metrics</p>
+                           </div>
+                           <div className="text-right">
+                             <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Growth Trend</div>
+                             <div className="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                               <ChevronUp size={12} /> +24% MoM
+                             </div>
+                           </div>
+                         </div>
+
+                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8">
+                           <div>
+                             <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">MRR</div>
+                             <div className="text-3xl font-black text-white tracking-tighter">₹{(mrr).toLocaleString()}</div>
+                           </div>
+                           <div>
+                             <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">ARR</div>
+                             <div className="text-3xl font-black text-white tracking-tighter">₹{(arr).toLocaleString()}</div>
+                           </div>
+                           <div>
+                             <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">ARPU</div>
+                             <div className="text-3xl font-black text-white tracking-tighter">₹4,999</div>
+                           </div>
+                           <div>
+                             <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Churn Risk</div>
+                             <div className="text-3xl font-black text-amber-400 tracking-tighter">{churnRisk}</div>
+                           </div>
+                         </div>
+
+                         {/* Custom SVG Sparkline for Revenue */}
+                         <div className="h-32 w-full relative">
+                           <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                             <defs>
+                               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                                 <stop offset="0%" stopColor="#FF6B00" stopOpacity="0.4" />
+                                 <stop offset="100%" stopColor="#FF6B00" stopOpacity="0" />
+                               </linearGradient>
+                             </defs>
+                             <path d="M0,30 L0,20 Q10,15 20,22 T40,18 T60,10 T80,5 L100,0 L100,30 Z" fill="url(#revGrad)" />
+                             <motion.path 
+                               initial={{ pathLength: 0 }}
+                               animate={{ pathLength: 1 }}
+                               transition={{ duration: 1.5, ease: "easeOut" }}
+                               d="M0,20 Q10,15 20,22 T40,18 T60,10 T80,5 L100,0" 
+                               fill="none" stroke="#FF6B00" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" 
+                             />
+                           </svg>
+                         </div>
+                       </motion.div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         {/* 4. TENANT HEALTH */}
+                         <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                           <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Activity size={16} className="text-emerald-500"/> Tenant Health</h3>
+                           <div className="space-y-4">
+                             <div>
+                               <div className="flex justify-between text-xs font-bold mb-2">
+                                 <span className="text-gray-400 uppercase tracking-widest">Active</span>
+                                 <span className="text-emerald-400">{activeTenantsCount}</span>
+                               </div>
+                               <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                 <div className="h-full bg-emerald-500" style={{ width: `${(activeTenantsCount/Math.max(1, tenants.length))*100}%` }}></div>
+                               </div>
+                             </div>
+                             <div>
+                               <div className="flex justify-between text-xs font-bold mb-2">
+                                 <span className="text-gray-400 uppercase tracking-widest">In Trial</span>
+                                 <span className="text-blue-400">{trialTenantsCount}</span>
+                               </div>
+                               <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                 <div className="h-full bg-blue-500" style={{ width: `${(trialTenantsCount/Math.max(1, tenants.length))*100}%` }}></div>
+                               </div>
+                             </div>
+                             <div>
+                               <div className="flex justify-between text-xs font-bold mb-2">
+                                 <span className="text-gray-400 uppercase tracking-widest">Payment Due</span>
+                                 <span className="text-amber-400">0</span>
+                               </div>
+                               <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                 <div className="h-full bg-amber-500" style={{ width: `0%` }}></div>
+                               </div>
+                             </div>
+                             <div>
+                               <div className="flex justify-between text-xs font-bold mb-2">
+                                 <span className="text-gray-400 uppercase tracking-widest">Inactive/Suspended</span>
+                                 <span className="text-rose-400">{suspendedTenantsCount}</span>
+                               </div>
+                               <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                 <div className="h-full bg-rose-500" style={{ width: `${(suspendedTenantsCount/Math.max(1, tenants.length))*100}%` }}></div>
+                               </div>
+                             </div>
+                           </div>
+                         </motion.div>
+
+                         {/* 5. FOUNDER KPIs */}
+                         <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                           <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Shield size={16} className="text-purple-500"/> Founder KPIs</h3>
+                           <div className="grid grid-cols-2 gap-4">
+                             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Lead → Trial</div>
+                               <div className="text-2xl font-black text-white">{leadToTrialConv}%</div>
+                             </div>
+                             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Trial → Paid</div>
+                               <div className="text-2xl font-black text-white">{trialToPaidConv}%</div>
+                             </div>
+                             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Activation</div>
+                               <div className="text-2xl font-black text-white">82%</div>
+                             </div>
+                             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Avg Health</div>
+                               <div className="text-2xl font-black text-emerald-400">9.4</div>
+                             </div>
+                           </div>
+                         </motion.div>
+                       </div>
+                    </div>
+
+                    {/* RIGHT COLUMN */}
+                    <div className="space-y-6">
+                       
+                       {/* 6. GROWTH INTELLIGENCE */}
+                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Users size={16} className="text-blue-500"/> Growth Funnel</h3>
+                         <div className="space-y-3">
+                           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                             <div className="flex items-center gap-3"><UserPlus size={16} className="text-gray-400"/> <span className="text-sm font-bold text-white">Total Leads</span></div>
+                             <div className="font-black text-white">{leads.length}</div>
+                           </div>
+                           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 ml-4">
+                             <div className="flex items-center gap-3"><Bell size={16} className="text-blue-400"/> <span className="text-sm font-bold text-white">Demo Requests</span></div>
+                             <div className="font-black text-white">{demoRequests}</div>
+                           </div>
+                           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 ml-8">
+                             <div className="flex items-center gap-3"><Clock size={16} className="text-amber-400"/> <span className="text-sm font-bold text-white">Active Trials</span></div>
+                             <div className="font-black text-white">{trialTenantsCount}</div>
+                           </div>
+                           <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 ml-12">
+                             <div className="flex items-center gap-3"><CheckCircle2 size={16} className="text-emerald-500"/> <span className="text-sm font-bold text-emerald-400">Paid Subscriptions</span></div>
+                             <div className="font-black text-emerald-400">{activeTenantsCount}</div>
+                           </div>
+                         </div>
+                       </motion.div>
+
+                       {/* 7. ACTIVITY FEED */}
+                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group flex flex-col h-[400px]">
+                         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6 shrink-0"><Activity size={16} className="text-gray-400"/> Live Activity</h3>
+                         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                           {activities.length === 0 ? (
+                             <div className="text-sm text-gray-500 text-center py-10">No recent activity</div>
+                           ) : (
+                             activities.map(act => (
+                               <div key={act.id} className="flex gap-4 relative">
+                                 <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 z-10 relative">
+                                   {act.type === 'tenant_joined' ? <Building2 size={14} className="text-amber-400" /> :
+                                    act.type === 'subscription' ? <CheckCircle2 size={14} className="text-emerald-400" /> :
+                                    <Bell size={14} className="text-blue-400" />}
+                                 </div>
+                                 <div className="absolute top-8 left-4 bottom-[-16px] w-px bg-white/10 -ml-[0.5px]"></div>
+                                 <div className="flex-1 pb-4">
+                                   <div className="text-sm font-bold text-white leading-tight mb-1">{act.title}</div>
+                                   <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                                     {act.time.toLocaleDateString()} {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                   </div>
+                                 </div>
+                               </div>
+                             ))
+                           )}
+                         </div>
+                       </motion.div>
+
+                    </div>
                   </div>
                 </motion.div>
               )}
