@@ -34,7 +34,7 @@ const GlassCard = ({ children, className = '', onClick }: { children: React.Reac
 );
 
 const GradientText = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
-  <span className={`bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500 bg-clip-text text-transparent ${className}`}>
+  <span className={`bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500 bg-clip-text text-transparent animate-gradient-shine ${className}`}>
     {children}
   </span>
 );
@@ -265,8 +265,8 @@ const OnboardKitchen = () => {
                 <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-8 text-gray-300 shadow-[0_0_20px_rgba(255,120,0,0.1)]">
                   <Sparkles size={14} className="text-orange-400" /> The AI Operating System
                 </div>
-                <h2 className="text-5xl sm:text-7xl lg:text-[5.5rem] font-black tracking-tighter mb-6 leading-[1.1]">
-                  Launch With <br className="hidden sm:block" /> Bhojan<GradientText>OS AI</GradientText>
+                <h2 className="text-4xl sm:text-6xl lg:text-[4.5rem] font-bold tracking-tight mb-6 leading-[1.1]">
+                  Launch With <br className="hidden sm:block" /> <span className="font-black">Bhojan<GradientText>OS AI</GradientText></span>
                 </h2>
                 <p className="text-xl sm:text-2xl text-gray-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed px-2">
                   The Operating System Built For Modern Cloud Kitchens, Restaurants, Cafes, and Food Brands.

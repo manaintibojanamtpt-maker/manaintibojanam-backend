@@ -141,6 +141,23 @@ body {
     font-size: 16px; /* Prevents iOS Safari auto-zoom */
   }
 
+  .mapboxgl-popup-close-button {
+    color: #666;
+    font-size: 16px;
+    padding: 4px 8px;
+  }
+
+  @keyframes shine {
+    to {
+      background-position: 200% center;
+    }
+  }
+
+  .animate-gradient-shine {
+    background-size: 200% auto;
+    animation: shine 3s linear infinite;
+  }
+
   @keyframes spin { to { transform: rotate(360deg); } }
 }
 
