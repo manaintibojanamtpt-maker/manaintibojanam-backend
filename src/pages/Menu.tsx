@@ -569,7 +569,7 @@ const Menu: React.FC = () => {
              </div>
           </div>
           
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 p-1 bg-white/[0.02] rounded-2xl border border-white/5" role="tablist">
+          <div className="flex md:hidden gap-2.5 overflow-x-auto no-scrollbar pb-1 p-1 bg-white/[0.02] rounded-2xl border border-white/5" role="tablist">
             <button
               onClick={() => {
                 triggerHaptic('light');
@@ -608,7 +608,59 @@ const Menu: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-3 sm:px-4 pt-6">
+      {/* DESKTOP LAYOUT WRAPPER */}
+      <div className="max-w-[1400px] mx-auto w-full flex flex-col md:flex-row gap-8 xl:gap-12 px-4 sm:px-6 xl:px-8 pb-24">
+        {/* DESKTOP CATEGORY SIDEBAR */}
+        <div className="hidden md:block w-64 xl:w-72 flex-shrink-0 pt-6">
+          <div className="sticky top-32 space-y-2 bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/5 rounded-3xl p-5 shadow-sm">
+            <h3 className="text-gray-400 dark:text-white/40 font-black uppercase tracking-widest text-[10px] mb-4 px-2">Menu Categories</h3>
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setCategory('all');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={cn(
+                "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300",
+                category === 'all' ? "bg-orange-500 text-white font-bold shadow-[0_4px_20px_rgba(255,107,53,0.3)]" : "text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white font-bold"
+              )}
+            >
+              <span>Full Menu</span>
+              <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-black", category === 'all' ? "bg-black/20" : "bg-gray-100 dark:bg-white/10")}>{menu.length}</span>
+            </button>
+            {categories.map(cat => {
+              const count = menu.filter(m => m.category === cat.name || m.category === cat.id).length;
+              if (count === 0) return null;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCategory(cat.name);
+                    const id = `category-${encodeURIComponent(cat.name)}`;
+                    const element = document.getElementById(id);
+                    if (element) {
+                      const y = element.getBoundingClientRect().top + window.scrollY - 120;
+                      window.scrollTo({ top: y, behavior: 'smooth' });
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300",
+                    category === cat.name ? "bg-orange-500 text-white font-bold shadow-[0_4px_20px_rgba(255,107,53,0.3)]" : "text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white font-bold"
+                  )}
+                >
+                  <span className="text-left line-clamp-1">{cat.name}</span>
+                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-black", category === cat.name ? "bg-black/20" : "bg-gray-100 dark:bg-white/10")}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MAIN MENU CONTENT */}
+        <div className="flex-1 min-w-0">
+
+      <div className="pt-6">
         {/* TIME-BASED RECOMMENDATIONS - BENTO STYLE */}
         {!search && category === 'all' && timeBasedRecs.items.length > 0 && (
           <section className="mb-10">
@@ -741,21 +793,22 @@ const Menu: React.FC = () => {
                           {catItems.length} items
                         </span>
                       </div>
-                      <div className="flex flex-col bg-white dark:bg-[#151515] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/5 shadow-sm">
+                      <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:bg-transparent dark:md:bg-transparent md:border-none md:shadow-none bg-white dark:bg-[#151515] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/5 shadow-sm">
                         {catItems.map((item, index) => (
-                          <MenuItemCard 
-                            key={item.id}
-                            item={item} 
-                            index={index}
-                            addToCart={addToCart}
-                            updateQuantity={updateQuantity}
-                            getItemQuantity={getItemQuantity}
-                            isStoreOpenNow={isStoreOpenNow}
-                            onViewReviews={(item: any) => {
-                              setSelectedItemForReviews(item);
-                              fetchItemReviews(item.id);
-                            }}
-                          />
+                          <div key={item.id} className="md:bg-white dark:md:bg-[#151515] md:rounded-[1.5rem] md:border md:border-gray-200 dark:md:border-white/5 md:shadow-sm md:overflow-hidden md:[&>article]:border-b-0 md:[&>article]:h-full md:[&>article]:bg-transparent">
+                            <MenuItemCard 
+                              item={item} 
+                              index={index}
+                              addToCart={addToCart}
+                              updateQuantity={updateQuantity}
+                              getItemQuantity={getItemQuantity}
+                              isStoreOpenNow={isStoreOpenNow}
+                              onViewReviews={(item: any) => {
+                                setSelectedItemForReviews(item);
+                                fetchItemReviews(item.id);
+                              }}
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -785,6 +838,8 @@ const Menu: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+      </div>
       </div>
 
       {/* REVIEWS MODAL */}

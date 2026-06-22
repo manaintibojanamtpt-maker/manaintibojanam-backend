@@ -15,13 +15,12 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { name: 'Dashboard', path: '/owner/dashboard', icon: LayoutDashboard },
-    { name: 'AI Operations', path: '/owner/operations', icon: BrainCircuit, hideOnMobile: true },
-    { name: 'Active Orders', path: '/owner/orders', icon: ShoppingBag },
-    { name: 'Customers', path: '/owner/customers', icon: Users },
-    { name: 'Menu Builder', path: '/owner/menu', icon: MenuIcon },
-    { name: 'Recipe Intelligence', path: '/owner/recipes', icon: BookOpen, hideOnMobile: true },
-    { name: 'Marketing', path: '/owner/marketing', icon: Rocket, hideOnMobile: true },
+    { name: 'Command Center', path: '/owner/dashboard', icon: LayoutDashboard },
+    { name: 'Commerce Engine', path: '/owner/orders', icon: ShoppingBag },
+    { name: 'Customer Graph', path: '/owner/customers', icon: Users },
+    { name: 'Predictive Supply', path: '/owner/recipes', icon: BookOpen },
+    { name: 'Menu Engine', path: '/owner/menu', icon: MenuIcon, hideOnMobile: true },
+    { name: 'Intelligence Layer', path: '/owner/marketing', icon: BrainCircuit, hideOnMobile: true },
     { name: 'Storefront Settings', path: '/owner/settings', icon: Settings },
   ];
 

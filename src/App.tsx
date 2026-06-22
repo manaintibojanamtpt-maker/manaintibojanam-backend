@@ -14,7 +14,8 @@ import FloatingMiniCart from './components/FloatingMiniCart';
 import InstallPrompt from './components/InstallPrompt';
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
-import DesktopSidebar from './components/DesktopSidebar';
+import StorefrontDesktopHeader from './components/StorefrontDesktopHeader';
+import DesktopFloatingCart from './components/DesktopFloatingCart';
 import NotchNotification from './components/NotchNotification';
 import FlyToCartAnimation from './components/FlyToCartAnimation';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
@@ -402,8 +403,8 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
       <div className="flex-1 flex w-full min-h-screen bg-brand-bg dark:bg-dark-bg">
-      <DesktopSidebar />
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {!isFullScreen && <StorefrontDesktopHeader />}
         {!hideHeader && <Header />}
         <main id="main-scroll-container" className="flex-1 relative" style={{ paddingTop: isEdgeToEdge ? '0' : 'env(safe-area-inset-top)', paddingBottom: isFullScreen ? 'env(safe-area-inset-bottom)' : 'calc(140px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
           {isEdgeToEdge ? (
@@ -414,7 +415,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </AnimatePresence>
           ) : (
             <div
-              className="w-full max-w-full lg:max-w-3xl mx-auto px-2 sm:px-3 lg:px-6 relative"
+              className="w-full max-w-full xl:max-w-7xl mx-auto px-2 sm:px-3 lg:px-6 relative"
               style={{
                 paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
                 paddingRight: 'max(0.5rem, env(safe-area-inset-right))'
@@ -428,7 +429,12 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           )}
         </main>
-        {!isFullScreen && <FloatingMiniCart />}
+        {!isFullScreen && (
+          <div className="xl:hidden">
+            <FloatingMiniCart />
+          </div>
+        )}
+        {!isFullScreen && <DesktopFloatingCart />}
         <div className="lg:hidden">
           {!isFullScreen && <BottomNav />}
         </div>

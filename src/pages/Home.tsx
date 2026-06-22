@@ -428,45 +428,128 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="flex flex-col items-center gap-6 w-full max-w-xs sm:max-w-sm mb-6"
+              className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-sm sm:max-w-xl mb-6"
             >
               <button
                 onClick={() => {
                   triggerHaptic('medium');
                   navigate('/menu');
                 }}
-                className="group relative flex items-center justify-center gap-3 bg-white text-black px-8 sm:px-10 py-4 sm:py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
+                className="group relative flex flex-1 items-center justify-center gap-3 bg-white text-black px-8 sm:px-10 py-4 sm:py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
               >
-                <span>Explore Menu</span>
+                <span>Browse Menu</span>
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic('medium');
+                  document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="group relative flex flex-1 items-center justify-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] hover:bg-white/20 active:scale-95 transition-all w-full"
+              >
+                <span>Today's Specials</span>
               </button>
             </motion.div>
           </div>
 
-          {/* FLOATING STATS - NO LONGER ABSOLUTE TO PREVENT OVERLAP */}
-          <div className="w-full mt-auto pb-4">
-             <div className="flex justify-center items-center gap-4 sm:gap-8 max-w-md mx-auto">
+          {/* DESKTOP TRUST BADGES */}
+          <div className="w-full mt-auto pb-8 hidden md:block">
+             <div className="flex justify-center items-center gap-6 max-w-5xl mx-auto flex-wrap">
+                {[
+                  { icon: ChefHat, title: "Homemade" },
+                  { icon: ShieldCheck, title: "No Preservatives" },
+                  { icon: Clock, title: "Fresh Daily" },
+                  { icon: Utensils, title: "Authentic Andhra Recipes" }
+                ].map((badge, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-black/40 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-xl">
+                    <badge.icon className="text-orange-400" size={24} />
+                    <span className="text-white font-bold text-sm tracking-wide">{badge.title}</span>
+                  </div>
+                ))}
+             </div>
+          </div>
+
+          {/* MOBILE STATS */}
+          <div className="w-full mt-auto pb-4 md:hidden">
+             <div className="flex justify-center items-center gap-4 max-w-md mx-auto">
                 <div className="text-center flex-1">
-                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md">4.9/5</p>
-                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Rating</p>
+                  <p className="text-white font-black text-base leading-none shadow-black drop-shadow-md">4.9/5</p>
+                  <p className="text-white/70 text-[8px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Rating</p>
                 </div>
                 <div className="w-px h-8 bg-white/20"></div>
                 <div className="text-center flex-1">
-                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md">100%</p>
-                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Hygienic</p>
+                  <p className="text-white font-black text-base leading-none shadow-black drop-shadow-md">100%</p>
+                  <p className="text-white/70 text-[8px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Hygienic</p>
                 </div>
                 <div className="w-px h-8 bg-white/20"></div>
                 <div className="text-center flex-1">
-                  <p className="text-white font-black text-base sm:text-xl leading-none shadow-black drop-shadow-md text-green-400">NO</p>
-                  <p className="text-white/70 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Preservatives</p>
+                  <p className="text-white font-black text-base leading-none shadow-black drop-shadow-md text-green-400">NO</p>
+                  <p className="text-white/70 text-[8px] font-black uppercase tracking-widest mt-1.5 shadow-black drop-shadow-sm">Preservatives</p>
                 </div>
              </div>
           </div>
         </div>
       </section>
 
+      {/* BEST SELLERS */}
+      <div className="w-full px-4 sm:px-6 relative z-10 mt-8 mb-12" id="best-sellers">
+        {(loading || trendingItems.length > 0) && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-orange-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
+                    <TrendingUp size={22} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Best Sellers</h3>
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
+                </div>
+              </div>
+              <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
+                View All <ChevronRight size={14} strokeWidth={3} />
+              </Link>
+            </div>
+            
+            {loading ? (
+              <HomeBentoSkeleton />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trendingItems.slice(0, 6).map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.1 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    className="relative"
+                  >
+                    {index < 3 && (
+                      <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2.5 py-1 rounded-3xl shadow-xl border border-white/20">
+                        Highly Ordered
+                      </div>
+                    )}
+                    <MenuItemCard 
+                      item={item} 
+                      index={index}
+                      addToCart={addToCart}
+                      updateQuantity={updateQuantity}
+                      getItemQuantity={getItemQuantity}
+                      isStoreOpenNow={() => isStoreOpen}
+                      storeOpenTime={storeOpenTime}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+
       {/* WHAT'S ON YOUR MIND? (CIRCULAR CATEGORIES) */}
-      <section className="relative z-10 -mt-10 px-4 sm:px-6 mb-12">
+      <section className="relative z-10 px-4 sm:px-6 mb-12">
         <div className="bg-dark-bg rounded-[3rem] p-6 shadow-2xl border border-white/5">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -661,61 +744,6 @@ const Home: React.FC = () => {
           </section>
         )}
 
-        {/* TRENDING NOW */}
-        {(loading || trendingItems.length > 0) && (
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative w-12 h-12 bg-white/5 rounded-[1.25rem] flex items-center justify-center text-orange-200 border border-white/10 shadow-lg transition-transform group-hover:scale-110">
-                    <TrendingUp size={22} />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Trending Now</h3>
-                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
-                </div>
-              </div>
-              <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
-                View All <ChevronRight size={14} strokeWidth={3} />
-              </Link>
-            </div>
-            
-            {loading ? (
-              <HomeBentoSkeleton />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {trendingItems.slice(0, 4).map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 14 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.1 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className={cn(
-                      "relative",
-                      index === 0 && "sm:col-span-2 lg:col-span-2"
-                    )}
-                  >
-                    <div className="absolute -top-1 -right-1 z-10 bg-amber-500 text-black text-[8px] font-black uppercase tracking-tighter px-2.5 py-1 rounded-3xl shadow-xl border border-white/20">
-                      Highly Ordered
-                    </div>
-                    <MenuItemCard 
-                      item={item} 
-                      index={index}
-                      addToCart={addToCart}
-                      updateQuantity={updateQuantity}
-                      getItemQuantity={getItemQuantity}
-                      isStoreOpenNow={() => isStoreOpen}
-                      storeOpenTime={storeOpenTime}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
 
         {/* RECOMMENDED FOR YOU */}
         {(loading || recommendedItems.length > 0) && (
