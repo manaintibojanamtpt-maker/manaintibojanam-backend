@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
   Store, User, Phone, Mail, Lock, MessageCircle, ArrowRight, Loader2, 
   Sparkles, CheckCircle2, ShieldCheck, Headset, Users, ShoppingBag, 
-  ChevronRight, Building2, Zap, Activity, PieChart, 
+  ChevronRight, Building2, Zap, Activity, PieChart, Server,
   Globe, Database, BarChart3, LineChart, TrendingUp, LockKeyhole, ArrowUpRight, Bell, Network
 } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
