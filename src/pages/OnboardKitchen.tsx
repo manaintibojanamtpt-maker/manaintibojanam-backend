@@ -340,12 +340,13 @@ const OnboardKitchen = () => {
     setIsSubmitting(true);
     try {
       const db = getDb();
-      const newRequestRef = doc(collection(db, 'demo_requests'));
+      const newRequestRef = doc(collection(db, 'salesPipeline'));
       await setDoc(newRequestRef, {
-        name: demoName,
-        restaurantName: demoRestaurant,
+        ownerName: demoName,
+        kitchenName: demoRestaurant,
         phone: demoPhone,
-        status: 'new',
+        stage: 'new',
+        source: 'Landing Page Demo Book',
         createdAt: serverTimestamp()
       });
       setDemoSubmitted(true);
