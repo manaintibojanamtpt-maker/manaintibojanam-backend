@@ -328,6 +328,34 @@ const OnboardKitchen = () => {
   const navigate = useNavigate();
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [demoSubmitted, setDemoSubmitted] = useState(false);
+  const [demoName, setDemoName] = useState('');
+  const [demoRestaurant, setDemoRestaurant] = useState('');
+  const [demoPhone, setDemoPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!demoName || !demoRestaurant || !demoPhone) return;
+    
+    setIsSubmitting(true);
+    try {
+      const db = getDb();
+      const newRequestRef = doc(collection(db, 'demo_requests'));
+      await setDoc(newRequestRef, {
+        name: demoName,
+        restaurantName: demoRestaurant,
+        phone: demoPhone,
+        status: 'new',
+        createdAt: serverTimestamp()
+      });
+      setDemoSubmitted(true);
+    } catch (error) {
+      console.error("Error submitting demo request:", error);
+      toast.error("Failed to submit request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -625,23 +653,23 @@ const OnboardKitchen = () => {
                   <h3 className="text-2xl font-black text-white mb-2">Book a Live Demo</h3>
                   <p className="text-gray-400 text-sm mb-6">See how <BrandText /> can double your kitchen's margins. Pick a time that works for you.</p>
                   
-                  <form onSubmit={(e) => { e.preventDefault(); setDemoSubmitted(true); }} className="space-y-4 mb-8">
+                  <form onSubmit={handleDemoSubmit} className="space-y-4 mb-8">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Your Name</label>
-                      <input required type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="John Doe" />
+                      <input required type="text" value={demoName} onChange={(e) => setDemoName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="John Doe" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Restaurant Name</label>
-                      <input required type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="Cloud Kitchen 101" />
+                      <input required type="text" value={demoRestaurant} onChange={(e) => setDemoRestaurant(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="Cloud Kitchen 101" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">Phone Number</label>
-                      <input required type="tel" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="+91 99999 99999" />
+                      <input required type="tel" value={demoPhone} onChange={(e) => setDemoPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B00] transition-colors" placeholder="+91 99999 99999" />
                     </div>
                     
                     <div className="pt-4">
-                      <GradientButton type="submit">
-                        Schedule Demo
+                      <GradientButton type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Submitting...</span> : 'Schedule Demo'}
                       </GradientButton>
                     </div>
                   </form>
