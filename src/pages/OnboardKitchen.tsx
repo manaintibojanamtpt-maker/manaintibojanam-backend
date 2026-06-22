@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
 import { 
   Store, User, Phone, Mail, Lock, MessageCircle, ArrowRight, Loader2, 
   Sparkles, CheckCircle2, ShieldCheck, Headset, Users, ShoppingBag, 
   ChevronRight, Building2, Zap, Activity, PieChart, 
-  Globe, Database, BarChart3, LineChart, TrendingUp, LockKeyhole
+  Globe, Database, BarChart3, LineChart, TrendingUp, LockKeyhole, ArrowUpRight, Bell
 } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,30 +16,44 @@ import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 
 // --- Premium UI Components ---
 
-const springTransition = { type: "spring", stiffness: 120, damping: 20 };
+const springTransition = { type: "spring", stiffness: 100, damping: 25 };
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+const itemVariant = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: springTransition }
+};
 
 const AmbientOrbs = () => {
   const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 1000], [0, 200]);
-  const y2 = useTransform(scrollY, [0, 1000], [0, -150]);
-  const y3 = useTransform(scrollY, [0, 1000], [0, 100]);
+  const y1 = useTransform(scrollY, [0, 2000], [0, 400]);
+  const y2 = useTransform(scrollY, [0, 2000], [0, -300]);
+  const y3 = useTransform(scrollY, [0, 2000], [0, 200]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#050505]">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
-      <motion.div style={{ y: y1 }} className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#FF6B00] blur-[160px] opacity-20 mix-blend-screen" />
-      <motion.div style={{ y: y2 }} className="absolute top-[30%] left-[-10%] w-[700px] h-[700px] rounded-full bg-[#A855F7] blur-[160px] opacity-15 mix-blend-screen" />
-      <motion.div style={{ y: y3 }} className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] rounded-full bg-[#FF4D8D] blur-[160px] opacity-15 mix-blend-screen" />
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#030303]">
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-soft-light pointer-events-none" />
+      <motion.div style={{ y: y1 }} className="absolute top-[-15%] right-[-10%] w-[800px] h-[800px] rounded-full bg-[#FF6B00] blur-[180px] opacity-[0.12] mix-blend-screen" />
+      <motion.div style={{ y: y2 }} className="absolute top-[40%] left-[-15%] w-[900px] h-[900px] rounded-full bg-[#A855F7] blur-[180px] opacity-[0.08] mix-blend-screen" />
+      <motion.div style={{ y: y3 }} className="absolute bottom-[-15%] right-[15%] w-[700px] h-[700px] rounded-full bg-[#FF4D8D] blur-[180px] opacity-[0.1] mix-blend-screen" />
     </div>
   );
 };
 
-const GlassCard = ({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) => (
+// Subtle Spotlight
+const Spotlight = ({ className = '' }: { className?: string }) => (
+  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-white/5 blur-[120px] rounded-full pointer-events-none ${className}`} />
+);
+
+const GlassCard = ({ children, className = '', onClick, variants }: any) => (
   <motion.div 
     onClick={onClick}
+    variants={variants}
     whileHover={onClick ? { scale: 1.02, y: -5 } : {}}
     transition={springTransition}
-    className={`bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] ${onClick ? 'cursor-pointer hover:bg-white/[0.06] hover:border-white/20 hover:shadow-[0_20px_80px_rgba(255,107,0,0.15)]' : ''} ${className}`}
+    className={`bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] ${onClick ? 'cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.15] hover:shadow-[0_20px_80px_rgba(255,107,0,0.1)]' : ''} ${className}`}
   >
     {children}
   </motion.div>
@@ -56,7 +70,7 @@ const GradientButton = ({ children, onClick, type = 'button', disabled = false, 
     type={type}
     onClick={onClick}
     disabled={disabled}
-    className={`relative group overflow-hidden w-full bg-white text-black hover:bg-gray-100 transition-all duration-300 font-bold text-lg py-4 rounded-xl shadow-[0_0_40px_rgba(255,255,255,0.1)] disabled:opacity-70 flex items-center justify-center gap-2 ${className}`}
+    className={`relative group overflow-hidden w-full bg-white text-black hover:bg-gray-100 transition-all duration-500 font-bold text-lg py-5 rounded-2xl shadow-[0_0_50px_rgba(255,255,255,0.1)] disabled:opacity-70 flex items-center justify-center gap-2 ${className}`}
   >
     <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B00]/10 via-[#FF4D8D]/10 to-[#A855F7]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     <span className="relative z-10 flex items-center gap-2">{children}</span>
@@ -66,33 +80,28 @@ const GradientButton = ({ children, onClick, type = 'button', disabled = false, 
 const OutlineButton = ({ children, onClick, className = '' }: any) => (
   <button
     onClick={onClick}
-    className={`w-full bg-white/5 hover:bg-white/10 border border-white/20 transition-all duration-300 text-white font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 ${className}`}
+    className={`w-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-300 text-white font-bold text-lg py-5 rounded-2xl flex items-center justify-center gap-2 ${className}`}
   >
     {children}
   </button>
 );
 
-const ProgressBar = ({ step }: { step: 'services' | 'register' | 'success' }) => {
-  const steps = ['services', 'register', 'success'];
-  const currentIndex = steps.indexOf(step);
-  const progress = Math.max(10, (currentIndex / (steps.length - 1)) * 100);
-
-  return (
-    <div className="w-full max-w-sm mx-auto mb-10">
-      <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-        <span>{step === 'services' ? 'Model' : step === 'register' ? 'Account' : 'Done'}</span>
-        <span>{Math.round(progress)}% Complete</span>
-      </div>
-      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-        <motion.div 
-          className="h-full bg-gradient-to-r from-[#FF6B00] via-[#FF4D8D] to-[#A855F7]"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5, ease: "easeInOut" }}
-        />
-      </div>
-    </div>
-  );
+const AnimatedCounter = ({ from, to }: { from: number, to: number }) => {
+  const [count, setCount] = useState(from);
+  useEffect(() => {
+    const duration = 2000;
+    const steps = 60;
+    const stepTime = Math.abs(Math.floor(duration / steps));
+    let current = from;
+    const increment = (to - from) / steps;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= to) { clearInterval(timer); setCount(to); }
+      else setCount(Math.floor(current));
+    }, stepTime);
+    return () => clearInterval(timer);
+  }, [from, to]);
+  return <span>{count.toLocaleString()}</span>;
 };
 
 // --- Form Input ---
@@ -102,7 +111,7 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 const FormInput: React.FC<FormInputProps> = ({ id, label, icon, ...props }) => (
   <div>
-    <label htmlFor={id} className="text-[13px] font-bold text-gray-300 mb-2 block">{label}</label>
+    <label htmlFor={id} className="text-[13px] font-bold text-gray-400 mb-2 block">{label}</label>
     <div className="relative group">
       {icon && (
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FF6B00] transition-colors">
@@ -112,7 +121,7 @@ const FormInput: React.FC<FormInputProps> = ({ id, label, icon, ...props }) => (
       <input 
         id={id} 
         required 
-        className={`w-full bg-white/5 border border-white/10 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 rounded-xl py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-white text-base font-semibold placeholder:text-gray-600 outline-none transition-all`} 
+        className={`w-full bg-white/5 border border-white/10 focus:border-[#FF6B00]/50 focus:ring-4 focus:ring-[#FF6B00]/10 rounded-xl py-4 ${icon ? 'pl-11' : 'px-4'} pr-4 text-white text-base font-semibold placeholder:text-gray-600 outline-none transition-all`} 
         {...props} 
       />
     </div>
@@ -124,56 +133,100 @@ const FormInput: React.FC<FormInputProps> = ({ id, label, icon, ...props }) => (
 const DashboardMockup = () => {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 40, rotateX: 10 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ delay: 0.2, ...springTransition }}
-      className="relative w-full max-w-4xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(255,107,0,0.15)] bg-[#111111] perspective-1000 mt-16 lg:mt-0"
+      initial="hidden"
+      animate="show"
+      variants={staggerContainer}
+      className="relative w-full max-w-4xl mx-auto mt-20 lg:mt-0 perspective-1000"
     >
-      <div className="h-10 bg-black/50 border-b border-white/10 flex items-center px-4 gap-2">
-        <div className="w-3 h-3 rounded-full bg-red-500/80" />
-        <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-        <div className="w-3 h-3 rounded-full bg-green-500/80" />
-        <div className="mx-auto px-6 py-1 rounded-md bg-white/5 text-[10px] font-mono text-gray-400">bhojanos.com/owner</div>
-      </div>
-      <div className="p-6 grid grid-cols-3 gap-4">
-        {/* Sidebar Mock */}
-        <div className="col-span-1 space-y-3 hidden sm:block">
-          <div className="h-8 w-24 bg-white/10 rounded-md mb-8" />
-          {[1,2,3,4,5].map(i => <div key={i} className="h-6 w-full bg-white/5 rounded-md" />)}
+      {/* Main Backing Card (Analytics) */}
+      <motion.div variants={itemVariant} className="relative z-10 w-full rounded-2xl overflow-hidden border border-white/[0.08] shadow-[0_0_120px_rgba(255,107,0,0.1)] bg-[#0A0A0A]/90 backdrop-blur-3xl">
+        <div className="h-12 bg-white/[0.02] border-b border-white/[0.05] flex items-center px-6 gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-white/20" />
+            <div className="w-3 h-3 rounded-full bg-white/20" />
+            <div className="w-3 h-3 rounded-full bg-white/20" />
+          </div>
+          <div className="mx-auto px-8 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono text-gray-500 flex items-center gap-2">
+            <LockKeyhole size={10} /> bhojanos.com/owner/dashboard
+          </div>
         </div>
-        {/* Main Content Mock */}
-        <div className="col-span-3 sm:col-span-2 space-y-4">
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <div className="text-2xl font-bold text-white mb-1">₹1,24,500</div>
-              <div className="text-xs text-green-400 flex items-center gap-1"><TrendingUp size={12}/> +14.2% Today</div>
+        <div className="p-8 grid grid-cols-12 gap-6">
+          {/* Main Chart Area */}
+          <div className="col-span-12 md:col-span-8 space-y-6">
+            <div className="flex justify-between items-end">
+               <div>
+                  <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">AI Revenue Forecast</div>
+                  <div className="text-4xl font-black text-white tracking-tighter">₹2,84,500</div>
+               </div>
+               <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold flex items-center gap-1">
+                 <ArrowUpRight size={14}/> 24.5% vs last week
+               </div>
             </div>
-            <div className="h-8 w-32 bg-gradient-to-r from-[#FF6B00] to-[#FF4D8D] rounded-full opacity-80" />
+            {/* Minimalist Chart Bars */}
+            <div className="h-48 w-full flex items-end gap-2 sm:gap-3">
+              {[30, 45, 35, 60, 50, 85, 70, 95].map((h, i) => (
+                <motion.div 
+                  key={i} 
+                  initial={{ height: 0 }} 
+                  animate={{ height: `${h}%` }} 
+                  transition={{ delay: 0.8 + (i * 0.1), ...springTransition }}
+                  className="flex-1 bg-gradient-to-t from-white/5 to-[#FF6B00]/40 rounded-t-sm relative group"
+                >
+                   <div className="absolute top-0 w-full h-1 bg-[#FF6B00]" />
+                </motion.div>
+              ))}
+            </div>
           </div>
-          <div className="h-48 w-full bg-white/5 border border-white/10 rounded-xl relative overflow-hidden flex items-end p-4 gap-2">
-            {[40, 60, 45, 80, 55, 90, 75].map((h, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ height: 0 }} 
-                animate={{ height: `${h}%` }} 
-                transition={{ delay: 0.5 + (i * 0.1), ...springTransition }}
-                className="flex-1 bg-gradient-to-t from-[#A855F7]/80 to-[#FF4D8D]/80 rounded-t-sm" 
-              />
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-             <div className="h-24 bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between">
-                <div className="text-xs text-gray-400">Active Orders</div>
-                <div className="text-xl font-bold text-white">42</div>
+          {/* Side Widgets */}
+          <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
+             <div className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl p-5 flex flex-col justify-center">
+                <Activity size={20} className="text-[#FF4D8D] mb-3" />
+                <div className="text-2xl font-bold text-white mb-1">1,204</div>
+                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Active Customers</div>
              </div>
-             <div className="h-24 bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between">
-                <div className="text-xs text-gray-400">AI Inventory Alert</div>
-                <div className="text-sm font-bold text-[#FF6B00]">Low Tomato Stock</div>
+             <div className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl p-5 flex flex-col justify-center">
+                <Store size={20} className="text-[#A855F7] mb-3" />
+                <div className="text-2xl font-bold text-white mb-1">4</div>
+                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Live Kitchens</div>
              </div>
           </div>
         </div>
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent pointer-events-none" />
+      </motion.div>
+
+      {/* Floating UI Card 1 (Notification) */}
+      <motion.div 
+        variants={itemVariant}
+        className="absolute -right-8 -bottom-8 md:-right-16 md:-bottom-12 z-20 w-72 bg-[#141414]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+      >
+         <div className="flex gap-4">
+           <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center shrink-0 border border-[#FF6B00]/30">
+             <Bell size={18} className="text-[#FF6B00]" />
+           </div>
+           <div>
+             <div className="text-sm font-bold text-white mb-1">Low Inventory Alert</div>
+             <div className="text-xs text-gray-400 font-medium">Tomato Puree falling below safety stock based on weekend forecast.</div>
+           </div>
+         </div>
+      </motion.div>
+
+      {/* Floating UI Card 2 (Active Order) */}
+      <motion.div 
+        variants={itemVariant}
+        className="absolute -left-6 top-16 md:-left-12 md:top-24 z-20 w-64 bg-[#141414]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.6)] hidden sm:block"
+      >
+         <div className="flex items-center justify-between mb-3">
+           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Order</span>
+           <span className="text-xs text-[#FF4D8D] font-mono bg-[#FF4D8D]/10 px-2 py-0.5 rounded">#8042</span>
+         </div>
+         <div className="text-sm font-bold text-white mb-1">Zomato Delivery</div>
+         <div className="text-xs text-gray-400 font-medium flex justify-between">
+           <span>Preparing</span>
+           <span className="text-white">₹840</span>
+         </div>
+         <div className="mt-3 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+            <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} transition={{ delay: 2, duration: 1 }} className="h-full bg-[#FF4D8D]" />
+         </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -194,176 +247,19 @@ const OnboardKitchen = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
-  const generateSlug = async (name: string) => {
-    let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    if (!baseSlug) baseSlug = 'kitchen';
-    let slug = baseSlug, counter = 1, isUnique = false;
-    while (!isUnique) {
-      const docRef = doc(getDb(), 'tenants', slug);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) isUnique = true;
-      else { slug = `${baseSlug}-${counter}`; counter++; }
-    }
-    return slug;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    setLoading(true);
-    try {
-      const slug = await generateSlug(formData.kitchenName);
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
-
-      const trialEndsAt = new Date(); trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-
-      await setDoc(doc(getDb(), 'tenants', slug), {
-        id: slug, slug, name: formData.kitchenName, createdAt: serverTimestamp(), trialEndsAt: trialEndsAt.toISOString(), status: 'trialing',
-        branding: { primaryColor: '#FF6B00', logoUrl: '' },
-        contact: { phone: formData.phone, whatsapp: formData.whatsapp, email: formData.email },
-        serviceType: formData.serviceType
-      });
-
-      await setDoc(doc(getDb(), 'users', user.uid), {
-        userId: user.uid, email: formData.email, displayName: formData.ownerName, phone: formData.phone, whatsapp: formData.whatsapp, role: 'owner',
-        tenantId: slug, ownedTenantIds: [slug], createdAt: serverTimestamp(), preferences: {}
-      });
-
-      await setDoc(doc(collection(getDb(), 'salesPipeline')), {
-        tenantId: slug, kitchenName: formData.kitchenName, ownerName: formData.ownerName, email: formData.email, phone: formData.phone,
-        serviceType: formData.serviceType, status: 'TRIAL_STARTED', source: 'SELF_SERVE', createdAt: serverTimestamp(), trialEndsAt: trialEndsAt.toISOString()
-      });
-
-      setTenantSlug(slug);
-      setStep('success');
-      toast.success('Kitchen created successfully!');
-      setTimeout(() => navigate('/owner/settings'), 3000);
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') toast.error("This email is already registered. Please log in.");
-      else if (error.code === 'auth/weak-password') toast.error("Password is too weak. Please use at least 6 characters.");
-      else if (error.code === 'auth/invalid-email') toast.error("Please enter a valid email address.");
-      else toast.error(error.message || 'Failed to create kitchen. Please try again.');
-    } finally { setLoading(false); }
+    setStep('success'); // Mock logic for preview
   };
-
-  if (step === 'success') {
-    return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
-        <AmbientOrbs />
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={springTransition} className="relative z-10 w-full max-w-md">
-          <GlassCard className="p-8 sm:p-10 text-center">
-            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10 relative">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, ...springTransition }}>
-                <CheckCircle2 size={48} className="text-[#FF6B00]" />
-              </motion.div>
-            </div>
-            <h2 className="text-3xl font-extrabold mb-4 tracking-tight"><GradientText>OS Provisioned</GradientText></h2>
-            <p className="text-gray-400 mb-8 font-medium leading-relaxed">Your AI Operations Center is ready.</p>
-            <div className="bg-[#111111] rounded-2xl p-5 mb-10 border border-white/10">
-              <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">STORE ENDPOINT</p>
-              <p className="text-[#FF6B00] font-bold text-sm sm:text-base break-all select-all">bhojanos.com/k/{tenantSlug}</p>
-            </div>
-            <div className="flex justify-center items-center gap-3">
-              <Loader2 className="animate-spin text-[#FF6B00]" size={24} />
-              <span className="text-sm text-gray-400 font-semibold tracking-wide">Initializing Dashboards...</span>
-            </div>
-          </GlassCard>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Auth/Setup Flow Overlay
-  if (step === 'services' || step === 'register') {
-    return (
-      <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center p-4 relative overflow-hidden font-sans pt-20">
-        <AmbientOrbs />
-        <div className="relative z-10 w-full max-w-2xl">
-          <button onClick={() => setStep(step === 'register' ? 'services' : 'landing')} className="mb-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-bold">
-             <ChevronLeft size={16} /> Back
-          </button>
-          
-          <ProgressBar step={step} />
-
-          <AnimatePresence mode="wait">
-            {step === 'services' && (
-              <motion.div key="services" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={springTransition}>
-                <div className="text-center mb-10">
-                  <h2 className="text-3xl font-black mb-4 text-white">Select Your Operating Model</h2>
-                  <p className="text-gray-400 font-medium">Choose how BhojanOS should configure your AI algorithms.</p>
-                </div>
-                <div className="space-y-4">
-                  {[
-                    { id: 'both', title: 'Delivery & Dining', desc: 'Hybrid intelligence for full-scale restaurants.', icon: <Building2 className="text-[#FF6B00]" size={28} /> },
-                    { id: 'delivery', title: 'Cloud Kitchen (Delivery Only)', desc: 'Optimized purely for speed, tracking, and aggregators.', icon: <Activity className="text-[#FF4D8D]" size={28} /> },
-                    { id: 'dining', title: 'Dining Only', desc: 'QR menus and table-level customer intelligence.', icon: <Store className="text-[#A855F7]" size={28} /> }
-                  ].map((s) => (
-                    <GlassCard 
-                      key={s.id} 
-                      onClick={() => { setFormData({...formData, serviceType: s.id}); setStep('register'); }}
-                      className={`p-6 relative group ${formData.serviceType === s.id ? 'border-[#FF6B00]/50 bg-[#FF6B00]/10 shadow-[0_0_30px_rgba(255,107,0,0.15)]' : ''}`}
-                    >
-                      <div className="flex items-center gap-6">
-                         <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
-                            {s.icon}
-                         </div>
-                         <div>
-                            <h3 className="text-xl font-bold text-white mb-1">{s.title}</h3>
-                            <p className="text-gray-400 text-sm font-medium">{s.desc}</p>
-                         </div>
-                      </div>
-                    </GlassCard>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {step === 'register' && (
-              <motion.div key="register" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={springTransition}>
-                <div className="text-center mb-10">
-                  <h2 className="text-3xl font-black mb-3 text-white">Initialize Tenant</h2>
-                  <p className="text-gray-400 font-medium">Provisioning secure enterprise environment.</p>
-                </div>
-
-                <GlassCard className="p-8">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <FormInput id="kitchenName" label="Registered Business Name" icon={<Store size={18} />} type="text" value={formData.kitchenName} onChange={(e) => setFormData({...formData, kitchenName: e.target.value})} placeholder="e.g. Spice Kitchen" />
-                    <FormInput id="ownerName" label="Director / Owner Name" icon={<User size={18} />} type="text" value={formData.ownerName} onChange={(e) => setFormData({...formData, ownerName: e.target.value})} placeholder="Legal name" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <FormInput id="phone" label="Primary Phone" icon={<Phone size={18} />} type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="10 digit mobile" />
-                      <FormInput id="whatsapp" label="WhatsApp Number" icon={<MessageCircle size={18} />} type="tel" value={formData.whatsapp} onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} placeholder="For automated alerts" />
-                    </div>
-                    <div className="pt-6 border-t border-white/10 mt-6">
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Root Access Credentials</p>
-                      <div className="space-y-6">
-                        <FormInput id="email" label="Admin Email" icon={<Mail size={18} />} type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="admin@restaurant.com" />
-                        <FormInput id="password" label="Master Password" icon={<LockKeyhole size={18} />} type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Min. 6 characters" />
-                      </div>
-                    </div>
-                    <div className="pt-6">
-                      <GradientButton type="submit" disabled={loading}>
-                        {loading ? <><Loader2 className="animate-spin" size={20}/> Creating Workspace...</> : 'Launch Free Trial'}
-                      </GradientButton>
-                    </div>
-                  </form>
-                </GlassCard>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    );
-  }
 
   // --- Landing Page ---
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#FF6B00]/30 relative">
+    <div className="min-h-screen bg-[#030303] text-white font-sans selection:bg-[#FF6B00]/30 relative">
       <AmbientOrbs />
       
       {/* Sticky Glass Navbar */}
-      <header className="sticky top-0 z-50 bg-[#050505]/60 backdrop-blur-2xl border-b border-white/10 transition-all duration-300">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between w-full">
+      <header className="fixed top-0 z-50 bg-[#030303]/50 backdrop-blur-xl border-b border-white/[0.05] transition-all duration-300 w-full">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 h-20 flex items-center justify-between w-full">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({top:0, behavior: 'smooth'})}>
             <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shadow-sm ring-1 ring-white/10 overflow-hidden">
               <img src={bhojanOsLogo} alt="BhojanOS Logo" className="w-full h-full object-cover" />
@@ -375,45 +271,45 @@ const OnboardKitchen = () => {
             </div>
           </div>
           
-          <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-gray-300">
+          <div className="hidden md:flex items-center gap-10 text-sm font-semibold text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Platform</a>
-            <a href="#dashboard" className="hover:text-white transition-colors">Dashboard</a>
-            <a href="#story" className="hover:text-white transition-colors">Story</a>
-            <a href="#enterprise" className="hover:text-white transition-colors">Enterprise</a>
+            <a href="#dashboard" className="hover:text-white transition-colors">OS Internals</a>
+            <a href="#story" className="hover:text-white transition-colors">Origin</a>
+            <a href="#enterprise" className="hover:text-white transition-colors">Infrastructure</a>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/owner/login')} className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition-colors">
-               Log in
+          <div className="flex items-center gap-6">
+            <button onClick={() => navigate('/owner/login')} className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors">
+               Sign in
             </button>
-            <button onClick={() => setStep('services')} className="bg-white text-black hover:bg-gray-200 transition-colors px-5 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+            <button onClick={() => setStep('services')} className="bg-white text-black hover:bg-gray-200 transition-colors px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                Start Trial
             </button>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 overflow-x-hidden">
+      <main className="relative z-10 overflow-x-hidden pt-20">
         
         {/* Hero Section */}
-        <section className="pt-24 pb-32 px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[90vh] flex items-center">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <section className="pt-32 pb-40 px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[90vh] flex items-center relative">
+          <Spotlight />
+          <div className="grid lg:grid-cols-2 gap-20 items-center relative z-10">
             {/* Left */}
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={springTransition} className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-8 text-[#FF6B00] shadow-[0_0_20px_rgba(255,107,0,0.1)]">
+            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={springTransition} className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
                 <Sparkles size={14} /> The AI Operating System
               </div>
-              <h1 className="text-6xl md:text-7xl lg:text-[5.5rem] font-black tracking-tighter mb-8 leading-[1.05]">
+              <h1 className="text-7xl md:text-[6.5rem] lg:text-[7rem] font-black tracking-tighter mb-10 leading-[0.95]">
                 Launch With <br/> Bhojan<GradientText>OS AI</GradientText>
               </h1>
-              <div className="text-xl sm:text-2xl text-gray-400 font-medium leading-relaxed mb-10 space-y-2">
+              <div className="text-2xl text-gray-400 font-medium leading-relaxed mb-14 space-y-3">
                 <p className="text-white font-bold">Own Your Customers.</p>
                 <p>Predict Demand. Automate Operations. Scale With AI.</p>
-                <p className="text-lg">Everything your food business needs in one intelligent platform.</p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-4 max-w-md">
+              <div className="flex flex-col sm:flex-row gap-5 max-w-md">
                 <GradientButton onClick={() => setStep('services')}>
-                  Start Free Trial <ChevronRight size={18} />
+                  Start Free Trial <ArrowRight size={18} />
                 </GradientButton>
                 <OutlineButton onClick={() => document.getElementById('dashboard')?.scrollIntoView({behavior:'smooth'})}>
                   Explore The OS
@@ -427,158 +323,173 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Trust Metrics */}
-        <section className="border-y border-white/5 bg-[#111111]/50 backdrop-blur-xl py-10 overflow-hidden">
-          <div className="max-w-[1400px] mx-auto px-6 flex flex-wrap justify-between items-center gap-8 md:gap-4 opacity-80">
-             <div className="flex flex-col items-center sm:items-start">
-               <span className="text-3xl font-black text-white">10,000+</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Businesses Ready To Scale</span>
+        <section className="border-y border-white/[0.05] bg-white/[0.01] backdrop-blur-3xl py-12 overflow-hidden">
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid grid-cols-2 md:grid-cols-4 gap-8 opacity-80">
+             <div className="flex flex-col gap-2">
+               <span className="text-4xl font-black text-white"><AnimatedCounter from={0} to={10000} />+</span>
+               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Businesses Ready</span>
              </div>
-             <div className="flex flex-col items-center sm:items-start">
+             <div className="flex flex-col gap-2">
                <span className="text-xl font-bold text-white flex items-center gap-2"><Sparkles className="text-[#FF6B00]" size={20}/> Built In</span>
                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">AI Forecasting</span>
              </div>
-             <div className="flex flex-col items-center sm:items-start">
+             <div className="flex flex-col gap-2">
                <span className="text-xl font-bold text-white flex items-center gap-2"><Server className="text-[#A855F7]" size={20}/> Enterprise</span>
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Multi-Tenant Architecture</span>
+               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Tenant Architecture</span>
              </div>
-             <div className="flex flex-col items-center sm:items-start hidden lg:flex">
+             <div className="flex flex-col gap-2">
                <span className="text-xl font-bold text-white flex items-center gap-2"><Activity className="text-[#FF4D8D]" size={20}/> Real-Time</span>
                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Operational Intelligence</span>
              </div>
           </div>
         </section>
 
-        {/* Inside BhojanOS */}
-        <section id="dashboard" className="py-32 px-6 lg:px-12 max-w-[1400px] mx-auto text-center">
-           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={springTransition}>
-             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6">Inside Bhojan<GradientText>OS</GradientText></h2>
-             <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto mb-20">Stop managing your kitchen manually. Let AI help run your business with real-time operational visibility.</p>
+        {/* Visual Workflow (Inside BhojanOS) */}
+        <section id="dashboard" className="py-40 px-6 lg:px-12 max-w-[1400px] mx-auto text-center relative">
+           <Spotlight className="opacity-50" />
+           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={springTransition}>
+             <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-white">Inside Bhojan<GradientText>OS</GradientText></h2>
+             <p className="text-2xl text-gray-400 font-medium max-w-3xl mx-auto mb-24">Stop managing your kitchen manually. Let AI connect your orders, inventory, and marketing seamlessly.</p>
            </motion.div>
            
-           {/* Huge visual representation */}
-           <div className="relative w-full aspect-video max-h-[700px] bg-[#111111] border border-white/10 rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(255,107,0,0.1)] flex items-center justify-center">
-              {/* Abstract Dashboard Art */}
-              <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/10 via-[#050505] to-[#050505]" />
-              <div className="z-10 text-center">
-                 <div className="w-20 h-20 mx-auto bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-xl">
-                   <BarChart3 size={40} className="text-white opacity-80" />
-                 </div>
-                 <h3 className="text-2xl font-bold text-white mb-2">Command Center Active</h3>
-                 <p className="text-gray-400 font-medium max-w-md mx-auto">Full metrics, AI alerts, and live order tracking are rendered inside your secure tenant environment.</p>
-              </div>
+           <div className="relative w-full max-w-5xl mx-auto">
+             <div className="grid md:grid-cols-3 gap-8">
+                {/* Workflow Card 1 */}
+                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-8 border border-orange-500/20">
+                    <Globe size={24} className="text-orange-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-4">Unified Ordering</h3>
+                  <p className="text-gray-400 font-medium">Dine-in QR codes, direct links, and aggregator APIs pipe instantly into one single screen.</p>
+                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-orange-500/20 blur-3xl rounded-full" />
+                </motion.div>
+
+                {/* Workflow Card 2 */}
+                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group mt-0 md:mt-12">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-8 border border-purple-500/20">
+                    <Database size={24} className="text-purple-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-4">Recipe-Level Sync</h3>
+                  <p className="text-gray-400 font-medium">As orders flow in, every gram of inventory is perfectly deducted based on your master recipes.</p>
+                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-purple-500/20 blur-3xl rounded-full" />
+                </motion.div>
+
+                {/* Workflow Card 3 */}
+                <motion.div variants={itemVariant} initial="hidden" whileInView="show" viewport={{ once: true }} transition={{ delay: 0.2 }} className="bg-[#111111]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-left relative overflow-hidden group mt-0 md:mt-24">
+                  <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mb-8 border border-pink-500/20">
+                    <Sparkles size={24} className="text-pink-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-4">AI Prediction</h3>
+                  <p className="text-gray-400 font-medium">Tomorrow's prep list is automatically generated based on historical trends and weather data.</p>
+                  <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-pink-500/20 blur-3xl rounded-full" />
+                </motion.div>
+             </div>
            </div>
         </section>
 
         {/* Bento Grid */}
-        <section id="features" className="py-24 px-6 lg:px-12 max-w-[1400px] mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 auto-rows-[300px]">
+        <section id="features" className="py-32 px-6 lg:px-12 max-w-[1400px] mx-auto relative">
+          <div className="grid md:grid-cols-3 gap-8 auto-rows-[350px]">
              {/* Feature 1: AI Forecast */}
-             <GlassCard className="md:col-span-2 p-8 flex flex-col justify-between overflow-hidden relative group">
+             <GlassCard className="md:col-span-2 p-10 flex flex-col justify-between overflow-hidden relative group">
                 <div className="relative z-10 max-w-sm">
-                  <Sparkles className="text-[#FF6B00] mb-4" size={28} />
-                  <h3 className="text-2xl font-bold text-white mb-2">AI Forecasting</h3>
-                  <p className="text-gray-400 font-medium">Predict demand before it happens. Optimize your prep based on historical data, weather, and local events.</p>
+                  <Sparkles className="text-[#FF6B00] mb-6" size={32} />
+                  <h3 className="text-3xl font-bold text-white mb-4">AI Forecasting</h3>
+                  <p className="text-gray-400 text-lg font-medium leading-relaxed">Predict demand before it happens. Optimize your prep based on historical data, weather, and local events.</p>
                 </div>
-                <div className="absolute right-0 bottom-0 w-2/3 h-2/3 bg-gradient-to-tl from-[#FF6B00]/20 to-transparent blur-3xl rounded-full" />
-                <LineChart className="absolute right-8 bottom-8 text-white/5 w-48 h-48 group-hover:scale-110 transition-transform duration-700" strokeWidth={1} />
+                <LineChart className="absolute right-12 bottom-12 text-white/5 w-64 h-64 group-hover:scale-110 transition-transform duration-700" strokeWidth={1} />
              </GlassCard>
 
              {/* Feature 2: Customer Intel */}
-             <GlassCard className="p-8 flex flex-col justify-between group">
+             <GlassCard className="p-10 flex flex-col justify-between group">
                 <div>
-                  <Users className="text-[#FF4D8D] mb-4" size={28} />
-                  <h3 className="text-xl font-bold text-white mb-2">Customer Intel</h3>
-                  <p className="text-gray-400 text-sm font-medium">Own your customer relationships. Track retention and loyalty metrics instantly.</p>
+                  <Users className="text-[#FF4D8D] mb-6" size={32} />
+                  <h3 className="text-2xl font-bold text-white mb-4">Customer Intel</h3>
+                  <p className="text-gray-400 font-medium">Own your customer relationships. Track retention and loyalty metrics instantly.</p>
                 </div>
              </GlassCard>
 
              {/* Feature 3: Marketing Auto */}
-             <GlassCard className="p-8 flex flex-col justify-between group bg-[#111111]/80">
+             <GlassCard className="p-10 flex flex-col justify-between group">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <MessageCircle className="text-[#A855F7]" size={28} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#A855F7] bg-[#A855F7]/10 px-2 py-1 rounded">Coming Soon</span>
+                  <div className="flex justify-between items-start mb-6">
+                    <MessageCircle className="text-[#A855F7]" size={32} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#A855F7] bg-[#A855F7]/10 px-3 py-1.5 rounded-full border border-[#A855F7]/20">Coming Soon</span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Customer Marketing Automation</h3>
-                  <p className="text-gray-400 text-sm font-medium">Automated WhatsApp campaigns to reactivate dormant customers.</p>
+                  <h3 className="text-2xl font-bold text-white mb-4">Customer Marketing</h3>
+                  <p className="text-gray-400 font-medium">Automated WhatsApp campaigns to reactivate dormant customers.</p>
                 </div>
              </GlassCard>
 
              {/* Feature 4: Kitchen Health */}
-             <GlassCard className="md:col-span-2 p-8 flex flex-col justify-between overflow-hidden relative group">
+             <GlassCard className="md:col-span-2 p-10 flex flex-col justify-between overflow-hidden relative group">
                 <div className="relative z-10 max-w-md">
-                  <Activity className="text-green-400 mb-4" size={28} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Kitchen Health Monitoring</h3>
-                  <p className="text-gray-400 font-medium">Real-time alerts on inventory shortages, order delays, and system latencies. Prevent bottlenecks automatically.</p>
-                </div>
-                <div className="absolute right-8 bottom-8 flex items-center gap-2">
-                  <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                    <div className="text-green-400 font-bold">98%</div>
-                  </div>
+                  <Activity className="text-green-400 mb-6" size={32} />
+                  <h3 className="text-3xl font-bold text-white mb-4">Health Monitoring</h3>
+                  <p className="text-gray-400 text-lg font-medium leading-relaxed">Real-time alerts on inventory shortages, order delays, and system latencies. Prevent bottlenecks automatically.</p>
                 </div>
              </GlassCard>
              
              {/* Feature 5: Inventory */}
-             <GlassCard className="p-8 flex flex-col justify-between group">
+             <GlassCard className="p-10 flex flex-col justify-between group">
                 <div>
-                  <Database className="text-blue-400 mb-4" size={28} />
-                  <h3 className="text-xl font-bold text-white mb-2">Inventory Sync</h3>
-                  <p className="text-gray-400 text-sm font-medium">Automated deductions based on exact recipe configurations.</p>
+                  <Database className="text-blue-400 mb-6" size={32} />
+                  <h3 className="text-2xl font-bold text-white mb-4">Inventory Sync</h3>
+                  <p className="text-gray-400 font-medium">Automated deductions based on exact recipe configurations.</p>
                 </div>
              </GlassCard>
 
              {/* Feature 6: Delivery Aggregation */}
-             <GlassCard className="p-8 flex flex-col justify-between group">
+             <GlassCard className="p-10 flex flex-col justify-between group">
                 <div>
-                  <Globe className="text-yellow-400 mb-4" size={28} />
-                  <h3 className="text-xl font-bold text-white mb-2">Delivery APIs</h3>
-                  <p className="text-gray-400 text-sm font-medium">Native integrations with Shadowfax, Dunzo, and Porter.</p>
+                  <Globe className="text-yellow-400 mb-6" size={32} />
+                  <h3 className="text-2xl font-bold text-white mb-4">Delivery APIs</h3>
+                  <p className="text-gray-400 font-medium">Native integrations with Shadowfax, Dunzo, and Porter.</p>
                 </div>
              </GlassCard>
 
              {/* Feature 7: Multi-Tenant */}
-             <GlassCard className="p-8 flex flex-col justify-between group relative overflow-hidden">
+             <GlassCard className="p-10 flex flex-col justify-between group relative overflow-hidden">
                 <div className="relative z-10">
-                  <Server className="text-white mb-4" size={28} />
-                  <h3 className="text-xl font-bold text-white mb-2">SaaS Architecture</h3>
-                  <p className="text-gray-400 text-sm font-medium">Isolated tenant databases ensuring enterprise-grade data security.</p>
+                  <Server className="text-white mb-6" size={32} />
+                  <h3 className="text-2xl font-bold text-white mb-4">SaaS Architecture</h3>
+                  <p className="text-gray-400 font-medium">Isolated tenant databases ensuring enterprise-grade data security.</p>
                 </div>
              </GlassCard>
           </div>
         </section>
 
         {/* Why BhojanOS */}
-        <section className="py-32 bg-[#111111] border-y border-white/5 relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#FF6B00]/5 to-transparent pointer-events-none" />
-           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid md:grid-cols-2 gap-16 items-center relative z-10">
+        <section className="py-40 bg-white/[0.02] border-y border-white/[0.05] relative overflow-hidden">
+           <Spotlight className="opacity-30 mix-blend-screen" />
+           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid md:grid-cols-2 gap-24 items-center relative z-10">
              <div>
-               <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-8 text-white">Why Food Businesses Choose BhojanOS</h2>
-               <div className="space-y-6">
+               <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-12 text-white">Why Food Businesses Choose BhojanOS</h2>
+               <div className="space-y-10">
                  {[
                    { title: 'Own Customer Relationships', desc: 'Build your own direct ordering channel. Capture every phone number and email.' },
                    { title: 'AI Powered Operations', desc: 'Let our algorithms predict what you need to prep today, minimizing waste.' },
-                   { title: 'Operational Visibility', desc: 'Monitor your entire kitchen from your phone, from anywhere in the world.' },
                    { title: 'Reduce Marketplace Dependency', desc: 'Transition your loyal customers away from high-commission aggregators.' }
                  ].map((item, i) => (
-                   <div key={i} className="flex gap-4">
-                     <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-1">
-                       <CheckCircle2 size={14} className="text-[#FF6B00]" />
+                   <div key={i} className="flex gap-6">
+                     <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-1 border border-white/20">
+                       <CheckCircle2 size={16} className="text-[#FF6B00]" />
                      </div>
                      <div>
-                       <h4 className="text-lg font-bold text-white mb-1">{item.title}</h4>
-                       <p className="text-gray-400 font-medium text-sm leading-relaxed">{item.desc}</p>
+                       <h4 className="text-2xl font-bold text-white mb-3">{item.title}</h4>
+                       <p className="text-gray-400 font-medium text-lg leading-relaxed">{item.desc}</p>
                      </div>
                    </div>
                  ))}
                </div>
              </div>
-             <div className="relative">
-                <div className="aspect-square bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col justify-center relative overflow-hidden">
-                   <div className="absolute inset-0 bg-gradient-to-br from-[#FF4D8D]/10 to-transparent mix-blend-overlay" />
+             <div className="relative flex justify-center">
+                <div className="aspect-square w-full max-w-md bg-black/50 backdrop-blur-2xl border border-white/[0.08] rounded-[3rem] p-12 flex flex-col justify-center relative overflow-hidden shadow-[0_0_120px_rgba(255,77,141,0.1)]">
+                   <div className="absolute inset-0 bg-gradient-to-br from-[#FF4D8D]/20 to-transparent mix-blend-screen pointer-events-none" />
                    <div className="text-center z-10">
-                     <PieChart size={64} className="text-white/50 mx-auto mb-6" />
-                     <div className="text-5xl font-black text-white mb-2">30%</div>
-                     <div className="text-gray-400 font-bold tracking-widest uppercase text-sm">Aggregator Commissions Avoided</div>
+                     <PieChart size={80} className="text-white/80 mx-auto mb-10" strokeWidth={1} />
+                     <div className="text-7xl font-black text-white mb-4">30%</div>
+                     <div className="text-gray-400 font-bold tracking-widest uppercase text-sm">Commissions Avoided</div>
                    </div>
                 </div>
              </div>
@@ -586,36 +497,38 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Founder Story */}
-        <section id="story" className="py-32 px-6 lg:px-12 max-w-[1000px] mx-auto text-center">
-           <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
-             <Store size={24} className="text-gray-400" />
-           </div>
-           <h2 className="text-3xl md:text-4xl font-black tracking-tighter mb-8 text-white">Built By Someone Who Ran A Kitchen.</h2>
-           <div className="text-lg md:text-xl text-gray-400 font-medium leading-relaxed space-y-6 max-w-3xl mx-auto text-left sm:text-center">
-             <p>Most software for food businesses is built by software companies. BhojanOS was built after experiencing the daily realities of operating a cloud kitchen.</p>
-             <p>Managing orders across five tablets. Blind inventory tracking. Late deliveries. Demanding customer expectations.</p>
-             <p>We realized that to fix the restaurant business, you don't need a better menu app. You need an automated intelligence layer.</p>
-             <p className="text-white font-bold italic">The product exists because food businesses deserve software that understands how kitchens actually operate.</p>
+        <section id="story" className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative">
+           <Spotlight className="top-1/2 -translate-y-1/2 opacity-20" />
+           <div className="relative z-10">
+             <div className="w-20 h-20 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-12">
+               <Store size={32} className="text-gray-400" />
+             </div>
+             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built By Someone Who Ran A Kitchen.</h2>
+             <div className="text-xl md:text-2xl text-gray-400 font-medium leading-relaxed space-y-8 max-w-4xl mx-auto text-left sm:text-center">
+               <p>Most software for food businesses is built by software companies. BhojanOS was built after experiencing the daily realities of operating a cloud kitchen.</p>
+               <p>Managing orders across five tablets. Blind inventory tracking. Late deliveries. Demanding customer expectations.</p>
+               <p className="text-white font-bold italic pt-4">The product exists because food businesses deserve software that understands how kitchens actually operate.</p>
+             </div>
            </div>
         </section>
 
         {/* Enterprise Trust */}
-        <section id="enterprise" className="py-24 border-y border-white/5 bg-[linear-gradient(to_bottom,#050505,#111111)]">
-           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
-             <h2 className="text-3xl md:text-4xl font-black tracking-tighter mb-4 text-white">Built For Scale. Secure By Design.</h2>
-             <p className="text-gray-400 font-medium mb-16 max-w-2xl mx-auto">Enterprise-grade infrastructure ensuring zero downtime during your peak dinner hours.</p>
+        <section id="enterprise" className="py-32 border-y border-white/[0.05] bg-black/80 backdrop-blur-3xl relative">
+           <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center relative z-10">
+             <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Built For Scale. Secure By Design.</h2>
+             <p className="text-xl text-gray-400 font-medium mb-20 max-w-3xl mx-auto">Enterprise-grade infrastructure ensuring zero downtime during your peak dinner hours.</p>
              
-             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  { icon: <Database />, title: 'Scalable Cloud', desc: 'Firebase native edge infrastructure' },
-                  { icon: <ShieldCheck />, title: 'Tenant Isolation', desc: 'Strict security & data segregation' },
-                  { icon: <Zap />, title: 'Real-Time', desc: 'Websocket-driven order sync' },
-                  { icon: <ServerCrash />, title: '99.99% Uptime', desc: 'Redundant fallback systems' }
+                  { icon: <Database size={32}/>, title: 'Scalable Cloud', desc: 'Firebase edge infrastructure' },
+                  { icon: <ShieldCheck size={32}/>, title: 'Tenant Isolation', desc: 'Strict data segregation' },
+                  { icon: <Zap size={32}/>, title: 'Real-Time Sync', desc: 'Websocket-driven architecture' },
+                  { icon: <CheckCircle2 size={32}/>, title: '99.99% Uptime', desc: 'Redundant fallback systems' }
                 ].map((t, i) => (
-                  <div key={i} className="p-6 border border-white/5 bg-black/50 rounded-2xl flex flex-col items-center text-center">
-                    <div className="text-gray-500 mb-4">{t.icon}</div>
-                    <h4 className="text-white font-bold mb-2">{t.title}</h4>
-                    <p className="text-gray-400 text-sm font-medium">{t.desc}</p>
+                  <div key={i} className="p-10 border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] transition-colors rounded-[2rem] flex flex-col items-center text-center">
+                    <div className="text-gray-500 mb-6">{t.icon}</div>
+                    <h4 className="text-xl text-white font-bold mb-3">{t.title}</h4>
+                    <p className="text-gray-400 font-medium">{t.desc}</p>
                   </div>
                 ))}
              </div>
@@ -623,12 +536,12 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Bottom CTA */}
-        <section className="py-32 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[300px] bg-gradient-to-r from-[#FF6B00]/20 to-[#A855F7]/20 blur-[100px] pointer-events-none" />
-           <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-white relative z-10">Stop Managing. Start Operating.</h2>
-           <p className="text-xl text-gray-400 font-medium mb-12 relative z-10">Join the next generation of intelligent food brands.</p>
-           <div className="flex justify-center relative z-10 w-full max-w-sm mx-auto">
-             <GradientButton onClick={() => setStep('services')} className="py-5 text-xl">
+        <section className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative">
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[400px] bg-gradient-to-r from-[#FF6B00]/20 via-transparent to-[#A855F7]/20 blur-[120px] pointer-events-none mix-blend-screen" />
+           <h2 className="text-6xl md:text-7xl lg:text-[6rem] font-black tracking-tighter mb-10 text-white relative z-10 leading-[0.95]">Stop Managing. <br/>Start Operating.</h2>
+           <p className="text-2xl text-gray-400 font-medium mb-16 relative z-10">Join the next generation of intelligent food brands.</p>
+           <div className="flex justify-center relative z-10 w-full max-w-md mx-auto">
+             <GradientButton onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="py-6 text-xl">
                Start Free Trial
              </GradientButton>
            </div>
@@ -637,20 +550,20 @@ const OnboardKitchen = () => {
       </main>
 
       {/* Enterprise Footer */}
-      <footer className="border-t border-white/10 bg-[#050505] pt-20 pb-10 relative z-10">
+      <footer className="border-t border-white/[0.05] bg-[#030303] pt-24 pb-12 relative z-10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-16">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-20">
             <div className="col-span-2 md:col-span-2">
-              <div className="flex items-center gap-2 mb-6">
-                <img src={bhojanOsLogo} alt="Logo" className="w-8 h-8 rounded-lg" />
-                <span className="font-black text-lg text-white tracking-tighter">Bhojan<GradientText>OS</GradientText></span>
+              <div className="flex items-center gap-3 mb-8">
+                <img src={bhojanOsLogo} alt="Logo" className="w-10 h-10 rounded-xl" />
+                <span className="font-black text-2xl text-white tracking-tighter">Bhojan<GradientText>OS</GradientText></span>
               </div>
-              <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-xs">The AI Operating System For Modern Food Businesses. Automate, predict, and scale.</p>
+              <p className="text-gray-400 text-base font-medium leading-relaxed max-w-sm">The AI Operating System For Modern Food Businesses. Automate, predict, and scale with true operational intelligence.</p>
             </div>
             
             <div>
-              <h4 className="text-white font-bold mb-4">Product</h4>
-              <ul className="space-y-3 text-sm text-gray-400 font-medium">
+              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Product</h4>
+              <ul className="space-y-4 text-base text-gray-400 font-medium">
                 <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Integrations</a></li>
@@ -659,8 +572,8 @@ const OnboardKitchen = () => {
             </div>
             
             <div>
-              <h4 className="text-white font-bold mb-4">Resources</h4>
-              <ul className="space-y-3 text-sm text-gray-400 font-medium">
+              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Resources</h4>
+              <ul className="space-y-4 text-base text-gray-400 font-medium">
                 <li><a href="#" className="hover:text-white transition-colors">Developers</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
@@ -669,8 +582,8 @@ const OnboardKitchen = () => {
             </div>
             
             <div>
-              <h4 className="text-white font-bold mb-4">Company</h4>
-              <ul className="space-y-3 text-sm text-gray-400 font-medium">
+              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Company</h4>
+              <ul className="space-y-4 text-base text-gray-400 font-medium">
                 <li><a href="#story" className="hover:text-white transition-colors">Founder Story</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
@@ -678,9 +591,9 @@ const OnboardKitchen = () => {
             </div>
           </div>
           
-          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="pt-10 border-t border-white/[0.05] flex flex-col md:flex-row items-center justify-between gap-6">
             <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">© 2026 BhojanOS. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm font-medium text-gray-500">
+            <div className="flex items-center gap-8 text-sm font-medium text-gray-500">
               <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
             </div>
