@@ -69,6 +69,7 @@ const OwnerOrders = lazy(() => import('./pages/owner/OwnerOrders'));
 const OwnerCustomers = lazy(() => import('./pages/owner/OwnerCustomers'));
 const OwnerSettings = lazy(() => import('./pages/owner/OwnerSettings'));
 const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
+const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
@@ -274,6 +275,7 @@ const AppContent: React.FC = () => {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/super-admin/login" element={<BhojanOSSuperAdminLogin />} />
               <Route path="/owner/login" element={<OwnerLogin />} />
+              <Route path="/owner/register" element={<OwnerRegister />} />
               <Route path="/onboard" element={<OnboardKitchen />} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
@@ -377,7 +379,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isFullScreen = isCheckout || isSubscription;
   
   const isMenu = isRoute('/menu');
-  const isLogin = isRoute('/login') || path === '/owner/login';
+  const isLogin = isRoute('/login') || path === '/owner/login' || path === '/owner/register';
   const isAdmin = path.startsWith('/admin');
   const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
   const isOnboard = path === '/onboard';

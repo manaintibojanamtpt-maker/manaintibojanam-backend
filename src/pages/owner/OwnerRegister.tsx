@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { Store, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { Store, Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { doc, setDoc } from 'firebase/firestore';
+import { getDb } from '../../lib/firebase-db';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -18,30 +20,54 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const OwnerLogin = () => {
+const OwnerRegister = () => {
+  const [name, setName] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
 
-  // If already logged in and owns at least one tenant, redirect to dashboard
+  // If already logged in, redirect to dashboard
   if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
     return <Navigate to="/owner/settings" />;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || !name || !restaurantName) return;
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast.success('Welcome back!');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update profile
+      await updateProfile(userCredential.user, { displayName: name });
+      
+      // Create user doc
+      const db = getDb();
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name,
+        email,
+        role: 'admin',
+        ownedTenantIds: [restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-')],
+        createdAt: new Date()
+      }, { merge: true });
+
+      // Create tenant doc
+      await setDoc(doc(db, 'tenants', restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-')), {
+        name: restaurantName,
+        status: 'active',
+        createdAt: new Date(),
+        settings: { theme: 'orange' }
+      }, { merge: true });
+
+      toast.success('Account created successfully!');
       navigate('/owner/settings');
     } catch (error: any) {
-      console.error('Owner Login Error:', error);
-      toast.error('Invalid email or password. Did you sign up with Google?');
+      console.error('Owner Register Error:', error);
+      toast.error(error.message || 'Failed to create account.');
     } finally {
       setLoading(false);
     }
@@ -54,12 +80,12 @@ const OwnerLogin = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
-      toast.success('Welcome back!');
+      toast.success('Welcome!');
       navigate('/owner/settings');
     } catch (error: any) {
       setLoading(false);
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
-        toast.error(error.message || 'Google login failed');
+        toast.error(error.message || 'Google signup failed');
       }
     }
   };
@@ -72,23 +98,57 @@ const OwnerLogin = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 relative overflow-hidden shrink-0"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00]/5 to-transparent pointer-events-none" />
           
           <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B00] to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-[#FF6B00]/20">
               <Store size={20} className="text-white" />
             </div>
             <div className="text-2xl font-black tracking-tight text-white">
-              BhojanOS<span className="text-red-500">Owner</span>
+              BhojanOS
             </div>
           </div>
           
           <div className="text-center mb-8 relative z-10">
-            <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Welcome Back</h1>
-            <p className="text-white/50 text-sm font-medium">Log in to manage your kitchen operations</p>
+            <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Create your Store</h1>
+            <p className="text-white/50 text-sm font-medium">Start your 14-day free trial today.</p>
           </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Full Name</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <User size={18} className="text-white/20" />
+              </div>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Restaurant Name</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Store size={18} className="text-white/20" />
+              </div>
+              <input
+                type="text"
+                required
+                value={restaurantName}
+                onChange={(e) => setRestaurantName(e.target.value)}
+                placeholder="Cloud Kitchen 101"
+                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email Address</label>
             <div className="relative">
@@ -101,7 +161,7 @@ const OwnerLogin = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="owner@example.com"
-                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
+                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
               />
             </div>
           </div>
@@ -118,7 +178,7 @@ const OwnerLogin = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
+                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
               />
             </div>
           </div>
@@ -126,13 +186,13 @@ const OwnerLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
+            className="w-full mt-4 bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-[#FF6B00]/90 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl shadow-lg shadow-[#FF6B00]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
           >
             {loading ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <>
-                <span>Sign In</span>
+                <span>Start Free Trial</span>
                 <ArrowRight size={18} />
               </>
             )}
@@ -151,12 +211,12 @@ const OwnerLogin = () => {
           className="w-full mt-6 bg-white hover:bg-gray-100 text-gray-900 font-bold text-sm py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:pointer-events-none"
         >
           <GoogleIcon />
-          <span>Continue with Google</span>
+          <span>Sign up with Google</span>
         </button>
         
         <div className="mt-8 pt-6 border-t border-white/5 text-center">
           <p className="text-white/40 text-sm">
-            Don't have a store yet? <Link to="/owner/register" className="text-red-500 hover:text-red-400 font-bold ml-1">Create one</Link>
+            Already have an account? <Link to="/owner/login" className="text-[#FF6B00] hover:text-[#FF6B00]/80 font-bold ml-1">Log in</Link>
           </p>
         </div>
       </motion.div>
@@ -165,5 +225,4 @@ const OwnerLogin = () => {
   );
 };
 
-export default OwnerLogin;
-
+export default OwnerRegister;

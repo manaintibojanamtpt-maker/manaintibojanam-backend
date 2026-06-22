@@ -360,8 +360,11 @@ const OnboardKitchen = () => {
             <button onClick={() => navigate('/owner/login')} className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors">
                Sign in
             </button>
-            <button onClick={() => navigate('/owner/login')} className="bg-[#FF6B00] text-white hover:bg-[#FF6B00]/80 transition-colors px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(255,107,0,0.3)]">
-               Start Free Trial
+            <button 
+              onClick={() => navigate('/owner/register')}
+              className="bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-[#FF6B00]/90 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all w-full sm:w-auto"
+            >
+              Start Free Trial
             </button>
           </div>
         </div>
@@ -383,7 +386,7 @@ const OnboardKitchen = () => {
               <p>BhojanOS replaces your messy POS, delivery tablets, and inventory spreadsheets with a single smart platform that runs your food business on autopilot.</p>
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-5 max-w-md mx-auto">
-              <GradientButton onClick={() => navigate('/owner/login')}>
+              <GradientButton onClick={() => navigate('/owner/register')}>
                 Start Free Trial <ArrowRight size={18} />
               </GradientButton>
               <OutlineButton onClick={() => setShowDemoModal(true)}>
@@ -502,7 +505,7 @@ const OnboardKitchen = () => {
                    <span className="text-5xl font-black text-white">₹1,999</span>
                    <span className="text-gray-500 font-bold">/month</span>
                  </div>
-                 <GradientButton onClick={() => navigate('/owner/login')} className="w-full">
+                 <GradientButton onClick={() => navigate('/owner/register')} className="w-full">
                    Start 14-Day Free Trial
                  </GradientButton>
                </div>
@@ -546,7 +549,7 @@ const OnboardKitchen = () => {
              <p>Join smart cloud kitchen owners who have doubled their margins.</p>
            </div>
            <div className="flex flex-col sm:flex-row justify-center gap-5 relative z-10 w-full max-w-md mx-auto">
-             <GradientButton onClick={() => navigate('/owner/login')}>
+             <GradientButton onClick={() => navigate('/owner/register')}>
                Start Free Trial
              </GradientButton>
              <OutlineButton onClick={() => setShowDemoModal(true)}>
