@@ -56,38 +56,27 @@ const Login: React.FC = () => {
     fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
     
     const handleRedirectResult = async () => {
-      // Check if we just returned from a redirect
-      const hasRedirected = sessionStorage.getItem('auth_redirecting') === 'true';
-      if (!hasRedirected) return;
-
-      const toastId = toast.loading('Completing sign-in...');
       try {
         const result = await getRedirectResult(auth);
-        sessionStorage.removeItem('auth_redirecting');
         
         if (result?.user) {
-          toast.success('Sign-in successful!', { id: toastId });
+          toast.success('Sign-in successful!');
           if (biometricsSupported && !hasLocalBiometrics) {
             setShowBiometricOnboarding(true);
           } else {
             navigate(redirectUrl);
           }
-        } else {
-          // No user, but no error - just clear the toast
-          toast.dismiss(toastId);
         }
       } catch (error: any) {
         sessionStorage.removeItem('auth_redirecting');
         console.error("Redirect Auth Error:", error);
         
         if (error.code === 'auth/credential-already-in-use') {
-          toast.error('This account is already linked to another user.', { id: toastId });
+          toast.error('This account is already linked to another user.');
         } else if (error.code === 'auth/popup-blocked') {
-          toast.error('Please allow popups for this site', { id: toastId });
+          toast.error('Please allow popups for this site');
         } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
-          toast.error('Sign-in failed. Please try again.', { id: toastId });
-        } else {
-          toast.dismiss(toastId);
+          toast.error('Sign-in failed. Please try again.');
         }
       }
     };
