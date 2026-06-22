@@ -312,7 +312,7 @@ const Menu: React.FC = () => {
   useEffect(() => {
     setLoading(true);
 
-    const unsubscribeMenu = onSnapshot(query(collection(getDb(), "menu"), where("tenantId", "==", activeTenantId), orderBy("createdAt", "desc")), (snapshot) => {
+    const unsubscribeMenu = onSnapshot(query(collection(getDb(), "menu"), where("tenantId", "==", activeTenantId)), (snapshot) => {
       const menuItems = snapshot.docs.map(doc => {
         const data = doc.data() as any;
         return {
@@ -330,7 +330,12 @@ const Menu: React.FC = () => {
           rating: Number(data.rating ?? 0)
         } as MenuItem & { isActive?: boolean };
       }).filter(item => item.isAvailable && item.isActive !== false);
-      setMenu(menuItems);
+      menuItems.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || a.createdAt || 0;
+        const timeB = b.createdAt?.toMillis?.() || b.createdAt || 0;
+        return timeB - timeA;
+      });
+      setMenu(menuItems as MenuItem[]);
       setLoading(false);
     }, (err) => {
       console.error("Menu Listener Error:", err);
@@ -339,8 +344,9 @@ const Menu: React.FC = () => {
     });
 
     // Real-time categories
-    const unsubscribeCategories = onSnapshot(query(collection(getDb(), "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true), orderBy("priority", "desc")), (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribeCategories = onSnapshot(query(collection(getDb(), "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true)), (snapshot) => {
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
       setCategories(cats);
     }, (err) => {
       console.error("Categories Listener Error:", err);

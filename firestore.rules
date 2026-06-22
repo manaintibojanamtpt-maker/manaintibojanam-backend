@@ -74,7 +74,7 @@ service cloud.firestore {
         isAdmin() ||
         isTenantOwner(resource.data.tenantId)
       );
-      allow create: if isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid);
+      allow create: if (isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid)) || (!isAuthenticated() && request.resource.data.userId == null);
       allow update: if isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && (
         (isAdmin() && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
         (isTenantOwner(resource.data.tenantId) && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||

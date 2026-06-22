@@ -104,12 +104,10 @@ const Checkout: React.FC = () => {
       try {
         const q = query(
           collection(getDb(), 'menu'),
-          where('tenantId', '==', activeTenantId),
-          where('isAvailable', '==', true),
-          limit(20)
+          where('tenantId', '==', activeTenantId)
         );
         const snapshot = await getDocs(q);
-        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem));
+        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem)).filter(i => i.isAvailable).slice(0, 20);
         
         // Simple context-based filtering:
         // If they have biryani, suggest raita/drink
