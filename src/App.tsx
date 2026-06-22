@@ -265,7 +265,7 @@ const AppContent: React.FC = () => {
   return (
     <LazyMotion features={domAnimation}>
       <Router>
-        <div className="flex-1 flex flex-col w-full h-full bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
+        <div className="flex-1 flex flex-col w-full min-h-screen bg-brand-bg dark:bg-dark-bg transition-colors duration-300">
           <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
           
           <Suspense fallback={<GlobalLoading />}>
@@ -319,7 +319,7 @@ const PageWrapper: React.FC<{ children: React.ReactNode, locationKey: string }> 
       initial={{ x: 10, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -10, opacity: 0 }}
-      transition={{ type: "tween", ease: [0.32, 0.72, 0, 1], duration: 0.4 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
       className="w-full h-full"
     >
       {children}
@@ -401,11 +401,11 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isEdgeToEdge = isFullScreen || isAccount || isOrderSuccess || isPaymentSuccess || isAddresses;
 
   return (
-      <div className="flex-1 flex w-full h-full bg-brand-bg dark:bg-dark-bg overflow-hidden">
+      <div className="flex-1 flex w-full min-h-screen bg-brand-bg dark:bg-dark-bg">
       <DesktopSidebar />
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {!hideHeader && <Header />}
-        <main id="main-scroll-container" className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative" style={{ paddingTop: isEdgeToEdge ? '0' : 'env(safe-area-inset-top)', paddingBottom: isFullScreen ? 'env(safe-area-inset-bottom)' : 'calc(140px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
+        <main id="main-scroll-container" className="flex-1 relative" style={{ paddingTop: isEdgeToEdge ? '0' : 'env(safe-area-inset-top)', paddingBottom: isFullScreen ? 'env(safe-area-inset-bottom)' : 'calc(140px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
           {isEdgeToEdge ? (
             <AnimatePresence mode="wait">
               <PageWrapper locationKey={location.pathname}>
