@@ -224,8 +224,8 @@ const OnboardKitchen = () => {
       <AmbientOrbs />
       
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#050505]/80 backdrop-blur-2xl border-b border-white/10 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 shadow-sm w-full">
-        <div className="max-w-5xl mx-auto flex items-center justify-between w-full">
+      <header className="sticky top-0 z-40 bg-[#050505]/80 backdrop-blur-2xl border-b border-white/10 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 shadow-sm w-full">
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-12 flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
             {step !== 'landing' && (
               <button onClick={() => setStep(step === 'register' ? 'services' : 'landing')} className="mr-2 p-2 hover:bg-white/10 rounded-full transition-colors text-gray-300">
@@ -248,7 +248,7 @@ const OnboardKitchen = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-5xl mx-auto relative z-10 px-4 sm:px-8 pb-[120px] sm:pb-32 overflow-x-hidden">
+      <main className="flex-1 w-full max-w-[1600px] mx-auto relative z-10 px-6 lg:px-12 pb-[120px] sm:pb-32 overflow-x-hidden">
         
         {step !== 'landing' && (
           <div className="pt-8">
