@@ -47,17 +47,20 @@ const OwnerRegister = () => {
       
       // Create user doc
       const db = getDb();
+      const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
         email,
         role: 'admin',
-        ownedTenantIds: [restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-')],
+        ownedTenantIds: [slug],
         createdAt: new Date()
       }, { merge: true });
 
       // Create tenant doc
-      await setDoc(doc(db, 'tenants', restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-')), {
+      await setDoc(doc(db, 'tenants', slug), {
         name: restaurantName,
+        slug: slug,
         status: 'active',
         createdAt: new Date(),
         settings: { theme: 'orange' }

@@ -90,11 +90,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       try {
-        const q = query(collection(getDb(), 'tenants'), where('slug', '==', slug), limit(1));
-        const snapshot = await getDocs(q);
+        const docRef = doc(getDb(), 'tenants', slug);
+        const docSnap = await getDoc(docRef);
         
-        if (!snapshot.empty) {
-          const docSnap = snapshot.docs[0];
+        if (docSnap.exists()) {
           const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
           setTenantId(data.id);
           setActiveTenantId(data.id);
@@ -102,8 +101,21 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setTenantInfo(data);
           sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
         } else {
-          // Not found, trigger 404
-          setTenantNotFound(true);
+          const q = query(collection(getDb(), 'tenants'), where('slug', '==', slug), limit(1));
+          const snapshot = await getDocs(q);
+          
+          if (!snapshot.empty) {
+            const docSnapQuery = snapshot.docs[0];
+            const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
+            setTenantId(data.id);
+            setActiveTenantId(data.id);
+            setTenantSlug(slug);
+            setTenantInfo(data);
+            sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
+          } else {
+            // Not found, trigger 404
+            setTenantNotFound(true);
+          }
         }
       } catch (error) {
         console.error("Failed to resolve tenant slug:", error);
