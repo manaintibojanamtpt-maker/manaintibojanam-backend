@@ -189,7 +189,7 @@ export function useCheckoutState() {
     specialInstructions, setSpecialInstructions,
     appliedCoupon, setAppliedCoupon, discountAmount,
     fees, gstAmount, packingFee, deliveryFee, finalTotal, baseDeliveryFee, cheapestPartner, FREE_DELIVERY_THRESHOLD,
-    isProcessing, setIsProcessing, setDeliveryState,
+    isProcessing, setIsProcessing, deliveryState, setDeliveryState,
     orderType, setOrderType
   };
 }
