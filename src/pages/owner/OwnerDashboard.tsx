@@ -7,7 +7,7 @@ import {
   BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power
 } from 'lucide-react';
 import { m } from 'framer-motion';
-import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
 import { Order, Subscription } from '../../types';
@@ -44,6 +44,7 @@ const OwnerDashboard = () => {
   const [inventoryAlerts, setInventoryAlerts] = React.useState<{name: string, stock: number, isCritical: boolean}[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [growthSnapshot, setGrowthSnapshot] = React.useState<AIGrowthSnapshot | null>(null);
+  const [menuCount, setMenuCount] = React.useState(0);
 
   const storeSlug = tenantInfo?.slug || tenantId;
   const storeUrl = getStoreUrl(storeSlug);
@@ -116,6 +117,7 @@ const OwnerDashboard = () => {
           alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
         }
       });
+      setMenuCount(snapshot.size);
       setInventoryAlerts(alerts);
     });
 
@@ -156,103 +158,188 @@ const OwnerDashboard = () => {
     return <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">Initializing Command Center...</div>;
   }
 
-  // Calculate Launch Readiness
-  const readinessSteps = [
-    { name: 'Email Verification', complete: tenantInfo?.kyc?.emailVerificationStatus === 'verified', link: '/owner/settings' },
+  // --- Sandbox Mode & Today's Priority Logic ---
+  const isSandboxActive = tenantInfo?.storeStatus === 'published' && tenantInfo?.sandboxMode;
+  
+  const sandboxSteps = [
     { name: 'Store Name', complete: !!tenantInfo?.name, link: '/owner/settings' },
-    { name: 'Business Identity (KYC)', complete: tenantInfo?.kyc?.verificationLevel !== undefined && tenantInfo.kyc.verificationLevel >= 0 && !!tenantInfo?.kyc?.mobileNumber, link: '/owner/kyc' },
     { name: 'Kitchen Address', complete: !!tenantInfo?.location?.lat, link: '/owner/settings' },
-    { name: 'Delivery Configuration', complete: !!tenantInfo?.deliveryConfig?.freeRadius, link: '/owner/settings' },
-    { name: 'Merchant Agreement', complete: !!tenantInfo?.legal?.merchantDeclarationAcceptedAt, link: '/owner/kyc' },
+    { name: 'Mobile Number', complete: !!tenantInfo?.kyc?.mobileNumber, link: '/owner/kyc' },
+    { name: 'At least 3 Menu Items', complete: menuCount >= 3, link: '/owner/menu' }
   ];
-  const completedReadiness = readinessSteps.filter(s => s.complete).length;
-  const readinessScore = Math.round((completedReadiness / readinessSteps.length) * 100);
+  const completedSandboxSteps = sandboxSteps.filter(s => s.complete).length;
+  const sandboxReady = completedSandboxSteps === sandboxSteps.length;
 
-  const handlePublishStore = async () => {
-    if (readinessScore < 100 || !tenantInfo?.slug) return;
+  const handleActivateSandbox = async () => {
+    if (!sandboxReady || !tenantInfo?.slug) return;
     try {
       await updateDoc(doc(getDb(), 'tenants', tenantInfo.slug), {
-        storeStatus: 'verification_pending'
+        storeStatus: 'published',
+        sandboxMode: true,
+        sandboxActivatedAt: new Date().toISOString()
       });
-      toast.success('Store submitted for verification! Super Admin will review shortly.');
+      toast.success('🚀 Sandbox Mode Activated! Your store is now live.');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to submit store for verification.');
+      toast.error('Failed to activate Sandbox Mode.');
     }
   };
+
+  const getPriorityActions = () => {
+    const priorities = [];
+    
+    if (tenantInfo?.storeStatus === 'draft' && !isSandboxActive) {
+      priorities.push({
+        title: 'Activate Sandbox Mode',
+        message: 'Complete the minimum requirements to publish your store and start receiving orders.',
+        action: 'Review Sandbox Requirements',
+        link: null, // Custom click handled in UI
+        impact: 'High Impact: Start earning revenue today',
+        isPrimary: true
+      });
+    }
+
+    if (isSandboxActive && analytics?.totalOrders === 0) {
+      priorities.push({
+        title: 'Get Your First Customer',
+        message: 'Share your newly published store with friends, family, and local WhatsApp groups.',
+        action: 'Share on WhatsApp',
+        link: 'whatsapp',
+        impact: 'High Impact: Generates initial traction and test orders',
+        isPrimary: true
+      });
+    }
+
+    if (!tenantInfo?.deliveryConfig?.freeRadius) {
+      priorities.push({
+        title: 'Complete Delivery Settings',
+        message: 'Set your delivery radius and minimum order value to avoid declining out-of-range orders.',
+        action: 'Configure Delivery',
+        link: '/owner/settings',
+        impact: 'Medium Impact: Reduces canceled orders',
+        isPrimary: false
+      });
+    }
+
+    if (menuCount < 5) {
+      priorities.push({
+        title: 'Expand Your Menu',
+        message: 'Stores with 5+ items receive 3x more orders. You currently have ' + menuCount + ' items.',
+        action: 'Add Menu Items',
+        link: '/owner/menu',
+        impact: 'High Impact: Increases order conversion',
+        isPrimary: false
+      });
+    }
+
+    // Default priority if everything is perfect
+    if (priorities.length === 0) {
+      priorities.push({
+        title: 'Share Store Link',
+        message: 'Keep the momentum going! Share your store link on Instagram, Facebook, and WhatsApp.',
+        action: 'Share Store',
+        link: 'whatsapp',
+        impact: 'Low Effort: Drives organic traffic',
+        isPrimary: true
+      });
+    }
+
+    return priorities.slice(0, 3);
+  };
+
+  const priorityActions = getPriorityActions();
 
   return (
     <div className="text-white space-y-6">
       
-      {/* Launch Readiness Checklist */}
-      {tenantInfo?.storeStatus !== 'published' && (
+      {/* Sandbox Mode Active Banner */}
+      {isSandboxActive && (
+        <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/10 border border-blue-500/30 rounded-2xl p-6 relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                🚀 Sandbox Mode Active
+              </h2>
+              <p className="text-sm text-blue-200 mt-1 max-w-xl">
+                Your store is live and can receive its first 10 orders. Complete full KYC verification before reaching your Sandbox limit to continue receiving orders.
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate('/owner/kyc')}
+              className="whitespace-nowrap px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20"
+            >
+              Complete Verification
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sandbox Readiness Checklist (Only show if not published/sandbox) */}
+      {tenantInfo?.storeStatus === 'draft' && !isSandboxActive && (
         <div className="bg-[#1C0E0A] border border-orange-500/20 rounded-2xl p-6 relative isolate overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-2">
                 <Target className="text-orange-500" />
-                Launch Readiness: {readinessScore}%
+                Sandbox Requirements: {completedSandboxSteps}/{sandboxSteps.length}
               </h2>
-              <p className="text-sm text-orange-200/70 mt-1">Complete these steps to publish your store.</p>
+              <p className="text-sm text-orange-200/70 mt-1">Complete these minimum steps to activate Sandbox Mode and start receiving orders today.</p>
             </div>
             <button 
-              onClick={handlePublishStore}
-              disabled={readinessScore < 100}
-              className={`px-6 py-2 rounded-xl font-bold transition-all ${readinessScore === 100 ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-white/10 text-white/40 cursor-not-allowed'}`}
+              onClick={handleActivateSandbox}
+              disabled={!sandboxReady}
+              className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${sandboxReady ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'bg-white/10 text-white/40 cursor-not-allowed'}`}
             >
-              {tenantInfo?.storeStatus === 'verification_pending' ? 'Verification Pending...' : 'Publish Store'}
+              Activate Sandbox Mode
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {readinessSteps.map(step => (
-              <div key={step.name} className={`flex items-center gap-3 p-3 rounded-lg border ${step.complete ? 'bg-green-500/10 border-green-500/20' : 'bg-black/40 border-white/5'}`}>
-                {step.complete ? <CheckCircle2 className="text-green-500" size={18} /> : <div className="w-4 h-4 rounded-full border-2 border-white/20 ml-0.5" />}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {sandboxSteps.map(step => (
+              <div key={step.name} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-white/5 transition-colors ${step.complete ? 'bg-green-500/10 border-green-500/20' : 'bg-black/40 border-white/5'}`} onClick={() => navigate(step.link)}>
                 <span className={`text-sm font-bold ${step.complete ? 'text-green-100' : 'text-gray-400'}`}>{step.name}</span>
+                {step.complete ? <CheckCircle2 className="text-green-500" size={18} /> : <ChevronRight className="text-white/20" size={16} />}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 1. AI Business Coach Briefing */}
-      {growthSnapshot && (
-        <header className="bg-gradient-to-r from-[#FF6B00]/20 via-[#FF6B00]/5 to-transparent border border-[#FF6B00]/20 rounded-2xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <BrainCircuit size={120} />
+      {/* Today's Priority Widget */}
+      <header className="bg-gradient-to-br from-[#111] to-[#0A0A0A] border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+          <Target size={120} />
+        </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-4">
+             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+             <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Today's Priority</span>
           </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-               <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-pulse" />
-               <span className="text-xs font-bold uppercase tracking-widest text-[#FF6B00]">AI Business Coach</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug max-w-3xl mb-6">
-              {growthSnapshot.summary.split('. ').map((sentence, idx) => {
-                if (sentence.includes('down') || sentence.includes('haven\'t')) return <span key={idx} className="text-red-400">{sentence}. </span>;
-                if (sentence.includes('up') || sentence.includes('VIP')) return <span key={idx} className="text-green-400">{sentence}. </span>;
-                if (!sentence) return null;
-                return <span key={idx} className="text-white/70">{sentence}. </span>;
-              })}
-            </h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-              {growthSnapshot.recommendations.map((rec, idx) => (
-                <button key={idx} onClick={() => {
-                  if (rec.actionPayload?.campaignType) navigate('/owner/marketing');
-                  if (rec.actionTitle.includes('Radius')) navigate('/owner/settings');
-                }} className="flex flex-col items-start p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group text-left">
-                  <span className="text-xs font-bold text-gray-400 mb-1">{rec.type} Action</span>
-                  <span className="text-sm font-bold text-white group-hover:text-[#FF6B00] transition-colors">{rec.actionTitle}</span>
-                  <span className="text-xs text-gray-500 mt-1 line-clamp-2">{rec.message}</span>
-                </button>
-              ))}
-              <div className="flex flex-col items-start p-3 bg-white/5 border border-white/10 rounded-xl">
-                <span className="text-xs font-bold text-gray-400 mb-1">Potential Revenue Recovery</span>
-                <span className="text-lg font-black text-green-400">₹{growthSnapshot.expectedRevenueRecovery.toLocaleString()}</span>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
+            {priorityActions.map((action, idx) => (
+              <div key={idx} className={`flex flex-col items-start p-5 rounded-xl border transition-all ${action.isPrimary ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}>
+                <h3 className="text-lg font-bold text-white mb-2">{action.title}</h3>
+                <p className="text-sm text-gray-400 mb-4 flex-1">{action.message}</p>
+                <div className="w-full flex flex-col sm:flex-row items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      if (action.link === 'whatsapp') {
+                        shareToWhatsApp();
+                      } else if (action.link) {
+                        navigate(action.link);
+                      }
+                    }}
+                    className={`w-full sm:w-auto px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${action.isPrimary ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                  >
+                    {action.action}
+                  </button>
+                  <span className="text-[10px] font-mono text-emerald-400/80">{action.impact}</span>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        </header>
-      )}
+        </div>
+      </header>
 
       {/* REAL BUSINESS OUTCOMES (Priority 5) */}
       {tenantInfo?.storeStatus === 'published' && analytics?.currentMonth && (

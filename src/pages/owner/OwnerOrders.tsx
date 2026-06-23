@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { auth } from '../../firebase';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
+import { updateMenuItem } from '../../services/api';
 
 const OWNER_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
 
@@ -41,8 +42,14 @@ const OwnerOrders: React.FC = () => {
     trackingUrl: '',
     riderName: '',
     riderPhone: '',
+    riderPhone: '',
     notifyCustomer: true
   });
+
+  // Quick Stock Modal State
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [fetchingMenu, setFetchingMenu] = useState(false);
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
 
@@ -161,6 +168,30 @@ const OwnerOrders: React.FC = () => {
     setDispatchOrder(null);
   };
 
+  const handleOpenStockModal = async () => {
+    setStockModalOpen(true);
+    setFetchingMenu(true);
+    try {
+      const q = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantId));
+      onSnapshot(q, (snapshot) => {
+        setMenuItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        setFetchingMenu(false);
+      });
+    } catch (e) {
+      console.error(e);
+      setFetchingMenu(false);
+    }
+  };
+
+  const handleToggleStock = async (item: any) => {
+    try {
+      await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
+      toast.success(`${item.name} is ${!item.isAvailable ? 'In Stock' : '86ed (Out of Stock)'}`);
+    } catch (e) {
+      toast.error('Failed to update stock');
+    }
+  };
+
   const pendingOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'CREATED' || o.status === 'PLACED');
 
   const trialEndsAt = parseTrialDate(tenantInfo?.trialEndsAt);
@@ -180,7 +211,14 @@ const OwnerOrders: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex w-full items-center md:w-auto">
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <button 
+              onClick={handleOpenStockModal}
+              className="flex w-full md:w-auto items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 px-4 py-3 md:py-2 rounded-2xl md:rounded-full font-bold transition-all whitespace-nowrap border border-gray-200 dark:border-gray-700 shadow-sm"
+            >
+              <PackageX size={16} className="mr-2" />
+              Quick Stock
+            </button>
             {pendingOrders.length > 0 && (
               <m.div 
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -483,6 +521,67 @@ const OwnerOrders: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Quick Stock Modal */}
+      <AnimatePresence>
+        {stockModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
+            <m.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="bg-white dark:bg-gray-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[600px] border border-gray-200 dark:border-gray-800"
+            >
+              <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl z-10">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Quick Stock Control</h3>
+                  <p className="text-sm text-gray-500 mt-1">Tap to instantly 86 (disable) an item</p>
+                </div>
+                <button 
+                  onClick={() => setStockModalOpen(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+                >
+                  <XCircle size={24} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 flex-1">
+                {fetchingMenu ? (
+                  <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>
+                ) : menuItems.length === 0 ? (
+                  <div className="text-center p-8 text-gray-500">No menu items found.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {menuItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleToggleStock(item)}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all active:scale-[0.98] ${
+                          item.isAvailable 
+                            ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300' 
+                            : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/30'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className={`font-bold ${item.isAvailable ? 'text-gray-900 dark:text-white' : 'text-red-700 dark:text-red-400 line-through opacity-70'}`}>
+                            {item.name}
+                          </div>
+                          <div className="text-sm text-gray-500">₹{item.price}</div>
+                        </div>
+                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                          item.isAvailable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {item.isAvailable ? 'IN STOCK' : 'OUT OF STOCK'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

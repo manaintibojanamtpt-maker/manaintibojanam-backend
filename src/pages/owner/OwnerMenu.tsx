@@ -140,6 +140,16 @@ const OwnerMenu = () => {
     setEditingItem(null);
   };
 
+  const handleToggleAvailability = async (item: MenuItem) => {
+    try {
+      await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
+      toast.success(`${item.name} is now ${!item.isAvailable ? 'Available' : 'Sold Out'}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update availability');
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -291,9 +301,15 @@ const OwnerMenu = () => {
                         <span className="bg-white/5 px-2 py-1 rounded-md text-xs text-white/70 border border-white/10">{item.category}</span>
                       </td>
                       <td className="p-4">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${item.isAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleAvailability(item);
+                          }}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all active:scale-95 ${item.isAvailable ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}
+                        >
                           {item.isAvailable ? 'Available' : 'Sold Out'}
-                        </span>
+                        </button>
                       </td>
                       <td className="p-4 text-right space-x-2">
                         <button onClick={() => handleOpenModal(item)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors">
