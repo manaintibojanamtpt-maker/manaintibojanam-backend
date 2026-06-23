@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
+import HeaderLocationDropdown from './HeaderLocationDropdown';
 
 const StorefrontDesktopHeader = () => {
   const navigate = useNavigate();
@@ -37,13 +38,7 @@ const StorefrontDesktopHeader = () => {
           </span>
         </Link>
         
-        <div className="hidden lg:flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-xl border border-gray-100 dark:border-white/5 hover:border-orange-500/30 transition-colors cursor-pointer">
-          <MapPin size={18} className="text-orange-500" />
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Delivering to</span>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">Select Location</span>
-          </div>
-        </div>
+        <HeaderLocationDropdown />
       </div>
 
       {/* Global Search */}

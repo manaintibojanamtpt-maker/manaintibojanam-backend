@@ -15,6 +15,7 @@ import { getDb } from '../lib/firebase-db';
 import toast from 'react-hot-toast';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import FounderBetaTrustBanner from '../components/FounderBetaTrustBanner';
+import { triggerHaptic } from '../utils/haptics';
 
 // --- Premium UI Components ---
 
@@ -105,15 +106,18 @@ const InteractiveCommandCenter = () => {
         </div>
 
         {/* OS Nav */}
-        <div className="flex overflow-x-auto border-b border-white/[0.05] bg-white/[0.01]">
+        <div className="flex overflow-x-auto scrollbar-hide border-b border-white/[0.05] bg-white/[0.01]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-8 py-4 text-sm font-bold transition-all whitespace-nowrap ${
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveTab(tab.id);
+              }}
+              className={`flex shrink-0 items-center gap-2 px-6 sm:px-8 py-4 text-sm font-bold transition-all whitespace-nowrap active:scale-95 ${
                 activeTab === tab.id 
-                  ? 'text-[#FF6B00] border-b-2 border-[#FF6B00] bg-white/[0.02]' 
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.01] border-b-2 border-transparent'
+                  ? 'text-[#FF6B00] border-b-2 border-[#FF6B00] bg-[#FF6B00]/[0.05]' 
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02] border-b-2 border-transparent'
               }`}
             >
               {tab.icon} {tab.label}

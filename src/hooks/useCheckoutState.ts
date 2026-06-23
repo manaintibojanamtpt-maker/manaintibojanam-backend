@@ -79,27 +79,44 @@ export function useCheckoutState() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser || hasInitialized.current) return;
+    if (!currentUser && !hasInitialized.current) return;
     
-    if (userProfile) {
-      if (!name) setName(userProfile.name || currentUser.displayName || '');
+    // Initialize profile details once
+    if (userProfile && !hasInitialized.current) {
+      if (!name) setName(userProfile.name || currentUser?.displayName || '');
       if (!phone) setPhone(userProfile.phone || '');
-      if (!email) setEmail(userProfile.email || currentUser.email || '');
-
-      // if (userProfile.preferences?.lastPaymentMethod) {
-      //   setPaymentMethod(userProfile.preferences.lastPaymentMethod);
-      // }
-
-      if (deliveryState.selectedAddress) {
-        setSelectedAddressId(deliveryState.selectedAddress.id);
-        setAddressText(deliveryState.selectedAddress.address);
-      } else if (userProfile.savedAddresses && userProfile.savedAddresses.length > 0) {
-        const defaultAddr = userProfile.savedAddresses.find(a => a.isDefault) || userProfile.savedAddresses[0];
-        setSelectedAddressId(defaultAddr.id);
-        setAddressText(defaultAddr.address);
-      }
-      
+      if (!email) setEmail(userProfile.email || currentUser?.email || '');
       hasInitialized.current = true;
+    }
+
+    // Sync delivery state continuously
+    if (deliveryState.selectedAddress) {
+      setSelectedAddressId(deliveryState.selectedAddress.id);
+      setAddressText(deliveryState.selectedAddress.addressText || deliveryState.selectedAddress.address);
+    } else if (userProfile?.savedAddresses && userProfile.savedAddresses.length > 0) {
+      const defaultAddr = userProfile.savedAddresses.find((a: any) => a.isDefault) || userProfile.savedAddresses[0];
+      setSelectedAddressId(defaultAddr.id);
+      setAddressText(defaultAddr.addressText || defaultAddr.address);
+      
+      // Update global delivery state so header and other components sync
+      setDeliveryState((prev: any) => ({
+        ...prev,
+        selectedAddress: {
+          id: defaultAddr.id,
+          label: defaultAddr.label || 'Home',
+          address: defaultAddr.address,
+          addressText: defaultAddr.addressText || defaultAddr.address,
+          fullAddress: defaultAddr.fullAddress || defaultAddr.address,
+          houseNumber: defaultAddr.houseNumber,
+          buildingName: defaultAddr.buildingName,
+          landmark: defaultAddr.landmark,
+          city: defaultAddr.city,
+          pincode: defaultAddr.pincode,
+          lat: defaultAddr.lat || 0,
+          lng: defaultAddr.lng || 0,
+          isDefault: defaultAddr.isDefault
+        }
+      }));
     }
   }, [currentUser, userProfile, deliveryState]);
 

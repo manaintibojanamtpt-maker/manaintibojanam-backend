@@ -9,6 +9,11 @@ interface LocationData {
   lng: number;
   addressText: string;
   fullAddress: string;
+  houseNumber?: string;
+  buildingName?: string;
+  landmark?: string;
+  city?: string;
+  pincode?: string;
   distanceKm: number;
   deliveryFee: number;
   isServiceable?: boolean;
@@ -220,6 +225,9 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
       lng: coordinates.lng,
       addressText: detectedAddress,
       fullAddress: fullAddress + (instructions ? ` | Note: ${instructions}` : '') + (phone ? ` | Ph: ${phone}` : ''),
+      houseNumber: house,
+      buildingName: building,
+      landmark: landmark,
       distanceKm: distanceInfo.distance,
       deliveryFee: distanceInfo.fee,
       isServiceable: distanceInfo.fee !== -1
