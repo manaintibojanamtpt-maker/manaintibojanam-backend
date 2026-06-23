@@ -1023,7 +1023,7 @@ const Menu: React.FC = () => {
               if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
               setIsCategorySheetOpen(true);
             }}
-            className={`fixed ${cart.length > 0 ? 'bottom-32' : 'bottom-24'} left-1/2 -translate-x-1/2 z-[45] bg-gray-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-black px-6 py-3 rounded-full font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-black/30 flex items-center gap-2 border border-white/10 dark:border-black/10 transition-all press-feedback`}
+            className={`fixed ${cart.length > 0 ? 'bottom-[168px]' : 'bottom-24'} left-1/2 -translate-x-1/2 z-[45] bg-gray-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-black px-6 py-3 rounded-full font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-black/30 flex items-center gap-2 border border-white/10 dark:border-black/10 transition-all press-feedback`}
           >
             <MenuIcon size={16} />
             Browse Menu
@@ -1124,31 +1124,7 @@ const Menu: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* STICKY CART CTA */}
-      <AnimatePresence>
-        {cart.length > 0 && !isCategorySheetOpen && (
-          <m.div
-            initial={{ y: 150, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 150, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-6 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-96 z-[60]"
-          >
-            <div 
-              onClick={() => navigate(`${basePath}/checkout`)}
-              className="bg-red-600 shadow-xl rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-95 transition-all"
-            >
-              <div className="flex flex-col">
-                <span className="text-white font-black text-sm uppercase tracking-widest">{cart.reduce((sum, i) => sum + i.quantity, 0)} Items</span>
-                <span className="text-red-100 font-bold text-xs">{formatPrice(cart.reduce((sum, i) => sum + (i.price * i.quantity), 0))}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-black text-sm uppercase tracking-widest">View Cart</span>
-                <ShoppingCart size={18} className="text-white" />
-              </div>
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
+
 
       </m.div>
       )}

@@ -57,7 +57,7 @@ const FloatingMiniCart: React.FC = () => {
   return (
     <div 
       className="fixed left-1/2 -translate-x-1/2 z-[90] w-full max-w-[360px] px-4 pointer-events-none"
-      style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
+      style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="relative flex flex-col items-center">
         
