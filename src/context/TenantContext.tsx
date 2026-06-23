@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { setActiveTenantId } from '../services/api';
 import { getDb } from '../lib/firebase-db';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { useAuth } from './AuthContext';
 
 export interface TenantInfo {
   id: string;
@@ -58,13 +59,16 @@ const TenantContext = createContext<TenantContextType>({
 export const useTenant = () => useContext(TenantContext);
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { userProfile } = useAuth();
+  const ownerTenantId = userProfile?.ownedTenantIds?.[0];
+
   const [tenantId, setTenantId] = useState<string>('mana-inti');
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [tenantNotFound, setTenantNotFound] = useState(false);
 
-  const resolveTenant = async () => {
+  const resolveTenant = useCallback(async () => {
     const path = window.location.pathname;
     const match = path.match(/^\/k\/([^/]+)/);
     const isOwnerPanel = path.startsWith('/owner');
@@ -84,7 +88,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (match) {
       slug = match[1];
     } else if (isOwnerPanel) {
-      slug = 'mana-inti';
+      slug = ownerTenantId || 'mana-inti';
     }
 
     if (!slug) {
@@ -125,11 +129,11 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setLoading(false);
     }
-  };
+  }, [ownerTenantId]);
 
   useEffect(() => {
     resolveTenant();
-  }, []);
+  }, [resolveTenant]);
 
   return (
     <TenantContext.Provider value={{ tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, refreshTenant: resolveTenant }}>
