@@ -224,8 +224,18 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           maxZoom: 19,
         }).addTo(map);
 
+        // Robust resize observation
+        const resizeObserver = new ResizeObserver(() => {
+          if (mapRef.current && map) {
+            map.invalidateSize();
+          }
+        });
+        resizeObserver.observe(mapRef.current!);
+
         setTimeout(() => {
-          map.invalidateSize();
+          if (mapRef.current && map) {
+            map.invalidateSize();
+          }
         }, 100);
 
         map.on('movestart', () => {
@@ -246,6 +256,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
         // Cleanup function
         return () => {
+          resizeObserver.disconnect();
           map.remove();
         };
       } catch (error) {
@@ -333,7 +344,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             </div>
 
             {/* Search Box */}
-            <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 relative z-20 shrink-0">
+            <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 relative z-50 shrink-0">
               <form onSubmit={handleSearch} className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
@@ -385,9 +396,9 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             </div>
 
             {/* Map Container */}
-            <div className="relative flex-1 min-h-[200px] sm:min-h-[300px]">
+            <div className="relative flex-1 min-h-[200px] sm:min-h-[300px] z-10 bg-gray-100 dark:bg-gray-800">
               {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-20">
                   <div className="text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-red-600" />
                     <p className="text-sm text-gray-600 dark:text-gray-400">Loading map...</p>
@@ -396,7 +407,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
               )}
               <div
                 ref={mapRef}
-                className="w-full h-full z-0"
+                className="absolute inset-0 z-0"
               />
               <style dangerouslySetInnerHTML={{ __html: `
                 .pin-moving {
