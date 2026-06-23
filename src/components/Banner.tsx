@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
@@ -103,7 +103,7 @@ const Banner: React.FC = () => {
       onTouchEnd={() => setIsPaused(false)}
     >
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={banners[currentIndex].id}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -120,25 +120,25 @@ const Banner: React.FC = () => {
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 z-20 flex flex-col justify-end pb-16 px-8 md:px-16 max-w-3xl">
-            <motion.h2 
+            <m.h2 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
               className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-2"
             >
               {banners[currentIndex].title}
-            </motion.h2>
+            </m.h2>
             {banners[currentIndex].subtitle && (
-              <motion.p 
+              <m.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
                 className="text-white/90 text-sm md:text-lg font-bold mb-8"
               >
                 {banners[currentIndex].subtitle}
-              </motion.p>
+              </m.p>
             )}
-            <motion.button 
+            <m.button 
               onClick={() => {
                 const link = banners[currentIndex].link || '/menu';
                 if (link.startsWith('http')) {
@@ -154,9 +154,9 @@ const Banner: React.FC = () => {
             >
               Order Now
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </motion.button>
+            </m.button>
           </div>
-        </motion.div>
+        </m.div>
       </AnimatePresence>
 
       {/* Controls */}

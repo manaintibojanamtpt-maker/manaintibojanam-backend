@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Loader2, Lock, Mail, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -78,20 +78,20 @@ const AdminLogin: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center w-full py-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <motion.div
+          <m.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className={`inline-block p-1 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl mb-6 overflow-hidden ${isBhojanOS ? '' : 'border-2 border-orange-500/10'}`}
           >
             <img src={displayLogo} alt="Logo" className="w-24 h-24 object-contain rounded-3xl shadow-inner" />
-          </motion.div>
+          </m.div>
           <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter" style={{ fontFamily: isBhojanOS ? "'Inter', sans-serif" : "'Playfair Display', serif" }}>
             {isBhojanOS ? "BHOJANOS" : "Admin Portal"}
           </h1>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mt-2">Secure Gateway • Authorized Only</p>
         </div>
 
-        <motion.div
+        <m.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800"
@@ -155,10 +155,10 @@ const AdminLogin: React.FC = () => {
               <span>Back to Customer Site</span>
             </Link>
           </div>
-        </motion.div>
+        </m.div>
         
         <p className="text-center mt-8 text-xs text-gray-400 font-medium">
-          &copy; {new Date().getFullYear()} Mana Inti Bojanam. All rights reserved.
+          &copy; {new Date().getFullYear()} BhojanOS. All rights reserved.
         </p>
       </div>
       </div>

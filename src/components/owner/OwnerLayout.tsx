@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X, LayoutDashboard, Rocket, BrainCircuit, BookOpen, AlertCircle, Crown, Gift, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { useTenant } from '../../context/TenantContext';
@@ -119,7 +119,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 } ${item.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {isActive && (
-                  <motion.div 
+                  <m.div 
                     layoutId="ownerSidebarActive"
                     className="absolute left-0 w-1 h-6 bg-red-500 rounded-r-full"
                     initial={{ opacity: 0 }}
@@ -175,7 +175,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.button
+            <m.button
               type="button"
               aria-label="Close owner menu"
               className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
@@ -184,7 +184,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
             />
-            <motion.aside
+            <m.aside
               className="fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-sm flex-col border-r border-white/10 bg-[#0f0f11] shadow-2xl lg:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -281,7 +281,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   Sign Out
                 </button>
               </div>
-            </motion.aside>
+            </m.aside>
           </>
         )}
       </AnimatePresence>

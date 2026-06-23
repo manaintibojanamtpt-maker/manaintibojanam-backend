@@ -32,7 +32,7 @@ import {
   Minimize
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from 'framer-motion';
 import { 
   collection, 
   query, 
@@ -280,7 +280,7 @@ export default function AdminPanel() {
     });
 
     // Reviews Listener
-    const unsubscribeReviews = onSnapshot(query(collection(getDb(), "reviews"), orderBy("createdAt", "desc")), (snapshot) => {
+    const unsubscribeReviews = onSnapshot(query(collection(getDb(), "reviews"), orderBy("createdAt", "desc"), limit(100)), (snapshot) => {
       setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
@@ -297,7 +297,7 @@ export default function AdminPanel() {
     });
 
     // Subscriptions Listener
-    const subscriptionsQuery = query(collection(getDb(), "subscriptions"), orderBy("createdAt", "desc"));
+    const subscriptionsQuery = query(collection(getDb(), "subscriptions"), orderBy("createdAt", "desc"), limit(100));
     const unsubscribeSubscriptions = onSnapshot(subscriptionsQuery, (snapshot) => {
       setSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => {
@@ -317,7 +317,7 @@ export default function AdminPanel() {
     });
 
     // Support Tickets Listener
-    const supportQuery = query(collection(getDb(), "supportTickets"), orderBy("createdAt", "desc"));
+    const supportQuery = query(collection(getDb(), "supportTickets"), orderBy("createdAt", "desc"), limit(100));
     const unsubscribeSupport = onSnapshot(supportQuery, (snapshot) => {
       setSupportTickets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => {
@@ -821,13 +821,13 @@ export default function AdminPanel() {
       {/* ZOMATO-STYLE NEW ORDER OVERLAY */}
       <AnimatePresence>
         {newOrderIds.length > 0 && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
           >
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.8, y: 50 }}
@@ -857,8 +857,8 @@ export default function AdminPanel() {
                 <Check size={28} />
                 Acknowledge
               </button>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -866,7 +866,7 @@ export default function AdminPanel() {
       {/* SIDEBAR */}
       <AnimatePresence>
         {(isSidebarOpen || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (
-          <motion.div 
+          <m.div 
             initial={typeof window !== 'undefined' && window.innerWidth < 768 ? { x: -300 } : false}
             animate={{ x: 0 }}
             exit={{ x: -300 }}
@@ -910,14 +910,14 @@ export default function AdminPanel() {
                 <span>Logout</span>
               </button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       {/* OVERLAY FOR MOBILE SIDEBAR */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -994,7 +994,7 @@ export default function AdminPanel() {
         <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8 lg:px-12 md:py-8 lg:py-12 bg-brand-bg dark:bg-dark-bg transition-colors duration-300">
         <AnimatePresence mode="wait">
           {tab === "dashboard" && (
-            <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+            <m.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1105,11 +1105,11 @@ export default function AdminPanel() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "analytics" && (
-            <motion.div key="analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+            <m.div key="analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Business Analytics</h2>
@@ -1201,11 +1201,11 @@ export default function AdminPanel() {
                 </div>
                 <TrendingUp size={150} className="absolute -right-5 md:-right-10 -bottom-5 md:-bottom-10 text-white/10 rotate-12" />
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "categories" && (
-            <motion.div key="categories" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+            <m.div key="categories" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <div className="flex flex-col gap-2 md:gap-0 md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Category Management</h2>
@@ -1324,11 +1324,11 @@ export default function AdminPanel() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "orders" && (
-            <motion.div key="orders" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="orders" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="flex flex-col gap-2 md:gap-0 md:justify-between md:items-center mb-8 md:mb-12">
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Manage Orders</h2>
@@ -1491,11 +1491,11 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "refunds" && (
-            <motion.div key="refunds" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="refunds" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-8 md:mb-12 tracking-tight">Refund Management</h2>
               
               <div className="space-y-6">
@@ -1555,11 +1555,11 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "menu" && (
-            <motion.div key="menu" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="menu" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8 md:mb-12">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Menu Management</h2>
                 <button 
@@ -1644,11 +1644,11 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "add_item" && (
-            <motion.div key="add_item" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <m.div key="add_item" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-12">
                 <button onClick={() => setTab("menu")} className="p-2 md:p-3 hover:bg-white dark:hover:bg-gray-800 rounded-2xl text-gray-400 hover:text-red-600 transition-all">
                   <X size={20} className="md:size-6" />
@@ -1744,11 +1744,11 @@ export default function AdminPanel() {
                   </button>
                 </div>
               </form>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "edit_item" && editingItem && (
-            <motion.div key="edit_item" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <m.div key="edit_item" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-12">
                 <button onClick={() => { setEditingItem(null); setTab("menu"); }} className="p-2 md:p-3 hover:bg-white dark:hover:bg-gray-800 rounded-2xl text-gray-400 hover:text-red-600 transition-all">
                   <X size={20} className="md:size-6" />
@@ -1861,11 +1861,11 @@ export default function AdminPanel() {
                   </button>
                 </div>
               </form>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "coupons" && (
-            <motion.div key="coupons" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="coupons" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-8 md:mb-12 tracking-tight">Coupon Management</h2>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
@@ -1933,11 +1933,11 @@ export default function AdminPanel() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "subscriptions" && (
-            <motion.div key="subscriptions" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="subscriptions" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 md:mb-12 gap-4">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Subscriptions</h2>
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-900 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
@@ -2000,11 +2000,11 @@ export default function AdminPanel() {
                   </table>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "reviews" && (
-            <motion.div key="reviews" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="reviews" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-8 md:mb-12 tracking-tight">Customer Reviews</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
@@ -2100,11 +2100,11 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "banners" && (
-            <motion.div key="banners" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+            <m.div key="banners" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <div className="flex flex-col gap-2 md:gap-0 md:items-center md:justify-between mb-8 md:mb-12">
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">Banners</h2>
@@ -2189,11 +2189,11 @@ export default function AdminPanel() {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "pricing" && (
-            <motion.div key="pricing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="pricing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-8 md:mb-12 tracking-tight">Pricing & Fees</h2>
               
               <form onSubmit={handleUpdateSettings} className="bg-white dark:bg-gray-900 rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 lg:p-12 shadow-sm border border-gray-100 dark:border-gray-800 max-w-2xl">
@@ -2323,19 +2323,19 @@ export default function AdminPanel() {
                   </button>
                 </div>
               </form>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "payments" && (
-            <motion.div key="payments" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="payments" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <Suspense fallback={<div className="py-16 text-center text-gray-500">Loading payment verification...</div>}>
                 <PaymentVerificationPanel />
               </Suspense>
-            </motion.div>
+            </m.div>
           )}
 
           {tab === "support" && (
-            <motion.div key="support" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <m.div key="support" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-8 md:mb-12 tracking-tight">Customer Support</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
@@ -2436,20 +2436,20 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* TRACKING MODAL */}
         <AnimatePresence>
           {showTrackingModal && (
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
             >
-              <motion.div 
+              <m.div 
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative overflow-hidden"
@@ -2517,8 +2517,8 @@ export default function AdminPanel() {
                     Update Tracking
                   </button>
                 </div>
-              </motion.div>
-            </motion.div>
+              </m.div>
+            </m.div>
           )}
         </AnimatePresence>
 

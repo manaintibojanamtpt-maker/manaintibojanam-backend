@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="col-span-2 md:col-span-1 flex flex-col items-center md:items-start text-center md:text-left">
             <Link to="/" className="inline-flex flex-col items-center md:items-start gap-2 mb-6 group cursor-pointer">
-              <span className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-gray-900 dark:text-white tracking-tight drop-shadow-xl">Mana Inti Bojanam</span>
+              <span className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-gray-900 dark:text-white tracking-tight drop-shadow-xl">BhojanOS</span>
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-red-400">Premium Telugu Home Kitchen</span>
             </Link>
             <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm font-medium max-w-xs mb-8 hidden md:block">
@@ -91,7 +91,7 @@ const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row justify-between items-center pt-12 border-t border-gray-100 dark:border-white/5 gap-6">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-            © {new Date().getFullYear()} Mana Inti Bojanam. All rights reserved.
+            © {new Date().getFullYear()} BhojanOS. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">

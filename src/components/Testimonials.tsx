@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
 
 const testimonials = [
@@ -15,7 +15,7 @@ const testimonials = [
     id: 2,
     name: "Rahul Verma",
     role: "Regular Customer",
-    content: "Mana Inti Bojanam is my go-to for lunch every day. Healthy, no preservatives, and very affordable.",
+    content: "BhojanOS is my go-to for lunch every day. Healthy, no preservatives, and very affordable.",
     rating: 5,
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop"
   },
@@ -34,7 +34,7 @@ const Testimonials: React.FC = () => {
     <section className="py-16 px-6 bg-white dark:bg-dark-bg overflow-hidden">
       <div className="w-full">
         <div className="text-center mb-12">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -42,7 +42,7 @@ const Testimonials: React.FC = () => {
           >
             <Star size={16} className="fill-red-600" />
             <span className="text-xs font-black uppercase tracking-widest">4.5 Rating from 100+ Customers</span>
-          </motion.div>
+          </m.div>
           <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight mb-4">What Our Family Says</h2>
           <p className="text-gray-500 dark:text-gray-400 font-medium mx-auto max-w-none">
             We take pride in serving authentic home-cooked meals. Here's why our customers love us.
@@ -51,7 +51,7 @@ const Testimonials: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, idx) => (
-            <motion.div
+            <m.div
               key={testimonial.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -83,7 +83,7 @@ const Testimonials: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 font-medium italic leading-relaxed">
                 "{testimonial.content}"
               </p>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

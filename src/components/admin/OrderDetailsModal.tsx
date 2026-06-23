@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { X, Package, Clock, CreditCard, MapPin, Phone, User } from 'lucide-react';
 
 import { Order } from '../../types';
@@ -25,13 +25,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose })
   const isScheduled = order.deliveryType === 'scheduled' || (order.scheduledTime && order.deliveryType !== 'asap');
   return (
     <AnimatePresence>
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
       >
-        <motion.div 
+        <m.div 
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           exit={{ scale: 0.9 }}
@@ -113,8 +113,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose })
               )}
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </AnimatePresence>
   );
 };

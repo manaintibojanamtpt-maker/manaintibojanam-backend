@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Sparkles, Bot, User, Utensils, ShoppingCart, Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import { isStoreOpenNow } from '../lib/storeUtils';
 import { useCart } from '../context/CartContext';
@@ -246,27 +246,27 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
   return (
     <>
       {/* Floating Action Button */}
-      <motion.button
+      <m.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleOpen}
         className={`fixed ${cart.length > 0 ? 'bottom-48 sm:bottom-28' : 'bottom-24'} right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-black transition-all duration-300`}
       >
         <Sparkles size={24} />
-      </motion.button>
+      </m.button>
 
       {/* Bottom Sheet Modal */}
       <AnimatePresence>
         {isOpen && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleClose}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
             />
-            <motion.div
+            <m.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -296,7 +296,7 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
               {/* Chat Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-transparent">
                 {messages.map((msg, idx) => (
-                  <motion.div
+                  <m.div
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -309,12 +309,12 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
                     }`}>
                       <p className="text-sm leading-relaxed">{msg.content}</p>
                     </div>
-                  </motion.div>
+                  </m.div>
                 ))}
 
                 {/* Interactive Confirmation Card */}
                 {pendingToolCall && (
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-[85%] bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-2xl p-4 shadow-sm">
+                  <m.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-[85%] bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-500 font-bold mb-2">
                       <AlertTriangle size={18} />
                       Action Required
@@ -328,18 +328,18 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
                       <button onClick={() => confirmTool(true)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-2 rounded-lg transition-colors">Yes, do it</button>
                       <button onClick={() => confirmTool(false)} className="flex-1 bg-white dark:bg-black border border-yellow-200 dark:border-yellow-900/50 text-gray-700 dark:text-gray-300 text-sm font-bold py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
 
                 {/* Typing Indicator */}
                 {isTyping && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                  <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                     <div className="bg-white dark:bg-[#151515] shadow-sm border border-gray-100 dark:border-white/5 rounded-2xl rounded-bl-none p-4 flex gap-1.5">
-                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
-                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
-                      <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <m.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <m.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <m.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full" />
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -384,7 +384,7 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
                   <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Local AI</span>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

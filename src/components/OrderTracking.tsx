@@ -19,7 +19,7 @@ import {
   Utensils,
   ChevronDown
 } from "lucide-react";
-import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "framer-motion";
+import { m, AnimatePresence, useScroll, useSpring, useTransform } from 'framer-motion';
 import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
 import { OrderStatus } from "../types";
@@ -376,7 +376,7 @@ export default function OrderTracking() {
   }
 
   return (
-    <motion.div 
+    <m.div 
       className="min-h-screen bg-brand-bg dark:bg-dark-bg flex flex-col" 
       style={{ minHeight: '100dvh', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
     >
@@ -388,11 +388,11 @@ export default function OrderTracking() {
           paddingRight: 'max(0.5rem, env(safe-area-inset-right))'
         }}
       >
-      <motion.div className="fixed left-0 right-0 top-0 z-[60] h-1 origin-left bg-gradient-to-r from-orange-500 via-red-500 to-rose-500" style={{ scaleX: scrollProgress }} />
+      <m.div className="fixed left-0 right-0 top-0 z-[60] h-1 origin-left bg-gradient-to-r from-orange-500 via-red-500 to-rose-500" style={{ scaleX: scrollProgress }} />
       {/* PULL TO REFRESH INDICATOR */}
       <AnimatePresence>
         {isRefreshing && (
-          <motion.div 
+          <m.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 60, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -400,7 +400,7 @@ export default function OrderTracking() {
           >
             <RefreshCcw size={20} className="animate-spin" />
             <span className="ml-2 font-black text-xs uppercase tracking-widest">Refreshing...</span>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
       {/* DIGITAL INVOICE MODAL */}
@@ -413,13 +413,13 @@ export default function OrderTracking() {
       {/* RATING MODAL */}
       <AnimatePresence>
         {showRating && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
           >
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl relative overflow-hidden"
@@ -492,8 +492,8 @@ export default function OrderTracking() {
                   <p className="text-gray-500 font-medium">Your review helps us serve you better.</p>
                 </div>
               )}
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
       {/* HEADER */}
@@ -549,7 +549,7 @@ export default function OrderTracking() {
       <div className="px-2 sm:px-3 mt-2 lg:max-w-3xl lg:mx-auto">
         
         {/* LIVE STATUS HERO */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24 }}
@@ -561,14 +561,14 @@ export default function OrderTracking() {
               <h2 className="mt-1 text-2xl font-black tracking-tight text-gray-900">{displayState.customerTitle || currentStatusStep?.label}</h2>
               <p className="mt-1 text-sm font-medium text-gray-500">{displayState.customerSubtitle || currentStatusStep?.description}</p>
             </div>
-            <motion.div
+            <m.div
               className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-red-600"
               animate={{ scale: [1, 1.04, 1] }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
             >
               <span className="h-2 w-2 rounded-full bg-red-500" />
               Live
-            </motion.div>
+            </m.div>
           </div>
 
           <div className="mt-4">
@@ -577,7 +577,7 @@ export default function OrderTracking() {
               <span>{Math.round(statusProgress * 100)}%</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-              <motion.div
+              <m.div
                 className="h-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-red-600"
                 initial={false}
                 animate={{ width: `${statusProgress * 100}%` }}
@@ -601,11 +601,11 @@ export default function OrderTracking() {
               </Link>
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* DELIVERY DETAILS MVP */}
         {order.deliveryPartner && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm"
@@ -646,13 +646,13 @@ export default function OrderTracking() {
                 <MapPin size={18} /> Track Live Delivery
               </a>
             )}
-          </motion.div>
+          </m.div>
         )}
 
         {/* CANCELLATION TIMER */}
         <AnimatePresence>
           {canCancel && (order.status === OrderStatus.PLACED || order.status === OrderStatus.PENDING) && (
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -673,7 +673,7 @@ export default function OrderTracking() {
               >
                 <XCircle size={20} /> Cancel Order
               </button>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -731,7 +731,7 @@ export default function OrderTracking() {
                   const isLast = index === filteredStatusSteps.length - 1;
 
                   return (
-                    <motion.div
+                    <m.div
                       key={step.id}
                       className="relative flex gap-4"
                       initial={{ opacity: 0, y: 5 }}
@@ -758,7 +758,7 @@ export default function OrderTracking() {
                           <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{step.description}</p>
                         )}
                       </div>
-                    </motion.div>
+                    </m.div>
                   );
                 })}
               </div>
@@ -911,14 +911,14 @@ export default function OrderTracking() {
       {/* INVOICE MODAL */}
       <AnimatePresence>
         {showInvoice && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowInvoice(false)}
           >
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -926,11 +926,11 @@ export default function OrderTracking() {
               onClick={(e) => e.stopPropagation()}
             >
               <DigitalInvoice order={order} onClose={() => setShowInvoice(false)} />
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

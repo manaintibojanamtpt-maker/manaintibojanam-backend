@@ -8,13 +8,13 @@ interface ReferralBannerProps {
 export default function ReferralBanner({ referralCode }: ReferralBannerProps) {
   const [copied, setCopied] = useState(false);
 
-  const message = `🍱 Daily Home-Style Meals!\n\nI’m using Mana Inti Bojanam for daily meals 😋\n\nUse my code ${referralCode} and get ₹100 OFF!\n\n👉 https://mana-inti-bojanam-pune-492610.web.app`;
+  const message = `🍱 Daily Home-Style Meals!\n\nI’m using BhojanOS for daily meals 😋\n\nUse my code ${referralCode} and get ₹100 OFF!\n\n👉 https://bhojanos.web.app`;
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Mana Inti Bojanam',
+          title: 'BhojanOS',
           text: message,
         });
       } catch (err) {

@@ -1,11 +1,11 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Shield, Lock, Eye, Database } from 'lucide-react';
 
 const Privacy: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 px-6">
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100"
@@ -43,7 +43,7 @@ const Privacy: React.FC = () => {
             <p>You have the right to access, correct, or request the deletion of your personal data. Please contact our support team for any privacy-related inquiries.</p>
           </section>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 };

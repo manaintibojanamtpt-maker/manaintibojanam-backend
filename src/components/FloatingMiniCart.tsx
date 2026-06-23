@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { m, AnimatePresence, useAnimation } from 'framer-motion';
 import { ShoppingBag, X, Plus, Minus, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useTenant } from '../context/TenantContext';
@@ -64,7 +64,7 @@ const FloatingMiniCart: React.FC = () => {
         {/* SNAP STATE 3: ACTIVE (Mini List) */}
         <AnimatePresence>
           {snapState === 'active' && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -102,16 +102,16 @@ const FloatingMiniCart: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* MAIN PILL (States 1 & 2) */}
-        <motion.div
+        <m.div
           animate={controls}
           className="pointer-events-auto"
         >
-          <motion.div
+          <m.div
             layout
             initial={false}
             animate={{
@@ -134,7 +134,7 @@ const FloatingMiniCart: React.FC = () => {
               {/* Expanded Info */}
               <AnimatePresence mode="popLayout">
                 {snapState !== 'collapsed' && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
@@ -160,12 +160,12 @@ const FloatingMiniCart: React.FC = () => {
                         <ArrowRight size={12} strokeWidth={3} />
                       </button>
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
     </div>
   );

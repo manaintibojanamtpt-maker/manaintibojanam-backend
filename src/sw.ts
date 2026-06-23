@@ -53,7 +53,7 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch (error) {
-    payload = { title: 'Mana Inti Bojanam', body: event.data.text() };
+    payload = { title: 'BhojanOS', body: event.data.text() };
   }
 
   const notification = payload.notification || payload;
@@ -61,7 +61,7 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push notification data:', payload);
 
   const options = {
-    body: notification.body || data.body || 'New notification from Mana Inti Bojanam',
+    body: notification.body || data.body || 'New notification from BhojanOS',
     icon: notification.icon || '/icon-v20-192.png',
     badge: '/icon-v20-192.png',
     vibrate: [200, 100, 200],
@@ -76,7 +76,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(notification.title || data.title || 'Mana Inti Bojanam', options)
+    self.registration.showNotification(notification.title || data.title || 'BhojanOS', options)
   );
 });
 

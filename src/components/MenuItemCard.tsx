@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { formatPrice, cn } from '../lib/utils';
 import { useCart } from '../context/CartContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import BottomSheet from './BottomSheet';
 import { triggerHaptic } from '../utils/haptics';
 import { Minus, Plus, Star, Check } from 'lucide-react';
@@ -94,7 +94,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const badgeDetails = getBadgeDetails();
 
   return (
-    <motion.article 
+    <m.article 
       id={`menu-item-${item.id}`}
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -145,7 +145,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
       {/* Right Image & CTA Column */}
       <div className="relative flex flex-col items-center flex-shrink-0 mb-3 ml-2">
-        <motion.div 
+        <m.div 
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-xl bg-gray-200 dark:bg-white/10 overflow-hidden shadow-sm border border-gray-200 dark:border-white/5 relative group"
@@ -168,25 +168,25 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        </motion.div>
+        </m.div>
         
         {/* Floating Add Button */}
         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 w-[85%]">
           {showSuccess ? (
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.8 }} animate={{ scale: 1 }}
               className="h-9 w-full bg-emerald-500/20 backdrop-blur-md rounded-full flex items-center justify-center border border-emerald-500/50"
             >
               <Check size={18} className="text-emerald-400" strokeWidth={3} />
-            </motion.div>
+            </m.div>
           ) : quantity > 0 && !(item.addons && item.addons.length > 0) ? (
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className="h-10 w-full bg-orange-50 dark:bg-[#2A1A12] rounded-full flex items-center justify-between px-1.5 shadow-sm border border-orange-200 dark:border-orange-500/30"
             >
-              <motion.button
+              <m.button
                 whileTap={{ scale: 0.85 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -196,16 +196,16 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 className="w-7 h-7 flex items-center justify-center hover:bg-orange-200 dark:hover:bg-white/10 rounded-full transition-colors"
               >
                 <Minus size={14} className="text-orange-600 dark:text-[#F4C27A]" strokeWidth={3} />
-              </motion.button>
-              <motion.span 
+              </m.button>
+              <m.span 
                 key={quantity}
                 initial={{ y: 5, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 className="text-sm font-black text-orange-900 dark:text-white tabular-nums"
               >
                 {quantity}
-              </motion.span>
-              <motion.button
+              </m.span>
+              <m.button
                 whileTap={{ scale: 0.8 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -215,10 +215,10 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 className="w-7 h-7 flex items-center justify-center hover:bg-orange-200 dark:hover:bg-white/10 rounded-full transition-colors"
               >
                 <Plus size={14} className="text-orange-600 dark:text-[#F4C27A]" strokeWidth={3} />
-              </motion.button>
-            </motion.div>
+              </m.button>
+            </m.div>
           ) : (
-            <motion.button
+            <m.button
               whileTap={{ scale: 0.95 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -238,7 +238,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-[#D4A574] border border-dark-bg"></span>
                 </span>
               )}
-            </motion.button>
+            </m.button>
           )}
         </div>
       </div>
@@ -294,7 +294,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           </div>
         </div>
       </BottomSheet>
-    </motion.article>
+    </m.article>
   );
 };
 

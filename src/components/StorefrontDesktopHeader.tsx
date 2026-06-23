@@ -33,7 +33,7 @@ const StorefrontDesktopHeader = () => {
         <Link to={`${basePath}/`} className="flex items-center gap-2 group">
           <img src={bhojanOsLogo} alt="BhojanOS" className="w-8 h-8 object-contain" />
           <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
-            {tenantDetails?.name || 'Mana Inti Bojanam'}
+            {tenantDetails?.name || 'BhojanOS'}
           </span>
         </Link>
         

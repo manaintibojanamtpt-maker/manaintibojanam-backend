@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Fingerprint, Smartphone, ShieldCheck, X, ShieldAlert } from 'lucide-react';
 
 interface BiometricModalProps {
@@ -27,7 +27,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -36,7 +36,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
           />
 
           {/* Modal Content */}
-          <motion.div
+          <m.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -57,17 +57,17 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
             <div className="p-8 text-center">
               {/* Icon Animation */}
               <div className="relative mb-6 flex justify-center">
-                <motion.div
+                <m.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
                   className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-zinc-800 text-orange-500 shadow-inner"
                 >
                   <Icon size={48} />
-                </motion.div>
+                </m.div>
                 
                 {/* Pulsing circles */}
-                <motion.div 
+                <m.div 
                   animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
                   transition={{ duration: 2, repeat: Infinity }}
                   className="absolute inset-0 rounded-full bg-orange-500/20"
@@ -81,7 +81,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
               <p className="mb-8 text-zinc-400">
                 {type === 'onboarding' 
                   ? `Enable ${biometryType || 'Biometrics'} for instant, secure access to your account without typing passwords.` 
-                  : 'Verify your identity to continue using Mana Inti Bojanam.'}
+                  : 'Verify your identity to continue using BhojanOS.'}
               </p>
 
               <div className="flex flex-col gap-3">
@@ -115,7 +115,7 @@ const BiometricModal: React.FC<BiometricModalProps> = ({
                 <span>Your biometric data never leaves this device</span>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

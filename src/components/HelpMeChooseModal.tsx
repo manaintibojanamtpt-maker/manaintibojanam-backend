@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Sparkles, Utensils, Flame, Leaf, X, ChevronRight, Check } from 'lucide-react';
 import { MenuItem } from '../types';
 import { useCart } from '../context/CartContext';
@@ -137,7 +137,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
         <div className="flex-1">
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+              <m.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-6">How hungry are you?</h3>
                 <div className="grid gap-3">
                   {[
@@ -161,11 +161,11 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {step === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+              <m.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-6">Spice Preference?</h3>
                 <div className="grid gap-3">
                   {[
@@ -189,11 +189,11 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+              <m.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-6">Dietary Choice?</h3>
                 <div className="grid gap-3">
                   {[
@@ -216,11 +216,11 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {step === 4 && (
-              <motion.div key="step4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+              <m.div key="step4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Your Perfect Match</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Based on your preferences</p>
@@ -258,7 +258,7 @@ export default function HelpMeChooseModal({ isOpen, onClose, menuItems }: Props)
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>

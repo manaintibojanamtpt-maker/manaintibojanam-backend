@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { Order } from '../types';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useTenant } from '../context/TenantContext';
@@ -69,40 +69,40 @@ const OrderSuccess: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] bg-brand-bg dark:bg-dark-bg flex flex-col items-center justify-center p-6 text-center">
-      <motion.div
+      <m.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", bounce: 0.5, duration: 0.6 }}
         className="w-32 h-32 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-6"
       >
-        <motion.div
+        <m.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.3, type: "spring", bounce: 0.5 }}
         >
           <CheckCircle2 size={72} className="text-green-500" strokeWidth={2.5} />
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
       
-      <motion.h1 
+      <m.h1 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="text-2xl font-black text-gray-900 dark:text-white mb-2"
       >
         Order Placed Successfully!
-      </motion.h1>
+      </m.h1>
       
-      <motion.p 
+      <m.p 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
         className="text-gray-500 dark:text-gray-400 mb-10 font-medium"
       >
         Order #{order.orderNumber || order.id.slice(-6).toUpperCase()}
-      </motion.p>
+      </m.p>
       
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
@@ -120,7 +120,7 @@ const OrderSuccess: React.FC = () => {
         >
           Back to Menu
         </Link>
-      </motion.div>
+      </m.div>
     </div>
   );
 };

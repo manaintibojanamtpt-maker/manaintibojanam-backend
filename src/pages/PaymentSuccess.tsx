@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { updateOrderStatus, updatePaymentStatus } from '../services/api';
 import { Order, OrderStatus } from '../types';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, ArrowRight, RefreshCw, ShoppingBag, Clock, X, Home } from 'lucide-react';
 import { saveGuestOrder } from '../lib/guestOrders';
 import toast from 'react-hot-toast';
@@ -110,7 +110,7 @@ const PaymentSuccess: React.FC = () => {
   return (
     <div className="min-h-screen bg-brand-bg dark:bg-dark-bg">
       <div className="w-full px-4 py-10">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -156,7 +156,7 @@ const PaymentSuccess: React.FC = () => {
               Track Order
             </Link>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </div>
   );

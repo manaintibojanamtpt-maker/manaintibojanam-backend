@@ -6,7 +6,7 @@ import {
   Activity, TrendingUp, AlertOctagon, Heart, Award, Target, PackageX, AlertCircle,
   BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
@@ -28,103 +28,7 @@ const PENDING_STATUSES = new Set(['CREATED', 'PLACED', 'PENDING']);
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? `${window.location.origin}/k/${slugOrId}` : '';
 
-// --- CUSTOM SVG SPARKLINE CHART ---
-const SparklineChart = () => {
-  // Mock data for 12 hours (e.g. 10 AM to 10 PM)
-  const actualData = [10, 15, 35, 45, 30, 20, 25, 40, 65, 80, 50, 25];
-  const predictedData = [12, 18, 30, 50, 35, 22, 28, 45, 60, 85, 55, 30];
-  
-  const maxVal = Math.max(...actualData, ...predictedData);
-  const width = 800;
-  const height = 200;
-  const paddingX = 0;
-  const paddingY = 20;
-  
-  const getSmoothPath = (data: number[]) => {
-    if (data.length === 0) return '';
-    let path = `M 0 ${height - paddingY - ((data[0] / maxVal) * (height - paddingY * 2))}`;
-    for (let i = 0; i < data.length - 1; i++) {
-      const x1 = (i / (data.length - 1)) * width;
-      const y1 = height - paddingY - ((data[i] / maxVal) * (height - paddingY * 2));
-      const x2 = ((i + 1) / (data.length - 1)) * width;
-      const y2 = height - paddingY - ((data[i + 1] / maxVal) * (height - paddingY * 2));
-      const cx1 = x1 + (x2 - x1) / 3;
-      const cx2 = x2 - (x2 - x1) / 3;
-      path += ` C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
-    }
-    return path;
-  };
-
-  const actualPath = getSmoothPath(actualData);
-  const predictedPath = getSmoothPath(predictedData);
-
-  return (
-    <div className="w-full h-full relative group">
-       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
-         {/* Grid lines */}
-         <path d={`M 0 ${height/2} L ${width} ${height/2}`} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />
-         <path d={`M 0 ${height-1} L ${width} ${height-1}`} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-         
-         {/* Predicted Line (Dashed, White/Gray) */}
-         <motion.path 
-           d={predictedPath} 
-           fill="none" 
-           stroke="rgba(255,255,255,0.3)" 
-           strokeWidth="2" 
-           strokeDasharray="4 4"
-           initial={{ pathLength: 0, opacity: 0 }}
-           animate={{ pathLength: 1, opacity: 1 }}
-           transition={{ duration: 1.5, ease: "easeInOut" }}
-         />
-         
-         {/* Actual Line Gradient Area */}
-         <defs>
-           <linearGradient id="gradientActual" x1="0" y1="0" x2="0" y2="1">
-             <stop offset="0%" stopColor="#A855F7" stopOpacity="0.4" />
-             <stop offset="100%" stopColor="#A855F7" stopOpacity="0" />
-           </linearGradient>
-         </defs>
-         <motion.path 
-           d={`${actualPath} L ${width} ${height} L 0 ${height} Z`} 
-           fill="url(#gradientActual)" 
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ duration: 1.5, delay: 0.5 }}
-         />
-         
-         {/* Actual Line (Solid, Purple) */}
-         <motion.path 
-           d={actualPath} 
-           fill="none" 
-           stroke="#A855F7" 
-           strokeWidth="3"
-           initial={{ pathLength: 0 }}
-           animate={{ pathLength: 1 }}
-           transition={{ duration: 1.5, ease: "easeOut" }}
-         />
-
-         {/* Current Point Dot */}
-         <motion.circle 
-           cx={(8 / (actualData.length - 1)) * width} 
-           cy={height - paddingY - ((actualData[8] / maxVal) * (height - paddingY * 2))} 
-           r="5" 
-           fill="white" 
-           stroke="#A855F7" 
-           strokeWidth="3"
-           initial={{ scale: 0 }}
-           animate={{ scale: 1 }}
-           transition={{ delay: 1.5, type: "spring" }}
-         />
-       </svg>
-       
-       <div className="absolute top-0 right-0 bg-[#A855F7]/10 border border-[#A855F7]/30 text-[#A855F7] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2">
-         <div className="w-1.5 h-1.5 rounded-full bg-[#A855F7] animate-pulse" />
-         Live Tracking
-       </div>
-    </div>
-  );
-};
-
+const SparklineChart = React.lazy(() => import('../../components/owner/widgets/SparklineChart'));
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
@@ -472,8 +376,10 @@ const OwnerDashboard = () => {
                     </div>
                  </div>
               </div>
-              <div className="h-64 w-full">
-                 <SparklineChart />
+              <div className="h-48 mt-4 relative w-full overflow-hidden">
+                <React.Suspense fallback={<div className="w-full h-full bg-white/5 animate-pulse rounded-lg" />}>
+                  <SparklineChart />
+                </React.Suspense>
               </div>
            </div>
 

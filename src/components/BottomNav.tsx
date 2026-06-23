@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, ShoppingBag, User, Utensils } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import ActiveOrderStrip from './ActiveOrderStrip';
 import { cn } from '../lib/utils';
@@ -61,7 +61,7 @@ const BottomNav = () => {
 
   return (
     <AnimatePresence>
-      <motion.nav
+      <m.nav
         initial={{ y: 0, opacity: 1 }}
         animate={{ y: isVisible ? 0 : 100, opacity: isVisible ? 1 : 0 }}
         transition={{ type: "spring", stiffness: 400, damping: 40 }}
@@ -86,7 +86,7 @@ const BottomNav = () => {
                 className="relative flex flex-col items-center justify-center w-16 h-12 group"
               >
                 {isActive && (
-                  <motion.div
+                  <m.div
                     layoutId="activeBar"
                     className="absolute -bottom-1 w-1 h-1 bg-orange-500 rounded-full"
                     transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
@@ -94,7 +94,7 @@ const BottomNav = () => {
                 )}
                 
                 <div className="relative z-10 flex flex-col items-center gap-1.5">
-                  <motion.div 
+                  <m.div 
                     animate={{ 
                       y: isActive ? -2 : 0,
                       scale: isActive ? 1.15 : 1
@@ -108,7 +108,7 @@ const BottomNav = () => {
                       size={20} 
                       strokeWidth={isActive ? 2.5 : 2}
                     />
-                  </motion.div>
+                  </m.div>
                   <span className={cn(
                     "text-[8px] font-black tracking-[0.2em] uppercase transition-all duration-300",
                     isActive ? 'text-white' : 'text-white/20'
@@ -118,7 +118,7 @@ const BottomNav = () => {
                 </div>
 
                 {isActive && (
-                   <motion.div
+                   <m.div
                      layoutId="navGlow"
                      className="absolute inset-0 bg-orange-500/5 blur-xl rounded-full"
                      transition={{ duration: 1 }}
@@ -128,7 +128,7 @@ const BottomNav = () => {
             );
           })}
         </div>
-      </motion.nav>
+      </m.nav>
     </AnimatePresence>
   );
 };

@@ -290,7 +290,7 @@ export const populateSampleData = async () => {
     await setDoc(tenantRef, {
       id: "mana-inti",
       slug: "mana-inti",
-      name: "Mana Inti Bojanam",
+      name: "BhojanOS",
       ownerId: "SYSTEM_SEEDED",
       isActive: true,
       planId: "enterprise",

@@ -78,7 +78,7 @@ class EmailService {
             itemsHtml: this.renderItemsHtml(payload.items),
             totalInWords: this.numberToWords(payload.totalAmount),
             supportPhone: '+91-XXXX-XXXX-XX', // Update with actual support number
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });
@@ -151,7 +151,7 @@ class EmailService {
             courierName: payload.courierProvider || 'Our Courier',
             trackingUrl: payload.trackingUrl || '#',
             supportPhone: '+91-XXXX-XXXX-XX',
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });
@@ -194,7 +194,7 @@ class EmailService {
             transactionId: `TXN-${Date.now()}`,
             paymentDate: new Date().toLocaleDateString('en-IN'),
             supportEmail: 'support@manaintibojanam.com',
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });
@@ -232,7 +232,7 @@ class EmailService {
             ratingText: this.getRatingText(payload.rating),
             hasComments: !!payload.feedback,
             supportEmail: 'feedback@manaintibojanam.com',
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });
@@ -277,7 +277,7 @@ class EmailService {
             amountInWords: this.numberToWords(amount),
             retryLink: `/checkout?orderId=${orderId}`,
             supportPhone: '+91-XXXX-XXXX-XX',
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });
@@ -322,7 +322,7 @@ class EmailService {
             refundAmountInWords: refundAmount ? this.numberToWords(refundAmount) : 'N/A',
             hasRefund: !!refundAmount,
             supportEmail: 'support@manaintibojanam.com',
-            brandName: 'Mana Inti Bojanam'
+            brandName: 'BhojanOS'
           }
         })
       });

@@ -16,7 +16,7 @@ export const generateWhatsAppLink = (phone: string | undefined, message: string)
 };
 
 export const getDeliveryMessage = (orderNumber: string, customerName: string, invoiceUrl: string) => {
-  return `Namaste ${customerName}!\n\nYour order #${orderNumber} from *Mana Inti Bojanam* has been delivered!\n\nYou can download your digital invoice here:\n${invoiceUrl}\n\nThank you for choosing us!`;
+  return `Namaste ${customerName}!\n\nYour order #${orderNumber} from *BhojanOS* has been delivered!\n\nYou can download your digital invoice here:\n${invoiceUrl}\n\nThank you for choosing us!`;
 };
 
 const formatOrderItems = (items: ShareOrderLike['items'] = []) => {

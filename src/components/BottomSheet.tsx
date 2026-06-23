@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation, PanInfo } from 'framer-motion';
+import { m, AnimatePresence, useAnimation, PanInfo } from 'framer-motion';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -60,7 +60,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           />
           
           {/* Sheet */}
-          <motion.div
+          <m.div
             ref={containerRef}
             initial={{ y: "100%" }}
             animate={controls}
@@ -106,7 +106,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             >
               {children}
             </div>
-          </motion.div>
+          </m.div>
         </>
       )}
     </AnimatePresence>

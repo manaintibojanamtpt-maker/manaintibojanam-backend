@@ -1,6 +1,6 @@
 export const CONTACT_INFO = {
   phone: '+91 7666258454',
-  email: 'manaintibojanam@gmail.com',
+  email: 'bhojanos26@gmail.com',
   address: 'Tirupati, Andhra Pradesh',
 };
 

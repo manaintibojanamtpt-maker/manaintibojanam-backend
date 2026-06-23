@@ -21,7 +21,7 @@ export function useStoreBranding(): StoreBranding {
 
   return useMemo(() => {
     const isDefaultStorefront = !tenantId || tenantId === 'mana-inti';
-    const brandName = tenantInfo?.name || 'Mana Inti Bojanam';
+    const brandName = tenantInfo?.name || 'BhojanOS';
 
     if (isDefaultStorefront) {
       return {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
@@ -104,7 +104,7 @@ const ActiveOrderStrip: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
@@ -144,7 +144,7 @@ const ActiveOrderStrip: React.FC = () => {
             </div>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </AnimatePresence>
   );
 };

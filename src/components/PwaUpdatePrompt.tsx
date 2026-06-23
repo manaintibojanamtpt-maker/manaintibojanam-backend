@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
 import React from 'react';
 // @ts-ignore - provided by vite-plugin-pwa
@@ -31,7 +31,7 @@ export const PwaUpdatePrompt: React.FC = () => {
   return (
     <AnimatePresence>
       {needRefresh && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 100, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 100, scale: 0.9 }}
@@ -76,7 +76,7 @@ export const PwaUpdatePrompt: React.FC = () => {
             </div>
 
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

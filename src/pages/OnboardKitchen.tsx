@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { m, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
   Store, User, Phone, Mail, Lock, MessageCircle, ArrowRight, Loader2, 
   Sparkles, CheckCircle2, ShieldCheck, Headset, Users, ShoppingBag, 
@@ -39,9 +39,9 @@ const AmbientOrbs = () => {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#030303]">
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-soft-light pointer-events-none" />
-      <motion.div style={{ y: y1 }} className="absolute top-[-15%] right-[-10%] w-[800px] h-[800px] rounded-full bg-[#FF6B00] blur-[180px] opacity-[0.12] mix-blend-screen" />
-      <motion.div style={{ y: y2 }} className="absolute top-[40%] left-[-15%] w-[900px] h-[900px] rounded-full bg-[#A855F7] blur-[180px] opacity-[0.08] mix-blend-screen" />
-      <motion.div style={{ y: y3 }} className="absolute bottom-[-15%] right-[15%] w-[700px] h-[700px] rounded-full bg-[#FF4D8D] blur-[180px] opacity-[0.1] mix-blend-screen" />
+      <m.div style={{ y: y1 }} className="absolute top-[-15%] right-[-10%] w-[800px] h-[800px] rounded-full bg-[#FF6B00] blur-[180px] opacity-[0.12] mix-blend-screen" />
+      <m.div style={{ y: y2 }} className="absolute top-[40%] left-[-15%] w-[900px] h-[900px] rounded-full bg-[#A855F7] blur-[180px] opacity-[0.08] mix-blend-screen" />
+      <m.div style={{ y: y3 }} className="absolute bottom-[-15%] right-[15%] w-[700px] h-[700px] rounded-full bg-[#FF4D8D] blur-[180px] opacity-[0.1] mix-blend-screen" />
     </div>
   );
 };
@@ -125,7 +125,7 @@ const InteractiveCommandCenter = () => {
         <div className="p-8 min-h-[400px] relative bg-black/40">
           <AnimatePresence mode="wait">
             {activeTab === 'demand' && (
-              <motion.div key="demand" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="h-full">
+              <m.div key="demand" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="h-full">
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Weekend Demand Forecast</h3>
@@ -161,11 +161,11 @@ const InteractiveCommandCenter = () => {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeTab === 'recipe' && (
-              <motion.div key="recipe" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              <m.div key="recipe" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Live Inventory Deduction</h3>
@@ -246,11 +246,11 @@ const InteractiveCommandCenter = () => {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeTab === 'customer' && (
-              <motion.div key="customer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              <m.div key="customer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                  <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Customer Graph</h3>
@@ -275,11 +275,11 @@ const InteractiveCommandCenter = () => {
                      <button className="mt-4 text-xs font-bold bg-[#FF4D8D]/20 text-[#FF4D8D] px-3 py-1.5 rounded-lg w-fit">Create Reactivation Campaign</button>
                    </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeTab === 'health' && (
-              <motion.div key="health" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              <m.div key="health" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Kitchen Health Monitoring</h3>
@@ -314,7 +314,7 @@ const InteractiveCommandCenter = () => {
                      </div>
                    </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -407,7 +407,7 @@ const OnboardKitchen = () => {
         {/* Hero Section */}
         <section className="pt-16 pb-24 md:pt-32 md:pb-40 px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center items-center text-center relative">
           <Spotlight />
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={springTransition} className="max-w-4xl mx-auto relative z-10">
+          <m.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={springTransition} className="max-w-4xl mx-auto relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-8 sm:mb-10 text-[#FF6B00] shadow-[0_0_30px_rgba(255,107,0,0.1)]">
               <Sparkles size={14} /> The All-In-One Restaurant System
             </div>
@@ -425,7 +425,7 @@ const OnboardKitchen = () => {
                 Book Demo
               </OutlineButton>
             </div>
-          </motion.div>
+          </m.div>
         </section>
 
         {/* Features / Why Fails */}
@@ -661,8 +661,8 @@ const OnboardKitchen = () => {
       <AnimatePresence>
         {showDemoModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDemoModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[#111111] border border-white/10 rounded-3xl p-8 max-w-md w-full relative z-10 shadow-2xl">
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDemoModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <m.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[#111111] border border-white/10 rounded-3xl p-8 max-w-md w-full relative z-10 shadow-2xl">
               <button onClick={() => setShowDemoModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={20}/></button>
               
               {!demoSubmitted ? (
@@ -701,7 +701,7 @@ const OnboardKitchen = () => {
                   <OutlineButton onClick={() => setShowDemoModal(false)}>Close</OutlineButton>
                 </div>
               )}
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

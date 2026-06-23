@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import {
   Building2, Users, Activity, Settings, Search, Filter, 
   CheckCircle2, Clock, LogOut, User, ChevronRight, Save, Shield, Key, Home,
@@ -347,7 +347,7 @@ export default function BhojanOSSuperAdmin() {
                 {profileOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)}></div>
-                    <motion.div 
+                    <m.div 
                       initial={{ opacity: 0, y: 10, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.96 }}
@@ -382,7 +382,7 @@ export default function BhojanOSSuperAdmin() {
                           Sign Out
                         </button>
                       </div>
-                    </motion.div>
+                    </m.div>
                   </>
                 )}
               </AnimatePresence>
@@ -404,83 +404,83 @@ export default function BhojanOSSuperAdmin() {
               
               {/* OVERVIEW TAB */}
               {activeTab === 'overview' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-8"
                 >
                   {/* HEADER */}
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
                     <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                       Command Center
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base font-medium">Platform performance and growth intelligence.</p>
-                  </motion.div>
+                  </m.div>
 
                   {/* 1. EXECUTIVE OVERVIEW */}
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-white/5 rounded-xl text-white border border-white/5"><Building2 size={16} /></div>
                         <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Total Kitchens</div>
                       </div>
                       <div className="text-3xl font-black text-white tracking-tighter">{tenants.length}</div>
-                    </motion.div>
+                    </m.div>
                     
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-emerald-500/10 shadow-xl relative overflow-hidden group">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-emerald-500/10 shadow-xl relative overflow-hidden group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20"><CheckCircle2 size={16} /></div>
                         <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Active Tenants</div>
                       </div>
                       <div className="text-3xl font-black text-white tracking-tighter">{activeTenantsCount}</div>
-                    </motion.div>
+                    </m.div>
 
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-blue-500/10 shadow-xl relative overflow-hidden group">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-blue-500/10 shadow-xl relative overflow-hidden group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/20"><Clock size={16} /></div>
                         <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Trial Accounts</div>
                       </div>
                       <div className="text-3xl font-black text-white tracking-tighter">{trialTenantsCount}</div>
-                    </motion.div>
+                    </m.div>
 
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#151515] to-[#222] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group col-span-2 md:col-span-4 lg:col-span-1">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-gradient-to-br from-[#151515] to-[#222] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group col-span-2 md:col-span-4 lg:col-span-1">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-white/5 rounded-xl text-white border border-white/5"><TrendingUp size={16} /></div>
                         <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Platform MRR</div>
                       </div>
                       <div className="text-3xl font-black text-green-400 tracking-tighter">₹{mrr.toLocaleString()}</div>
-                    </motion.div>
+                    </m.div>
                   </div>
 
                   {/* FOUNDER COMMAND METRICS (Priority 7) */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">First Orders (Beta)</div>
                       <div className="text-2xl font-black text-white">{Math.round(activeTenantsCount * 0.8)}</div>
-                    </motion.div>
+                    </m.div>
                     
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Avg Trust Score</div>
                       <div className="text-2xl font-black text-emerald-400">88/100</div>
-                    </motion.div>
+                    </m.div>
 
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Compliance Score</div>
                       <div className="text-2xl font-black text-blue-400">{Math.round((fssaiVerified / Math.max(1, tenants.length)) * 100)}%</div>
-                    </motion.div>
+                    </m.div>
 
-                    <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
+                    <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Open Support Tickets</div>
                       <div className="text-2xl font-black text-amber-400">12</div>
-                    </motion.div>
+                    </m.div>
                   </div>
                   {/* PLATFORM ALERTS */}
                   <AnimatePresence>
                     {alerts.length > 0 && (
-                      <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                      <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
                         {alerts.map((alert, i) => (
-                          <motion.div 
+                          <m.div 
                             key={alert.id} 
                             initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
                             className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
@@ -496,9 +496,9 @@ export default function BhojanOSSuperAdmin() {
                             <button className="text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1">
                               View <ArrowRight size={12}/>
                             </button>
-                          </motion.div>
+                          </m.div>
                         ))}
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
 
@@ -508,7 +508,7 @@ export default function BhojanOSSuperAdmin() {
                     <div className="lg:col-span-2 space-y-6">
                        
                        {/* 3. REVENUE INTELLIGENCE */}
-                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 sm:p-8 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                       <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 sm:p-8 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
                          <div className="flex justify-between items-start mb-8">
                            <div>
                              <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-1"><TrendingUp size={16} className="text-orange-500"/> Revenue Intelligence</h3>
@@ -551,7 +551,7 @@ export default function BhojanOSSuperAdmin() {
                                </linearGradient>
                              </defs>
                              <path d="M0,30 L0,20 Q10,15 20,22 T40,18 T60,10 T80,5 L100,0 L100,30 Z" fill="url(#revGrad)" />
-                             <motion.path 
+                             <m.path 
                                initial={{ pathLength: 0 }}
                                animate={{ pathLength: 1 }}
                                transition={{ duration: 1.5, ease: "easeOut" }}
@@ -560,11 +560,11 @@ export default function BhojanOSSuperAdmin() {
                              />
                            </svg>
                          </div>
-                       </motion.div>
+                       </m.div>
 
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                          {/* 4. TENANT HEALTH */}
-                         <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                         <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
                            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Activity size={16} className="text-emerald-500"/> Tenant Health</h3>
                            <div className="space-y-4">
                              <div>
@@ -604,10 +604,10 @@ export default function BhojanOSSuperAdmin() {
                                </div>
                              </div>
                            </div>
-                         </motion.div>
+                         </m.div>
 
                          {/* 5. FOUNDER KPIs (Due-Diligence Metrics) */}
-                         <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                         <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
                            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Shield size={16} className="text-purple-500"/> Due-Diligence Metrics</h3>
                            <div className="grid grid-cols-2 gap-4">
                              <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
@@ -627,7 +627,7 @@ export default function BhojanOSSuperAdmin() {
                                <div className="text-2xl font-black text-emerald-400">{activeSubscriptions}</div>
                              </div>
                            </div>
-                         </motion.div>
+                         </m.div>
                        </div>
                     </div>
 
@@ -635,7 +635,7 @@ export default function BhojanOSSuperAdmin() {
                     <div className="space-y-6">
                        
                        {/* 6. GROWTH INTELLIGENCE */}
-                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                       <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
                          <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6"><Users size={16} className="text-blue-500"/> Growth Funnel</h3>
                          <div className="space-y-3">
                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
@@ -655,10 +655,10 @@ export default function BhojanOSSuperAdmin() {
                              <div className="font-black text-emerald-400">{activeTenantsCount}</div>
                            </div>
                          </div>
-                       </motion.div>
+                       </m.div>
 
                        {/* 7. ACTIVITY FEED */}
-                       <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group flex flex-col h-[400px]">
+                       <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-6 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group flex flex-col h-[400px]">
                          <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-6 shrink-0"><Activity size={16} className="text-gray-400"/> Live Activity</h3>
                          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
                            {activities.length === 0 ? (
@@ -682,22 +682,22 @@ export default function BhojanOSSuperAdmin() {
                              ))
                            )}
                          </div>
-                       </motion.div>
+                       </m.div>
 
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               {/* BETA DASHBOARD TAB */}
               {activeTab === 'beta' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-black uppercase tracking-widest border border-orange-500/20">Market Validation</span>
                     </div>
@@ -705,7 +705,7 @@ export default function BhojanOSSuperAdmin() {
                       Founder Beta Program
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base font-medium">Tracking the first 10 businesses for product-market fit.</p>
-                  </motion.div>
+                  </m.div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                     <div className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
@@ -779,18 +779,18 @@ export default function BhojanOSSuperAdmin() {
                     </div>
                   </div>
 
-                </motion.div>
+                </m.div>
               )}
 
               {/* TENANTS CRM TAB */}
               {activeTab === 'tenants' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-6 sm:space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
+                  <m.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
                     <div>
                       <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Tenants</h2>
                       <p className="text-sm text-gray-400 mt-1 font-medium">Manage active kitchens and trials.</p>
@@ -810,10 +810,10 @@ export default function BhojanOSSuperAdmin() {
                         <Filter size={16} className="text-gray-400" /> <span className="hidden sm:inline">Filter</span>
                       </button>
                     </div>
-                  </motion.div>
+                  </m.div>
 
                   {/* Desktop Table View */}
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="hidden sm:block bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="hidden sm:block bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
@@ -848,7 +848,7 @@ export default function BhojanOSSuperAdmin() {
                                       await setDoc(tenantRef, {
                                         id: 'mana-inti',
                                         slug: 'mana-inti',
-                                        name: 'Mana Inti Bojanam',
+                                        name: 'BhojanOS',
                                         ownerId: currentUser?.uid || 'admin',
                                         status: 'active',
                                         tier: 'premium',
@@ -954,14 +954,14 @@ export default function BhojanOSSuperAdmin() {
                         </tbody>
                       </table>
                     </div>
-                  </motion.div>
+                  </m.div>
 
                   {/* Mobile Card View */}
                   <div className="sm:hidden space-y-4">
                     {filteredTenants.map((tenant) => {
                       const status = getStatusIndicator(tenant.status);
                       return (
-                        <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={tenant.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
+                        <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={tenant.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-black text-lg shrink-0">
@@ -1013,29 +1013,29 @@ export default function BhojanOSSuperAdmin() {
                               </button>
                             )}
                           </div>
-                        </motion.div>
+                        </m.div>
                       );
                     })}
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               {/* LEADS TAB */}
               {activeTab === 'leads' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-6 sm:space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
+                  <m.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
                     <div>
                       <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Leads</h2>
                       <p className="text-sm text-gray-400 mt-1 font-medium">Manage onboarding requests and sales.</p>
                     </div>
-                  </motion.div>
+                  </m.div>
 
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="hidden sm:block bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="hidden sm:block bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden">
                     {leads.length > 0 ? (
                       <div className="overflow-x-auto text-left">
                         <table className="w-full text-left border-collapse min-w-[800px]">
@@ -1102,12 +1102,12 @@ export default function BhojanOSSuperAdmin() {
                         </p>
                       </div>
                     )}
-                  </motion.div>
+                  </m.div>
 
                   {/* Mobile Leads Card View */}
                   <div className="sm:hidden space-y-4">
                     {leads.map((lead) => (
-                      <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={lead.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
+                      <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={lead.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="font-bold text-white text-lg tracking-tight">{lead.kitchenName || lead.businessName}</div>
@@ -1145,24 +1145,24 @@ export default function BhojanOSSuperAdmin() {
                             </button>
                           )}
                         </div>
-                      </motion.div>
+                      </m.div>
                     ))}
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               {/* PMF ANALYTICS TAB (Priority 3) */}
               {activeTab === 'pmf' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="space-y-2">
                     <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">Product-Market Fit Analytics</h1>
                     <p className="text-gray-400 text-sm font-medium">Tracking activation funnels, drop-offs, and platform stickiness.</p>
-                  </motion.div>
+                  </m.div>
 
                   <div className="bg-[#151515] border border-white/5 rounded-3xl p-6 sm:p-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
@@ -1216,18 +1216,18 @@ export default function BhojanOSSuperAdmin() {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               {/* INVESTOR DATA ROOM TAB (Priority 8) */}
               {activeTab === 'investors' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
                   className="space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex items-center justify-between">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex items-center justify-between">
                     <div className="space-y-2">
                       <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-3">
                         Investor Data Room <Shield className="text-emerald-400" />
@@ -1237,7 +1237,7 @@ export default function BhojanOSSuperAdmin() {
                     <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg">
                       <Save size={16} /> Export PDF Report
                     </button>
-                  </motion.div>
+                  </m.div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-[#151515] border border-white/5 rounded-2xl p-5">
@@ -1274,23 +1274,23 @@ export default function BhojanOSSuperAdmin() {
                       ))}
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               {/* SETTINGS TAB */}
               {activeTab === 'settings' && (
-                <motion.div 
+                <m.div 
                   initial="hidden" 
                   animate="visible" 
                   variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
                   className="max-w-3xl space-y-8"
                 >
-                  <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}>
+                  <m.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}>
                     <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Platform Settings</h2>
                     <p className="text-sm font-medium text-gray-400 mt-2">Manage your super admin preferences and platform security.</p>
-                  </motion.div>
+                  </m.div>
 
-                  <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden divide-y divide-white/5">
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden divide-y divide-white/5">
                     
                     {/* Profile Section */}
                     <div className="p-6 sm:p-10 flex flex-col sm:flex-row gap-8">
@@ -1378,8 +1378,8 @@ export default function BhojanOSSuperAdmin() {
                       </div>
                     </div>
 
-                  </motion.div>
-                </motion.div>
+                  </m.div>
+                </m.div>
               )}
             </div>
           )}

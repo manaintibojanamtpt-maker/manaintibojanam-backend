@@ -5,7 +5,7 @@ import { MapPin, Plus, Trash2, Edit2, ArrowLeft } from 'lucide-react';
 import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { useTenant } from '../context/TenantContext';
 
 const Addresses: React.FC = () => {

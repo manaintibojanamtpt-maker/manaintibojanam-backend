@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { m, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
   ArrowRight, 
   Star, 
@@ -329,7 +329,7 @@ const Home: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-dark-bg">
       {/* STICKY SEARCH BAR (Appears on scroll) */}
-      <motion.div 
+      <m.div 
         initial={{ y: -100, opacity: 0 }}
         animate={{ 
           y: scrollY.get() > 400 ? 0 : -100, 
@@ -344,13 +344,13 @@ const Home: React.FC = () => {
           <Search size={18} className="text-orange-500" />
           <span className="text-sm font-bold text-white/50">Search for 'Biryani' or 'Dosa'...</span>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* UNIFIED HERO SECTION */}
       <section className="relative overflow-hidden min-h-[90vh] bg-transparent flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* HERO IMAGE CONTAINER */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <motion.div 
+          <m.div 
             style={{ scale }}
             className="w-full h-full"
           >
@@ -359,7 +359,7 @@ const Home: React.FC = () => {
               alt="Authentic Andhra Meal" 
               className="w-full h-full object-cover brightness-[0.6] contrast-[1.1] scale-110"
             />
-          </motion.div>
+          </m.div>
           
           {/* CINEMATIC OVERLAY */}
           <div className="absolute inset-0 mib-hero-gradient z-[1]" />
@@ -374,7 +374,7 @@ const Home: React.FC = () => {
             <div className="flex flex-col -gap-1">
               <span className="text-orange-300 font-black text-[9px] tracking-[0.3em] uppercase leading-none mb-0.5">Premium</span>
               <span className="text-white font-black text-[14px] tracking-tight leading-none font-serif truncate max-w-[150px]">
-                {tenantInfo?.name || "Mana Inti Bojanam"}
+                {tenantInfo?.name || "BhojanOS"}
               </span>
             </div>
           </div>
@@ -392,7 +392,7 @@ const Home: React.FC = () => {
         <div className="relative z-20 flex flex-1 flex-col justify-center items-center text-center px-6 pt-24 pb-8">
           
           <div className="flex flex-col items-center justify-center flex-1 w-full">
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -400,9 +400,9 @@ const Home: React.FC = () => {
             >
               <Sparkles size={14} className="text-orange-500 shrink-0" />
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-orange-400 whitespace-nowrap">Authentic Andhra Home Kitchen</span>
-            </motion.div>
+            </m.div>
 
-            <motion.h1
+            <m.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.8 }}
@@ -413,18 +413,18 @@ const Home: React.FC = () => {
                 Cooked
               </span>
               for You
-            </motion.h1>
+            </m.h1>
 
-            <motion.p
+            <m.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
               className="text-white/70 font-bold text-base sm:text-lg leading-relaxed max-w-[28ch] mb-8"
             >
               Experience the soul of Telugu cuisine, prepared with love and zero preservatives.
-            </motion.p>
+            </m.p>
 
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
@@ -449,7 +449,7 @@ const Home: React.FC = () => {
               >
                 <span>Today's Specials</span>
               </button>
-            </motion.div>
+            </m.div>
           </div>
 
           {/* DESKTOP TRUST BADGES */}
@@ -519,7 +519,7 @@ const Home: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {trendingItems.slice(0, 6).map((item, index) => (
-                  <motion.div
+                  <m.div
                     key={item.id}
                     initial={{ opacity: 0, y: 14 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -541,7 +541,7 @@ const Home: React.FC = () => {
                       isStoreOpenNow={() => isStoreOpen}
                       storeOpenTime={storeOpenTime}
                     />
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
             )}
@@ -563,7 +563,7 @@ const Home: React.FC = () => {
             {categoriesLoading
               ? Array(6).fill(0).map((_, i) => <div key={i} className="flex-shrink-0 w-20 h-20 rounded-full bg-white/5 shimmer" />)
               : categories.map((cat: any, idx: number) => (
-                  <motion.button
+                  <m.button
                     key={cat.id || cat.name || idx}
                     type="button"
                     onClick={() => {
@@ -588,7 +588,7 @@ const Home: React.FC = () => {
                     <p className="mt-3 text-[10px] font-black uppercase tracking-[0.1em] text-white/80 group-hover:text-white transition-colors">
                       {cat.name}
                     </p>
-                  </motion.button>
+                  </m.button>
                 ))}
           </div>
         </div>
@@ -618,7 +618,7 @@ const Home: React.FC = () => {
                 Array(3).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
               ) : (
                 timeBasedItems.slice(0, 3).map((item, index) => (
-                  <motion.div
+                  <m.div
                     key={item.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -632,7 +632,7 @@ const Home: React.FC = () => {
                       getItemQuantity={getItemQuantity}
                       isStoreOpenNow={() => isStoreOpen}
                     />
-                  </motion.div>
+                  </m.div>
                 ))
               )}
             </div>
@@ -691,7 +691,7 @@ const Home: React.FC = () => {
                 Array(3).fill(0).map((_, i) => <RecommendedSkeleton key={i} />)
               ) : (
                 specialItems.slice(0, 6).map((item, index) => (
-                  <motion.div
+                  <m.div
                     key={item.id}
                     initial={{ opacity: 0, y: 14 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -707,7 +707,7 @@ const Home: React.FC = () => {
                       isStoreOpenNow={() => isStoreOpen}
                       storeOpenTime={storeOpenTime}
                     />
-                  </motion.div>
+                  </m.div>
                 ))
               )}
             </div>
@@ -847,7 +847,7 @@ const Home: React.FC = () => {
                     bg: "bg-blue-50 dark:bg-blue-900/20"
                   }
                 ].map((promise, idx) => (
-                  <motion.div 
+                  <m.div 
                     key={idx}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -862,7 +862,7 @@ const Home: React.FC = () => {
                       <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight mb-2">{promise.title}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{promise.desc}</p>
                     </div>
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
             </div>
@@ -941,7 +941,7 @@ const Home: React.FC = () => {
                   color: "text-purple-600"
                 }
               ].map((item, idx) => (
-                <motion.div 
+                <m.div 
                   key={idx}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -954,7 +954,7 @@ const Home: React.FC = () => {
                   </div>
                   <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">{item.title}</h3>
                   <p className="text-gray-600 dark:text-gray-400 font-medium leading-relaxed">{item.desc}</p>
-                </motion.div>
+                </m.div>
               ))}
             </div>
           </div>
@@ -1034,7 +1034,7 @@ const Home: React.FC = () => {
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {['Manjari Bk', 'Amanora', 'Hadapsar', 'Mundhwa', 'Kharadi', 'Wanowrie'].map((area, idx) => (
-                    <motion.div 
+                    <m.div 
                       key={area}
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -1046,7 +1046,7 @@ const Home: React.FC = () => {
                         <MapPin size={14} />
                       </div>
                       <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">{area}</span>
-                    </motion.div>
+                    </m.div>
                   ))}
                 </div>
               </div>
@@ -1185,7 +1185,7 @@ const Home: React.FC = () => {
                   </button>
                   <AnimatePresence>
                     {activeFaq === idx && (
-                      <motion.div 
+                      <m.div 
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -1193,7 +1193,7 @@ const Home: React.FC = () => {
                         <div className="px-8 pb-8 text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                           {faq.a}
                         </div>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </div>
@@ -1239,13 +1239,13 @@ const Home: React.FC = () => {
       {/* HOME LOCATION MODAL */}
       <AnimatePresence>
         {isLocationModalOpen && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
@@ -1302,18 +1302,18 @@ const Home: React.FC = () => {
                   Save location
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
 
         {showLocationPrompt && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
           >
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="bg-white dark:bg-gray-900 rounded-[3rem] p-10 max-w-sm w-full text-center relative overflow-hidden border border-gray-100 dark:border-white/5"
@@ -1366,8 +1366,8 @@ const Home: React.FC = () => {
                   Enter Manually
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

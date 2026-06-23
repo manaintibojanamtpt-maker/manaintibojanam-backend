@@ -264,7 +264,7 @@ class NotificationService {
       // Show notification while app is in foreground
       if (notification) {
         this.displayNotification(
-          notification.title || 'Mana Inti Bojanam',
+          notification.title || 'BhojanOS',
           {
             body: notification.body || '',
             icon: notification.icon || '/logo192.png',
@@ -275,7 +275,7 @@ class NotificationService {
         );
 
         emitNotchNotification({
-          title: notification.title || 'Mana Inti Bojanam',
+          title: notification.title || 'BhojanOS',
           body: notification.body || '',
           type: 'order',
           status: data?.status,

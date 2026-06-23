@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Check, Info, Sparkles, ArrowRight, Loader2, Star, Gift, ShieldCheck, ChevronLeft, PauseCircle, PlayCircle, Utensils } from 'lucide-react';
 import { activeTenantId } from '../services/api';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
@@ -437,7 +437,7 @@ export default function SubscriptionPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 md:pt-12 flex-1 w-full">
         
         {subscriptionSuccess ? (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             className="flex flex-col items-center justify-center min-h-[60vh] text-center"
@@ -460,7 +460,7 @@ export default function SubscriptionPage() {
             >
               Back to Home
             </button>
-          </motion.div>
+          </m.div>
         ) : existingSubDoc ? (
           <div className="max-w-2xl mx-auto mb-12">
             <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter mb-6">Manage Subscription</h2>

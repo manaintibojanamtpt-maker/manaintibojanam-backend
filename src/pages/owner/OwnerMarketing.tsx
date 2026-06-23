@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { CustomerSegmentSummary, getCustomerSegmentsSummary, generateCampaign } from '../../services/CustomerIntelligenceService';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Rocket, Send, Copy, AlertTriangle, CheckCircle2, TrendingUp, Users, Activity, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { trackEvent } from '../../services/AnalyticsService';
@@ -131,7 +131,7 @@ const OwnerMarketing: React.FC = () => {
         {/* Campaign Generation Column */}
         <div className="lg:col-span-2">
           {generatedCampaign ? (
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="bg-[#0f0f11] rounded-3xl border border-white/10 overflow-hidden"
@@ -205,7 +205,7 @@ const OwnerMarketing: React.FC = () => {
                   {isSending ? 'Launching Campaign...' : 'Launch Campaign'}
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           ) : (
             <div className="h-full border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center text-white/30 p-12 text-center min-h-[400px]">
               <Rocket size={48} className="mb-4 opacity-50" />

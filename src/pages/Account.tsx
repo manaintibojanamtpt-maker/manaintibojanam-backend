@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle, Activity } from 'lucide-react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { m, AnimatePresence, Variants } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useBiometrics } from '../hooks/useBiometrics';
@@ -88,14 +88,14 @@ const Account: React.FC = () => {
   const BottomSheet = ({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) => {
     const content = (
       <>
-        <motion.div 
+        <m.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }} 
           onClick={onClose}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]"
         />
-        <motion.div 
+        <m.div 
           variants={modalVariants}
           initial="hidden"
           animate="visible"
@@ -118,7 +118,7 @@ const Account: React.FC = () => {
             </button>
           </div>
           {children}
-        </motion.div>
+        </m.div>
       </>
     );
     return typeof document !== 'undefined' ? createPortal(content, document.body) : <>{content}</>;
@@ -133,14 +133,14 @@ const Account: React.FC = () => {
         </div>
       </div>
 
-      <motion.div 
+      <m.div 
         variants={containerVariants}
         initial="hidden"
         animate="show"
         className="px-4 sm:px-6 pt-6 max-w-2xl mx-auto"
       >
         {/* Immersive Hero Section */}
-        <motion.div variants={itemVariants} className="relative mb-10">
+        <m.div variants={itemVariants} className="relative mb-10">
           <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 to-amber-400/10 blur-3xl rounded-[3rem] -z-10" />
           <div className="flex items-center gap-5">
             <div className="relative">
@@ -175,11 +175,11 @@ const Account: React.FC = () => {
               )}
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* BHOJAN LOYALTY WALLET */}
         {currentUser && (
-          <motion.div variants={itemVariants} className="mb-10">
+          <m.div variants={itemVariants} className="mb-10">
             <div className="bg-gradient-to-br from-[#1a1a1f] to-[#141418] rounded-3xl p-6 border border-white/5 relative overflow-hidden shadow-xl">
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
@@ -211,12 +211,12 @@ const Account: React.FC = () => {
                 </button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
 
         {/* ORDERS */}
         {currentUser && (
-          <motion.div variants={itemVariants} className="mb-6">
+          <m.div variants={itemVariants} className="mb-6">
             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Food Orders</h3>
           <div className="bg-white/5 rounded-[1.75rem] border border-white/10 overflow-hidden backdrop-blur-md">
             <Link to="/my-orders" className="flex items-center gap-4 p-4 active:bg-white/10 transition-colors">
@@ -241,12 +241,12 @@ const Account: React.FC = () => {
               <ChevronRight size={18} className="text-white/20" />
             </Link>
           </div>
-        </motion.div>
+        </m.div>
         )}
 
         {/* ACCOUNT */}
         {currentUser && (
-        <motion.div variants={itemVariants} className="mb-6">
+        <m.div variants={itemVariants} className="mb-6">
           <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Account Settings</h3>
           <div className="bg-white/5 rounded-[1.75rem] border border-white/10 overflow-hidden backdrop-blur-md">
             <Link to="/addresses" className="flex items-center gap-4 p-4 active:bg-white/10 transition-colors">
@@ -348,11 +348,11 @@ const Account: React.FC = () => {
               </>
             )}
           </div>
-        </motion.div>
+        </m.div>
         )}
 
         {/* SUPPORT */}
-        <motion.div variants={itemVariants} className="mb-8">
+        <m.div variants={itemVariants} className="mb-8">
           <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-2">Support & More</h3>
           <div className="bg-white/5 rounded-[1.75rem] border border-white/10 overflow-hidden backdrop-blur-md">
             <div onClick={() => setActiveModal('support')} className="flex items-center gap-4 p-4 active:bg-white/10 transition-colors cursor-pointer">
@@ -370,15 +370,15 @@ const Account: React.FC = () => {
                 <Heart size={20} />
               </div>
               <div className="flex-1">
-                <p className="font-bold">About Mana Inti Bojanam</p>
+                <p className="font-bold">About BhojanOS</p>
               </div>
               <ChevronRight size={18} className="text-white/20" />
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* ACTION */}
-        <motion.div variants={itemVariants}>
+        <m.div variants={itemVariants}>
           {currentUser ? (
             <button 
               onClick={handleLogout}
@@ -400,9 +400,9 @@ const Account: React.FC = () => {
           <p className="text-center mt-6 text-[10px] font-bold tracking-widest uppercase text-white/20">
             App Version 2.0.0
           </p>
-        </motion.div>
+        </m.div>
 
-      </motion.div>
+      </m.div>
 
       {/* MODALS */}
       <AnimatePresence>
@@ -517,13 +517,13 @@ const Account: React.FC = () => {
                 <Utensils size={32} className="text-white" />
               </div>
               <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                Mana Inti Bojanam
+                BhojanOS
               </h3>
             </div>
             
             <div className="space-y-6 text-[15px] leading-relaxed text-white/80 pb-6">
               <p>
-                Welcome to <strong className="text-white">Mana Inti Bojanam</strong> — your trusted source for authentic, home-cooked Andhra-style meals. 
+                Welcome to <strong className="text-white">BhojanOS</strong> — your trusted source for authentic, home-cooked Andhra-style meals. 
               </p>
               <div className="p-5 rounded-[1.5rem] bg-orange-500/10 border border-orange-500/20">
                 <p className="italic text-orange-200">

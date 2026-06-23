@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Tenant } from '../../types';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Target, Gift, Users, Copy, CheckCircle2, Award, ChevronRight, TrendingUp, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 

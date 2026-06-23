@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Download, Printer, X, CheckCircle2, MapPin, Phone, User, ShoppingBag } from 'lucide-react';
 
 import { Order, OrderStatus } from '../types';
@@ -19,13 +19,13 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
   };
 
   return (
-    <motion.div 
+    <m.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 print:p-0 print:bg-white print:backdrop-blur-none"
     >
-      <motion.div 
+      <m.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:rounded-none"
@@ -201,8 +201,8 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
             <Download size={20} /> Download PDF
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 };
 

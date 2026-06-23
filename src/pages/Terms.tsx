@@ -1,11 +1,11 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Shield, FileText, Scale, Clock } from 'lucide-react';
 
 const Terms: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 px-6">
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100"
@@ -20,12 +20,12 @@ const Terms: React.FC = () => {
         <div className="prose prose-red max-w-none space-y-8 text-gray-600 font-medium">
           <section>
             <h2 className="text-2xl font-black text-gray-900 mb-4">1. Platform Usage</h2>
-            <p>Welcome to Mana Inti Bojanam. By accessing our platform, you agree to comply with and be bound by these terms. Our service is designed to provide authentic home-cooked meals delivered to your doorstep.</p>
+            <p>Welcome to BhojanOS. By accessing our platform, you agree to comply with and be bound by these terms. Our service is designed to provide authentic home-cooked meals delivered to your doorstep.</p>
           </section>
 
           <section>
             <h2 className="text-2xl font-black text-gray-900 mb-4">2. Order Responsibility</h2>
-            <p>Users are responsible for providing accurate delivery information, including address and contact details. Mana Inti Bojanam is not liable for delivery failures due to incorrect information provided by the customer.</p>
+            <p>Users are responsible for providing accurate delivery information, including address and contact details. BhojanOS is not liable for delivery failures due to incorrect information provided by the customer.</p>
           </section>
 
           <section>
@@ -35,7 +35,7 @@ const Terms: React.FC = () => {
 
           <section>
             <h2 className="text-2xl font-black text-gray-900 mb-4">4. Limitation of Liability</h2>
-            <p>Mana Inti Bojanam shall not be liable for any indirect, incidental, or consequential damages arising from the use of our service or consumption of our food products beyond the order value.</p>
+            <p>BhojanOS shall not be liable for any indirect, incidental, or consequential damages arising from the use of our service or consumption of our food products beyond the order value.</p>
           </section>
 
           <section>
@@ -43,7 +43,7 @@ const Terms: React.FC = () => {
             <p>Payments can be made via Razorpay (Online) or Cash on Delivery. Online payments are processed securely. In case of payment failure where money is deducted, please refer to our Refund Policy.</p>
           </section>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 };

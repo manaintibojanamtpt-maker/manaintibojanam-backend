@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingCart, 
   Plus, 
@@ -511,7 +511,7 @@ const Menu: React.FC = () => {
   return (
     <AnimatePresence mode="wait">
       {loading ? (
-        <motion.div 
+        <m.div 
           key="loading"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
@@ -529,9 +529,9 @@ const Menu: React.FC = () => {
               {[1, 2, 3, 4, 5, 6].map(i => <MenuItemSkeleton key={i} />)}
             </div>
           </div>
-        </motion.div>
+        </m.div>
       ) : (
-        <motion.div 
+        <m.div 
           key="content"
           initial={{ opacity: 0, scale: 1 }}
           animate={{ opacity: 1, scale: isCategorySheetOpen ? 0.96 : 1 }}
@@ -846,14 +846,14 @@ const Menu: React.FC = () => {
       <AnimatePresence>
         {selectedItemForReviews && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
               onClick={() => setSelectedItemForReviews(null)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -971,7 +971,7 @@ const Menu: React.FC = () => {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -987,7 +987,7 @@ const Menu: React.FC = () => {
               Got Questions?
             </div>
             <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter-extra mb-4">Everything You <br className="md:hidden" /> <span className="text-red-600">Need to Know</span></h2>
-            <p className="text-sm md:text-lg text-gray-500 dark:text-gray-400 font-medium italic">"Mana Inti Bojanam - Where every bite feels like home."</p>
+            <p className="text-sm md:text-lg text-gray-500 dark:text-gray-400 font-medium italic">"BhojanOS - Where every bite feels like home."</p>
           </div>
 
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1014,7 +1014,7 @@ const Menu: React.FC = () => {
       {/* FLOATING ACTION BUTTON (BROWSE MENU) */}
       <AnimatePresence>
         {showFAB && !isCategorySheetOpen && (
-          <motion.button
+          <m.button
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
@@ -1027,7 +1027,7 @@ const Menu: React.FC = () => {
           >
             <MenuIcon size={16} />
             Browse Menu
-          </motion.button>
+          </m.button>
         )}
       </AnimatePresence>
 
@@ -1035,14 +1035,14 @@ const Menu: React.FC = () => {
       <AnimatePresence>
         {isCategorySheetOpen && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsCategorySheetOpen(false)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
-            <motion.div
+            <m.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -1119,7 +1119,7 @@ const Menu: React.FC = () => {
                   );
                 })}
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -1127,7 +1127,7 @@ const Menu: React.FC = () => {
       {/* STICKY CART CTA */}
       <AnimatePresence>
         {cart.length > 0 && !isCategorySheetOpen && (
-          <motion.div
+          <m.div
             initial={{ y: 150, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 150, opacity: 0 }}
@@ -1146,11 +1146,11 @@ const Menu: React.FC = () => {
                 <ShoppingCart size={18} className="text-white" />
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
-      </motion.div>
+      </m.div>
       )}
     </AnimatePresence>
   );
@@ -1165,20 +1165,20 @@ function FAQItem({ question, answer }: { question: string, answer: string }) {
         className="w-full flex items-center justify-between text-left group"
       >
         <span className="text-base font-black text-gray-900 dark:text-white tracking-tight group-hover:text-red-600 transition-colors">{question}</span>
-        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} className="text-red-600">
+        <m.div animate={{ rotate: isOpen ? 180 : 0 }} className="text-red-600">
           <ChevronDown size={18} />
-        </motion.div>
+        </m.div>
       </button>
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
             <p className="pt-4 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{answer}</p>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

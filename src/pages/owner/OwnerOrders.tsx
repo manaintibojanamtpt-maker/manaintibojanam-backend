@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
@@ -182,14 +182,14 @@ const OwnerOrders: React.FC = () => {
           
           <div className="flex w-full items-center md:w-auto">
             {pendingOrders.length > 0 && (
-              <motion.div 
+              <m.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex w-full items-center justify-center bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 px-4 py-3 md:py-2 rounded-2xl md:rounded-full font-medium"
               >
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2" />
                 {pendingOrders.length} New {pendingOrders.length === 1 ? 'Order' : 'Orders'}
-              </motion.div>
+              </m.div>
             )}
           </div>
         </header>
@@ -226,7 +226,7 @@ const OwnerOrders: React.FC = () => {
           <div className="grid gap-4 sm:gap-6">
             <AnimatePresence>
               {orders.map((order) => (
-                <motion.div
+                <m.div
                   key={order.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -367,7 +367,7 @@ const OwnerOrders: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               ))}
               
               {orders.length === 0 && (

@@ -241,7 +241,7 @@ export class BiometricService {
             reason: "Verify your identity to unlock",
             title: "App Locked",
             subtitle: "Please verify to continue",
-            description: "Verify your identity to unlock Mana Inti Bojanam"
+            description: "Verify your identity to unlock BhojanOS"
           });
           await Haptics.impact({ style: ImpactStyle.Light });
           return { local: true };

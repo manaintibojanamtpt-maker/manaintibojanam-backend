@@ -5,7 +5,7 @@ import { getRecipes, saveRecipe } from '../../services/RecipeService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import { Save, Plus, Trash2, Utensils, BookOpen, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 export default function OwnerRecipes() {
   const { tenantId } = useTenant();
@@ -145,9 +145,9 @@ export default function OwnerRecipes() {
               </div>
 
               {saved && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-green-500/20 text-green-400 p-3 rounded-lg border border-green-500/20 mb-6 text-sm font-bold flex items-center gap-2">
+                <m.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-green-500/20 text-green-400 p-3 rounded-lg border border-green-500/20 mb-6 text-sm font-bold flex items-center gap-2">
                   <CheckCircle2 size={16} /> Recipe successfully saved. Inventory forecasts will now use this data.
-                </motion.div>
+                </m.div>
               )}
 
               <div className="flex-1 overflow-y-auto">

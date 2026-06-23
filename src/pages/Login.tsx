@@ -9,7 +9,7 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import { auth } from '../firebase';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Loader2, ArrowLeft, Shield, Fingerprint, Crown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -232,7 +232,7 @@ const Login: React.FC = () => {
 
         {/* Branding & Form Area */}
         <div className="flex-1 px-6 max-w-md w-full mx-auto flex flex-col justify-center py-10">
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
@@ -251,9 +251,9 @@ const Login: React.FC = () => {
               <h1 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight">{tenantInfo.name}</h1>
             )}
             <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sign in to your account</p>
-          </motion.div>
+          </m.div>
 
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
@@ -287,7 +287,7 @@ const Login: React.FC = () => {
 
           <AnimatePresence mode="wait">
             {step === 'phone' ? (
-              <motion.form
+              <m.form
                 key="phone"
                 onSubmit={handleSendOtp}
                 initial={{ opacity: 0, x: -20 }}
@@ -315,9 +315,9 @@ const Login: React.FC = () => {
                 >
                   {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Continue securely'}
                 </button>
-              </motion.form>
+              </m.form>
             ) : (
-              <motion.form
+              <m.form
                 key="otp"
                 onSubmit={handleVerifyOtp}
                 initial={{ opacity: 0, x: 20 }}
@@ -354,7 +354,7 @@ const Login: React.FC = () => {
                 >
                   Change Mobile Number
                 </button>
-              </motion.form>
+              </m.form>
             )}
           </AnimatePresence>
 
@@ -397,7 +397,7 @@ const Login: React.FC = () => {
               </button>
             </div>
           </div>
-          </motion.div>
+          </m.div>
         </div>
       </div>
 

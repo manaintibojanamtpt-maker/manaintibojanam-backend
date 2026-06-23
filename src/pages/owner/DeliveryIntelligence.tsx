@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { MapPin, TrendingUp, AlertCircle, CheckCircle2, Rocket, BrainCircuit, Activity, Target, Navigation } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getDb } from '../../lib/firebase-db';
@@ -108,7 +108,7 @@ export const DeliveryIntelligence: React.FC = () => {
         </div>
 
         {/* AI Recommendations Banner */}
-        <motion.div 
+        <m.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-red-900/40 to-orange-900/40 border border-red-500/20 rounded-2xl p-6 relative overflow-hidden"
@@ -132,11 +132,11 @@ export const DeliveryIntelligence: React.FC = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* KPI Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
@@ -147,9 +147,9 @@ export const DeliveryIntelligence: React.FC = () => {
               <h3 className="font-bold text-sm">Avg Delivery Distance</h3>
             </div>
             <div className="text-3xl font-black text-white">{metrics.avgDistance.toFixed(1)} <span className="text-xl text-gray-500 font-bold">km</span></div>
-          </motion.div>
+          </m.div>
 
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
@@ -160,9 +160,9 @@ export const DeliveryIntelligence: React.FC = () => {
               <h3 className="font-bold text-sm">Success Rate</h3>
             </div>
             <div className="text-3xl font-black text-white">{metrics.successRate.toFixed(1)}<span className="text-xl text-gray-500 font-bold">%</span></div>
-          </motion.div>
+          </m.div>
 
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
@@ -173,9 +173,9 @@ export const DeliveryIntelligence: React.FC = () => {
               <h3 className="font-bold text-sm">Avg Delivery Fee</h3>
             </div>
             <div className="text-3xl font-black text-white"><span className="text-xl text-gray-500 font-bold">₹</span>{metrics.avgFee.toFixed(0)}</div>
-          </motion.div>
+          </m.div>
 
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4 }}
@@ -189,7 +189,7 @@ export const DeliveryIntelligence: React.FC = () => {
               </div>
               <div className="text-3xl font-black text-white">{metrics.outOfBoundsAttempts} <span className="text-xl text-gray-500 font-bold">orders</span></div>
             </div>
-          </motion.div>
+          </m.div>
         </div>
 
         {/* Detailed Insights */}

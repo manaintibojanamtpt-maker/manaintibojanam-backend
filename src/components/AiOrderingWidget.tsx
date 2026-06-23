@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Send, Loader2, Sparkles, Plus, Minus, Check, X, Volume2, Search } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { MenuItem } from '../types';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../lib/utils';
@@ -405,7 +405,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
               {/* Clear button */}
               <AnimatePresence>
                 {transcript.trim() && (
-                  <motion.button
+                  <m.button
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
@@ -419,7 +419,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
                     className="w-7 h-7 flex items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/10 transition-all"
                   >
                     <X size={15} strokeWidth={2.5} />
-                  </motion.button>
+                  </m.button>
                 )}
               </AnimatePresence>
 
@@ -436,7 +436,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
               
               <AnimatePresence>
                 {transcript.trim() && (
-                  <motion.button
+                  <m.button
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
@@ -445,7 +445,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-orange-500 text-white transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} className="ml-0.5" strokeWidth={2.5} />}
-                  </motion.button>
+                  </m.button>
                 )}
               </AnimatePresence>
             </div>
@@ -455,7 +455,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
         {/* Live Search Results Dropdown */}
         <AnimatePresence>
           {isFocused && liveResults.length > 0 && (
-            <motion.div
+            <m.div
               ref={dropdownRef}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
@@ -483,24 +483,24 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
                   <span className="text-sm font-bold text-orange-400 flex-shrink-0">₹{item.price}</span>
                 </button>
               ))}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {error && (
-          <motion.p 
+          <m.p 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-xs font-bold text-red-500 flex items-center gap-1 mt-1"
           >
             <X size={14} /> {error}
-          </motion.p>
+          </m.p>
         )}
 
         {/* Moderate Confidence Prompts */}
         <AnimatePresence>
           {moderateIntents.length > 0 && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -542,7 +542,7 @@ export default function AiOrderingWidget({ menuItems, searchQuery = '', onSearch
                   </div>
                 </div>
               ))}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

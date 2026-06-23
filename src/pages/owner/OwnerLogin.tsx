@@ -4,7 +4,7 @@ import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
 const GoogleIcon = () => (
@@ -67,7 +67,7 @@ const OwnerLogin = () => {
   return (
     <div className="h-full overflow-y-auto bg-[#0a0a0a] p-4 flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center w-full py-8">
-        <motion.div 
+        <m.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 relative overflow-hidden shrink-0"
@@ -159,7 +159,7 @@ const OwnerLogin = () => {
             Don't have a store yet? <Link to="/owner/register" className="text-red-500 hover:text-red-400 font-bold ml-1">Create one</Link>
           </p>
         </div>
-      </motion.div>
+      </m.div>
       </div>
     </div>
   );

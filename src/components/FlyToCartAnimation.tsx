@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 
 const FlyToCartAnimation: React.FC = () => {
@@ -26,7 +26,7 @@ const FlyToCartAnimation: React.FC = () => {
   return (
     <AnimatePresence>
       {flyToCartParams && (
-        <motion.img
+        <m.img
           key={flyToCartParams.id}
           src={flyToCartParams.imageUrl}
           initial={{ 

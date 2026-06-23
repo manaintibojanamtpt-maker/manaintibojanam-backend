@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../lib/utils';
@@ -19,7 +19,7 @@ const DesktopFloatingCart = () => {
     <div className="hidden xl:block fixed bottom-8 right-8 z-[100]">
       <AnimatePresence>
         {isOpen ? (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -69,9 +69,9 @@ const DesktopFloatingCart = () => {
                 Proceed to Checkout <ArrowRight size={18} />
               </button>
             </div>
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.button
+          <m.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
@@ -87,7 +87,7 @@ const DesktopFloatingCart = () => {
               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">View Cart</span>
               <span className="text-sm font-bold">{formatPrice(total)}</span>
             </div>
-          </motion.button>
+          </m.button>
         )}
       </AnimatePresence>
     </div>

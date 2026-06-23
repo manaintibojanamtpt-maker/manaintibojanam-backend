@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Package, Clock, CreditCard, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { OrderStatus, Order, PaymentStatus } from '../../types';
 import { getDisplayStatus, updatePaymentStatus } from '../../services/api';
@@ -253,7 +253,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
 
   return (
     <>
-      <motion.div 
+      <m.div 
         layout
         className={`bg-white dark:bg-gray-900 ${compactMode ? 'rounded-xl p-3' : 'rounded-2xl p-5'} premium-card-shadow border ${borderClass} hover:premium-card-shadow-hover transition-all duration-200 ${statusClass}`}
       >
@@ -268,7 +268,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
               {order.customerName || 'Guest'}
               {order.phone && (
                 <a 
-                  href={`https://wa.me/${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent("Hi, this is Mana Inti Bojanam. Your order is being prepared...")}`} 
+                  href={`https://wa.me/${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent("Hi, this is BhojanOS. Your order is being prepared...")}`} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="ml-2 text-green-500 hover:text-green-600 transition-colors"
@@ -379,7 +379,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
           {order.status === OrderStatus.DELIVERED && (
             <button
               onClick={() => {
-                const invoiceUrl = `https://mana-inti-bojanam-pune-492610.web.app/order/${order.id}`;
+                const invoiceUrl = `https://bhojanos.web.app/order/${order.id}`;
                 const message = getDeliveryMessage(order.orderNumber?.toString() || order.id, order.customerName || 'Customer', invoiceUrl);
                 const link = generateWhatsAppLink(order.phone, message);
                 window.open(link, '_blank');
@@ -397,7 +397,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
             Details
           </button>
         </div>
-      </motion.div>
+      </m.div>
 
       {showDetails && (
         <OrderDetailsModal order={order} onClose={() => setShowDetails(false)} />

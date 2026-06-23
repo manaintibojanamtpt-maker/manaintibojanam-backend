@@ -7,11 +7,11 @@ import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
 import { saveGuestOrder } from '../lib/guestOrders';
-import LocationPicker from '../components/LocationPicker';
+const LocationPicker = React.lazy(() => import('../components/LocationPicker'));
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../lib/firebase-db';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -480,7 +480,7 @@ const Checkout: React.FC = () => {
           key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
           amount: createData.order.amount,
           currency: 'INR',
-          name: 'Mana Inti Bojanam',
+          name: 'BhojanOS',
           description: 'Authentic Telugu Meals',
           order_id: createData.order.id,
           prefill: {
@@ -608,7 +608,7 @@ const Checkout: React.FC = () => {
   if (state.cart.length === 0) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 dark:bg-[#111111] p-6 text-center">
-        <motion.div 
+        <m.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -617,24 +617,24 @@ const Checkout: React.FC = () => {
           <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse opacity-50 blur-xl"></div>
           <div className="absolute inset-6 bg-red-500/20 rounded-full border border-red-500/30 backdrop-blur-sm"></div>
           <ShoppingCart size={56} className="text-red-500 relative z-10" strokeWidth={1.5} />
-        </motion.div>
-        <motion.h2 
+        </m.div>
+        <m.h2 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
           className="text-2xl font-black text-gray-900 dark:text-white mb-2 tracking-tight"
         >
           Your dining table is waiting
-        </motion.h2>
-        <motion.p 
+        </m.h2>
+        <m.p 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
           className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed"
         >
           Let's fill it with some hot, home-style food.
-        </motion.p>
-        <motion.button 
+        </m.p>
+        <m.button 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -642,7 +642,7 @@ const Checkout: React.FC = () => {
           className="mib-primary-action w-full max-w-[280px]"
         >
           Browse Menu
-        </motion.button>
+        </m.button>
       </div>
     );
   }
@@ -672,7 +672,7 @@ const Checkout: React.FC = () => {
         
         {/* Subscription Specialized Card */}
         {hasSubscription && subscriptionItem && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, y: 10 }} 
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden"
@@ -708,12 +708,12 @@ const Checkout: React.FC = () => {
                 <span>Pause or resume anytime (upto 7 days)</span>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
         
         {/* 1. Order Summary Card (Items First) - Only for regular orders */}
         {!hasSubscription && (
-          <motion.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <m.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="mb-5 border-b border-gray-100 dark:border-gray-800 pb-4">
               <h2 className="font-bold text-gray-900 dark:text-white text-lg">Your Order</h2>
               <p className="text-xs font-semibold text-gray-500 mt-1.5 flex items-center gap-1.5"><Clock size={14} className="text-gray-400"/> Freshly prepared after your order</p>
@@ -764,12 +764,12 @@ const Checkout: React.FC = () => {
                 />
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
 
         {/* 1.5. Upsell Carousel */}
         {upsellRecommendations.length > 0 && !hasSubscription && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 p-5"
@@ -808,11 +808,11 @@ const Checkout: React.FC = () => {
                 );
               })}
             </div>
-          </motion.div>
+          </m.div>
         )}
 
         {/* 2. Bill Details - Premium Editorial Card */}
-        <motion.div 
+        <m.div 
           className="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800"
           initial={{ opacity: 0, y: 10 }} 
           animate={{ opacity: 1, y: 0 }} 
@@ -887,14 +887,14 @@ const Checkout: React.FC = () => {
             <div className="pt-4 border-t border-gray-100 dark:border-white/5">
               <div className="flex justify-between items-center">
                 <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">Grand Total</span>
-                <motion.span 
+                <m.span 
                   key={state.finalTotal}
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
                   className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums"
                 >
                   {formatPrice(state.finalTotal)}
-                </motion.span>
+                </m.span>
               </div>
             </div>
           </div>
@@ -908,11 +908,11 @@ const Checkout: React.FC = () => {
                 Securely handled & verified for hygiene
              </p>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Smart Recommendations Moved Here - Only for regular orders */}
         {!hasSubscription && recommendations.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500"><Sparkles size={16} /></div>
@@ -946,13 +946,13 @@ const Checkout: React.FC = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </m.div>
         )}
         
         {/* 3. Delivery / Pickup Toggle - Hide for Subscriptions */}
         {!hasSubscription && (
           <div className="bg-gray-100 dark:bg-white/5 p-1.5 rounded-2xl flex relative border border-gray-200 dark:border-white/5 shadow-inner">
-            <motion.div
+            <m.div
               className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] bg-gradient-to-r from-red-600 to-orange-500 rounded-xl shadow-md z-0"
               animate={{ x: state.orderType === 'pickup' ? '100%' : '0%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
@@ -965,7 +965,7 @@ const Checkout: React.FC = () => {
         {/* 4. Address Card */}
         <AnimatePresence mode="popLayout">
           {state.orderType === 'delivery' ? (
-            <motion.div key="delivery" className="bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <m.div key="delivery" className="bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
@@ -1017,9 +1017,9 @@ const Checkout: React.FC = () => {
                   {!state.phone && isPlacingOrder && <p className="text-[10px] font-bold text-red-500 ml-1">Phone number is required for delivery updates</p>}
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div key="pickup" className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <m.div key="pickup" className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-600 flex items-center justify-center shrink-0"><MapPin size={20} /></div>
                 <div>
@@ -1031,13 +1031,13 @@ const Checkout: React.FC = () => {
                 <input type="text" placeholder="Your Name" className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white outline-none" value={state.name || ''} onChange={(e) => state.setName(e.target.value)} />
                 <input type="tel" placeholder="Phone Number" className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white outline-none" value={state.phone || ''} onChange={(e) => state.setPhone(e.target.value)} />
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* 5. Delivery Timing - Hide for Subscriptions */}
         {!hasSubscription && (
-          <motion.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <m.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock size={20} className="text-red-500" />
@@ -1095,11 +1095,11 @@ const Checkout: React.FC = () => {
                 </div>
               )}
             </div>
-          </motion.div>
+          </m.div>
         )}
 
         {/* 6. Payment Method Card */}
-        <motion.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <m.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center gap-2 mb-4"><CreditCard size={20} className="text-red-500" /><h2 className="font-bold text-gray-900 dark:text-white">Payment Method</h2></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button type="button" onClick={() => state.setPaymentMethod('online')} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'online' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
@@ -1111,7 +1111,7 @@ const Checkout: React.FC = () => {
               <p className="text-xs text-gray-500">Cash on Delivery</p>
             </button>
           </div>
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Trust Badges */}
@@ -1135,12 +1135,12 @@ const Checkout: React.FC = () => {
            </div>
            
            <div className="flex-1 relative">
-             <motion.div
+             <m.div
                className="relative h-14 rounded-2xl overflow-hidden flex items-center justify-center group shadow-[0_12px_24px_-12px_rgba(255,107,53,0.5)]"
              >
                <AnimatePresence mode="wait">
                  {isPlacingOrder ? (
-                   <motion.div
+                   <m.div
                      key="loading"
                      initial={{ opacity: 0 }}
                      animate={{ opacity: 1 }}
@@ -1148,9 +1148,9 @@ const Checkout: React.FC = () => {
                    >
                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                      Securing Order...
-                   </motion.div>
+                   </m.div>
                  ) : (
-                   <motion.button
+                   <m.button
                      key="action"
                      initial={{ opacity: 0 }}
                      animate={{ opacity: 1 }}
@@ -1162,32 +1162,34 @@ const Checkout: React.FC = () => {
                    >
                      {hasSubscription ? 'Pay & Subscribe' : 'Place Order'}
                      <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                   </motion.button>
+                   </m.button>
                  )}
                </AnimatePresence>
-             </motion.div>
+             </m.div>
            </div>
         </div>
       </div>
 
-      <LocationPicker 
-        isOpen={showLocationPicker} 
-        onClose={() => setShowLocationPicker(false)} 
-        onLocationSelect={handleLocationSelect}
-        tenant={tenantInfo as any}
-      />
+      <React.Suspense fallback={null}>
+        <LocationPicker 
+          isOpen={showLocationPicker} 
+          onClose={() => setShowLocationPicker(false)} 
+          onLocationSelect={handleLocationSelect}
+          tenant={tenantInfo as any}
+        />
+      </React.Suspense>
 
       <AnimatePresence>
         {showAddressModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAddressModal(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1241,7 +1243,7 @@ const Checkout: React.FC = () => {
                   <Plus size={16} /> Add New Address
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1249,7 +1251,7 @@ const Checkout: React.FC = () => {
       {/* Full-screen Loading Overlay for Placing Order */}
       <AnimatePresence>
         {isPlacingOrder && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-6">
+          <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-6">
             <div className="relative w-24 h-24 mb-6">
               <div className="absolute inset-0 rounded-full border-4 border-gray-100 dark:border-gray-800"></div>
               <div className="absolute inset-0 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
@@ -1257,7 +1259,7 @@ const Checkout: React.FC = () => {
             </div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 text-center tracking-tight">{state.paymentMethod === 'online' ? 'Securely processing...' : 'Confirming your order...'}</h2>
             <p className="text-gray-500 dark:text-gray-400 font-medium text-center max-w-xs text-sm">Please do not close this window or press back. We are finalizing your delicious meal.</p>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

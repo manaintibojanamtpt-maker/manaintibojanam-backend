@@ -1,11 +1,11 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { XCircle, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 const CancellationPolicy: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 px-6">
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100"
@@ -50,10 +50,10 @@ const CancellationPolicy: React.FC = () => {
 
           <section>
             <h2 className="text-2xl font-black text-gray-900 mb-4">4. Policy Updates</h2>
-            <p>Mana Inti Bojanam reserves the right to modify this policy at any time. Any changes will be updated on this page.</p>
+            <p>BhojanOS reserves the right to modify this policy at any time. Any changes will be updated on this page.</p>
           </section>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 };

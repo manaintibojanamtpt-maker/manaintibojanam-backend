@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { 
   TrendingUp, Activity, AlertTriangle, CheckCircle2, 
   Calendar, ShoppingBag, Utensils, PieChart, Info,
@@ -184,7 +184,7 @@ export default function ForecastDashboard() {
 
             <AnimatePresence>
               {simResult && !simLoading && (
-                <motion.div 
+                <m.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-black/30 p-4 rounded-xl border border-white/10 mt-4"
@@ -204,7 +204,7 @@ export default function ForecastDashboard() {
                       <span className="text-green-400 font-bold">+{simResult.expectedRepeatLift}%</span>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </div>

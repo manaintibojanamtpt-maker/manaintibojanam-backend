@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Utensils, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -72,7 +72,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={onClose} />
       
-      <motion.div 
+      <m.div 
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
@@ -99,7 +99,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
         <div className="flex-1 overflow-y-auto p-6 no-scrollbar relative min-h-[350px]">
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.div key="step1" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
+              <m.div key="step1" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-500/20 text-orange-600 flex items-center justify-center">
                     <Utensils size={20} />
@@ -125,11 +125,11 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {step === 2 && (
-              <motion.div key="step2" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
+              <m.div key="step2" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-500/20 text-orange-600 flex items-center justify-center">
                     <Clock size={20} />
@@ -171,11 +171,11 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {step === 3 && (
-              <motion.div key="step3" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
+              <m.div key="step3" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle2 size={32} />
@@ -201,7 +201,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
                     <span className="text-orange-500 text-2xl font-black">₹{getPrice()}</span>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -224,7 +224,7 @@ const SubscriptionWizardModal: React.FC<SubscriptionWizardModalProps> = ({ isOpe
             {step < 3 && <ArrowRight size={18} />}
           </button>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 };

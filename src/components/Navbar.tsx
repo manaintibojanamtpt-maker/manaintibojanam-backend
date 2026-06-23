@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTenant } from '../context/TenantContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 
@@ -130,7 +130,7 @@ const Navbar: React.FC = () => {
       >
       <AnimatePresence>
         {!isStoreOpen && (
-          <motion.div 
+          <m.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -138,10 +138,10 @@ const Navbar: React.FC = () => {
           >
             <span className="w-2 h-2 bg-white rounded-full animate-pulse shadow-sm" />
             Currently not accepting orders. Please check back later! 🕒
-          </motion.div>
+          </m.div>
         )}
         {isStoreOpen && closingSoon && (
-          <motion.div 
+          <m.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -149,7 +149,7 @@ const Navbar: React.FC = () => {
           >
             <span className="w-2 h-2 bg-white rounded-full animate-pulse shadow-sm" />
             Hurry! We're closing in less than 30 minutes! 🏃‍♂️💨
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -212,7 +212,7 @@ const Navbar: React.FC = () => {
             >
               <ShoppingCart size={18} className="group-hover:text-red-600 transition-colors" />
               {cartCount > 0 && (
-                <motion.span 
+                <m.span 
                   key={cartCount}
                   initial={{ scale: 0.5 }}
                   animate={{ scale: [1, 1.25, 1] }}
@@ -220,7 +220,7 @@ const Navbar: React.FC = () => {
                   className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white dark:border-gray-900 shadow-lg shadow-red-600/30"
                 >
                   {cartCount}
-                </motion.span>
+                </m.span>
               )}
             </Link>
 
@@ -248,7 +248,7 @@ const Navbar: React.FC = () => {
                   {isUserMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
-                      <motion.div 
+                      <m.div 
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -293,7 +293,7 @@ const Navbar: React.FC = () => {
                             Logout
                           </button>
                         </div>
-                      </motion.div>
+                      </m.div>
                     </>
                   )}
                 </AnimatePresence>
@@ -338,14 +338,14 @@ const Navbar: React.FC = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <>
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMenuOpen(false)}
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
             />
-            <motion.div 
+            <m.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -404,7 +404,7 @@ const Navbar: React.FC = () => {
               <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5">
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Customer Support</p>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -445,7 +445,7 @@ const NavLink = ({ to, label, active, light }: { to: string, label: string, acti
   >
     {label}
     {active && (
-      <motion.div 
+      <m.div 
         layoutId="navUnderline"
         className="absolute -bottom-1 left-0 right-0 h-1 bg-red-600 rounded-full shadow-lg shadow-red-600/30"
       />

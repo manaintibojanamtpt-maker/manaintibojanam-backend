@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { 
@@ -167,7 +167,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "text-gray-900 dark:text-white", isActive, onClick }: any) => (
-  <motion.div 
+  <m.div 
     whileHover={{ y: -2, scale: 1.01 }}
     whileTap={{ scale: 0.98 }}
     onClick={onClick}
@@ -194,7 +194,7 @@ const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "t
       </div>
       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{subtitle}</p>
     </div>
-  </motion.div>
+  </m.div>
 );
 
 const ChannelIcon = ({ channel }: { channel: string }) => {
@@ -414,7 +414,7 @@ export default function SystemHealth() {
         {/* ACTIVE FILTER BAR */}
         <AnimatePresence>
           {activeKpi && !isMobile && (
-            <motion.div 
+            <m.div 
               initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
               animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
               exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
@@ -432,7 +432,7 @@ export default function SystemHealth() {
                   <X className="w-4 h-4" /> Clear Filter
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -726,12 +726,12 @@ export default function SystemHealth() {
       <AnimatePresence>
         {isMobile && activeKpi && (
           <>
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={clearFilters}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
             />
-            <motion.div 
+            <m.div 
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} 
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-dark-bg rounded-t-2xl shadow-2xl z-50 flex flex-col border-t border-gray-200 dark:border-white/5 lg:hidden"
@@ -748,7 +748,7 @@ export default function SystemHealth() {
               <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-dark-bg">
                 {renderMobileDrawerContent()}
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -757,12 +757,12 @@ export default function SystemHealth() {
       <AnimatePresence>
         {selectedIncident && (
           <>
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSelectedIncident(null)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
-            <motion.div 
+            <m.div 
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-[#111111] shadow-2xl z-[60] flex flex-col border-l border-gray-200 dark:border-white/5"
             >
@@ -836,7 +836,7 @@ export default function SystemHealth() {
                   Acknowledge Incident
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

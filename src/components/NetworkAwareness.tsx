@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { WifiOff, Wifi, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -55,7 +55,7 @@ const NetworkAwareness: React.FC<NetworkAwarenessProps> = ({ connected, loading,
   return (
     <AnimatePresence>
       {showOfflineUI && (
-        <motion.div
+        <m.div
           initial={{ y: -50, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: -50, opacity: 0, scale: 0.95 }}
@@ -82,7 +82,7 @@ const NetworkAwareness: React.FC<NetworkAwarenessProps> = ({ connected, loading,
               <RefreshCw size={14} className={`text-white ${!isBrowserOnline ? 'opacity-30' : ''}`} />
             </button>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

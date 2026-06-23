@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { OrderStatus } from '../types';
 import { OrderStateService } from '../services/OrderStateService';
 import { X } from 'lucide-react';
@@ -38,7 +38,7 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
       {isVisible && (
         <>
           {/* Backdrop */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -47,7 +47,7 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
           />
 
           {/* Popup Card */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.8, y: -100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: -100 }}
@@ -84,7 +84,7 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
 
               <div className="p-6">
                 {/* Icon with bounce animation */}
-                <motion.div
+                <m.div
                   className="text-6xl text-center mb-4"
                   animate={{ y: [0, -10, 0] }}
                   transition={{
@@ -93,7 +93,7 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
                   }}
                 >
                   {display.icon}
-                </motion.div>
+                </m.div>
 
                 {/* Status label */}
                 <h2 className="text-2xl font-black text-center text-gray-900 mb-2">
@@ -116,7 +116,7 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
                 </div>
 
                 {/* Action button */}
-                <motion.button
+                <m.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onDismiss}
@@ -135,19 +135,19 @@ export const OrderEventPopup: React.FC<OrderEventPopupProps> = ({
                   `}
                 >
                   Got It!
-                </motion.button>
+                </m.button>
 
                 {/* Close icon (top-right) */}
-                <motion.button
+                <m.button
                   whileHover={{ scale: 1.15 }}
                   onClick={onDismiss}
                   className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
                 >
                   <X size={24} />
-                </motion.button>
+                </m.button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </>
       )}
     </AnimatePresence>

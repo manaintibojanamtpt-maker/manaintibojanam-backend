@@ -13,7 +13,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTenant } from "../context/TenantContext";
 import { useCart } from "../context/CartContext";
 import { useStoreBranding } from "../hooks/useStoreBranding";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Clock, ChevronRight, XCircle, RefreshCcw, MapPin, Star, FileText, MessageCircle, Share2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -246,7 +246,7 @@ export default function MyOrders() {
         </div>
 
         {orders.length === 0 ? (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-brand-bg dark:bg-dark-bg p-8 text-center flex flex-col items-center justify-center py-20"
@@ -263,7 +263,7 @@ export default function MyOrders() {
             <Link to={tenantSlug ? `/k/${tenantSlug}/menu` : '/menu'} className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-xl shadow-red-600/30 transition-transform active:scale-95 w-full max-w-[280px] uppercase tracking-widest text-sm inline-block">
               Browse Menu
             </Link>
-          </motion.div>
+          </m.div>
         ) : (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
@@ -326,7 +326,7 @@ export default function MyOrders() {
               const itemsText = (order.items || []).map((item: any) => `${item.name} x${item.quantity}`).join(', ');
               
               return (
-                <motion.div
+                <m.div
                   key={order.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -447,7 +447,7 @@ export default function MyOrders() {
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               );
             })}
           </div>
@@ -458,14 +458,14 @@ export default function MyOrders() {
       <AnimatePresence>
         {ratingOrder && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setRatingOrder(null)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            <motion.div 
+            <m.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -515,7 +515,7 @@ export default function MyOrders() {
                   Submit
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

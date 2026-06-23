@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Shield, FileText, CheckCircle2, AlertCircle, UploadCloud, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
@@ -108,7 +108,7 @@ export const OwnerKYC: React.FC = () => {
 
         {/* Legal Declaration (Phase 3 Requirement) */}
         {!tenantInfo?.legal?.merchantDeclarationAcceptedAt && (
-          <motion.div 
+          <m.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6"
@@ -148,7 +148,7 @@ export const OwnerKYC: React.FC = () => {
                 </button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
 
         {/* KYC Form */}
