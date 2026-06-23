@@ -282,7 +282,7 @@ const OwnerDashboard = () => {
       
       {/* Launch Readiness Checklist */}
       {tenantInfo?.storeStatus !== 'published' && (
-        <div className="bg-gradient-to-r from-orange-900/40 to-red-900/40 border border-orange-500/20 rounded-2xl p-6">
+        <div className="bg-[#1C0E0A] border border-orange-500/20 rounded-2xl p-6 relative isolate overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-2">
