@@ -27,6 +27,14 @@ export interface TenantInfo {
     baseFee: number;
     prepTime: number;
   };
+  kyc?: any;
+  fssai?: any;
+  subscription?: any;
+  businessType?: string;
+  contactPhone?: string;
+  logo?: string;
+  storeStatus?: string;
+  legal?: any;
 }
 
 interface TenantContextType {
@@ -35,6 +43,7 @@ interface TenantContextType {
   tenantInfo: TenantInfo | null;
   loading: boolean;
   tenantNotFound: boolean;
+  refreshTenant: () => Promise<void>;
 }
 
 const TenantContext = createContext<TenantContextType>({
@@ -43,6 +52,7 @@ const TenantContext = createContext<TenantContextType>({
   tenantInfo: null,
   loading: true,
   tenantNotFound: false,
+  refreshTenant: async () => {},
 });
 
 export const useTenant = () => useContext(TenantContext);
@@ -54,94 +64,75 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(true);
   const [tenantNotFound, setTenantNotFound] = useState(false);
 
-  useEffect(() => {
-    const resolveTenant = async () => {
-      const path = window.location.pathname;
-      const match = path.match(/^\/k\/([^/]+)/);
-      const slug = match ? match[1] : null;
+  const resolveTenant = async () => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/k\/([^/]+)/);
+    const isOwnerPanel = path.startsWith('/owner');
+    
+    const sessionTenant = sessionStorage.getItem('tenant_preview');
+    if (sessionTenant) {
+      const data = JSON.parse(sessionTenant) as TenantInfo;
+      setTenantId(data.id);
+      setActiveTenantId(data.id);
+      setTenantSlug(data.slug);
+      setTenantInfo(data);
+      setLoading(false);
+      return;
+    }
 
-      if (!slug) {
-        // Default to mana-inti
-        try {
-          const cached = sessionStorage.getItem('tenant_mana-inti');
-          if (cached) {
-            const data = JSON.parse(cached);
-            setTenantId(data.id);
-            setActiveTenantId(data.id);
-            setTenantSlug('');
-            setTenantInfo(data);
-            setLoading(false);
-            return;
-          }
-          const tDoc = await getDoc(doc(getDb(), 'tenants', 'mana-inti'));
-          if (tDoc.exists()) {
-            const data = { id: tDoc.id, ...tDoc.data() } as TenantInfo;
-            setTenantId(data.id);
-            setActiveTenantId(data.id);
-            setTenantSlug('');
-            setTenantInfo(data);
-            sessionStorage.setItem('tenant_mana-inti', JSON.stringify(data));
-          }
-        } catch(e) {
-          console.error("Error fetching default tenant", e);
-        }
-        setLoading(false);
-        return;
-      }
+    let slug = '';
+    if (match) {
+      slug = match[1];
+    } else if (isOwnerPanel) {
+      slug = 'mana-inti';
+    }
 
-      // Resolve by slug
-      const cached = sessionStorage.getItem(`tenant_${slug}`);
-      if (cached) {
-        const data = JSON.parse(cached);
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const docRef = doc(getDb(), 'tenants', slug);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
         setTenantId(data.id);
         setActiveTenantId(data.id);
         setTenantSlug(slug);
         setTenantInfo(data);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const docRef = doc(getDb(), 'tenants', slug);
-        const docSnap = await getDoc(docRef);
+        sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
+      } else {
+        const q = query(collection(getDb(), 'tenants'), where('slug', '==', slug), limit(1));
+        const snapshot = await getDocs(q);
         
-        if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
+        if (!snapshot.empty) {
+          const docSnapQuery = snapshot.docs[0];
+          const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
           setTenantId(data.id);
           setActiveTenantId(data.id);
           setTenantSlug(slug);
           setTenantInfo(data);
           sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
         } else {
-          const q = query(collection(getDb(), 'tenants'), where('slug', '==', slug), limit(1));
-          const snapshot = await getDocs(q);
-          
-          if (!snapshot.empty) {
-            const docSnapQuery = snapshot.docs[0];
-            const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
-            setTenantId(data.id);
-            setActiveTenantId(data.id);
-            setTenantSlug(slug);
-            setTenantInfo(data);
-            sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
-          } else {
-            // Not found, trigger 404
-            setTenantNotFound(true);
-          }
+          setTenantNotFound(true);
         }
-      } catch (error) {
-        console.error("Failed to resolve tenant slug:", error);
-        setTenantNotFound(true);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Failed to resolve tenant slug:", error);
+      setTenantNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     resolveTenant();
   }, []);
 
   return (
-    <TenantContext.Provider value={{ tenantId, tenantSlug, tenantInfo, loading, tenantNotFound }}>
+    <TenantContext.Provider value={{ tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, refreshTenant: resolveTenant }}>
       {children}
     </TenantContext.Provider>
   );

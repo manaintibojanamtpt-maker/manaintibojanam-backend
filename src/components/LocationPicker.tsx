@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapPin, X, Check, Loader2, Search, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 
 import { Tenant } from '../types';
@@ -73,6 +74,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const [isFetchingAddress, setIsFetchingAddress] = useState(false);
   const [step, setStep] = useState<'map' | 'details'>('map');
   const [addressDetails, setAddressDetails] = useState({ house: '', building: '', landmark: '' });
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -296,22 +298,41 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   };
 
   const handleCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([latitude, longitude], 17, { duration: 1.2 });
-            setHasInteracted(true);
-          }
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          // Could show a toast here
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
     }
+
+    setIsDetectingLocation(true);
+
+    const successCallback = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([latitude, longitude], 17, { duration: 1.2 });
+        setHasInteracted(true);
+      }
+      setIsDetectingLocation(false);
+    };
+
+    const errorCallback = (error: GeolocationPositionError) => {
+      console.warn('High accuracy geolocation failed:', error);
+      // Fallback to low accuracy
+      navigator.geolocation.getCurrentPosition(
+        successCallback,
+        (fallbackError) => {
+          console.error('Fallback geolocation error:', fallbackError);
+          toast.error('Could not detect location. Please check your device location permissions.');
+          setIsDetectingLocation(false);
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      successCallback,
+      errorCallback,
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
   };
 
   return (
