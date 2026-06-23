@@ -7,7 +7,7 @@ import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
 import { saveGuestOrder } from '../lib/guestOrders';
-const LocationPicker = React.lazy(() => import('../components/LocationPicker'));
+const AutoLocationForm = React.lazy(() => import('../components/AutoLocationForm'));
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -1171,7 +1171,7 @@ const Checkout: React.FC = () => {
       </div>
 
       <React.Suspense fallback={null}>
-        <LocationPicker 
+        <AutoLocationForm 
           isOpen={showLocationPicker} 
           onClose={() => setShowLocationPicker(false)} 
           onLocationSelect={handleLocationSelect}
