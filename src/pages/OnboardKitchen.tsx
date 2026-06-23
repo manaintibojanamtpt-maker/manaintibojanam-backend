@@ -597,8 +597,8 @@ const OnboardKitchen = () => {
       {/* Enterprise Footer */}
       <footer className="border-t border-white/[0.05] bg-[#030303] pt-24 pb-12 relative z-10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-20">
-            <div className="col-span-2 md:col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 lg:gap-12 mb-20">
+            <div className="col-span-2 md:col-span-4 lg:col-span-2">
               <div className="flex items-center gap-3 mb-8">
                 <img src={bhojanOsLogo} alt="Logo" className="w-10 h-10 rounded-xl" />
                 <span className="font-black text-2xl text-white tracking-tighter">Bhojan<GradientText>OS</GradientText></span>
@@ -633,7 +633,7 @@ const OnboardKitchen = () => {
               </ul>
             </div>
 
-            <div className="col-span-2 md:col-span-1">
+            <div className="col-span-2 md:col-span-1 lg:col-span-1">
               <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Contact Us</h4>
               <ul className="space-y-4 text-sm text-gray-400 font-medium">
                 <li className="flex items-center gap-3"><Mail size={16} className="text-[#FF6B00]" /> <a href="mailto:bhojanos26@gmail.com" className="hover:text-white transition-colors">bhojanos26@gmail.com</a></li>
