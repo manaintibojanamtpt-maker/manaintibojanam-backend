@@ -3,6 +3,8 @@ import { MapPin, X, Check, Loader2, Search, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 
+import { Tenant } from '../types';
+
 interface LocationData {
   lat: number;
   lng: number;
@@ -10,18 +12,16 @@ interface LocationData {
   fullAddress: string;
   distanceKm: number;
   deliveryFee: number;
+  isServiceable?: boolean;
 }
 
 interface LocationPickerProps {
   isOpen: boolean;
   onClose: () => void;
   onLocationSelect: (locationData: LocationData) => void;
-  initialLat?: number;
-  initialLng?: number;
+  tenant?: Tenant | null;
   title?: string;
 }
-
-const RESTAURANT_LOC = { lat: 18.499588, lng: 73.978638 };
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371; 
@@ -36,21 +36,32 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return distance * 1.2; 
 };
 
-const calculateDeliveryFee = (distanceKm: number) => {
-  if (distanceKm <= 2) return 30;
-  if (distanceKm <= 5) return 50;
-  if (distanceKm <= 8) return 80;
-  return 100 + Math.ceil((distanceKm - 8) * 12);
+export const getDeliveryFee = (distanceKm: number, tenant?: Tenant | null) => {
+  if (!tenant?.deliveryConfig) {
+    if (distanceKm <= 2) return 30;
+    if (distanceKm <= 5) return 50;
+    if (distanceKm <= 8) return 80;
+    return 100 + Math.ceil((distanceKm - 8) * 12);
+  }
+  
+  const config = tenant.deliveryConfig;
+  if (distanceKm <= config.freeRadius) return 0;
+  if (distanceKm <= config.paidRadius) return config.baseFee;
+  if (distanceKm > config.maxRadius) return -1; // Unserviceable
+  
+  const extraDistance = distanceKm - config.paidRadius;
+  return config.baseFee + Math.ceil(extraDistance * config.perKmCharge);
 };
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
   isOpen,
   onClose,
   onLocationSelect,
-  initialLat = 18.5204, // Pune center
-  initialLng = 73.8567,
+  tenant,
   title = "Confirm Delivery Location"
 }) => {
+  const initialLat = tenant?.location?.lat || 18.5204;
+  const initialLng = tenant?.location?.lng || 73.8567;
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; addressText?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,8 +99,13 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const updateLocationDetails = React.useCallback((lat: number, lng: number) => {
     setIsFetchingAddress(true);
     
-    const dist = calculateDistance(RESTAURANT_LOC.lat, RESTAURANT_LOC.lng, lat, lng);
-    setDistanceInfo({ distance: dist, fee: calculateDeliveryFee(dist) });
+    // Check if tenant has location
+    if (!tenant?.location?.lat) {
+      setDistanceInfo({ distance: 0, fee: 30 }); // Dummy info, UI will block it anyway
+    } else {
+      const dist = calculateDistance(tenant.location.lat, tenant.location.lng, lat, lng);
+      setDistanceInfo({ distance: dist, fee: getDeliveryFee(dist, tenant) });
+    }
     
     if (debounceRef.current) clearTimeout(debounceRef.current);
     
@@ -262,7 +278,8 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       addressText: selectedLocation.addressText,
       fullAddress,
       distanceKm: distanceInfo.distance,
-      deliveryFee: distanceInfo.fee
+      deliveryFee: distanceInfo.fee,
+      isServiceable: distanceInfo.fee !== -1
     });
     onClose();
   };
@@ -441,10 +458,10 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                   Use Current Location
                 </button>
 
-                {(distanceInfo?.distance || 0) > 10 ? (
-                  <div className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2">
+                {distanceInfo?.fee === -1 ? (
+                  <div className="w-full py-3 px-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2">
                     <AlertCircle size={16} />
-                    Sorry, we don't deliver to this location
+                    Location Out of Bounds
                   </div>
                 ) : (
                   <button
@@ -458,6 +475,41 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Map Step Footer */}
+            {step === 'map' && (
+              <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+                {distanceInfo?.fee === -1 ? (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-start gap-3">
+                    <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <h4 className="text-sm font-bold text-red-700 dark:text-red-400">Currently unavailable at your location</h4>
+                      <p className="text-xs text-red-600 dark:text-red-300 mt-0.5">This location is outside the kitchen's maximum delivery radius.</p>
+                    </div>
+                  </div>
+                ) : distanceInfo && (
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Delivery Distance: </span>
+                      <span className="font-bold text-gray-900 dark:text-white">{distanceInfo.distance.toFixed(1)} km</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Delivery Fee: </span>
+                      <span className="font-bold text-gray-900 dark:text-white">
+                        {distanceInfo.fee === 0 ? <span className="text-green-500">Free</span> : `₹${distanceInfo.fee}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={handleConfirmMap}
+                  disabled={!selectedLocation || isFetchingAddress || distanceInfo?.fee === -1}
+                  className="w-full bg-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-[0_4px_12px_rgba(220,38,38,0.2)] hover:bg-red-700 hover:shadow-[0_4px_16px_rgba(220,38,38,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isFetchingAddress ? 'Getting Address Details...' : distanceInfo?.fee === -1 ? 'Location Out of Bounds' : 'Confirm Location'}
+                </button>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

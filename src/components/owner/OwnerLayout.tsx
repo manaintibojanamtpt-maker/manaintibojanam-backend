@@ -1,28 +1,52 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X, LayoutDashboard, Rocket, BrainCircuit, BookOpen } from 'lucide-react';
+import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X, LayoutDashboard, Rocket, BrainCircuit, BookOpen, AlertCircle, Crown, Gift, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
+import { useEntitlements } from '../../hooks/useEntitlements';
+import { useTenant } from '../../context/TenantContext';
+import { sendEmailVerification } from 'firebase/auth';
+import toast from 'react-hot-toast';
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userProfile, logout } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
+  const { tenantInfo } = useTenant();
   useOrderAlerts();
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const entitlements = useEntitlements();
+
+  const handleResendEmail = async () => {
+    if (!currentUser || sendingEmail) return;
+    setSendingEmail(true);
+    try {
+      await sendEmailVerification(currentUser);
+      toast.success('Verification email sent! Check your inbox.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send verification email.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const navItems = [
     { name: 'Command Center', path: '/owner/dashboard', icon: LayoutDashboard },
     { name: 'Commerce Engine', path: '/owner/orders', icon: ShoppingBag },
-    { name: 'Customer Graph', path: '/owner/customers', icon: Users },
-    { name: 'Predictive Supply', path: '/owner/recipes', icon: BookOpen },
+    { name: 'My Customers', path: '/owner/customers', icon: Users, disabled: !entitlements.features.customerInsights },
+    { name: 'Compliance & KYC', path: '/owner/kyc', icon: CheckCircle2 },
+    { name: 'Stock Alerts', path: '/owner/recipes', icon: BookOpen, disabled: !entitlements.features.predictiveSupply },
     { name: 'Menu Engine', path: '/owner/menu', icon: MenuIcon, hideOnMobile: true },
-    { name: 'Intelligence Layer', path: '/owner/marketing', icon: BrainCircuit, hideOnMobile: true },
+    { name: 'Ways to Increase Sales', path: '/owner/marketing', icon: BrainCircuit, hideOnMobile: true, disabled: !entitlements.features.marketing },
+    { name: 'Delivery Intel', path: '/owner/delivery', icon: Rocket, hideOnMobile: true, disabled: !entitlements.features.deliveryIntelligence },
     { name: 'Storefront Settings', path: '/owner/settings', icon: Settings },
-  ];
+    { name: 'Plans & Billing', path: '/owner/subscription', icon: Crown, hideOnMobile: true },
+    { name: 'Refer & Earn', path: '/owner/referrals', icon: Gift, hideOnMobile: false },
+    { name: 'Help & Feedback', path: '/owner/feedback', icon: MessageCircle, hideOnMobile: false }
+  ].filter(item => !item.disabled); // Completely hide them if disabled, or you can gray them out. Let's gray them out.
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const storeUrl = tenantId ? `https://${window.location.host}/k/${tenantId}` : '';
@@ -294,6 +318,26 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </button>
           </div>
         </header>
+
+        {/* Email Verification Banner */}
+        {(!currentUser?.emailVerified && tenantInfo?.kyc?.emailVerificationStatus !== 'verified') && (
+          <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0 relative z-10">
+            <div className="flex items-start sm:items-center gap-3">
+              <AlertCircle size={18} className="text-rose-500 mt-0.5 sm:mt-0 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-rose-400">Verify your email to continue.</p>
+                <p className="text-xs text-rose-400/70 mt-0.5">You cannot publish your store or activate premium plans until your email is verified.</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleResendEmail}
+              disabled={sendingEmail}
+              className="text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 disabled:opacity-50"
+            >
+              {sendingEmail ? 'Sending...' : 'Resend Email'}
+            </button>
+          </div>
+        )}
 
         {/* Scrollable Content Container */}
         <div className="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">

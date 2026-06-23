@@ -213,5 +213,24 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow read, update, delete: if isAdmin();
     }
+
+    match /campaigns/{docId} {
+      allow read: if isAdmin() || isTenantOwner(resource.data.tenantId);
+      allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId);
+      allow update, delete: if isAdmin() || (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId));
+    }
+
+    match /audit_logs/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable
+    }
+
+    match /customers/{docId} {
+      allow read: if isAdmin() || isTenantOwner(resource.data.tenantId);
+      allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId);
+      allow update: if isAdmin() || (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId));
+      allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId);
+    }
   }
 }

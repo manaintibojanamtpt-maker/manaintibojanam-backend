@@ -3,7 +3,7 @@ import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2 } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 
@@ -12,13 +12,27 @@ const OwnerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'location'>('general');
+  const [fetchingCoords, setFetchingCoords] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     whatsapp: '',
     deliveryNotes: '',
     logoUrl: '',
-    subscriptionEnabled: false
+    subscriptionEnabled: false,
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    lat: '',
+    lng: '',
+    freeRadius: 3,
+    paidRadius: 5,
+    maxRadius: 10,
+    baseFee: 30,
+    perKmCharge: 15,
+    prepTime: 20
   });
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
@@ -39,7 +53,19 @@ const OwnerSettings: React.FC = () => {
             whatsapp: data.contact?.whatsapp || '',
             deliveryNotes: data.deliveryNotes || '',
             logoUrl: data.branding?.logoUrl || '',
-            subscriptionEnabled: data.features?.subscriptionEnabled || false
+            subscriptionEnabled: data.features?.subscriptionEnabled || false,
+            address: data.location?.address || '',
+            city: data.location?.city || '',
+            state: data.location?.state || '',
+            pincode: data.location?.pincode || '',
+            lat: data.location?.lat ? String(data.location.lat) : '',
+            lng: data.location?.lng ? String(data.location.lng) : '',
+            freeRadius: data.deliveryConfig?.freeRadius || 3,
+            paidRadius: data.deliveryConfig?.paidRadius || 5,
+            maxRadius: data.deliveryConfig?.maxRadius || 10,
+            baseFee: data.deliveryConfig?.baseFee || 30,
+            perKmCharge: data.deliveryConfig?.perKmCharge || 15,
+            prepTime: data.deliveryConfig?.prepTime || 20
           });
         }
       } catch (error) {
@@ -67,7 +93,23 @@ const OwnerSettings: React.FC = () => {
         'contact.whatsapp': formData.whatsapp,
         deliveryNotes: formData.deliveryNotes,
         'branding.logoUrl': formData.logoUrl,
-        'features.subscriptionEnabled': formData.subscriptionEnabled
+        'features.subscriptionEnabled': formData.subscriptionEnabled,
+        location: {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          lat: Number(formData.lat) || 0,
+          lng: Number(formData.lng) || 0
+        },
+        deliveryConfig: {
+          freeRadius: Number(formData.freeRadius),
+          paidRadius: Number(formData.paidRadius),
+          maxRadius: Number(formData.maxRadius),
+          baseFee: Number(formData.baseFee),
+          perKmCharge: Number(formData.perKmCharge),
+          prepTime: Number(formData.prepTime)
+        }
       });
       
       toast.success("Settings saved successfully");
@@ -145,6 +187,33 @@ const OwnerSettings: React.FC = () => {
     }
   };
 
+  const autoFetchCoordinates = async () => {
+    if (!formData.address || !formData.city) {
+      toast.error("Please enter Address and City first");
+      return;
+    }
+    setFetchingCoords(true);
+    try {
+      const q = encodeURIComponent(`${formData.address}, ${formData.city}, ${formData.state}`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          lat: data[0].lat,
+          lng: data[0].lon
+        }));
+        toast.success("Coordinates updated from address!");
+      } else {
+        toast.error("Could not find coordinates. Please enter manually.");
+      }
+    } catch (e) {
+      toast.error("Error fetching coordinates");
+    } finally {
+      setFetchingCoords(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-20 text-white">
@@ -160,14 +229,27 @@ const OwnerSettings: React.FC = () => {
           <img src={logo} alt="BhojanOS" className="h-12 w-12 rounded-xl shadow-sm border border-white/10" />
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">Kitchen Settings</h1>
-            <p className="text-white/50 mt-1">Manage your storefront presence</p>
+            <p className="text-white/50 mt-1">Manage your storefront presence and logistics</p>
           </div>
         </header>
+
+        <div className="flex space-x-4 mb-6 border-b border-white/10 pb-0">
+          <button onClick={() => setActiveTab('general')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'general' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Settings size={18} />
+            <span className="font-bold tracking-widest text-xs uppercase">General</span>
+          </button>
+          <button onClick={() => setActiveTab('location')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'location' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <MapPin size={18} />
+            <span className="font-bold tracking-widest text-xs uppercase">Location & Delivery</span>
+          </button>
+        </div>
 
         <div className="bg-[#0f0f11] rounded-xl shadow-sm border border-white/10">
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             
-            {/* Business Name */}
+            {activeTab === 'general' && (
+              <>
+                {/* Business Name */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
                 Business Name
@@ -288,6 +370,94 @@ const OwnerSettings: React.FC = () => {
                 </label>
               </div>
             </div>
+            </>
+            )}
+
+            {activeTab === 'location' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                {/* KITCHEN PROFILE */}
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4"><MapPin size={20} className="text-[#FF6B00]" /> Kitchen Address</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-bold text-white/80 mb-2 uppercase tracking-widest text-xs">Full Address</label>
+                      <input type="text" required value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00] focus:border-transparent transition-all" placeholder="123 Food Street, Shop 4" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-white/80 mb-2 uppercase tracking-widest text-xs">City</label>
+                      <input type="text" required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00]" placeholder="Pune" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-white/80 mb-2 uppercase tracking-widest text-xs">State</label>
+                      <input type="text" required value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00]" placeholder="Maharashtra" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-white/80 mb-2 uppercase tracking-widest text-xs">Pincode</label>
+                      <input type="text" required value={formData.pincode} onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00]" placeholder="411001" />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-white font-bold tracking-tight">Geographic Coordinates</h4>
+                      <button type="button" onClick={autoFetchCoordinates} disabled={fetchingCoords} className="px-3 py-1.5 bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20 rounded-lg text-xs font-bold tracking-widest uppercase flex items-center gap-2 hover:bg-[#FF6B00]/20 transition-colors">
+                        {fetchingCoords ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />} Auto-Detect
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 mb-2 uppercase tracking-widest">Latitude</label>
+                        <input type="text" required value={formData.lat} onChange={(e) => setFormData({ ...formData, lat: e.target.value })} className="block w-full px-4 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00]" placeholder="18.5204" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 mb-2 uppercase tracking-widest">Longitude</label>
+                        <input type="text" required value={formData.lng} onChange={(e) => setFormData({ ...formData, lng: e.target.value })} className="block w-full px-4 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-[#FF6B00]" placeholder="73.8567" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/10 w-full" />
+
+                {/* DELIVERY CONFIG */}
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4"><Truck size={20} className="text-blue-500" /> Delivery Engine</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Free Delivery Radius (KM)</label>
+                      <input type="number" step="0.1" required value={formData.freeRadius} onChange={(e) => setFormData({ ...formData, freeRadius: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Orders within this distance are free.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Base Delivery Radius (KM)</label>
+                      <input type="number" step="0.1" required value={formData.paidRadius} onChange={(e) => setFormData({ ...formData, paidRadius: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Orders up to this distance cost the base fee.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Max Delivery Radius (KM)</label>
+                      <input type="number" step="0.1" required value={formData.maxRadius} onChange={(e) => setFormData({ ...formData, maxRadius: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white border-l-2 border-l-red-500" />
+                      <p className="text-[10px] text-white/40 mt-1">Orders beyond this distance are blocked.</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Base Fee (₹)</label>
+                      <input type="number" required value={formData.baseFee} onChange={(e) => setFormData({ ...formData, baseFee: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Flat fee for orders inside the Base Radius.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Per KM Extra Charge (₹)</label>
+                      <input type="number" required value={formData.perKmCharge} onChange={(e) => setFormData({ ...formData, perKmCharge: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Charge per km if distance {'>'} Base Radius.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Avg Prep Time (Mins)</label>
+                      <input type="number" required value={formData.prepTime} onChange={(e) => setFormData({ ...formData, prepTime: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Used to calculate delivery ETA dynamically.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pt-6 border-t border-white/10">
               <button

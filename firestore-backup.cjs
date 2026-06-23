@@ -19,14 +19,15 @@ if (admin.apps.length === 0) {
   admin.initializeApp({ projectId });
 }
 
-const DATABASE_ID = 'ai-studio-3efd2980-c2f3-4286-8dff-afeca044d855';
+const DATABASE_ID = '(default)';
 const db = getFirestore(admin.app(), DATABASE_ID);
 
 const COLLECTIONS_TO_BACKUP = [
   'menu', 'categories', 'orders', 'order_drafts', 'subscriptions', 'users',
   'supportTickets', 'courierDispatches', 'reviews', 'referrals',
   'coupons', 'banners', 'userPreferences', 'paymentProofs', 
-  'notification_outbox', 'webhook_events', 'razorpayWebhooks'
+  'notification_outbox', 'webhook_events', 'razorpayWebhooks',
+  'tenants', 'customers', 'campaigns', 'audit_logs', 'inventory'
 ];
 
 const BACKUP_DIR = path.join(process.cwd(), 'backups');

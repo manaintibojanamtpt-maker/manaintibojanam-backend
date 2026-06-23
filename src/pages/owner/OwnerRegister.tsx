@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { Store, Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
+import { Store, Mail, Lock, Loader2, ArrowRight, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
+import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -24,6 +25,7 @@ const OwnerRegister = () => {
   const [name, setName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
   const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -45,6 +47,13 @@ const OwnerRegister = () => {
       // Update profile
       await updateProfile(userCredential.user, { displayName: name });
       
+      // Send email verification
+      try {
+        await sendEmailVerification(userCredential.user);
+      } catch (err) {
+        console.error("Email verification send failed", err);
+      }
+      
       // Create user doc
       const db = getDb();
       const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -61,8 +70,31 @@ const OwnerRegister = () => {
       await setDoc(doc(db, 'tenants', slug), {
         name: restaurantName,
         slug: slug,
-        status: 'active',
-        createdAt: new Date(),
+        ownerId: userCredential.user.uid,
+        status: 'draft',
+        storeStatus: 'draft',
+        subscription: {
+          planId: 'starter',
+          status: 'trialing',
+          startDate: new Date().toISOString(),
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14-day trial
+        },
+        legal: {
+          status: 'pending'
+        },
+        fssai: {
+          verificationStatus: 'not_submitted',
+          registrationDate: new Date().toISOString()
+        },
+        kyc: {
+          ownerName: name,
+          email: email,
+          emailVerificationStatus: 'pending',
+          mobileNumber: mobileNumber,
+          mobileVerificationStatus: 'pending',
+          verificationLevel: 0
+        },
+        createdAt: new Date().toISOString(),
         settings: { theme: 'orange' }
       }, { merge: true });
 
@@ -114,7 +146,8 @@ const OwnerRegister = () => {
           
           <div className="text-center mb-8 relative z-10">
             <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Create your Store</h1>
-            <p className="text-white/50 text-sm font-medium">Start your 14-day free trial today.</p>
+            <p className="text-white/50 text-sm font-medium mb-6">Start your 14-day free trial today.</p>
+            <FounderBetaTrustBanner />
           </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -167,6 +200,27 @@ const OwnerRegister = () => {
                 className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 flex justify-between">
+              <span>Mobile Number</span>
+              <span className="text-[10px] text-[#FF6B00]">Required</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Phone size={18} className="text-white/20" />
+              </div>
+              <input
+                type="tel"
+                required
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+                placeholder="9876543210"
+                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00] transition-all font-medium"
+              />
+            </div>
+            <p className="text-[10px] text-white/30 mt-1.5 ml-1">Mobile verification will be enabled in a future update.</p>
           </div>
 
           <div>

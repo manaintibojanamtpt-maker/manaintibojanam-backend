@@ -15,6 +15,18 @@ export interface TenantInfo {
   features?: {
     subscriptionEnabled?: boolean;
   };
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  deliveryConfig?: {
+    freeRadius: number;
+    paidRadius: number;
+    maxRadius: number;
+    perKmCharge: number;
+    baseFee: number;
+    prepTime: number;
+  };
 }
 
 interface TenantContextType {

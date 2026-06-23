@@ -456,11 +456,12 @@ const Home: React.FC = () => {
           <div className="w-full mt-auto pb-8 hidden md:block">
              <div className="flex justify-center items-center gap-6 max-w-5xl mx-auto flex-wrap">
                 {[
-                  { icon: ChefHat, title: "Homemade" },
-                  { icon: ShieldCheck, title: "No Preservatives" },
-                  { icon: Clock, title: "Fresh Daily" },
-                  { icon: Utensils, title: "Authentic Andhra Recipes" }
-                ].map((badge, idx) => (
+                  { id: 'verified_merchant', icon: ShieldCheck, title: "Verified Merchant", show: tenantInfo?.kyc?.verificationLevel && tenantInfo.kyc.verificationLevel > 0 },
+                  { id: 'fssai_verified', icon: ShieldCheck, title: "FSSAI Verified", show: tenantInfo?.fssai?.verificationStatus === 'verified' },
+                  { id: 'premium_verified', icon: Star, title: "Premium Verified", show: ['pro', 'enterprise'].includes(tenantInfo?.subscription?.planId || '') },
+                  { id: 'homemade', icon: ChefHat, title: "Homemade", show: !tenantInfo?.businessType || tenantInfo?.businessType === 'home_kitchen' },
+                  { id: 'fresh', icon: Clock, title: "Fresh Daily", show: true }
+                ].filter(b => b.show).slice(0, 4).map((badge, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-black/40 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-xl">
                     <badge.icon className="text-orange-400" size={24} />
                     <span className="text-white font-bold text-sm tracking-wide">{badge.title}</span>

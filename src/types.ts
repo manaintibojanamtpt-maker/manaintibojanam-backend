@@ -383,15 +383,90 @@ export interface Referral {
 
 // ================= BHOJANOS SAAS PLATFORM =================
 
+export type TenantLifecycleStatus = 'draft' | 'pending_verification' | 'approved' | 'trial' | 'active' | 'payment_due' | 'compliance_overdue' | 'suspended' | 'rejected' | 'archived';
+export type StoreLifecycleStatus = 'draft' | 'verification_pending' | 'approved' | 'published' | 'paused' | 'suspended' | 'archived';
+
 export interface Tenant {
   id: string;
   slug: string;
   name: string;
   ownerId: string;
-  status: 'trialing' | 'active' | 'suspended';
-  planId: 'starter' | 'growth' | 'pro' | 'enterprise';
-  trialEndsAt?: any;
-  subscriptionEndsAt?: any;
+  
+  // Phase 1: Governance
+  status: TenantLifecycleStatus;
+  storeStatus: StoreLifecycleStatus;
+
+  // Phase 2: KYC
+  kyc?: {
+    ownerName?: string;
+    businessName?: string;
+    phone?: string;
+    email?: string;
+    emailVerificationStatus?: 'pending' | 'verified';
+    emailVerifiedAt?: any;
+    mobileNumber?: string;
+    mobileVerificationStatus?: 'pending' | 'verified' | 'failed' | 'blocked';
+    otpAttempts?: number;
+    lastOtpSentAt?: any;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    pincode?: string;
+    gstNumber?: string;
+    panNumber?: string;
+    verificationLevel: 0 | 1 | 2 | 3;
+    documents?: {
+      businessProof?: { url: string; uploadedAt: any; status: string };
+      identityProof?: { url: string; uploadedAt: any; status: string };
+      addressProof?: { url: string; uploadedAt: any; status: string };
+      tradeLicense?: { url: string; uploadedAt: any; status: string };
+    };
+  };
+
+  // Phase 3: Legal
+  legal?: {
+    status: 'pending' | 'accepted';
+    merchantAgreementVersion?: string;
+    merchantAgreementAcceptedAt?: any;
+    merchantDeclarationAcceptedAt?: any;
+    termsAcceptedAt?: any;
+    privacyAcceptedAt?: any;
+    acceptedByIp?: string;
+    acceptedByBrowser?: string;
+  };
+
+  // Phase 4: FSSAI Compliance
+  fssai?: {
+    number?: string;
+    certificateUrl?: string;
+    expiryDate?: string;
+    verificationStatus: 'not_submitted' | 'pending_submission' | 'submitted' | 'under_review' | 'verified' | 'expired' | 'rejected' | 'compliance_overdue';
+    registrationDate?: any;
+  };
+
+  // Phase 6 & 8A: Subscription
+  subscription?: {
+    planId: 'starter' | 'growth' | 'pro' | 'enterprise';
+    status: 'trialing' | 'active' | 'past_due' | 'canceled';
+    startDate?: any;
+    trialActivatedAt?: any;
+    trialExpiresAt?: any;
+    trialUsed?: boolean;
+    trialType?: 'growth' | 'pro' | 'enterprise';
+    trialHistory?: { type: string; activatedAt: any; expiresAt: any }[];
+    subscriptionEndsAt?: any;
+    
+    // Payment Gateway Preparation
+    razorpayCustomerId?: string;
+    razorpaySubscriptionId?: string;
+    latestInvoiceId?: string;
+    renewalDate?: any;
+    paymentStatus?: 'success' | 'failed' | 'pending';
+    failureCount?: number;
+    dunningStatus?: 'active' | 'in_recovery' | 'suspended';
+  };
+
   paymentConfig?: {
     provider: 'razorpay' | 'phonepe';
     keyId: string;
@@ -402,6 +477,58 @@ export interface Tenant {
     logoUrl?: string;
     primaryColor?: string;
   };
+  location?: {
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+    lat: number;
+    lng: number;
+  };
+  deliveryConfig?: {
+    freeRadius: number; // in km
+    paidRadius: number; // in km (base limit for standard fee)
+    maxRadius: number; // in km (absolute max delivery limit)
+    perKmCharge: number; // charge per km beyond freeRadius
+    baseFee: number; // base fee for paidRadius
+    prepTime: number; // minutes to prepare order
+  };
+  
+  tenantHealthScore?: number; // 0-100
+  merchantTrustScore?: number; // 0-100
+  launchReadinessScore?: number; // 0-100
+
+  // Phase 19: Beta Tracking
+  beta?: {
+    isBetaUser?: boolean;
+    betaBatch?: string;
+    registrationDate?: any;
+    publishDate?: any;
+    firstOrderDate?: any;
+    firstRepeatOrderDate?: any;
+    trialActivatedDate?: any;
+    paidConversionDate?: any;
+    betaFeedbackScore?: number;
+  };
+
+  // Phase 28: Referral Tracking
+  referral?: {
+    referralCode?: string;
+    referredBy?: string;
+    referredTenantId?: string;
+    referralCount?: number;
+    successfulReferrals?: number;
+    rewardBalance?: number;
+    rewardHistory?: {
+      id: string;
+      type: 'free_month' | 'credit' | 'badge';
+      amount?: number;
+      planType?: 'growth' | 'pro';
+      issuedAt: any;
+      description: string;
+    }[];
+  };
+
   createdAt: any;
 }
 
@@ -466,4 +593,45 @@ export interface SimulationResult {
   expectedOrderLift: number; // percentage
   expectedRevenueLift: number; // percentage
   expectedRepeatLift: number; // percentage
+}
+
+// ==========================================
+// Phase 30: Feedback Engine
+// ==========================================
+
+export interface MerchantFeedback {
+  id?: string;
+  tenantId: string;
+  type: 'feature' | 'bug' | 'suggestion' | 'help' | 'rating';
+  description: string;
+  rating?: number;
+  merchantHealthSnapshot?: number;
+  plan?: string;
+  businessType?: string;
+  timestamp: any;
+  status?: 'new' | 'reviewed' | 'resolved';
+}
+
+// ==========================================
+// Phase 37: Case Study Engine
+// ==========================================
+
+export interface CaseStudy {
+  id?: string;
+  tenantId: string;
+  tenantName: string;
+  createdAt: any;
+  beforeStats: {
+    revenue: number;
+    orders: number;
+    retention: number;
+  };
+  afterStats: {
+    revenue: number;
+    orders: number;
+    retention: number;
+  };
+  revenueGrowth: number; // %
+  retentionGrowth: number; // %
+  operationalImprovements: string[];
 }

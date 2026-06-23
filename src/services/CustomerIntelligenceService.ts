@@ -88,34 +88,74 @@ export const getCustomerSegmentsSummary = async (tenantId: string): Promise<Cust
 export const generateCampaign = (audience: string, tenantName: string) => {
   let whatsappCopy = "";
   let smsCopy = "";
+  let instagramCaption = "";
   let couponCode = "";
-  let expectedRecoveryPerUser = 0;
+  let expectedReach = 0;
+  let expectedOrders = 0;
+  let expectedRevenueLift = 0;
+  let confidenceScore = 0;
 
   switch (audience) {
-    case 'At Risk':
+    case 'Customer Recovery':
       couponCode = "MISSYOU10";
       whatsappCopy = `Hi! We noticed you haven't ordered from ${tenantName} recently. We miss serving you! 🥺\n\nUse code *${couponCode}* for 10% OFF your next order.\n\nOrder here: [STORE_LINK]`;
       smsCopy = `${tenantName}: We miss you! Enjoy 10% OFF your next meal with code ${couponCode}. Order now: [STORE_LINK]`;
-      expectedRecoveryPerUser = 250;
+      instagramCaption = `We miss our favorite customers! 🥺 Tag someone who owes you a meal from ${tenantName} and use code ${couponCode} for 10% OFF today! Link in bio. 🥘✨`;
+      expectedReach = 450;
+      expectedOrders = 25;
+      expectedRevenueLift = 8500;
+      confidenceScore = 88;
       break;
-    case 'Churned':
+    case 'Win-Back':
       couponCode = "COMEBACK15";
       whatsappCopy = `It's been a while since your last meal from ${tenantName}. Come back and enjoy a special 15% OFF on us! 🍲✨\n\nUse code *${couponCode}* at checkout.\n\nOrder here: [STORE_LINK]`;
       smsCopy = `${tenantName}: Come back & enjoy 15% OFF your next order with code ${couponCode}. Order: [STORE_LINK]`;
-      expectedRecoveryPerUser = 350;
+      instagramCaption = `Been a while? Let's fix that! 🍲 Get 15% OFF your entire order with code ${couponCode} today. Link in bio to order!`;
+      expectedReach = 200;
+      expectedOrders = 10;
+      expectedRevenueLift = 3500;
+      confidenceScore = 75;
       break;
-    case 'VIP':
+    case 'Festival Promotion':
+      couponCode = "FESTIVAL20";
+      whatsappCopy = `Celebrate the season with ${tenantName}! 🎊 Enjoy 20% OFF our special festive menu. Valid for 48 hours only!\n\nUse code *${couponCode}*.\n\nOrder here: [STORE_LINK]`;
+      smsCopy = `${tenantName} Festive Special: Get 20% OFF with code ${couponCode}. Valid 48hrs! [STORE_LINK]`;
+      instagramCaption = `It's time to celebrate! 🎉 Enjoy our festive specials at ${tenantName}. Use code ${couponCode} for 20% OFF your entire order. Link in bio! 🍛✨`;
+      expectedReach = 1500;
+      expectedOrders = 120;
+      expectedRevenueLift = 45000;
+      confidenceScore = 92;
+      break;
+    case 'Combo Offers':
+      couponCode = "COMBOFREE";
+      whatsappCopy = `Craving a feast? 🥘 Buy any Family Combo from ${tenantName} and get a FREE dessert on us!\n\nUse code *${couponCode}*.\n\nOrder here: [STORE_LINK]`;
+      smsCopy = `${tenantName}: Buy any Combo, get a FREE dessert with code ${couponCode}. Order: [STORE_LINK]`;
+      instagramCaption = `The ultimate feast awaits! 🥘 Buy any Family Combo and get a FREE dessert on us. Because there's always room for sweet! Use code ${couponCode}. Link in bio.`;
+      expectedReach = 800;
+      expectedOrders = 45;
+      expectedRevenueLift = 22000;
+      confidenceScore = 85;
+      break;
+    case 'Referral':
+      couponCode = "SHARE50";
+      whatsappCopy = `Love ${tenantName}? Share the love! ❤️ Send this link to a friend and you both get ₹50 OFF your next order!\n\nShare this code: *${couponCode}*\n\nOrder here: [STORE_LINK]`;
+      smsCopy = `${tenantName}: Share code ${couponCode} with a friend. You both get ₹50 OFF! Order: [STORE_LINK]`;
+      instagramCaption = `Good food is meant to be shared! ❤️ Tag your foodie partner in crime. If they order using code ${couponCode}, you both get ₹50 OFF! Link in bio.`;
+      expectedReach = 2000;
+      expectedOrders = 80;
+      expectedRevenueLift = 30000;
+      confidenceScore = 70;
+      break;
+    default: // VIP
       couponCode = "VIPREWARD";
       whatsappCopy = `Hi! You are one of ${tenantName}'s top customers. As a thank you for your loyalty, enjoy a FREE dessert or ₹100 OFF your next order! 🏆🎁\n\nUse code *${couponCode}*.\n\nOrder here: [STORE_LINK]`;
       smsCopy = `${tenantName} VIP Reward: Get a free dessert or ₹100 OFF with code ${couponCode}. Thanks for your loyalty! [STORE_LINK]`;
-      expectedRecoveryPerUser = 500;
-      break;
-    default:
-      couponCode = "WELCOME5";
-      whatsappCopy = `Enjoy your meals from ${tenantName}! Use code *${couponCode}* for 5% OFF.`;
-      smsCopy = `Enjoy 5% OFF at ${tenantName} with code ${couponCode}.`;
-      expectedRecoveryPerUser = 150;
+      instagramCaption = `We love our regulars! ❤️ Show this post at ${tenantName} for a free upgrade on your meal today. Thanks for being awesome!`;
+      expectedReach = 150;
+      expectedOrders = 50;
+      expectedRevenueLift = 12000;
+      confidenceScore = 95;
   }
 
-  return { whatsappCopy, smsCopy, couponCode, expectedRecoveryPerUser };
+  return { whatsappCopy, smsCopy, instagramCaption, couponCode, expectedReach, expectedOrders, expectedRevenueLift, confidenceScore };
 };

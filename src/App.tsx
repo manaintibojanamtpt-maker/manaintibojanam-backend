@@ -33,9 +33,19 @@ import ForecastDashboard from './pages/owner/ForecastDashboard';
 import OwnerRecipes from './pages/owner/OwnerRecipes';
 import OwnerMarketing from './pages/owner/OwnerMarketing';
 import OwnerMenu from './pages/owner/OwnerMenu';
+import OwnerCustomers from './pages/owner/OwnerCustomers';
+import OwnerReferrals from './pages/owner/OwnerReferrals';
+import { DeliveryIntelligence } from './pages/owner/DeliveryIntelligence';
+import { OwnerKYC } from './pages/owner/OwnerKYC';
+import { EntitlementGate } from './components/owner/EntitlementGate';
+import BhojanOSSuperAdmin from './pages/BhojanOSSuperAdmin';
+import OwnerFeedback from './pages/owner/OwnerFeedback';
 import { populateSampleData } from './populateData';
+import { runEnterpriseMigration } from './scripts/migrateEnterprise';
 
 // Expose seeder to window for easy DB initialization after Firebase swap
+(window as any).populateSampleData = populateSampleData;
+(window as any).runEnterpriseMigration = runEnterpriseMigration;
 (window as any).runDatabaseSeeder = async () => {
   console.log("Starting Database Seeder...");
   await populateSampleData();
@@ -66,10 +76,10 @@ const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
 const OwnerOrders = lazy(() => import('./pages/owner/OwnerOrders'));
-const OwnerCustomers = lazy(() => import('./pages/owner/OwnerCustomers'));
 const OwnerSettings = lazy(() => import('./pages/owner/OwnerSettings'));
 const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
+const OwnerSubscription = lazy(() => import('./pages/owner/OwnerSubscription'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
@@ -283,12 +293,17 @@ const AppContent: React.FC = () => {
               <Route path="/owner/dashboard" element={<OwnerRoute><OwnerLayout><OwnerDashboard /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/import-data" element={<OwnerRoute><OwnerLayout><DataImporter /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/operations" element={<OwnerRoute><OwnerLayout><ForecastDashboard /></OwnerLayout></OwnerRoute>} />
-              <Route path="/owner/recipes" element={<OwnerRoute><OwnerLayout><OwnerRecipes /></OwnerLayout></OwnerRoute>} />
-              <Route path="/owner/marketing" element={<OwnerRoute><OwnerLayout><OwnerMarketing /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/kyc" element={<OwnerRoute><OwnerLayout><OwnerKYC /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/recipes" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="predictiveSupply"><OwnerRecipes /></EntitlementGate></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/marketing" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="marketing"><OwnerMarketing /></EntitlementGate></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/delivery" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="deliveryIntelligence"><DeliveryIntelligence /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/menu" element={<OwnerRoute><OwnerLayout><OwnerMenu /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/settings" element={<OwnerRoute><OwnerLayout><OwnerSettings /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/subscription" element={<OwnerRoute><OwnerLayout><OwnerSubscription /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/orders" element={<OwnerRoute><OwnerLayout><OwnerOrders /></OwnerLayout></OwnerRoute>} />
-              <Route path="/owner/customers" element={<OwnerRoute><OwnerLayout><OwnerCustomers /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/customers" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="customerInsights"><OwnerCustomers /></EntitlementGate></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/referrals" element={<OwnerRoute><OwnerLayout><OwnerReferrals /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/feedback" element={<OwnerRoute><OwnerLayout><OwnerFeedback /></OwnerLayout></OwnerRoute>} />
               
               <Route path="/k/:tenantSlug/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />
               <Route path="/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />

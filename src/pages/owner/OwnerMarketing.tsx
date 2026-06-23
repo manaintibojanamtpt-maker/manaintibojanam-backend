@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Rocket, Send, Copy, AlertTriangle, CheckCircle2, TrendingUp, Users, Activity, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { trackEvent } from '../../services/AnalyticsService';
+import { getDb } from '../../lib/firebase-db';
+import { collection, addDoc } from 'firebase/firestore';
 
 const OwnerMarketing: React.FC = () => {
   const { userProfile } = useAuth();
@@ -16,8 +18,12 @@ const OwnerMarketing: React.FC = () => {
   const [generatedCampaign, setGeneratedCampaign] = useState<{
     whatsappCopy: string;
     smsCopy: string;
+    instagramCaption: string;
     couponCode: string;
-    expectedRecoveryPerUser: number;
+    expectedReach: number;
+    expectedOrders: number;
+    expectedRevenueLift: number;
+    confidenceScore: number;
   } | null>(null);
 
   const [isSending, setIsSending] = useState(false);
@@ -39,23 +45,34 @@ const OwnerMarketing: React.FC = () => {
     trackEvent(tenantId, 'campaignCreated', { audience });
   };
 
-  const handleLaunch = () => {
-    if (!tenantId || !selectedAudience || !segments) return;
+  const handleLaunch = async () => {
+    if (!tenantId || !selectedAudience || !segments || !generatedCampaign) return;
     setIsSending(true);
 
-    // Mock API call to Twilio/WhatsApp Business API
-    setTimeout(() => {
-      let count = 0;
-      if (selectedAudience === 'At Risk') count = segments.atRiskCustomers;
-      if (selectedAudience === 'Churned') count = segments.churnedCustomers;
-      if (selectedAudience === 'VIP') count = segments.vipCustomers;
+    try {
+      const db = getDb();
+      await addDoc(collection(db, 'campaigns'), {
+        tenantId,
+        audience: selectedAudience,
+        couponCode: generatedCampaign.couponCode,
+        expectedReach: generatedCampaign.expectedReach,
+        expectedOrders: generatedCampaign.expectedOrders,
+        expectedRevenueLift: generatedCampaign.expectedRevenueLift,
+        confidenceScore: generatedCampaign.confidenceScore,
+        status: 'launched',
+        createdAt: new Date().toISOString()
+      });
 
-      trackEvent(tenantId, 'campaignSent', { audience: selectedAudience, count });
+      trackEvent(tenantId, 'campaignSent', { audience: selectedAudience, expectedOrders: generatedCampaign.expectedOrders });
       setIsSending(false);
       setGeneratedCampaign(null);
       setSelectedAudience(null);
-      toast.success(`Campaign successfully launched to ${count} customers!`);
-    }, 1500);
+      toast.success(`Campaign successfully launched across all channels!`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to launch campaign.');
+      setIsSending(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -84,47 +101,31 @@ const OwnerMarketing: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Campaign Selection Column */}
-        <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-lg font-bold text-white mb-4">Select Target Audience</h2>
+        <div className="lg:col-span-1 space-y-4 max-h-[600px] overflow-y-auto no-scrollbar pr-2">
+          <h2 className="text-lg font-bold text-white mb-4 sticky top-0 bg-[#050505] z-10 py-2">Select Target Audience</h2>
           
-          <button 
-            onClick={() => handleGenerate('At Risk')}
-            className={`w-full text-left p-5 rounded-2xl border transition-all ${selectedAudience === 'At Risk' ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-[#0f0f11] border-white/10 hover:border-white/20'}`}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 text-amber-400 font-bold">
-                <AlertTriangle size={18} /> Reactivation
+          {[
+            { id: 'Recovery Campaign (Inactive)', icon: AlertTriangle, color: 'amber', desc: "Target 24 Inactive Customers to recover lost revenue." },
+            { id: 'Win-Back Campaign (Lost)', icon: Activity, color: 'red', desc: "Target Lost Customers who haven't ordered in 30 days." },
+            { id: 'Loyalty Campaign (Repeat)', icon: CheckCircle2, color: 'emerald', desc: "Reward Repeat Customers to increase order frequency." },
+            { id: 'VIP / High Value', icon: Users, color: 'purple', desc: "Exclusive offers for your top 20% High Value Customers." },
+            { id: 'Birthday Campaign', icon: Rocket, color: 'pink', desc: "Automate birthday surprises for customers this month." },
+            { id: 'Festival Campaign', icon: Rocket, color: 'blue', desc: "Launch seasonal or festival-specific promotions." },
+            { id: 'Referral Campaign', icon: TrendingUp, color: 'orange', desc: "Incentivize your best customers to refer friends." }
+          ].map(c => (
+            <button 
+              key={c.id}
+              onClick={() => handleGenerate(c.id)}
+              className={`w-full text-left p-5 rounded-2xl border transition-all ${selectedAudience === c.id ? `bg-${c.color}-500/10 border-${c.color}-500/50 shadow-[0_0_20px_rgba(var(--color-${c.color}-500),0.2)]` : 'bg-[#0f0f11] border-white/10 hover:border-white/20'}`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className={`flex items-center gap-2 text-${c.color}-400 font-bold`}>
+                  <c.icon size={18} /> {c.id}
+                </div>
               </div>
-              <span className="bg-white/10 text-white px-2 py-0.5 rounded-md text-xs font-bold">{segments?.atRiskCustomers} Users</span>
-            </div>
-            <p className="text-sm text-white/50">Target At-Risk customers who haven't ordered in 14 days.</p>
-          </button>
-
-          <button 
-            onClick={() => handleGenerate('Churned')}
-            className={`w-full text-left p-5 rounded-2xl border transition-all ${selectedAudience === 'Churned' ? 'bg-red-500/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'bg-[#0f0f11] border-white/10 hover:border-white/20'}`}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 text-red-400 font-bold">
-                <Activity size={18} /> Win Back
-              </div>
-              <span className="bg-white/10 text-white px-2 py-0.5 rounded-md text-xs font-bold">{segments?.churnedCustomers} Users</span>
-            </div>
-            <p className="text-sm text-white/50">Target Churned customers who haven't ordered in 30 days.</p>
-          </button>
-
-          <button 
-            onClick={() => handleGenerate('VIP')}
-            className={`w-full text-left p-5 rounded-2xl border transition-all ${selectedAudience === 'VIP' ? 'bg-purple-500/10 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.2)]' : 'bg-[#0f0f11] border-white/10 hover:border-white/20'}`}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 text-purple-400 font-bold">
-                <Users size={18} /> VIP Reward
-              </div>
-              <span className="bg-white/10 text-white px-2 py-0.5 rounded-md text-xs font-bold">{segments?.vipCustomers} Users</span>
-            </div>
-            <p className="text-sm text-white/50">Target top 20% high-LTV customers to drive loyalty.</p>
-          </button>
+              <p className="text-sm text-white/50">{c.desc}</p>
+            </button>
+          ))}
         </div>
 
         {/* Campaign Generation Column */}
@@ -136,13 +137,25 @@ const OwnerMarketing: React.FC = () => {
               className="bg-[#0f0f11] rounded-3xl border border-white/10 overflow-hidden"
             >
               <div className="p-6 border-b border-white/5 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-white">Campaign Ready</h3>
-                  <div className="text-right">
-                    <p className="text-xs text-white/50 uppercase tracking-widest font-bold mb-1">Estimated Recovery</p>
-                    <p className="text-2xl font-black text-green-400">
-                      ₹{((selectedAudience === 'At Risk' ? segments!.atRiskCustomers : selectedAudience === 'Churned' ? segments!.churnedCustomers : segments!.vipCustomers) * generatedCampaign.expectedRecoveryPerUser).toLocaleString()}
-                    </p>
+                  <div className="text-right flex items-center gap-2">
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-full text-xs font-bold">Confidence: {generatedCampaign.confidenceScore}%</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-black/30 rounded-xl p-3 text-center border border-white/5">
+                    <p className="text-xs text-white/50 uppercase tracking-wider font-bold">Expected Reach</p>
+                    <p className="text-xl font-black text-blue-400">{generatedCampaign.expectedReach.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-black/30 rounded-xl p-3 text-center border border-white/5">
+                    <p className="text-xs text-white/50 uppercase tracking-wider font-bold">Expected Orders</p>
+                    <p className="text-xl font-black text-amber-400">{generatedCampaign.expectedOrders.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-black/30 rounded-xl p-3 text-center border border-white/5">
+                    <p className="text-xs text-white/50 uppercase tracking-wider font-bold">Revenue Lift</p>
+                    <p className="text-xl font-black text-green-400">₹{generatedCampaign.expectedRevenueLift.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -165,6 +178,16 @@ const OwnerMarketing: React.FC = () => {
                   </div>
                   <div className="bg-white/5 border border-white/10 p-4 rounded-xl text-sm text-white whitespace-pre-wrap font-medium">
                     {generatedCampaign.smsCopy}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-white/60">Instagram Caption</label>
+                    <button onClick={() => copyToClipboard(generatedCampaign.instagramCaption)} className="text-white/40 hover:text-white"><Copy size={14}/></button>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 p-4 rounded-xl text-sm text-white whitespace-pre-wrap font-medium">
+                    {generatedCampaign.instagramCaption}
                   </div>
                 </div>
 

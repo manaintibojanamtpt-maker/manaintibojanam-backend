@@ -14,6 +14,7 @@ import { auth } from '../firebase';
 import { getDb } from '../lib/firebase-db';
 import toast from 'react-hot-toast';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
+import FounderBetaTrustBanner from '../components/FounderBetaTrustBanner';
 
 // --- Premium UI Components ---
 
@@ -523,7 +524,8 @@ const OnboardKitchen = () => {
         <section id="pricing" className="py-40 px-6 lg:px-12 max-w-[1200px] mx-auto text-center relative border-b border-white/[0.05]">
            <div className="text-center mb-16">
              <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-white">Simple, Transparent Pricing</h2>
-             <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto">Everything you need to run your restaurant, for less than the cost of one wrong inventory order.</p>
+             <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto mb-10">Everything you need to run your restaurant, for less than the cost of one wrong inventory order.</p>
+             <FounderBetaTrustBanner />
            </div>
            
            <div className="bg-[#0A0A0A] border border-white/[0.05] rounded-[3rem] p-10 md:p-16 max-w-4xl mx-auto relative overflow-hidden shadow-2xl shadow-purple-500/5">
@@ -555,17 +557,18 @@ const OnboardKitchen = () => {
         </section>
 
         {/* Founder Story */}
-        <section id="origin" className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative">
+        <section id="origin" className="py-40 px-6 lg:px-12 max-w-[1000px] mx-auto text-center relative border-b border-white/[0.05]">
            <Spotlight className="top-1/2 -translate-y-1/2 opacity-20" />
            <div className="relative z-10">
              <div className="w-20 h-20 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-12">
                <Store size={32} className="text-[#FF6B00]" />
              </div>
-             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-12 text-white">Built from the pain of running a real kitchen.</h2>
-             <div className="text-lg sm:text-xl md:text-2xl text-gray-400 font-medium leading-relaxed space-y-6 sm:space-y-8 max-w-4xl mx-auto text-left sm:text-center px-2">
-               <p><BrandText /> wasn't dreamt up in a Silicon Valley boardroom. It was forged in a hot, chaotic cloud kitchen.</p>
-               <p>We experienced the "tablet hell" of managing multiple delivery aggregators. We felt the margin-crushing pain of guessing tomorrow's prep quantities, and the operational nightmare of finding out we ran out of a critical ingredient mid-service.</p>
-               <p>We built internal automation to fix our own problems. Then we realized every food business on earth needs this exact system.</p>
+             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter mb-4 text-white">Built by Vishwa kalyan.</h2>
+             <div className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed space-y-6 max-w-4xl mx-auto text-left sm:text-center px-2 mb-12">
+               <p>BhojanOS was created after experiencing the real operational struggles of running a cloud kitchen and food business.</p>
+               <p>Managing orders, inventory, customer retention, and daily operations manually became overwhelming.</p>
+               <p>BhojanOS was built to help food entrepreneurs automate operations, increase revenue, reduce waste, and grow sustainable businesses using AI-powered insights.</p>
+               <p className="text-[#FF6B00] font-bold">Built in India 🇮🇳 for food entrepreneurs.</p>
              </div>
            </div>
         </section>
@@ -615,18 +618,31 @@ const OnboardKitchen = () => {
             <div>
               <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Resources</h4>
               <ul className="space-y-4 text-base text-gray-400 font-medium">
-                <li><a href="#" className="hover:text-white transition-colors">Developers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Getting Started</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Video Tutorials</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Help & Support</a></li>
               </ul>
             </div>
             
             <div>
               <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Company</h4>
               <ul className="space-y-4 text-base text-gray-400 font-medium">
-                <li><a href="#origin" className="hover:text-white transition-colors">Founder Story</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#origin" className="hover:text-white transition-colors">About Founder</a></li>
+                <li><a href="mailto:bhojanos26@gmail.com" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="https://wa.me/917666258454" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp Support</a></li>
+              </ul>
+            </div>
+
+            <div className="col-span-2 md:col-span-1">
+              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Contact Us</h4>
+              <ul className="space-y-4 text-sm text-gray-400 font-medium">
+                <li className="flex items-center gap-3"><Mail size={16} className="text-[#FF6B00]" /> <a href="mailto:bhojanos26@gmail.com" className="hover:text-white transition-colors">bhojanos26@gmail.com</a></li>
+                <li className="flex items-center gap-3"><Phone size={16} className="text-[#FF6B00]" /> <a href="tel:+917666258454" className="hover:text-white transition-colors">+91 7666258454</a></li>
+                <li className="flex items-center gap-3"><MessageCircle size={16} className="text-green-500" /> WhatsApp Support Available</li>
+                <li className="mt-4 pt-4 border-t border-white/10">
+                  <span className="block text-white/50 text-xs mb-1">Support Hours:</span>
+                  9:00 AM – 9:00 PM IST
+                </li>
               </ul>
             </div>
           </div>

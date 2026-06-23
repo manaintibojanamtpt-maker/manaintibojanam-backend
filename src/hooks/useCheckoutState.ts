@@ -135,12 +135,12 @@ export function useCheckoutState() {
         if (surgeMultiplier > 1) appliedModifiers.push(`surge(${surgeMultiplier.toFixed(1)}x)`);
       }
 
-      const finalDeliveryFee = Math.max(fee, 30);
+      const finalDeliveryFee = Math.max(fee, 0); // Allow 0 for free delivery
       const partnerCost = 0;
       const cheapest = ['native'];
       
       const safeFee = Math.round(finalDeliveryFee);
-      const cappedDisplayFee = Math.min(safeFee, maxDeliveryFeeCap);
+      const cappedDisplayFee = safeFee; // Remove max limit to respect tenant rules
 
       console.log('[Pricing Engine]', {
         finalDeliveryFee: safeFee,

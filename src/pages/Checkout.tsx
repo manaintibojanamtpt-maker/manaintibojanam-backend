@@ -24,10 +24,20 @@ import { getUpsellRecommendations } from '../services/RecommendationEngine';
 // Countdown removed by request
 
 const Checkout: React.FC = () => {
-  const { tenantId, tenantSlug } = useTenant();
+  const { tenantId, tenantSlug, tenantInfo } = useTenant();
   const navigate = useNavigate();
   const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const state = useCheckoutState();
+  const location = useLocation();
+
+  const calculateETA = () => {
+    const distanceKm = state.deliveryState.selectedAddress?.distanceKm || 0;
+    const prepTime = tenantInfo?.deliveryConfig?.prepTime || 20;
+    const travelTime = Math.ceil(distanceKm * 4); // 4 mins per km
+    const minEta = prepTime + travelTime;
+    const maxEta = minEta + 15;
+    return `${minEta}-${maxEta} mins`;
+  };
   const { logEvent } = useAIAnalytics();
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -1055,7 +1065,7 @@ const Checkout: React.FC = () => {
                             : 'border-gray-50 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-red-200'
                         }`}
                       >
-                        {slot.replace('Today, ', '').replace('Standard Delivery (ASAP)', 'ASAP (30-45 mins)')}
+                        {slot.replace('Today, ', '').replace('Standard Delivery (ASAP)', `ASAP (${calculateETA()})`)}
                       </button>
                     ))}
                   </div>
@@ -1163,7 +1173,8 @@ const Checkout: React.FC = () => {
       <LocationPicker 
         isOpen={showLocationPicker} 
         onClose={() => setShowLocationPicker(false)} 
-        onLocationSelect={handleLocationSelect} 
+        onLocationSelect={handleLocationSelect}
+        tenant={tenantInfo as any}
       />
 
       <AnimatePresence>
