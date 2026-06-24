@@ -42,7 +42,6 @@ const OwnerOrders: React.FC = () => {
     trackingUrl: '',
     riderName: '',
     riderPhone: '',
-    riderPhone: '',
     notifyCustomer: true
   });
 

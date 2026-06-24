@@ -7,11 +7,14 @@ import {
   BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power
 } from 'lucide-react';
 import { m } from 'framer-motion';
-import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc } from 'firebase/firestore';
+import { logEvent } from '../../lib/analytics';
+import { logIncident } from '../../lib/monitoring';
 import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
-import { Order, Subscription } from '../../types';
+import { Order, Subscription, ReleaseNote } from '../../types';
 import { safeParseDate } from '../../lib/utils';
+import { ReleaseNotesModal } from '../../components/releases/ReleaseNotesModal';
 import { deriveOwnerCustomerMemories } from '../../utils/customerMemory';
 import { auth } from '../../firebase';
 import { CustomerSegmentSummary, getCustomerSegmentsSummary } from '../../services/CustomerIntelligenceService';
@@ -45,6 +48,9 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = React.useState(true);
   const [growthSnapshot, setGrowthSnapshot] = React.useState<AIGrowthSnapshot | null>(null);
   const [menuCount, setMenuCount] = React.useState(0);
+  const [latestRelease, setLatestRelease] = React.useState<ReleaseNote | null>(null);
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
 
   const storeSlug = tenantInfo?.slug || tenantId;
   const storeUrl = getStoreUrl(storeSlug);
@@ -55,12 +61,17 @@ const OwnerDashboard = () => {
     toast.success('Store link copied!');
   };
 
-  const shareToWhatsApp = () => {
+  const shareToWhatsAppDirect = () => {
     if (!storeUrl) return;
-    const text = encodeURIComponent(`Order online from ${tenantName}!\n\nVisit our store: ${storeUrl}`);
+    const text = encodeURIComponent(`We are now live on BhojanOS 🎉\n\nFresh homemade food delivered directly from our kitchen.\n\nOrder here:\n${storeUrl}\n\nPlease support us by sharing with your friends and family ❤️`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
+  const shareToWhatsAppStatus = () => {
+    if (!storeUrl) return;
+    const text = encodeURIComponent(`🍛 Fresh food now available online!\n\nOrder directly from our kitchen:\n${storeUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
   React.useEffect(() => {
     const healTenantDoc = async () => {
       if (!tenantId || !userProfile?.userId) return;
@@ -121,6 +132,20 @@ const OwnerDashboard = () => {
       setInventoryAlerts(alerts);
     });
 
+    const fetchLatestRelease = async () => {
+      try {
+        const snap = await getDocs(query(collection(getDb(), 'release_notes'), where('isPublished', '==', true)));
+        const releases = snap.docs.map(d => ({ id: d.id, ...d.data() } as ReleaseNote));
+        releases.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
+        if (releases.length > 0) {
+          setLatestRelease(releases[0]);
+        }
+      } catch (e) {
+        console.error('Failed to fetch release note', e);
+      }
+    };
+    fetchLatestRelease();
+
     return () => { unsubscribeOrders(); unsubscribeMenu(); };
   }, [tenantId]);
 
@@ -176,11 +201,25 @@ const OwnerDashboard = () => {
       await updateDoc(doc(getDb(), 'tenants', tenantInfo.slug), {
         storeStatus: 'published',
         sandboxMode: true,
-        sandboxActivatedAt: new Date().toISOString()
+        sandboxActivatedAt: new Date().toISOString(),
+        deliveryConfig: {
+          enabled: true,
+          freeRadius: 2,
+          paidRadius: 5,
+          maxRadius: 10,
+          baseFee: 30,
+          extraFeePerKm: 12
+        }
       });
       toast.success('🚀 Sandbox Mode Activated! Your store is now live.');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      logIncident('merchant_blockers', {
+        blockerType: 'Sandbox Activation Failure',
+        severity: 'Critical',
+        details: err?.message,
+        merchantName: tenantInfo?.name
+      });
       toast.error('Failed to activate Sandbox Mode.');
     }
   };
@@ -202,10 +241,18 @@ const OwnerDashboard = () => {
     if (isSandboxActive && analytics?.totalOrders === 0) {
       priorities.push({
         title: 'Get Your First Customer',
-        message: 'Share your newly published store with friends, family, and local WhatsApp groups.',
+        message: 'Send a direct message to family and friends.',
         action: 'Share on WhatsApp',
-        link: 'whatsapp',
-        impact: 'High Impact: Generates initial traction and test orders',
+        link: 'whatsapp_direct',
+        impact: 'High Impact: Generates initial traction',
+        isPrimary: true
+      });
+      priorities.push({
+        title: 'Share to WhatsApp Status',
+        message: 'Let your entire contacts list know you are open for business.',
+        action: 'Share to Status',
+        link: 'whatsapp_status',
+        impact: 'High Impact: Drives local awareness',
         isPrimary: true
       });
     }
@@ -252,6 +299,27 @@ const OwnerDashboard = () => {
   return (
     <div className="text-white space-y-6">
       
+      {/* Sandbox Recovery Banner */}
+      {tenantInfo?.storeStatus === 'draft' && !isBannerDismissed && (
+        <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6 relative overflow-hidden">
+          <div className="absolute top-2 right-2">
+            <button onClick={() => setIsBannerDismissed(true)} className="text-emerald-500/60 hover:text-emerald-400 p-1">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                🎉 Good news!
+              </h2>
+              <p className="text-sm text-emerald-200 mt-1 max-w-xl">
+                FSSAI and KYC are now optional during Sandbox testing. You can activate your store immediately and start receiving your first orders. Compliance can be completed before Live Launch.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sandbox Mode Active Banner */}
       {isSandboxActive && (
         <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/10 border border-blue-500/30 rounded-2xl p-6 relative overflow-hidden">
@@ -323,8 +391,10 @@ const OwnerDashboard = () => {
                 <div className="w-full flex flex-col sm:flex-row items-center gap-3">
                   <button 
                     onClick={() => {
-                      if (action.link === 'whatsapp') {
-                        shareToWhatsApp();
+                      if (action.link === 'whatsapp_direct') {
+                        shareToWhatsAppDirect();
+                      } else if (action.link === 'whatsapp_status') {
+                        shareToWhatsAppStatus();
                       } else if (action.link) {
                         navigate(action.link);
                       }
@@ -340,6 +410,39 @@ const OwnerDashboard = () => {
           </div>
         </div>
       </header>
+
+      {latestRelease && (
+        <div className="bg-[#111] border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20">
+              <Rocket className="text-indigo-400" size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white flex items-center gap-2 text-lg">
+                📢 What's New in BhojanOS
+                {tenantInfo?.lastViewedReleaseVersion !== latestRelease.version && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">NEW</span>
+                )}
+              </h3>
+              <p className="text-sm text-gray-400 mt-0.5">
+                Version {latestRelease.version} — {latestRelease.title}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setIsReleaseModalOpen(true);
+              if (tenantInfo?.lastViewedReleaseVersion !== latestRelease.version) {
+                setTenantInfo({ ...tenantInfo, lastViewedReleaseVersion: latestRelease.version });
+                updateDoc(doc(getDb(), 'tenants', tenantId), { lastViewedReleaseVersion: latestRelease.version });
+              }
+            }}
+            className="whitespace-nowrap px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold text-sm border border-white/10 transition-colors w-full sm:w-auto"
+          >
+            Read More
+          </button>
+        </div>
+      )}
 
       {/* REAL BUSINESS OUTCOMES (Priority 5) */}
       {tenantInfo?.storeStatus === 'published' && analytics?.currentMonth && (
@@ -567,6 +670,12 @@ const OwnerDashboard = () => {
         </div>
 
       </div>
+      <ReleaseNotesModal
+        isOpen={isReleaseModalOpen}
+        onClose={() => setIsReleaseModalOpen(false)}
+        release={latestRelease}
+        tenantId={tenantId}
+      />
     </div>
   );
 };

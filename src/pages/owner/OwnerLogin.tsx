@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -41,6 +42,7 @@ const OwnerLogin = () => {
       navigate('/owner/settings');
     } catch (error: any) {
       console.error('Owner Login Error:', error);
+      logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
       toast.error('Invalid email or password. Did you sign up with Google?');
     } finally {
       setLoading(false);
@@ -59,6 +61,7 @@ const OwnerLogin = () => {
     } catch (error: any) {
       setLoading(false);
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
+        logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
         toast.error(error.message || 'Google login failed');
       }
     }

@@ -18,6 +18,7 @@ import {
 } from "@simplewebauthn/server";
 import base64url from "base64url";
 import winston from "winston";
+import cron from "node-cron";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -2870,6 +2871,168 @@ async function startServer() {
     }
   });
 }
+
+// ================= AUTOPILOT MONITORING SYSTEM =================
+const getAutoPilotTransporter = () => {
+  const nodemailer = require("nodemailer");
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_USER || "bhojanos26@gmail.com",
+      pass: process.env.EMAIL_PASS || "fallback_pass"
+    }
+  });
+};
+
+let consecutiveEmailFailures = 0;
+
+const sendFounderAlert = async (subject: string, html: string) => {
+  const sentAt = new Date().toISOString();
+  let status = 'SUCCESS';
+  let providerResponse = 'OK';
+  try {
+    const transporter = getAutoPilotTransporter();
+    const info = await transporter.sendMail({
+      from: '"BhojanOS AutoPilot" <bhojanos26@gmail.com>',
+      to: "bhojanos26@gmail.com",
+      subject: `[AutoPilot] ${subject}`,
+      html
+    });
+    providerResponse = info?.response || 'OK';
+    consecutiveEmailFailures = 0;
+    logger.info({ message: "Founder Alert Sent", subject });
+  } catch (err: any) {
+    status = 'FAILED';
+    providerResponse = err.message;
+    consecutiveEmailFailures++;
+    logger.error({ message: "Failed to send founder alert", err });
+    
+    if (consecutiveEmailFailures >= 3 && _db) {
+      logger.error({ message: "CRITICAL: 3 Consecutive Email Failures", severity: "critical", type: "EMAIL_DELIVERY_FAILURE" });
+      await _db.collection('critical_alert_failures').add({
+        severity: "critical",
+        type: "EMAIL_DELIVERY_FAILURE",
+        timestamp: new Date().toISOString(),
+        failureCount: consecutiveEmailFailures
+      }).catch(console.error);
+    }
+  } finally {
+    if (_db) {
+      await _db.collection('alert_delivery_logs').add({ recipient: 'bhojanos26@gmail.com', subject, sentAt, status, providerResponse }).catch(console.error);
+    }
+  }
+};
+
+const withCronHealth = (jobName: string, fn: Function) => {
+  return async () => {
+    const startedAt = new Date().toISOString();
+    const startMs = Date.now();
+    let status = 'SUCCESS';
+    try {
+      await fn();
+    } catch (err) {
+      status = 'FAILED';
+      throw err;
+    } finally {
+      const completedAt = new Date().toISOString();
+      const duration = Date.now() - startMs;
+      if (_db) {
+        await _db.collection('cron_health').add({ jobName, startedAt, completedAt, duration, status }).catch(console.error);
+      }
+    }
+  };
+};
+
+const initializeMonitoringJobs = () => {
+  if (!_db) return;
+
+  // Phase 12: Platform Heartbeat System
+  cron.schedule("*/5 * * * *", async () => {
+    try {
+      await _db.collection('system_heartbeats').add({
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        serverUptime: process.uptime(),
+        memoryUsage: process.memoryUsage().heapUsed,
+        cpuUsage: process.cpuUsage().user,
+        nodeVersion: process.version,
+        buildVersion: 'FounderBeta'
+      });
+    } catch (e) {
+      logger.error({ message: 'Heartbeat failure', error: e });
+    }
+  });
+
+  // Phase 16: Hourly AutoPilot Aggregator (Extended)
+  cron.schedule("0 * * * *", withCronHealth("Hourly AutoPilot Aggregator", async () => {
+    logger.info({ message: "Running Hourly AutoPilot Aggregator" });
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    
+    // Check Heartbeat Freshness (15 min rule)
+    const fifteenMinsAgo = new Date(Date.now() - 900000).toISOString();
+    const recentHeartbeats = await _db.collection('system_heartbeats').where("timestamp", ">=", fifteenMinsAgo).limit(1).get();
+    const isHeartbeatHealthy = !recentHeartbeats.empty;
+    if (!isHeartbeatHealthy) {
+       await sendFounderAlert(`CRITICAL: Missing Heartbeat`, `<p>No heartbeat received for 15 minutes. Potential server or deployment failure.</p>`);
+    }
+
+    // Check Cron Execution (Did we miss a cycle?)
+    const fetchCount = async (coll: string) => {
+      const snap = await _db.collection(coll).where("serverTimestamp", ">=", oneHourAgo).get();
+      return snap.size;
+    };
+    
+    const crashes = await fetchCount("system_errors");
+    const payments = await fetchCount("payment_incidents");
+    const security = await fetchCount("security_events");
+    const firestore = await fetchCount("firestore_errors");
+    const apiErrs = await fetchCount("api_errors");
+    const blockers = await fetchCount("merchant_blockers");
+    const emailFails = await _db.collection('alert_delivery_logs').where("sentAt", ">=", oneHourAgo).where("status", "==", "FAILED").get().then((s: any) => s.size);
+    
+    let score = 100 - (crashes * 5) - (payments * 10) - (security * 5) - (firestore * 2) - (apiErrs * 2) - (blockers * 15) - (emailFails * 5);
+    if (!isHeartbeatHealthy) score -= 50;
+    score = Math.max(0, score);
+
+    let statusLabel = '🟢 Healthy';
+    if (score < 50) statusLabel = '🔴 Critical';
+    else if (score < 80) statusLabel = '🟡 Degraded';
+    
+    await _db.collection("platform_health_reports").add({
+      timestamp: new Date().toISOString(),
+      score,
+      statusLabel,
+      metrics: { crashes, payments, security, firestore, apiErrs, blockers, emailFails, isHeartbeatHealthy }
+    });
+    
+    if (score < 80 || crashes > 5 || payments > 2 || security > 5 || blockers > 0) {
+      await sendFounderAlert(`Health Drop: ${statusLabel} (Score ${score})`, `
+        <h2>Platform Health Alert: ${statusLabel}</h2>
+        <p>The AutoPilot system detected anomalies in the last hour:</p>
+        <ul>
+          <li>Health Score: <b>${score}</b></li>
+          <li>Merchant Revenue Blockers: <b>${blockers}</b></li>
+          <li>Crashes: ${crashes}</li>
+          <li>Payment Failures: ${payments}</li>
+          <li>Security Incidents: ${security}</li>
+          <li>Firestore Errors: ${firestore}</li>
+          <li>API Errors: ${apiErrs}</li>
+          <li>Heartbeat Freshness: ${isHeartbeatHealthy ? 'Healthy' : 'Failing'}</li>
+        </ul>
+      `);
+    }
+  }));
+
+  // Daily Founder Digest
+  cron.schedule("0 8 * * *", withCronHealth("Daily Founder Digest", async () => {
+    logger.info({ message: "Running Daily Founder Digest" });
+    await sendFounderAlert("Daily Digest", "<h2>BhojanOS Daily Digest</h2><p>Report generated at 08:00 AM.</p><p>Check Dashboard for full metrics.</p>");
+  }));
+};
+
+initializeMonitoringJobs();
 
 startServer();
 

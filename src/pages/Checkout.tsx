@@ -12,6 +12,7 @@ import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { m, AnimatePresence } from 'framer-motion';
+import { logIncident } from '../lib/monitoring';
 import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../lib/firebase-db';
 import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -524,12 +525,14 @@ const Checkout: React.FC = () => {
               }
             } catch (err: any) {
               console.error(err);
+              logIncident('merchant_blockers', { blockerType: 'Payment Verification Failed', error: err?.message, orderId: createData?.order?.id });
               toast.error(err?.message || 'Payment verification failed. Please try again.');
               setIsPlacingOrder(false);
             }
           },
           modal: {
             ondismiss: function() {
+              logIncident('merchant_blockers', { blockerType: 'Payment Abandoned', orderId: createData?.order?.id });
               setIsPlacingOrder(false);
             }
           }
@@ -541,12 +544,14 @@ const Checkout: React.FC = () => {
           }
           const rzp = new (window as any).Razorpay(options);
           rzp.on('payment.failed', function (response: any) {
+            logIncident('merchant_blockers', { blockerType: 'Razorpay Payment Failed', error: response.error.description, metadata: response.error });
             toast.error('Payment failed: ' + response.error.description);
             setIsPlacingOrder(false);
           });
           rzp.open();
         } catch (rzpErr: any) {
           console.error("Razorpay SDK Error:", rzpErr);
+          logIncident('merchant_blockers', { blockerType: 'Razorpay SDK Error', error: rzpErr?.message });
           toast.error(rzpErr.message || "Could not open payment window. Please check your phone/email.");
           setIsPlacingOrder(false);
         }
@@ -570,6 +575,7 @@ const Checkout: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
+      logIncident('merchant_blockers', { blockerType: 'Order Creation Failed', error: err?.message });
       toast.error(err.message || 'Failed to process. Please try again.');
       setIsPlacingOrder(false);
     }

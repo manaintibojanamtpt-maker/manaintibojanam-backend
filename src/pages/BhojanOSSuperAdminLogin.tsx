@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useNavigate, Link } from 'react-router-dom';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import { useAuth } from '../context/AuthContext';
+import { logIncident } from '../lib/monitoring';
 
 const BhojanOSSuperAdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -42,6 +43,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
       toast.success('Super Admin logged in successfully!');
     } catch (error: any) {
       console.error('Super Admin login error:', error);
+      logIncident('security_events', { reason: 'Super Admin Login Failed', email, error: error.message });
       
       if (error.code === 'auth/network-request-failed') {
         setErrorDetails("Network connection failed. This usually happens if your internet is unstable or if the Firebase Auth domain is not allowlisted in the Firebase Console.");

@@ -386,6 +386,18 @@ export interface Referral {
 export type TenantLifecycleStatus = 'draft' | 'pending_verification' | 'approved' | 'trial' | 'active' | 'payment_due' | 'compliance_overdue' | 'suspended' | 'rejected' | 'archived';
 export type StoreLifecycleStatus = 'draft' | 'verification_pending' | 'approved' | 'published' | 'paused' | 'suspended' | 'archived';
 
+export interface ReleaseNote {
+  id: string;
+  version: string;
+  title: string;
+  summary: string;
+  category: 'security' | 'performance' | 'bugfix' | 'stability' | 'merchant_growth' | 'storefront' | 'payments' | 'mobile';
+  highlights: string[];
+  publishedAt: any;
+  publishedBy: string;
+  isPublished: boolean;
+}
+
 export interface Tenant {
   id: string;
   slug: string;
@@ -395,6 +407,7 @@ export interface Tenant {
   // Phase 1: Governance
   status: TenantLifecycleStatus;
   storeStatus: StoreLifecycleStatus;
+  lastViewedReleaseVersion?: string;
 
   // Phase 2: KYC
   kyc?: {
@@ -506,6 +519,7 @@ export interface Tenant {
     publishDate?: any;
     firstOrderDate?: any;
     firstRepeatOrderDate?: any;
+    repeatOrderDate?: any;
     trialActivatedDate?: any;
     paidConversionDate?: any;
     betaFeedbackScore?: number;

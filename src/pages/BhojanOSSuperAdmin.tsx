@@ -10,6 +10,8 @@ import {
   fetchAllTenants, updateTenantStatus, 
   fetchOnboardingLeads, updateLeadStage 
 } from '../services/api';
+import { logEvent } from '../lib/analytics';
+import { logIncident } from '../lib/monitoring';
 import toast from 'react-hot-toast';
 import { calculateTrustScore } from '../lib/trustScore';
 import { useAuth } from '../context/AuthContext';
@@ -19,10 +21,11 @@ import { getDb } from '../lib/firebase-db';
 import { logAuditEvent } from '../lib/audit';
 import logo from '../assets/bhojan-os-logo.png';
 import { auth } from '../firebase';
+import { ReleaseCenter } from '../components/admin/ReleaseCenter';
 
 export default function BhojanOSSuperAdmin() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'settings'>('overview');
   const [tenants, setTenants] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +92,12 @@ export default function BhojanOSSuperAdmin() {
 
       loadData();
     } catch (error: any) {
+      logIncident('merchant_blockers', {
+        blockerType: 'Store Publish Failure',
+        severity: 'Critical',
+        details: error?.message,
+        tenantId
+      });
       toast.error('Failed to update tenant status: ' + error.message);
     }
   };
@@ -141,21 +150,20 @@ export default function BhojanOSSuperAdmin() {
     t.slug?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusIndicator = (status: string) => {
-    switch(status?.toLowerCase()) {
-      case 'active': 
-        return { color: 'text-emerald-400', bg: 'bg-emerald-400', border: 'border-emerald-400/20', bgFill: 'bg-emerald-400/10', label: 'Active' };
-      case 'trialing': 
-        return { color: 'text-blue-400', bg: 'bg-blue-400', border: 'border-blue-400/20', bgFill: 'bg-blue-400/10', label: 'Trialing' };
-      case 'pending': 
-        return { color: 'text-amber-400', bg: 'bg-amber-400', border: 'border-amber-400/20', bgFill: 'bg-amber-400/10', label: 'Pending' };
-      case 'suspended': 
-        return { color: 'text-rose-400', bg: 'bg-rose-400', border: 'border-rose-400/20', bgFill: 'bg-rose-400/10', label: 'Suspended' };
-      case 'rejected': 
-        return { color: 'text-gray-400', bg: 'bg-gray-400', border: 'border-gray-400/20', bgFill: 'bg-gray-400/10', label: 'Rejected' };
-      default: 
-        return { color: 'text-gray-400', bg: 'bg-gray-400', border: 'border-gray-400/20', bgFill: 'bg-gray-400/10', label: 'Unknown' };
+  const getStatusIndicator = (tenant: any) => {
+    if (tenant.beta?.repeatOrderDate || tenant.repeatOrderDate) {
+      return { color: 'text-purple-400', bg: 'bg-purple-400', border: 'border-purple-400/20', bgFill: 'bg-purple-400/10', label: '⭐ Repeat Order Achieved' };
     }
+    if (tenant.beta?.firstOrderDate || tenant.firstOrderDate) {
+      return { color: 'text-emerald-400', bg: 'bg-emerald-400', border: 'border-emerald-400/20', bgFill: 'bg-emerald-400/10', label: '🟢 First Order Achieved' };
+    }
+    if (tenant.storeStatus === 'published' || tenant.sandboxMode) {
+      return { color: 'text-yellow-400', bg: 'bg-yellow-400', border: 'border-yellow-400/20', bgFill: 'bg-yellow-400/10', label: '🟡 Published — No Orders' };
+    }
+    if (tenant.sandboxActivatedAt && tenant.storeStatus !== 'published') {
+       return { color: 'text-orange-400', bg: 'bg-orange-400', border: 'border-orange-400/20', bgFill: 'bg-orange-400/10', label: '🟠 Sandbox Active' };
+    }
+    return { color: 'text-red-400', bg: 'bg-red-400', border: 'border-red-400/20', bgFill: 'bg-red-400/10', label: '🔴 Registration Only' };
   };
 
   const activeTenantsCount = tenants.filter(t => t.status === 'active').length;
@@ -264,6 +272,17 @@ export default function BhojanOSSuperAdmin() {
           <div>
             <div className="px-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Management</div>
             <nav className="space-y-1.5">
+              <button
+                onClick={() => setActiveTab('releases')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  activeTab === 'releases' 
+                  ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5' 
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}
+              >
+                <Rocket size={18} className={activeTab === 'releases' ? 'text-white' : 'text-gray-500'} /> 
+                Release Center
+              </button>
               <button
                 onClick={() => setActiveTab('settings')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
@@ -752,8 +771,8 @@ export default function BhojanOSSuperAdmin() {
                                 <div className="text-xs">{tenant.slug}</div>
                               </td>
                               <td className="px-6 py-4">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusIndicator(tenant.status).bgFill} ${getStatusIndicator(tenant.status).color} ${getStatusIndicator(tenant.status).border} border`}>
-                                  {getStatusIndicator(tenant.status).label}
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusIndicator(tenant).bgFill} ${getStatusIndicator(tenant).color} ${getStatusIndicator(tenant).border} border`}>
+                                  {getStatusIndicator(tenant).label}
                                 </span>
                               </td>
                               <td className="px-6 py-4">
@@ -881,7 +900,7 @@ export default function BhojanOSSuperAdmin() {
                               </td>
                             </tr>
                           ) : filteredTenants.map((tenant) => {
-                            const status = getStatusIndicator(tenant.status);
+                            const status = getStatusIndicator(tenant);
                             return (
                               <tr key={tenant.id} className="hover:bg-white/[0.02] transition-colors group">
                                 <td className="px-6 py-5">
@@ -959,7 +978,7 @@ export default function BhojanOSSuperAdmin() {
                   {/* Mobile Card View */}
                   <div className="sm:hidden space-y-4">
                     {filteredTenants.map((tenant) => {
-                      const status = getStatusIndicator(tenant.status);
+                      const status = getStatusIndicator(tenant);
                       return (
                         <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={tenant.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
                           <div className="flex justify-between items-start">
@@ -1274,6 +1293,17 @@ export default function BhojanOSSuperAdmin() {
                       ))}
                     </div>
                   </div>
+                </m.div>
+              )}
+
+              {/* RELEASES TAB */}
+              {activeTab === 'releases' && (
+                <m.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ReleaseCenter />
                 </m.div>
               )}
 

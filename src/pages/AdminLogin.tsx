@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useNavigate, Link } from 'react-router-dom';
 import logo from '../assets/logo.webp';
 import { useAuth } from '../context/AuthContext';
+import { logIncident } from '../lib/monitoring';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -47,6 +48,7 @@ const AdminLogin: React.FC = () => {
       toast.success('Logged in successfully!');
     } catch (error: any) {
       console.error('Admin login error:', error);
+      logIncident('security_events', { reason: 'Admin Login Failed', email, error: error.message });
       
       if (error.code === 'auth/network-request-failed') {
         setErrorDetails("Network connection failed. This usually happens if your internet is unstable or if the Firebase Auth domain is not allowlisted in the Firebase Console.");
