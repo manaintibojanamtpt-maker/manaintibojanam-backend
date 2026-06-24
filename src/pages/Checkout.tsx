@@ -330,7 +330,7 @@ const Checkout: React.FC = () => {
       const lineSubtotal = item.price * item.quantity;
       const lineTax = (lineSubtotal * state.fees.gst) / 100;
       return {
-        menuItemId: item.id,
+        menuItemId: item.menuItemId || item.id,
         name: item.name,
         unitPrice: item.price,
         quantity: item.quantity,
