@@ -4,11 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 import {
   AlertTriangle, CheckCircle2, Copy, ExternalLink, MessageCircle, Store, Users,
   Activity, TrendingUp, AlertOctagon, Heart, Award, Target, PackageX, AlertCircle,
-  BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power
+  BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power,
+  X, Rocket
 } from 'lucide-react';
 import { m } from 'framer-motion';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc } from 'firebase/firestore';
-import { logEvent } from '../../lib/analytics';
 import { logIncident } from '../../lib/monitoring';
 import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
@@ -612,7 +612,7 @@ const OwnerDashboard = () => {
                   <button onClick={copyToClipboard} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-colors">
                     <Copy size={14} /> Copy
                   </button>
-                  <button onClick={shareToWhatsApp} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 rounded-xl text-sm font-medium transition-colors">
+                  <button onClick={shareToWhatsAppDirect} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 rounded-xl text-sm font-medium transition-colors">
                     <MessageCircle size={14} /> WhatsApp
                   </button>
                 </div>
@@ -655,7 +655,7 @@ const OwnerDashboard = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">{customer.name || 'Guest User'}</p>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">{customer.ordersCount} Orders</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">{customer.totalOrders} Orders</p>
                     </div>
                   </div>
                 )) : (

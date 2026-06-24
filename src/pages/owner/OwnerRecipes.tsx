@@ -4,7 +4,7 @@ import { MenuItem, Recipe, RecipeIngredient } from '../../types';
 import { getRecipes, saveRecipe } from '../../services/RecipeService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
-import { Save, Plus, Trash2, Utensils, BookOpen, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, Utensils, BookOpen, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { m } from 'framer-motion';
 
 export default function OwnerRecipes() {
