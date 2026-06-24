@@ -92,7 +92,7 @@ const promoteDraftTransaction = async (
       }
 
       // Phase 2 Security Patch: Sandbox Enforcement
-      const tenantRef = _db!.collection('tenants').doc(draftData.tenantId || 'mana-inti');
+      const tenantRef = _db!.collection('tenants').doc(draftData.orderPayload?.tenantId || draftData.tenantId || 'mana-inti');
       const tenantSnap = await transaction.get(tenantRef);
       if (tenantSnap.exists) {
         const tenantData = tenantSnap.data()!;
@@ -108,7 +108,7 @@ const promoteDraftTransaction = async (
       const orderRef = _db!.collection('orders').doc(draftId); // Draft ID becomes Order ID
       transaction.set(orderRef, {
         ...draftData.orderPayload,
-        tenantId: draftData.tenantId || 'mana-inti',
+        tenantId: draftData.orderPayload?.tenantId || draftData.tenantId || 'mana-inti',
         status: draftData.subscriptionPayload ? 'ACTIVE' : 'PLACED',
         paymentStatus: 'success',
         razorpayOrderId: paymentDetails.razorpayOrderId,
@@ -1774,7 +1774,8 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
       if (!draftDoc.exists) {
         return res.status(404).json({ success: false, error: 'Draft not found' });
       }
-      const draft = draftDoc.data();
+      const draftDocData = draftDoc.data();
+      const draft = draftDocData.orderPayload || draftDocData;
 
       let calculatedSubtotal = 0;
       if (draft.items && Array.isArray(draft.items)) {
