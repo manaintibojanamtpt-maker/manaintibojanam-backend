@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+      );
+    }
+
+    match /kyc/{tenantId}/{allPaths=**} {
+      // Only the tenant owner (via custom claims or indirect verification if we trust the client upload token, 
+      // but standard rule requires checking the users collection)
+      // Since storage rules don't support custom functions with array `in` perfectly sometimes, let's allow if they are authenticated and we verify tenant backend-side, 
+      // OR if we can read the user's ownedTenantIds:
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        tenantId in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.ownedTenantIds
+      );
+      allow write: if isAuthenticated() && (
+        isAdmin() || 
+        tenantId in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.ownedTenantIds
+      );
+    }
+
+    match /menu-items/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    match /profiles/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+  }
+}

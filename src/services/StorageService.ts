@@ -191,6 +191,32 @@ class StorageService {
   }
 
   /**
+   * Upload KYC document (Private, secure path)
+   */
+  async uploadKYCDocument(file: File, tenantId: string, docType: string): Promise<string> {
+    try {
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error(`File size exceeds 10MB limit.`);
+      }
+
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop();
+      const fileName = `${docType}-${timestamp}.${extension}`;
+      const storageRef = ref(this.storage, `kyc/${tenantId}/${fileName}`);
+
+      const snapshot = await uploadBytes(storageRef, file, {
+        contentType: file.type,
+      });
+
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return downloadURL;
+    } catch (error: any) {
+      console.error('Error uploading KYC document:', error);
+      throw new Error(error.message || 'Failed to upload KYC document');
+    }
+  }
+
+  /**
    * Validate file before upload
    * @param file File to validate
    * @returns Validation error message or null if valid

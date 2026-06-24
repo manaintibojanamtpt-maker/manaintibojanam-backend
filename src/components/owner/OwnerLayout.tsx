@@ -325,8 +325,8 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-start sm:items-center gap-3">
               <AlertCircle size={18} className="text-rose-500 mt-0.5 sm:mt-0 shrink-0" />
               <div>
-                <p className="text-sm font-bold text-rose-400">Verify your email to continue.</p>
-                <p className="text-xs text-rose-400/70 mt-0.5">You cannot publish your store or activate premium plans until your email is verified.</p>
+                <p className="text-sm font-bold text-rose-400">Verify your email to unlock Live Publishing.</p>
+                <p className="text-xs text-rose-400/70 mt-0.5">You can test your store in Sandbox Mode, but you cannot publish to Live or activate premium plans until your email is verified.</p>
               </div>
             </div>
             <button 

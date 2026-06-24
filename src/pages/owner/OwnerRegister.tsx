@@ -21,6 +21,9 @@ const GoogleIcon = () => (
   </svg>
 );
 
+import ReCAPTCHA from 'react-google-recaptcha';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
+
 const OwnerRegister = () => {
   const [name, setName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
@@ -28,8 +31,12 @@ const OwnerRegister = () => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = React.useRef<ReCAPTCHA>(null);
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
 
   // If already logged in, redirect to dashboard
   if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
@@ -42,6 +49,30 @@ const OwnerRegister = () => {
 
     setLoading(true);
     try {
+      // Pre-check slug
+      const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const reservedSlugs = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
+      if (reservedSlugs.some(reserved => slug.startsWith(reserved))) {
+        throw new Error("This store name is reserved or unavailable. Please choose another.");
+      }
+
+      // Generate fingerprint
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      const fingerprint = result.visitorId;
+
+      // Call Backend pre-check
+      const checkRes = await fetch(`${API_BASE_URL}/api/register-owner-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fingerprint, recaptchaToken })
+      });
+      const checkData = await checkRes.json();
+      if (!checkRes.ok || !checkData.success) {
+        if (recaptchaRef.current) recaptchaRef.current.reset();
+        throw new Error(checkData.error || 'Registration blocked by security policy.');
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Update profile
@@ -56,12 +87,11 @@ const OwnerRegister = () => {
       
       // Create user doc
       const db = getDb();
-      const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-');
       
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
         email,
-        role: 'admin',
+        role: 'owner', // Security Patch: Force role to owner instead of admin
         ownedTenantIds: [slug],
         createdAt: new Date()
       }, { merge: true });
@@ -239,6 +269,17 @@ const OwnerRegister = () => {
               />
             </div>
           </div>
+
+          {siteKey && (
+            <div className="flex justify-center mt-4">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={siteKey}
+                onChange={setRecaptchaToken}
+                theme="dark"
+              />
+            </div>
+          )}
 
           <button
             type="submit"

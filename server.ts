@@ -90,6 +90,20 @@ const promoteDraftTransaction = async (
         });
       }
 
+      // Phase 2 Security Patch: Sandbox Enforcement
+      const tenantRef = _db!.collection('tenants').doc(draftData.tenantId || 'mana-inti');
+      const tenantSnap = await transaction.get(tenantRef);
+      if (tenantSnap.exists) {
+        const tenantData = tenantSnap.data()!;
+        if (tenantData.sandboxMode) {
+          // Do a non-transactional count query (safe enough for sandbox limits)
+          const ordersSnap = await _db!.collection('orders').where('tenantId', '==', tenantRef.id).count().get();
+          if (ordersSnap.data().count >= 10) {
+            throw new Error('Sandbox limit exceeded. Upgrade to full activation to accept more orders.');
+          }
+        }
+      }
+
       const orderRef = _db!.collection('orders').doc(draftId); // Draft ID becomes Order ID
       transaction.set(orderRef, {
         ...draftData.orderPayload,
@@ -1697,17 +1711,102 @@ app.post("/api/reviews/submit", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ================= REGISTRATION APIs =================
+app.post("/api/register-owner-check", strictLimiter, async (req, res) => {
+  try {
+    const { email, fingerprint, recaptchaToken } = req.body;
+    
+    if (!_db) return res.status(500).json({ success: false, error: 'Database not initialized' });
+
+    // 1. Bot Protection (reCAPTCHA)
+    const secret = process.env.RECAPTCHA_SECRET_KEY;
+    if (secret) {
+      if (!recaptchaToken) return res.status(400).json({ success: false, error: 'reCAPTCHA required' });
+      const verifyRes = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${recaptchaToken}`, { method: 'POST' });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        return res.status(400).json({ success: false, error: 'reCAPTCHA validation failed' });
+      }
+    } else {
+      console.warn('⚠️ RECAPTCHA_SECRET_KEY is missing. Registration proceeding without bot protection.');
+    }
+
+    // 2. Trial Abuse Defense (Fingerprint)
+    if (fingerprint) {
+       const snap = await _db.collection('trial_fingerprints').doc(fingerprint).get();
+       if (snap.exists && snap.data()?.trialUsed) {
+         return res.status(403).json({ success: false, error: 'Trial limit exceeded for this device or environment.' });
+       }
+       // Mark it immediately to prevent parallel abuse. 
+       await _db.collection('trial_fingerprints').doc(fingerprint).set({
+         trialUsed: true,
+         email: email,
+         createdAt: FieldValue.serverTimestamp()
+       });
+    }
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    logger.error({ message: "Registration check error", err: err.message });
+    res.status(500).json({ success: false, error: 'Registration validation failed' });
+  }
+});
 
 // ================= RAZORPAY APIs =================
 app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
   try {
-    const { amount, draftId, userId } = req.body;
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, error: 'Invalid amount' });
-    }
+    const { draftId, planId, userId } = req.body;
     
-    if (!draftId) {
-      return res.status(400).json({ success: false, error: 'draftId is required for payment generation' });
+    if (!draftId && !planId) {
+      return res.status(400).json({ success: false, error: 'draftId or planId is required for payment generation' });
+    }
+
+    if (!_db) {
+      return res.status(500).json({ success: false, error: 'Database not initialized' });
+    }
+
+    let finalAmount = 0;
+
+    if (draftId) {
+      // Phase 1 Security Patch: Authoritative Backend Recalculation
+      const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
+      if (!draftDoc.exists) {
+        return res.status(404).json({ success: false, error: 'Draft not found' });
+      }
+      const draft = draftDoc.data();
+
+      let calculatedSubtotal = 0;
+      if (draft.items && Array.isArray(draft.items)) {
+        for (const item of draft.items) {
+          if (!item.menuItemId) continue;
+          const menuDoc = await _db.collection('menu').doc(item.menuItemId).get();
+          if (menuDoc.exists) {
+            calculatedSubtotal += (menuDoc.data().price * item.quantity);
+          }
+        }
+      }
+
+      // Reconstruct totals
+      const tax = calculatedSubtotal * 0.05; // 5% GST
+      const packingFee = draft.packingFee || 0;
+      const deliveryFee = draft.deliveryFee || 0;
+      const discount = draft.discountAmount || 0;
+      
+      finalAmount = calculatedSubtotal > 0 
+        ? calculatedSubtotal + tax + packingFee + deliveryFee - discount
+        : draft.totalAmount; // Fallback
+    } else if (planId) {
+      // Hardcoded Authoritative Subscription Prices
+      if (planId === '1_meal') finalAmount = 3000;
+      else if (planId === '2_meals') finalAmount = 5500;
+      else if (planId === 'premium') finalAmount = 6500;
+      else return res.status(400).json({ success: false, error: 'Invalid planId' });
+    }
+
+    const amount = finalAmount;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid calculated amount' });
     }
 
     if (!isRazorpayConfigured) {

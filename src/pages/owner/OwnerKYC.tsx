@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { m } from 'framer-motion';
 import { Shield, FileText, CheckCircle2, AlertCircle, UploadCloud, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -6,11 +6,13 @@ import { useTenant } from '../../context/TenantContext';
 import { getDb } from '../../lib/firebase-db';
 import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import StorageService from '../../services/StorageService';
 
 export const OwnerKYC: React.FC = () => {
   const { userProfile } = useAuth();
   const { tenantInfo, refreshTenant } = useTenant();
   const [loading, setLoading] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // Form State
   const [kycForm, setKycForm] = useState({
@@ -80,6 +82,30 @@ export const OwnerKYC: React.FC = () => {
       toast.error('Failed to accept declaration');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKYCUpload = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+    const file = e.target.files?.[0];
+    if (!file || !tenantInfo?.slug) return;
+
+    try {
+      setUploadingDoc(true);
+      const url = await StorageService.uploadKYCDocument(file, tenantInfo.slug, docType);
+      
+      const db = getDb();
+      await updateDoc(doc(db, 'tenants', tenantInfo.slug), {
+        [`kyc.${docType}DocumentUrl`]: url,
+        'kyc.verificationLevel': 1,
+        'kyc.status': 'pending_verification'
+      });
+      
+      toast.success(`${docType} document uploaded securely.`);
+      refreshTenant();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload document');
+    } finally {
+      setUploadingDoc(false);
     }
   };
 
@@ -275,7 +301,7 @@ export const OwnerKYC: React.FC = () => {
             <div className="grid grid-cols-1 pt-4 border-t border-white/5">
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  FSSAI Number <span className="text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded text-[10px]">Required within 15 days</span>
+                  FSSAI Number <span className="text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded text-[10px]">Optional During Sandbox</span>
                 </label>
                 <input 
                   type="text" 
@@ -284,7 +310,7 @@ export const OwnerKYC: React.FC = () => {
                   placeholder="14-digit FSSAI Number"
                   className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" 
                 />
-                <p className="text-xs text-gray-500 mt-2">You can register without an FSSAI number initially, but it must be provided within 15 days of onboarding to avoid compliance restrictions.</p>
+                <p className="text-xs text-gray-500 mt-2">You can register without an FSSAI number to test the Sandbox, but it is Required Before Live Launch.</p>
               </div>
             </div>
 
@@ -305,23 +331,25 @@ export const OwnerKYC: React.FC = () => {
           <div className="p-6 border-b border-white/10">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <UploadCloud className="text-gray-400" size={20} />
-              Document Center
+              Document Center <span className="text-orange-500 bg-orange-500/10 px-2 py-1 rounded text-[12px] ml-2">Optional During Sandbox</span>
             </h2>
-            <p className="text-sm text-gray-400 mt-1">Upload required documents to achieve Level 1 Verification.</p>
+            <p className="text-sm text-gray-400 mt-1">Upload required documents to achieve Level 1 Verification (Required Before Live Launch).</p>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            <div className="border border-white/10 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-black/20 hover:bg-black/40 transition-colors cursor-pointer group">
+            <label className="border border-white/10 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-black/20 hover:bg-black/40 transition-colors cursor-pointer group">
               <UploadCloud className="text-gray-500 group-hover:text-white transition-colors mb-2" size={32} />
-              <p className="text-sm font-bold text-white mb-1">Identity Proof</p>
+              <p className="text-sm font-bold text-white mb-1">{uploadingDoc ? 'Uploading...' : 'Identity Proof'}</p>
               <p className="text-xs text-gray-500">Aadhaar, PAN, Passport</p>
-            </div>
+              <input type="file" className="hidden" disabled={uploadingDoc} onChange={(e) => handleKYCUpload(e, 'identity')} />
+            </label>
 
-            <div className="border border-white/10 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-black/20 hover:bg-black/40 transition-colors cursor-pointer group">
+            <label className="border border-white/10 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-black/20 hover:bg-black/40 transition-colors cursor-pointer group">
               <UploadCloud className="text-gray-500 group-hover:text-white transition-colors mb-2" size={32} />
-              <p className="text-sm font-bold text-white mb-1">Business Proof</p>
+              <p className="text-sm font-bold text-white mb-1">{uploadingDoc ? 'Uploading...' : 'Business Proof'}</p>
               <p className="text-xs text-gray-500">GST, Trade License, MSME</p>
-            </div>
+              <input type="file" className="hidden" disabled={uploadingDoc} onChange={(e) => handleKYCUpload(e, 'business')} />
+            </label>
 
           </div>
         </div>

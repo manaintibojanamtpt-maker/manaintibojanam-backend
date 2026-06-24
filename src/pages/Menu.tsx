@@ -310,61 +310,64 @@ const Menu: React.FC = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
+    let isMounted = true;
+    const fetchStorefrontData = async () => {
+      setLoading(true);
+      try {
+        const db = getDb();
+        
+        // Fetch Menu
+        const menuSnap = await getDocs(query(collection(db, "menu"), where("tenantId", "==", activeTenantId)));
+        const menuItems = menuSnap.docs.map(doc => {
+          const data = doc.data() as any;
+          return {
+            id: doc.id,
+            name: data.name || 'Unknown dish',
+            description: data.description || '',
+            category: data.category || 'All',
+            image: data.image || data.imageUrl || '',
+            isAvailable: data.isAvailable !== false,
+            isActive: data.isActive !== false,
+            createdAt: data.createdAt || null,
+            type: data.type === 'non-veg' ? 'non-veg' : 'veg',
+            price: Number(data.price ?? 0),
+            discount: Number(data.discount ?? 0),
+            rating: Number(data.rating ?? 0)
+          } as MenuItem & { isActive?: boolean };
+        }).filter(item => item.isAvailable && item.isActive !== false);
+        
+        menuItems.sort((a, b) => {
+          const timeA = a.createdAt?.toMillis?.() || a.createdAt || 0;
+          const timeB = b.createdAt?.toMillis?.() || b.createdAt || 0;
+          return timeB - timeA;
+        });
+        
+        if (isMounted) setMenu(menuItems as MenuItem[]);
 
-    const unsubscribeMenu = onSnapshot(query(collection(getDb(), "menu"), where("tenantId", "==", activeTenantId)), (snapshot) => {
-      const menuItems = snapshot.docs.map(doc => {
-        const data = doc.data() as any;
-        return {
-          id: doc.id,
-          name: data.name || 'Unknown dish',
-          description: data.description || '',
-          category: data.category || 'All',
-          image: data.image || data.imageUrl || '',
-          isAvailable: data.isAvailable !== false,
-          isActive: data.isActive !== false,
-          createdAt: data.createdAt || null,
-          type: data.type === 'non-veg' ? 'non-veg' : 'veg',
-          price: Number(data.price ?? 0),
-          discount: Number(data.discount ?? 0),
-          rating: Number(data.rating ?? 0)
-        } as MenuItem & { isActive?: boolean };
-      }).filter(item => item.isAvailable && item.isActive !== false);
-      menuItems.sort((a, b) => {
-        const timeA = a.createdAt?.toMillis?.() || a.createdAt || 0;
-        const timeB = b.createdAt?.toMillis?.() || b.createdAt || 0;
-        return timeB - timeA;
-      });
-      setMenu(menuItems as MenuItem[]);
-      setLoading(false);
-    }, (err) => {
-      console.error("Menu Listener Error:", err);
-      toast.error("Failed to load menu");
-      setLoading(false);
-    });
+        // Fetch Categories
+        const catSnap = await getDocs(query(collection(db, "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true)));
+        const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        if (isMounted) setCategories(cats);
 
-    // Real-time categories
-    const unsubscribeCategories = onSnapshot(query(collection(getDb(), "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true)), (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-      setCategories(cats);
-    }, (err) => {
-      console.error("Categories Listener Error:", err);
-    });
+        // Fetch Settings
+        const settingsSnap = await getDoc(doc(db, "adminSettings", "global"));
+        if (settingsSnap.exists() && isMounted) {
+          setSettings(settingsSnap.data());
+        }
 
-    // Real-time settings
-    const unsubscribeSettings = onSnapshot(doc(getDb(), "adminSettings", "global"), (snapshot) => {
-      if (snapshot.exists()) {
-        setSettings(snapshot.data());
+      } catch (err) {
+        console.error("Storefront Fetch Error:", err);
+        if (isMounted) toast.error("Failed to load storefront data");
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    }, (err) => {
-      console.error("Settings Listener Error:", err);
-    });
+    };
+
+    fetchStorefrontData();
 
     return () => {
-      unsubscribeMenu();
-      unsubscribeCategories();
-      unsubscribeSettings();
+      isMounted = false;
     };
   }, [activeTenantId]);
 

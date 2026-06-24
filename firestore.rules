@@ -41,6 +41,21 @@ service cloud.firestore {
         (newStatus == 'REJECTED');
     }
 
+    function isReservedSlug(slug) {
+      return slug.matches('^dominos.*') ||
+             slug.matches('^swiggy.*') ||
+             slug.matches('^zomato.*') ||
+             slug.matches('^kfc.*') ||
+             slug.matches('^mcdonalds.*') ||
+             slug.matches('^burgerking.*') ||
+             slug.matches('^subway.*') ||
+             slug.matches('^admin.*') ||
+             slug.matches('^support.*') ||
+             slug.matches('^api.*') ||
+             slug.matches('^system.*') ||
+             slug.matches('^bhojanos.*');
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -53,11 +68,17 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (isOwner(userId) && 
+         !request.resource.data.keys().hasAny(['permissions', 'isAdmin']) &&
+         (!('role' in request.resource.data) || request.resource.data.role == 'owner' || request.resource.data.role == 'user')
+        )
+      );
       allow update: if isAuthenticated() && (
         isAdmin() || 
         request.auth.token.email == 'bhojanos26@gmail.com' ||
-        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'ownedTenantIds']))
+        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'ownedTenantIds', 'permissions', 'isAdmin']))
       );
     }
 
@@ -122,9 +143,17 @@ service cloud.firestore {
     }
 
     match /order_drafts/{draftId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if true; // Allowing updates if the user wants to amend the draft before payment
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        (resource.data.userId == request.auth.uid) || 
+        isTenantOwner(resource.data.tenantId)
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid) || 
+        isTenantOwner(resource.data.tenantId)
+      );
     }
 
     match /adminSettings/{settingId} {
@@ -198,8 +227,8 @@ service cloud.firestore {
 
     match /tenants/{tenantId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isAdmin() || request.auth.token.email == 'bhojanos26@gmail.com' || isUnmodified(['createdAt', 'ownerId']));
+      allow create: if isAuthenticated() && !isReservedSlug(tenantId) && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug));
+      allow update: if isAuthenticated() && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug)) && (isAdmin() || request.auth.token.email == 'bhojanos26@gmail.com' || isUnmodified(['createdAt', 'ownerId']));
       
       match /analytics/{docId} {
         allow read: if isAdmin() || isTenantOwner(tenantId);

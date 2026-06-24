@@ -437,7 +437,7 @@ const Checkout: React.FC = () => {
         const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: orderData.totalAmount, draftId, userId: state.currentUser?.uid })
+          body: JSON.stringify({ draftId, userId: state.currentUser?.uid })
         });
         const createData = await createRes.json();
         

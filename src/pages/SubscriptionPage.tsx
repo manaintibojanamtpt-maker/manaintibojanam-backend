@@ -264,7 +264,7 @@ export default function SubscriptionPage() {
       const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: finalPrice })
+        body: JSON.stringify({ planId: activePlan.id, userId: currentUser.uid })
       });
       const createData = await createRes.json();
       
