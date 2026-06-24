@@ -15,6 +15,15 @@
 
     <script>
       (function() {
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        var splashShown = sessionStorage.getItem('splash_shown') === 'true';
+        if (isStandalone || splashShown) {
+          document.write('<style>#initial-loader { display: none !important; opacity: 0 !important; visibility: hidden !important; }</style>');
+          window.__SKIP_SPLASH__ = true;
+        } else {
+          sessionStorage.setItem('splash_shown', 'true');
+        }
+
         var isBhojanOS = window.location.hostname.includes('bhojanos');
         if (isBhojanOS) {
           document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=3" />');

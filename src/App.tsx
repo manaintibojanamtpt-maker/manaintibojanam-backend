@@ -166,7 +166,8 @@ const AppContent: React.FC = () => {
       // Ensure the premium splash animation plays for its full duration (4s)
       const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
       const elapsed = Date.now() - startTime;
-      const minDuration = 4000;
+      const skipSplash = (window as any).__SKIP_SPLASH__;
+      const minDuration = skipSplash ? 0 : 4000;
       const timeToWait = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
@@ -466,7 +467,8 @@ const App: React.FC = () => {
     if (nativeSplash) {
       const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
       const elapsed = Date.now() - startTime;
-      const minDuration = 4000;
+      const skipSplash = (window as any).__SKIP_SPLASH__;
+      const minDuration = skipSplash ? 0 : 4000;
       const timeToWait = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
