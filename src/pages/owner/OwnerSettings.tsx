@@ -188,30 +188,30 @@ const OwnerSettings: React.FC = () => {
   };
 
   const autoFetchCoordinates = async () => {
-    if (!formData.address || !formData.city) {
-      toast.error("Please enter Address and City first");
+    if (!navigator.geolocation) {
+      toast.error("GPS Geolocation is not supported by your browser");
       return;
     }
+    
     setFetchingCoords(true);
-    try {
-      const q = encodeURIComponent(`${formData.address}, ${formData.city}, ${formData.state}`);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
-      const data = await res.json();
-      if (data && data.length > 0) {
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
         setFormData(prev => ({
           ...prev,
-          lat: data[0].lat,
-          lng: data[0].lon
+          lat: position.coords.latitude.toString(),
+          lng: position.coords.longitude.toString()
         }));
-        toast.success("Coordinates updated from address!");
-      } else {
-        toast.error("Could not find coordinates. Please enter manually.");
-      }
-    } catch (e) {
-      toast.error("Error fetching coordinates");
-    } finally {
-      setFetchingCoords(false);
-    }
+        toast.success("Coordinates detected from your GPS!");
+        setFetchingCoords(false);
+      },
+      (error) => {
+        console.error("GPS Error:", error);
+        toast.error("Failed to get GPS location. Please allow location permissions or enter manually.");
+        setFetchingCoords(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   if (loading) {
