@@ -39,7 +39,7 @@ const AmbientOrbs = () => {
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#030303]">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-soft-light pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-30 mix-blend-soft-light pointer-events-none" />
       <m.div style={{ y: y1 }} className="absolute top-[-15%] right-[-10%] w-[800px] h-[800px] rounded-full bg-[#FF6B00] blur-[180px] opacity-[0.12] mix-blend-screen" />
       <m.div style={{ y: y2 }} className="absolute top-[40%] left-[-15%] w-[900px] h-[900px] rounded-full bg-[#A855F7] blur-[180px] opacity-[0.08] mix-blend-screen" />
       <m.div style={{ y: y3 }} className="absolute bottom-[-15%] right-[15%] w-[700px] h-[700px] rounded-full bg-[#FF4D8D] blur-[180px] opacity-[0.1] mix-blend-screen" />
@@ -464,7 +464,7 @@ const OnboardKitchen = () => {
 
                {/* Right: The New Way (Green/Brand) */}
                <div className="bg-gradient-to-b from-[#0A1A0F] to-[#030303] p-10 md:p-14 text-left relative overflow-hidden">
-                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
+                 <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
                   <div className="flex items-center gap-3 mb-10 relative z-10">
                     <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center shrink-0">
                       <Check size={16} className="text-green-400" />

@@ -4,7 +4,7 @@ import { Phone, Mail, ShieldCheck } from 'lucide-react';
 const FounderBetaTrustBanner: React.FC<{ className?: string }> = ({ className = '' }) => {
   return (
     <div className={`w-full max-w-4xl mx-auto bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-2xl p-6 relative overflow-hidden ${className}`}>
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none" />
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
