@@ -84,13 +84,22 @@ const Home: React.FC = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const timeBasedHeader = useTimeBasedSection();
 
+  // Prevent Storefront flashing on BhojanOS root domain before redirecting
+  if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/' && authLoading) {
+    return (
+      <div className="min-h-screen bg-brand-bg dark:bg-dark-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (authLoading) return;
 
     if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
       const isPrivileged = currentUser && userProfile && ['admin', 'superadmin', 'owner'].includes(userProfile.role);
       if (!isPrivileged) {
-        window.location.href = '/onboard';
+        navigate('/onboard', { replace: true });
         return;
       }
     }
