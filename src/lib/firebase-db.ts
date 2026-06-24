@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { app } from '../firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+const databaseId = (firebaseConfig as any).firestoreDatabaseId || "(default)";
 
 console.log(`[Firestore Client] Initializing with Project: ${firebaseConfig.projectId}, Database: ${databaseId}`);
 

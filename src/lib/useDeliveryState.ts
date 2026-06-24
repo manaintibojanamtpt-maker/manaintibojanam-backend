@@ -11,8 +11,8 @@ export interface DeliveryAddress {
   landmark?: string;
   city?: string;
   pincode?: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   distanceKm?: number;
   deliveryFee?: number;
   isDefault?: boolean;

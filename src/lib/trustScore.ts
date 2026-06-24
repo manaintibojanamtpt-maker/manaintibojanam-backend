@@ -15,7 +15,7 @@ export const calculateTrustScore = (tenant: Tenant): number => {
   // 4. FSSAI Submitted or Verified (+20)
   if (tenant.fssai?.verificationStatus === 'verified') {
     score += 20;
-  } else if (tenant.fssai?.verificationStatus === 'pending_submission' && tenant.fssai.registrationNumber) {
+  } else if (tenant.fssai?.verificationStatus === 'pending_submission' && tenant.fssai.number) {
     score += 10;
   }
 
@@ -28,7 +28,7 @@ export const calculateTrustScore = (tenant: Tenant): number => {
 
   // 6. Documents Uploaded (+10)
   if (tenant.kyc?.documents?.addressProof) score += 5;
-  if (tenant.kyc?.documents?.idProof) score += 5;
+  if (tenant.kyc?.documents?.identityProof) score += 5;
 
   return Math.min(100, Math.max(0, score));
 };

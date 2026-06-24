@@ -135,7 +135,7 @@ export const initializeMonitoring = () => {
       if (!response.ok) {
         logIncident('api_errors', {
           ...getCommonMetadata(),
-          endpoint: typeof args[0] === 'string' ? args[0] : args[0]?.url,
+          endpoint: typeof args[0] === 'string' ? args[0] : (args[0] as any)?.url || (args[0] as any)?.href,
           statusCode: response.status,
           responseTime,
           payloadSize: response.headers.get('content-length') || 0,
@@ -148,7 +148,7 @@ export const initializeMonitoring = () => {
       const responseTime = performance.now() - startTime;
       logIncident('api_errors', {
         ...getCommonMetadata(),
-        endpoint: typeof args[0] === 'string' ? args[0] : args[0]?.url,
+        endpoint: typeof args[0] === 'string' ? args[0] : (args[0] as any)?.url || (args[0] as any)?.href,
         statusCode: 0,
         responseTime,
         payloadSize: 0,

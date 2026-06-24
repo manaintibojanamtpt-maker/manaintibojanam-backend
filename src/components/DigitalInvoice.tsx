@@ -1,6 +1,6 @@
 import React from 'react';
 import { m } from 'framer-motion';
-import { Download, Printer, X, CheckCircle2, MapPin, Phone, User, ShoppingBag } from 'lucide-react';
+import { Download, Printer, X, CheckCircle2, MapPin, Phone, User, ShoppingBag, Clock } from 'lucide-react';
 
 import { Order, OrderStatus } from '../types';
 

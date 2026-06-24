@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, deleteDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { 
   Activity, 
@@ -247,6 +247,18 @@ export default function SystemHealth() {
     }
     fetchIncidents();
   }, []);
+
+  const handleAcknowledgeIncident = async (incidentId: string) => {
+    try {
+      await deleteDoc(doc(getDb(), 'client_errors', incidentId));
+      setIncidents(prev => prev.filter(i => i.id !== incidentId));
+      setSelectedIncident(null);
+      toast.success('Incident acknowledged and cleared');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to clear incident');
+    }
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -830,7 +842,7 @@ export default function SystemHealth() {
 
               <div className="p-6 border-t border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-[#0A0A0A]">
                 <button 
-                  onClick={() => toast('Read-only view. Actions are disabled.', { icon: 'ℹ️' })}
+                  onClick={() => handleAcknowledgeIncident(selectedIncident.id)}
                   className="w-full bg-white dark:bg-[#111111] border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors shadow-sm"
                 >
                   Acknowledge Incident

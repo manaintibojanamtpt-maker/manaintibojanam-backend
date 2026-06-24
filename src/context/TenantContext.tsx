@@ -33,6 +33,8 @@ export interface TenantInfo {
   subscription?: any;
   businessType?: string;
   contactPhone?: string;
+  contactEmail?: string;
+  description?: string;
   logo?: string;
   storeStatus?: string;
   legal?: any;

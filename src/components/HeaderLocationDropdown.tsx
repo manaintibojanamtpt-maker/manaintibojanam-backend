@@ -28,7 +28,7 @@ const HeaderLocationDropdown = () => {
   
   const { currentUser, userProfile } = useAuth();
   const [deliveryState, setDeliveryState] = useDeliveryState();
-  const { tenantDetails } = useTenant();
+  const { tenantInfo } = useTenant();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -43,26 +43,26 @@ const HeaderLocationDropdown = () => {
 
   const getDisplayAddress = () => {
     if (deliveryState.selectedAddress) {
-      return deliveryState.selectedAddress.addressText || deliveryState.selectedAddress.label || 'Selected Location';
+      return deliveryState.selectedAddress.address || deliveryState.selectedAddress.label || 'Selected Location';
     }
     if (userProfile?.savedAddresses?.length) {
       const defaultAddr = userProfile.savedAddresses.find(a => a.isDefault) || userProfile.savedAddresses[0];
-      return defaultAddr.addressText || defaultAddr.label || 'Saved Location';
+      return defaultAddr.address || defaultAddr.label || 'Saved Location';
     }
     return 'Select Location';
   };
 
   const handleSelectSavedAddress = (address: any) => {
     // Validate Serviceability Immediately
-    const tenantLat = tenantDetails?.location?.lat;
-    const tenantLng = tenantDetails?.location?.lng;
+    const tenantLat = tenantInfo?.location?.lat;
+    const tenantLng = tenantInfo?.location?.lng;
     
     let distanceKm = 0;
     let deliveryFee = 0;
 
     if (tenantLat && tenantLng && address.lat && address.lng) {
       distanceKm = calculateDistance(tenantLat, tenantLng, address.lat, address.lng);
-      deliveryFee = getDeliveryFee(distanceKm, tenantDetails as any);
+      deliveryFee = getDeliveryFee(distanceKm, tenantInfo as any);
 
       if (deliveryFee === -1) {
         toast.error('Sorry, this kitchen currently does not deliver to your location.', { duration: 4000 });
@@ -170,7 +170,7 @@ const HeaderLocationDropdown = () => {
                     <MapPin size={16} className="text-gray-400 group-hover:text-orange-500 mt-0.5 shrink-0" />
                     <div className="flex flex-col overflow-hidden">
                       <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{addr.label || 'Address'}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{addr.addressText || addr.address}</span>
+                      <p className="text-xs text-gray-500 font-medium truncate mt-0.5">{addr.address}</p>
                     </div>
                   </button>
                 ))}
@@ -207,7 +207,7 @@ const HeaderLocationDropdown = () => {
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onLocationSelect={handleLocationSelect}
-        tenant={tenantDetails ? { ...tenantDetails, slug: '', status: 'active', theme: {} } as any : null}
+        tenant={tenantInfo ? { ...tenantInfo, slug: '', status: 'active', theme: {} } as any : null}
         title="Set Delivery Location"
       />
     </div>

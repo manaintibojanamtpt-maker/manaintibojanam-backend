@@ -11,6 +11,8 @@ export interface CustomerSegmentSummary {
   vipCustomers: number;
   atRiskCustomers: number;
   churnedCustomers: number;
+  inactive?: number;
+  vip?: number;
   trends: {
     vipGrowth: number;
     atRiskGrowth: number;

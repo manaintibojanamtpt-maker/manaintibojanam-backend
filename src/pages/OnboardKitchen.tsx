@@ -21,7 +21,7 @@ import { triggerHaptic } from '../utils/haptics';
 
 const BrandText = () => <span className="font-bold text-white tracking-tight">Bhojan<span className="text-[#FF6B00]">OS</span></span>;
 
-const springTransition = { type: "spring", stiffness: 100, damping: 25 };
+const springTransition: any = { type: "spring", stiffness: 100, damping: 25 };
 const staggerContainer = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1 } }

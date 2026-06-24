@@ -82,6 +82,11 @@ export interface SavedAddress {
   isDefault: boolean;
   lat?: number;
   lng?: number;
+  houseNumber?: string;
+  buildingName?: string;
+  landmark?: string;
+  city?: string;
+  pincode?: string;
 }
 
 export interface UserProfile {
@@ -92,7 +97,7 @@ export interface UserProfile {
   phone: string;
   email: string;
   address: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'owner' | 'superadmin';
   referralCode?: string;     // Unique referral code for this user
   fcmTokens?: string[];      // For push notifications
   savedAddresses?: SavedAddress[];
@@ -138,6 +143,7 @@ export enum OrderStatus {
   PENDING = 'PENDING',
   PAYMENT_PENDING = 'PAYMENT_PENDING',
   PAYMENT_VERIFICATION = 'PAYMENT_VERIFICATION',
+  REJECTED = 'REJECTED',
 }
 
 export type PaymentStatus = 'pending' | 'success' | 'failed' | 'expired' | 'pending_verification' | 'verified' | 'paid' | 'unpaid';

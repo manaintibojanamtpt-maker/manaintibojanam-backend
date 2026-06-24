@@ -72,7 +72,7 @@ const summarizeOrders = (orders: Order[]): CustomerMemorySummary => {
   const recentNote =
     sortedOrders.find((order) => String(order.specialInstructions || '').trim().length > 0)?.specialInstructions || null;
 
-  const lifetimeSpend = sortedOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const lifetimeSpend = sortedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
   return {
     topDishes,

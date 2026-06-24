@@ -96,7 +96,7 @@ export function useCheckoutState() {
     } else if (userProfile?.savedAddresses && userProfile.savedAddresses.length > 0) {
       const defaultAddr = userProfile.savedAddresses.find((a: any) => a.isDefault) || userProfile.savedAddresses[0];
       setSelectedAddressId(defaultAddr.id);
-      setAddressText(defaultAddr.addressText || defaultAddr.address);
+      setAddressText(defaultAddr.address);
       
       // Update global delivery state so header and other components sync
       setDeliveryState((prev: any) => ({
@@ -105,8 +105,6 @@ export function useCheckoutState() {
           id: defaultAddr.id,
           label: defaultAddr.label || 'Home',
           address: defaultAddr.address,
-          addressText: defaultAddr.addressText || defaultAddr.address,
-          fullAddress: defaultAddr.fullAddress || defaultAddr.address,
           houseNumber: defaultAddr.houseNumber,
           buildingName: defaultAddr.buildingName,
           landmark: defaultAddr.landmark,

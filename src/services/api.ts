@@ -77,7 +77,7 @@ export const fetchMenu = async (tenantId?: string): Promise<MenuItem[]> => {
       q = query(collection(getDb(), path));
     }
     const snapshot = await getDocs(q);
-    const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+    const results = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as MenuItem));
     
     // Sort in memory to avoid missing field omissions and composite index requirements
     results.sort((a, b) => {
@@ -419,7 +419,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
     }
 
     // Allow PENDING -> PREPARING when admin explicitly advances an order.
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+    const validTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
       [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
       [OrderStatus.PAYMENT_PENDING]: [OrderStatus.PAYMENT_VERIFICATION, OrderStatus.CANCELLED, OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
       [OrderStatus.PAYMENT_VERIFICATION]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
@@ -624,7 +624,7 @@ export const calculateDeliveryFee = (distance?: number): number => {
 // --- UI HELPERS ---
 
 export const getDisplayStatus = (status: OrderStatus): string => {
-  const mapping: Record<OrderStatus, string> = {
+  const mapping: Partial<Record<OrderStatus, string>> = {
     [OrderStatus.PLACED]: 'Placed',
     [OrderStatus.PENDING]: 'Pending',
     [OrderStatus.PAYMENT_PENDING]: 'Payment Pending',

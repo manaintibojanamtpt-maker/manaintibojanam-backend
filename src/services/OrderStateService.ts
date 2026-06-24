@@ -11,7 +11,7 @@ export class OrderStateService {
    * Valid status transitions for order lifecycle
    * Terminal statuses (DELIVERED, CANCELLED) have empty arrays
    */
-  private static readonly STATE_MACHINE: Record<OrderStatus, OrderStatus[]> = {
+  private static readonly STATE_MACHINE: Partial<Record<OrderStatus, OrderStatus[]>> = {
     [OrderStatus.CREATED]: [OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED],
     [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.SCHEDULED, OrderStatus.CANCELLED],
     [OrderStatus.DISPATCHED]: [OrderStatus.DELIVERED, OrderStatus.FAILED_DELIVERY, OrderStatus.CANCELLED],
@@ -87,10 +87,10 @@ export class OrderStateService {
    * Get customer-friendly status label, icon, and color
    */
   static getStatusDisplay(status: OrderStatus) {
-    const mapping: Record<
+    const mapping: Partial<Record<
       OrderStatus,
       { label: string; icon: string; color: string; description?: string }
-    > = {
+    >> = {
       [OrderStatus.CREATED]: {
         label: 'Order Created',
         icon: '📋',

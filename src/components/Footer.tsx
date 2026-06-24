@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, Instagram, Facebook, Mail, Phone, MapPin, MessageCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useTenant } from '../context/TenantContext';
 
 const Footer: React.FC = () => {
   const location = useLocation();
+  const { tenantInfo } = useTenant();
   const needsExtraPadding = ['/', '/menu'].includes(location.pathname);
 
   return (

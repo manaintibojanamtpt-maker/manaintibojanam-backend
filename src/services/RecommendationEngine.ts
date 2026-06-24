@@ -109,7 +109,7 @@ export const getSmartReorderRecommendations = async (
       if (order.status === 'CANCELLED' || order.status === 'REJECTED') return;
       
       (order.items || []).forEach(item => {
-        const id = item.menuItemId || item.id;
+        const id = item.menuItemId || (item as any).id;
         itemFrequencies.set(id, (itemFrequencies.get(id) || 0) + item.quantity);
       });
     });

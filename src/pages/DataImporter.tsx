@@ -85,7 +85,7 @@ const DataImporter = () => {
         const chunk = menuItems.slice(i, i + 400);
         const batch = writeBatch(db);
         for (const [id, data] of chunk) {
-          const docData: any = { ...data, tenantId: TENANT_ID };
+          const docData: any = { ...(data as any), tenantId: TENANT_ID };
           if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
           if (docData.updatedAt) docData.updatedAt = convertTimestamp(docData.updatedAt);
           batch.set(doc(db, 'menu', id), docData);
@@ -99,7 +99,7 @@ const DataImporter = () => {
         const chunk = orders.slice(i, i + 400);
         const batch = writeBatch(db);
         for (const [id, data] of chunk) {
-          const docData: any = { ...data, tenantId: TENANT_ID };
+          const docData: any = { ...(data as any), tenantId: TENANT_ID };
           if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
           if (docData.expiresAt) docData.expiresAt = convertTimestamp(docData.expiresAt);
           if (docData.scheduledFor) docData.scheduledFor = convertTimestamp(docData.scheduledFor);
@@ -122,7 +122,7 @@ const DataImporter = () => {
         const chunk = users.slice(i, i + 400);
         const batch = writeBatch(db);
         for (const [id, data] of chunk) {
-          const docData: any = { ...data, tenantId: TENANT_ID };
+          const docData: any = { ...(data as any), tenantId: TENANT_ID };
           if (docData.createdAt) docData.createdAt = convertTimestamp(docData.createdAt);
           if (docData.lastLogin) docData.lastLogin = convertTimestamp(docData.lastLogin);
           batch.set(doc(db, 'users', id), docData, { merge: true });

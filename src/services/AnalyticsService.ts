@@ -37,6 +37,15 @@ export interface TenantAnalytics {
   averageOrderValue: number;
   customerCount: number;
   repeatCustomers: number;
+  customerRetentionRate?: number;
+  currentMonth?: {
+    revenue: number;
+    orders: number;
+  };
+  previousMonth?: {
+    revenue: number;
+    orders: number;
+  };
   lastUpdated: any;
 }
 

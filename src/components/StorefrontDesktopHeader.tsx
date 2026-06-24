@@ -12,7 +12,7 @@ const StorefrontDesktopHeader = () => {
   const location = useLocation();
   const { itemCount } = useCart();
   const { currentUser } = useAuth();
-  const { tenantSlug, tenantDetails } = useTenant();
+  const { tenantSlug, tenantInfo } = useTenant();
   const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +34,7 @@ const StorefrontDesktopHeader = () => {
         <Link to={`${basePath}/`} className="flex items-center gap-2 group">
           <img src={bhojanOsLogo} alt="BhojanOS" className="w-8 h-8 object-contain" />
           <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
-            {tenantDetails?.name || 'BhojanOS'}
+            {tenantInfo?.name || 'BhojanOS'}
           </span>
         </Link>
         

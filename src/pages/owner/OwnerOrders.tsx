@@ -23,6 +23,7 @@ interface Order {
   totalAmount: number;
   status: string;
   createdAt: any;
+  items?: any[];
 }
 
 const OwnerOrders: React.FC = () => {

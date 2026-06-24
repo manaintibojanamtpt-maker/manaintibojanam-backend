@@ -10,7 +10,7 @@ import {
   fetchAllTenants, updateTenantStatus, 
   fetchOnboardingLeads, updateLeadStage 
 } from '../services/api';
-import { logEvent } from '../lib/analytics';
+
 import { logIncident } from '../lib/monitoring';
 import toast from 'react-hot-toast';
 import { calculateTrustScore } from '../lib/trustScore';
