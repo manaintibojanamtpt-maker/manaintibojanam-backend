@@ -391,7 +391,8 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const isCheckout = isRoute('/checkout');
   const isSubscription = isRoute('/subscription');
-  const isFullScreen = isCheckout || isSubscription;
+  const isBhojanOSRoot = window.location.hostname.includes('bhojanos') && path === '/';
+  const isFullScreen = isCheckout || isSubscription || isBhojanOSRoot;
   
   const isMenu = isRoute('/menu');
   const isLogin = isRoute('/login') || path === '/owner/login' || path === '/owner/register';
