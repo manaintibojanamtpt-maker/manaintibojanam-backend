@@ -16,6 +16,8 @@ import toast from 'react-hot-toast';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import FounderBetaTrustBanner from '../components/FounderBetaTrustBanner';
 import { triggerHaptic } from '../utils/haptics';
+import { ExecutiveLeadership } from '../components/ExecutiveLeadership';
+import { ExecutiveTeamSchema } from '../components/ExecutiveTeamSchema';
 
 // --- Premium UI Components ---
 
@@ -609,6 +611,8 @@ const OnboardKitchen = () => {
       </main>
 
       {/* Enterprise Footer */}
+      <ExecutiveLeadership />
+      <ExecutiveTeamSchema />
       <footer className="border-t border-white/[0.05] bg-[#030303] pt-24 pb-12 relative z-10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 lg:gap-12 mb-20">

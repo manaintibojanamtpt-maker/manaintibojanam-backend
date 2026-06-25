@@ -1,6 +1,7 @@
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
+import { EnvironmentConfig } from './config/environment';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
@@ -117,7 +118,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6">
         <h2 className="text-2xl font-bold text-white">Unauthorized</h2>
         <p className="text-white/70">You do not have owner permissions.</p>
-        <button onClick={() => window.location.href = '/login'} className="text-orange-500 underline">Return to Login</button>
+        <button onClick={() => window.location.href = EnvironmentConfig.getBaseUrl() + '/login'} className="text-orange-500 underline">Return to Login</button>
       </div>
     );
   }
@@ -244,7 +245,7 @@ const AppContent: React.FC = () => {
   const mainRoutes = (
     <Routes>
       <Route path="/" element={
-        (window.location.hostname.includes('bhojanos') || window.location.hostname.includes('onrender'))
+        EnvironmentConfig.isBhojanOSRoot()
           ? <Navigate to="/onboard" replace />
           : <Home />
       } />
@@ -398,7 +399,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const isCheckout = isRoute('/checkout');
   const isSubscription = isRoute('/subscription');
-  const isBhojanOSRoot = window.location.hostname.includes('bhojanos') && path === '/';
+  const isBhojanOSRoot = EnvironmentConfig.isBhojanOSRoot() && path === '/';
   const isFullScreen = isCheckout || isSubscription || isBhojanOSRoot;
   
   const isMenu = isRoute('/menu');

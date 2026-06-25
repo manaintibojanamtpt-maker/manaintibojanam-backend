@@ -5,6 +5,7 @@ import {
   User as FirebaseUser 
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import { EnvironmentConfig } from '../config/environment';
 import { BiometricService } from '../services/biometric.service';
 
 interface SavedAddress {
@@ -113,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("token");
     localStorage.removeItem("cart");
     setUserProfile(null);
-    window.location.href = '/login';
+    window.location.href = EnvironmentConfig.getBaseUrl() + '/login';
   };
 
   const login = (user: any) => {

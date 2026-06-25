@@ -1,32 +1,27 @@
 importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js');
 
+// Match the active production database (bhojanos2) instead of the legacy hosting project
 firebase.initializeApp({
-  projectId: "mana-inti-bojanam-pune-492610",
-  appId: "1:748579574410:web:e5139b348ed31a3e349373",
-  apiKey: "AIzaSyBcAPwlHc_x2RGuUoLj6gdQ0NzuWdl2mvw",
-  authDomain: "mana-inti-bojanam-pune-492610.firebaseapp.com",
-  messagingSenderId: "748579574410"
+  apiKey: "AIzaSyBBKia1hM4ZU0hYS52dTy63KTkwzZFYzgI",
+  authDomain: "auth.bhojanos.com", // Migrated from forbidden firebaseapp.com URL
+  projectId: "bhojanos2",
+  storageBucket: "bhojanos2.firebasestorage.app",
+  messagingSenderId: "928117320950",
+  appId: "1:928117320950:web:e155ae1679e8d9fbe950d7"
 });
 
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'Mana Inti Bojanam';
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'BhojanOS';
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.body || 'New Notification',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    data: payload.data || {}
+    data: Object.assign({}, payload.data, payload.notification),
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  const data = event.notification.data || {};
-  const url = data.url || '/my-orders';
-  event.waitUntil(clients.openWindow(url));
 });

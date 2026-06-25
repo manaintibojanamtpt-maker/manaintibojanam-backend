@@ -1,53 +1,95 @@
+/**
+ * EnvironmentConfig
+ * The absolute SINGLE source of truth for all URLs, domain logic, and environment states.
+ * No component may generate URLs manually. No window.location parsing.
+ */
 export const EnvironmentConfig = {
+  // --- Environment State ---
+  
+  isProduction(): boolean {
+    return import.meta.env.VITE_APP_ENV === 'production';
+  },
+
+  isPreview(): boolean {
+    return import.meta.env.VITE_APP_ENV === 'preview';
+  },
+
+  isDevelopment(): boolean {
+    return import.meta.env.VITE_APP_ENV === 'development' || !import.meta.env.VITE_APP_ENV;
+  },
+
+  isBhojanOSRoot(): boolean {
+    if (this.isProduction()) return true; // Assuming production always runs on root domain for the main app
+    if (this.isPreview()) return true; // Preview is also root
+    // In development, we might be testing locally
+    return typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  },
+
+  // --- URL Builders ---
+
   /**
    * Returns the canonical base URL of the application.
-   * Uses VITE_APP_ENV to determine the environment.
    */
   getBaseUrl(): string {
-    const env = import.meta.env.VITE_APP_ENV;
-    
-    if (env === 'production') {
+    if (this.isProduction()) {
       return 'https://bhojanos.com';
     }
     
-    if (env === 'preview') {
+    if (this.isPreview()) {
       return 'https://bhojanos.vercel.app';
     }
     
     // Development fallback
-    return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    return 'http://localhost:5173';
   },
 
   /**
    * Returns the backend API URL.
    */
   getApiUrl(): string {
-    const env = import.meta.env.VITE_APP_ENV;
-    
-    if (env === 'production') {
-      return import.meta.env.VITE_API_URL || 'https://api.bhojanos.com'; // Future-proof API domain
+    if (this.isProduction()) {
+      return import.meta.env.VITE_API_URL || 'https://api.bhojanos.com';
     }
     
-    if (env === 'preview') {
+    if (this.isPreview()) {
       return import.meta.env.VITE_API_URL || 'https://preview-api.bhojanos.com';
     }
     
     return import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
   },
 
-  // --- URL Builders ---
-
   getStorefrontUrl(slug: string): string {
-    // Future-ready for subdomains: `https://${slug}.bhojanos.com`
     return `${this.getBaseUrl()}/k/${slug}`;
   },
 
+  getOwnerUrl(): string {
+    return `${this.getBaseUrl()}/owner`;
+  },
+
+  getCustomerUrl(): string {
+    // Usually the root or specific customer portal
+    return this.getBaseUrl();
+  },
+
+  getAdminUrl(): string {
+    return `${this.getBaseUrl()}/super-admin`;
+  },
+
+  getAssetsUrl(): string {
+    return `${this.getBaseUrl()}/assets`;
+  },
+
+  getSupportEmail(): string {
+    return 'bhojanos26@gmail.com';
+  },
+
+  // --- Legacy / Existing Builders ---
   getOrderUrl(orderId: string): string {
     return `${this.getBaseUrl()}/order/${orderId}`;
   },
 
   getInvoiceUrl(orderId: string): string {
-    return `${this.getBaseUrl()}/order/${orderId}`; // Currently same as order URL
+    return `${this.getBaseUrl()}/order/${orderId}`; 
   },
 
   getReferralUrl(code: string): string {
@@ -56,18 +98,6 @@ export const EnvironmentConfig = {
 
   getCheckoutUrl(slug: string): string {
     return `${this.getBaseUrl()}/k/${slug}/checkout`;
-  },
-
-  getMerchantDashboardUrl(): string {
-    return `${this.getBaseUrl()}/owner`;
-  },
-
-  getAdminDashboardUrl(): string {
-    return `${this.getBaseUrl()}/super-admin`;
-  },
-
-  getSupportEmail(): string {
-    return 'bhojanos26@gmail.com'; // Standardized in previous sprint
   },
 
   getPrivacyPolicyUrl(): string {

@@ -185,7 +185,7 @@ try {
 const ambientProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
 const configProjectId = firebaseConfig.projectId;
 // Prioritize config project ID as it's the one explicitly provisioned for the app
-const projectId = configProjectId || ambientProjectId || 'mana-inti-bojanam-pune-492610'; 
+const projectId = configProjectId || ambientProjectId || 'bhojanos2'; 
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 

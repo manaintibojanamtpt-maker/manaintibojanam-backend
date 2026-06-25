@@ -150,7 +150,7 @@ export class BiometricService {
         body: JSON.stringify({ 
           userId, 
           email: email || userId, // Fallback to userId if email missing
-          origin: window.location.origin 
+          origin: EnvironmentConfig.getBaseUrl() 
         }),
         signal: controller.signal
       });
@@ -184,7 +184,7 @@ export class BiometricService {
         body: JSON.stringify({ 
           userId, 
           response: attResp,
-          origin: window.location.origin
+          origin: EnvironmentConfig.getBaseUrl()
         }),
         signal: vController.signal
       });
@@ -304,7 +304,7 @@ export class BiometricService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          origin: window.location.origin 
+          origin: EnvironmentConfig.getBaseUrl() 
         }),
       });
 
@@ -321,7 +321,7 @@ export class BiometricService {
         body: JSON.stringify({ 
           challengeId, 
           response: asseResp,
-          origin: window.location.origin
+          origin: EnvironmentConfig.getBaseUrl()
         }),
       });
 

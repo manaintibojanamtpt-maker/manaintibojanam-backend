@@ -8,6 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import logo from '../assets/logo.webp';
 import { useAuth } from '../context/AuthContext';
 import { logIncident } from '../lib/monitoring';
+import { EnvironmentConfig } from '../config/environment';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   
-  const isBhojanOS = window.location.hostname.includes('bhojanos');
+  const isBhojanOS = EnvironmentConfig.isBhojanOSRoot();
   const displayLogo = isBhojanOS ? '/bhojan-os-icon.png' : '/logo-v20-final.png';
 
   // Redirect if already logged in

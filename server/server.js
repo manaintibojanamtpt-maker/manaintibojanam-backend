@@ -34,9 +34,9 @@ try {
 const db = admin.apps.length > 0 ? admin.firestore() : null;
 
 // RP ID should be the domain without protocol
-const rpID = process.env.PASSKEY_RP_ID || 'mana-inti-bojanam-pune-492610.web.app';
+const rpID = process.env.PASSKEY_RP_ID || 'bhojanos.com';
 // Expected Origin should be the full URL
-const expectedOrigin = process.env.PASSKEY_ORIGIN || 'https://mana-inti-bojanam-pune-492610.web.app';
+const expectedOrigin = process.env.PASSKEY_ORIGIN || 'https://bhojanos.com';
 
 // Initialize Razorpay conditionally
 let razorpay;

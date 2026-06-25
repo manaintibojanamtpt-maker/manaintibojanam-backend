@@ -8,6 +8,7 @@ import { useEntitlements } from '../../hooks/useEntitlements';
 import { useTenant } from '../../context/TenantContext';
 import { sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
+import { EnvironmentConfig } from '../../config/environment';
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
@@ -49,7 +50,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   ].filter(item => !item.disabled); // Completely hide them if disabled, or you can gray them out. Let's gray them out.
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
-  const storeUrl = tenantId ? `https://${window.location.host}/k/${tenantId}` : '';
+  const storeUrl = tenantId ? EnvironmentConfig.getStorefrontUrl(tenantId) : '';
   const currentPage = navItems.find(item => item.path === location.pathname)?.name || location.pathname.split('/').pop() || 'Dashboard';
 
   useEffect(() => {
