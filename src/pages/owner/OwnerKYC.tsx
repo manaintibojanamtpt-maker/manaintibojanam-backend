@@ -33,7 +33,7 @@ export const OwnerKYC: React.FC = () => {
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
   const handleSaveKYC = async () => {
-    if (!tenantInfo?.slug) return;
+    if (!tenantInfo?.id) return;
     if (!kycForm.ownerName || !kycForm.businessName || !kycForm.phone || !kycForm.address) {
       toast.error('Please fill in all required fields.');
       return;
@@ -42,7 +42,7 @@ export const OwnerKYC: React.FC = () => {
     setLoading(true);
     try {
       const db = getDb();
-      await updateDoc(doc(db, 'tenants', tenantInfo.slug), {
+      await updateDoc(doc(db, 'tenants', tenantInfo.id), {
         'kyc.ownerName': kycForm.ownerName,
         'kyc.businessName': kycForm.businessName,
         'kyc.phone': kycForm.phone,
@@ -68,11 +68,11 @@ export const OwnerKYC: React.FC = () => {
   };
 
   const handleAcceptDeclaration = async () => {
-    if (!tenantInfo?.slug) return;
+    if (!tenantInfo?.id) return;
     setLoading(true);
     try {
       const db = getDb();
-      await updateDoc(doc(db, 'tenants', tenantInfo.slug), {
+      await updateDoc(doc(db, 'tenants', tenantInfo.id), {
         'legal.merchantDeclarationAcceptedAt': new Date().toISOString(),
       });
       toast.success('Merchant Declaration Accepted');
@@ -87,14 +87,14 @@ export const OwnerKYC: React.FC = () => {
 
   const handleKYCUpload = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
     const file = e.target.files?.[0];
-    if (!file || !tenantInfo?.slug) return;
+    if (!file || !tenantInfo?.id) return;
 
     try {
       setUploadingDoc(true);
-      const url = await StorageService.uploadKYCDocument(file, tenantInfo.slug, docType);
+      const url = await StorageService.uploadKYCDocument(file, tenantInfo.id, docType);
       
       const db = getDb();
-      await updateDoc(doc(db, 'tenants', tenantInfo.slug), {
+      await updateDoc(doc(db, 'tenants', tenantInfo.id), {
         [`kyc.${docType}DocumentUrl`]: url,
         'kyc.verificationLevel': 1,
         'kyc.status': 'pending_verification'
