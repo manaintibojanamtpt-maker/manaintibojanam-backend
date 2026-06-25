@@ -84,13 +84,14 @@ const Home: React.FC = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const timeBasedHeader = useTimeBasedSection();
 
-  const showBhojanOSLoader = window.location.hostname.includes('bhojanos') && window.location.pathname === '/' && authLoading;
+  const isBhojanOSRoot = window.location.hostname.includes('bhojanos') && window.location.pathname === '/';
+  const isPrivileged = currentUser && userProfile && ['admin', 'superadmin', 'owner'].includes(userProfile.role);
+  const showBhojanOSLoader = isBhojanOSRoot && (authLoading || !isPrivileged);
 
   useEffect(() => {
     if (authLoading) return;
 
-    if (window.location.hostname.includes('bhojanos') && window.location.pathname === '/') {
-      const isPrivileged = currentUser && userProfile && ['admin', 'superadmin', 'owner'].includes(userProfile.role);
+    if (isBhojanOSRoot) {
       if (!isPrivileged) {
         navigate('/onboard', { replace: true });
         return;
