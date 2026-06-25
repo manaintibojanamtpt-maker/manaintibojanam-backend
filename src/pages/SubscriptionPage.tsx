@@ -11,6 +11,7 @@ import ReferralBanner from '../components/ReferralBanner';
 import { differenceInDays, format, addDays } from 'date-fns';
 import { useTenant } from '../context/TenantContext';
 import { useStoreBranding } from '../hooks/useStoreBranding';
+import { EnvironmentConfig } from '../config/environment';
 
 const PLANS = [
   {
@@ -62,7 +63,7 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     // Wake up backend to avoid Razorpay cold-start delays
-    fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
+    fetch(`${EnvironmentConfig.getApiUrl()}/api/health`).catch(() => {});
 
     if (!currentUser) {
       setLoadingInitial(false);
@@ -260,7 +261,7 @@ export default function SubscriptionPage() {
       const endDate = new Date(now);
       endDate.setDate(now.getDate() + 30);
 
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+      const API_BASE_URL = EnvironmentConfig.getApiUrl();
       const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle, Activity } from 'lucide-react';
+import { EnvironmentConfig } from '../config/environment';
 import { m, AnimatePresence, Variants } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
@@ -28,7 +29,7 @@ const Account: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       // Wake up backend to avoid cold-start delays on Render
-      fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
+      fetch(`${EnvironmentConfig.getApiUrl()}/api/health`).catch(() => {});
     }
   }, [currentUser]);
 

@@ -1,3 +1,5 @@
+import { EnvironmentConfig } from '../config/environment';
+
 type ShareOrderLike = {
   orderNumber?: string | number;
   items?: Array<{ name?: string; quantity?: number }>;
@@ -27,13 +29,12 @@ const formatOrderItems = (items: ShareOrderLike['items'] = []) => {
 };
 
 export const buildStorefrontUrl = (tenantSlug?: string) => {
-  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
-  return `${window.location.origin}${basePath}`;
+  return tenantSlug ? EnvironmentConfig.getStorefrontUrl(tenantSlug) : EnvironmentConfig.getBaseUrl();
 };
 
 export const buildMenuUrl = (tenantSlug?: string) => {
   const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
-  return `${window.location.origin}${basePath}/menu`;
+  return `${EnvironmentConfig.getBaseUrl()}${basePath}/menu`;
 };
 
 export const buildOrderShareMessage = ({

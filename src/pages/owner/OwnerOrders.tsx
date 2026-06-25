@@ -10,8 +10,7 @@ import logo from '../../assets/bhojan-os-logo.png';
 import { auth } from '../../firebase';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
 import { updateMenuItem } from '../../services/api';
-
-const OWNER_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+import { EnvironmentConfig } from '../../config/environment';
 
 interface Order {
   id: string;
@@ -113,7 +112,7 @@ const OwnerOrders: React.FC = () => {
       const idToken = await auth.currentUser?.getIdToken();
       if (!idToken) throw new Error('Owner session expired. Please sign in again.');
 
-      const response = await fetch(`${OWNER_API_BASE_URL}/api/owner/orders/${orderId}/status`, {
+      const response = await fetch(`${EnvironmentConfig.getApiUrl()}/api/owner/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

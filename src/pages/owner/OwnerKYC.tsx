@@ -30,10 +30,32 @@ export const OwnerKYC: React.FC = () => {
     fssaiNumber: tenantInfo?.fssai?.number || '',
   });
 
+  useEffect(() => {
+    if (tenantInfo) {
+      setKycForm({
+        ownerName: tenantInfo.kyc?.ownerName || '',
+        businessName: tenantInfo.kyc?.businessName || '',
+        phone: tenantInfo.kyc?.phone || '',
+        email: tenantInfo.kyc?.email || '',
+        address: tenantInfo.kyc?.address || '',
+        city: tenantInfo.kyc?.city || '',
+        state: tenantInfo.kyc?.state || '',
+        country: tenantInfo.kyc?.country || 'India',
+        pincode: tenantInfo.kyc?.pincode || '',
+        gstNumber: tenantInfo.kyc?.gstNumber || '',
+        panNumber: tenantInfo.kyc?.panNumber || '',
+        fssaiNumber: tenantInfo.fssai?.number || '',
+      });
+    }
+  }, [tenantInfo]);
+
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
   const handleSaveKYC = async () => {
-    if (!tenantInfo?.id) return;
+    if (!tenantInfo?.id) {
+      toast.error('Tenant information is missing. Please refresh.');
+      return;
+    }
     if (!kycForm.ownerName || !kycForm.businessName || !kycForm.phone || !kycForm.address) {
       toast.error('Please fill in all required fields.');
       return;
@@ -68,7 +90,10 @@ export const OwnerKYC: React.FC = () => {
   };
 
   const handleAcceptDeclaration = async () => {
-    if (!tenantInfo?.id) return;
+    if (!tenantInfo?.id) {
+      toast.error('Tenant information is missing. Please refresh.');
+      return;
+    }
     setLoading(true);
     try {
       const db = getDb();

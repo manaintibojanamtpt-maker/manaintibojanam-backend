@@ -13,7 +13,7 @@ import {
   DocumentData
 } from 'firebase/firestore';
 
-export type IncidentType = 'system_errors' | 'api_errors' | 'firestore_errors' | 'payment_incidents' | 'security_events' | 'performance_metrics' | 'merchant_blockers';
+export type IncidentType = 'system_errors' | 'api_errors' | 'firestore_errors' | 'payment_incidents' | 'security_events' | 'performance_metrics' | 'merchant_blockers' | 'onboarding_events';
 
 export const logIncident = async (type: IncidentType, payload: any) => {
   try {

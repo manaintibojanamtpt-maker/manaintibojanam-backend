@@ -6,8 +6,9 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 
 const STORAGE_KEY_ENABLED = 'biometrics_enabled';
 const STORAGE_KEY_USER_ID = 'biometric_user_id';
+import { EnvironmentConfig } from '../config/environment';
+
 const STORAGE_KEY_DEVICE_NAME = 'biometric_device_name';
-const API_URL = 'https://manaintibojanam-backend.onrender.com';
 const SECRET_KEY = 'manaintibojanam.app';
 
 export class BiometricService {
@@ -110,7 +111,7 @@ export class BiometricService {
                           Math.random().toString(36).substring(2, 15);
 
       // 2. Register secret with backend
-      const resp = await fetch(`${API_URL}/api/auth/biometric/register`, {
+      const resp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/biometric/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, deviceSecret }),
@@ -143,7 +144,7 @@ export class BiometricService {
 
     try {
       // 1. Get registration options from server
-      const resp = await fetch(`${API_URL}/api/auth/generate-registration-options`, {
+      const resp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/generate-registration-options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -177,7 +178,7 @@ export class BiometricService {
       const vController = new AbortController();
       const vTimeoutId = setTimeout(() => vController.abort(), 30000);
 
-      const verifyResp = await fetch(`${API_URL}/api/auth/verify-registration`, {
+      const verifyResp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/verify-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -262,7 +263,7 @@ export class BiometricService {
       if (!credentials) return null;
 
       // 2. Verify secret with backend to get Firebase token
-      const resp = await fetch(`${API_URL}/api/auth/biometric/verify`, {
+      const resp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/biometric/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deviceSecret: credentials.password }),
@@ -299,7 +300,7 @@ export class BiometricService {
       }
 
       // 1. Get auth options
-      const resp = await fetch(`${API_URL}/api/auth/generate-authentication-options`, {
+      const resp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/generate-authentication-options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -314,7 +315,7 @@ export class BiometricService {
       const asseResp = await startAuthentication(options);
 
       // 3. Verify and get token
-      const verifyResp = await fetch(`${API_URL}/api/auth/verify-authentication`, {
+      const verifyResp = await fetch(`${EnvironmentConfig.getApiUrl()}/api/auth/verify-authentication`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

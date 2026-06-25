@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
+import { EnvironmentConfig } from '../../config/environment';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -36,7 +37,7 @@ const OwnerRegister = () => {
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+  const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
   // If already logged in, redirect to dashboard
   if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
@@ -124,11 +125,25 @@ const OwnerRegister = () => {
           mobileVerificationStatus: 'pending',
           verificationLevel: 0
         },
+        onboardingStatus: {
+          isComplete: false,
+          currentStep: 1,
+          migrated: false
+        },
         createdAt: new Date().toISOString(),
         settings: { theme: 'orange' }
       }, { merge: true });
 
       toast.success('Account created successfully!');
+      
+      try {
+        const ff = localStorage.getItem('bhojanos_ff_overrides');
+        if (ff && JSON.parse(ff).onboardingWizardV2) {
+          navigate('/owner/setup');
+          return;
+        }
+      } catch (e) {}
+      
       navigate('/owner/settings');
     } catch (error: any) {
       console.error('Owner Register Error:', error);
@@ -146,6 +161,15 @@ const OwnerRegister = () => {
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
       toast.success('Welcome!');
+      
+      try {
+        const ff = localStorage.getItem('bhojanos_ff_overrides');
+        if (ff && JSON.parse(ff).onboardingWizardV2) {
+          navigate('/owner/setup');
+          return;
+        }
+      } catch (e) {}
+      
       navigate('/owner/settings');
     } catch (error: any) {
       setLoading(false);

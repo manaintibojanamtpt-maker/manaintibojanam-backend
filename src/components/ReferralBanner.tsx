@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { EnvironmentConfig } from '../config/environment';
 import { Share2, Copy, CheckCircle2, Gift } from 'lucide-react';
 
 interface ReferralBannerProps {
@@ -8,7 +9,7 @@ interface ReferralBannerProps {
 export default function ReferralBanner({ referralCode }: ReferralBannerProps) {
   const [copied, setCopied] = useState(false);
 
-  const message = `🍱 Daily Home-Style Meals!\n\nI’m using BhojanOS for daily meals 😋\n\nUse my code ${referralCode} and get ₹100 OFF!\n\n👉 https://bhojanos.web.app`;
+  const message = `🍱 Daily Home-Style Meals!\n\nI’m using BhojanOS for daily meals 😋\n\nUse my code ${referralCode} and get ₹100 OFF!\n\n👉 ${EnvironmentConfig.getBaseUrl()}`;
 
   const handleShare = async () => {
     if (navigator.share) {

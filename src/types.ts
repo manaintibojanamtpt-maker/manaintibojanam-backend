@@ -486,11 +486,31 @@ export interface Tenant {
     dunningStatus?: 'active' | 'in_recovery' | 'suspended';
   };
 
+  onboardingStatus?: {
+    isComplete: boolean;
+    currentStep: number;
+    completedAt?: any;
+    migrated?: boolean;
+  };
+
   paymentConfig?: {
-    provider: 'razorpay' | 'phonepe';
-    keyId: string;
-    secretRef: string; // Secure reference to the secret key
-    isActive: boolean;
+    defaultProvider: string;
+    providers: {
+      razorpay?: {
+        enabled: boolean;
+        keyId?: string;
+        secretRef?: string;
+      };
+      upi?: {
+        enabled: boolean;
+        upiId?: string;
+        merchantName?: string;
+      };
+      cod?: {
+        enabled: boolean;
+      };
+      [key: string]: any;
+    };
   };
   brandConfig?: {
     logoUrl?: string;

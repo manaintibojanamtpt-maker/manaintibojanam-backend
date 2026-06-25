@@ -59,8 +59,11 @@
     <link rel="preload" as="image" href="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" fetchpriority="high">
     <link rel="preload" as="image" href="https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=400&auto=format&fit=crop" fetchpriority="high">
     <link rel="preload" as="image" href="https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=400&auto=format&fit=crop" fetchpriority="high">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Non-blocking via preload+onload -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap"></noscript>
 
     <style>
       body {
@@ -193,8 +196,8 @@
     </div>
 
     <div id="root"></div>
-    <!-- Razorpay Checkout SDK -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Razorpay Checkout SDK: Loaded lazily on demand, NOT blocking initial render -->
+    <!-- The RazorpayProvider loads this dynamically when payment is initiated -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

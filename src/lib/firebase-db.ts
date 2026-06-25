@@ -24,13 +24,11 @@ function initializeFirestoreInstance(): Firestore {
   try {
     try {
       _dbInstance = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
         ignoreUndefinedProperties: true,
       }, databaseId === "(default)" ? undefined : databaseId);
       return _dbInstance;
     } catch (specificDbError) {
       _dbInstance = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
         ignoreUndefinedProperties: true,
       });
       return _dbInstance;
@@ -117,7 +115,7 @@ async function testConnection(retries = 3) {
   
   if (databaseId !== "(default)") {
     try {
-      const defaultDb = initializeFirestore(app, { experimentalForceLongPolling: true });
+      const defaultDb = initializeFirestore(app, { ignoreUndefinedProperties: true });
       await getDocFromServer(doc(defaultDb, '_connection_test_', 'init'));
     } catch (e) {}
   }
@@ -151,5 +149,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(errorMessage);
 }
 
-// Start the connection test automatically when the module loads
-testConnection();
+// Defer the connection test so it does NOT block initial app render.
+// The UI and auth resolve immediately; this runs silently in the background.
+setTimeout(() => testConnection(), 3000);

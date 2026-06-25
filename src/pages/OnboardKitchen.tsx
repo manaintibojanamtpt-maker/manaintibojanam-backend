@@ -425,9 +425,14 @@ const OnboardKitchen = () => {
               <GradientButton onClick={() => navigate('/owner/register')}>
                 Start Free Trial <ArrowRight size={18} />
               </GradientButton>
-              <OutlineButton onClick={() => setShowDemoModal(true)}>
-                Book Demo
+              <OutlineButton onClick={() => navigate('/owner/login')}>
+                Owner Login
               </OutlineButton>
+            </div>
+            <div className="mt-8">
+              <button onClick={() => setShowDemoModal(true)} className="text-gray-400 hover:text-white underline text-sm font-medium">
+                Or Book a Live Demo
+              </button>
             </div>
           </m.div>
         </section>
@@ -590,9 +595,14 @@ const OnboardKitchen = () => {
              <GradientButton onClick={() => navigate('/owner/register')}>
                Start Free Trial
              </GradientButton>
-             <OutlineButton onClick={() => setShowDemoModal(true)}>
-               Book Demo
+             <OutlineButton onClick={() => navigate('/owner/login')}>
+               Owner Login
              </OutlineButton>
+           </div>
+           <div className="mt-8 relative z-10">
+             <button onClick={() => setShowDemoModal(true)} className="text-gray-400 hover:text-white underline text-sm font-medium">
+               Or Book a Live Demo
+             </button>
            </div>
         </section>
 

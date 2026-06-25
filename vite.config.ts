@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       cssCodeSplit: false,
-      modulePreload: false,
+      modulePreload: true,  // Re-enabled: allows browser to prefetch lazy chunks
       target: 'es2020',
       minify: 'esbuild',
       brotliSize: false,
@@ -61,6 +61,9 @@ export default defineConfig(({ mode }) => {
               }
               if (normalizedId.includes('/framer-motion/')) {
                 return 'vendor-motion';
+              }
+              if (normalizedId.includes('/react-dom/') || normalizedId.includes('/react/') || normalizedId.includes('/scheduler/')) {
+                return 'vendor-react';
               }
             }
             if (normalizedId.includes('/src/pages/AdminPanel.tsx')) {

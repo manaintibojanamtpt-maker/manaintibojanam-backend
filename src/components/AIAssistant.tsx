@@ -7,6 +7,7 @@ import { fetchMenu } from '../services/api';
 import toast from 'react-hot-toast';
 import { getDb } from '../lib/firebase-db';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { EnvironmentConfig } from '../config/environment';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { useStoreBranding } from '../hooks/useStoreBranding';
 import { MenuItem } from '../types';
@@ -31,27 +32,35 @@ const AIAssistant: React.FC = () => {
   const { cart, addToCart, removeFromCart, clearCart, total, setAiAssisted } = useCart();
   const { logEvent } = useAIAnalytics();
 
-  // Load Menu and Settings
+  const settingsLoaded = useRef(false);
+
+  // Load Menu eagerly (lightweight, cached)
   useEffect(() => {
     fetchMenu().then(items => setMenuItems(items));
+  }, []);
+
+  // Load settings and open listener ONLY when user opens the widget
+  const loadSettingsIfNeeded = useCallback(() => {
+    if (settingsLoaded.current) return;
+    settingsLoaded.current = true;
 
     const unsubscribe = onSnapshot(doc(getDb(), "adminSettings", "global"), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setSettings(data);
         const open = isStoreOpenNow(data);
-        setMessages([
+        setMessages(prev => prev.length === 0 ? [
           { 
             role: 'assistant', 
             content: open 
               ? `Hi! I'm your ${assistantName}. What are you craving today?`
               : `Hi! I'm your ${assistantName}. We're currently closed, but I can help you explore the menu for later!`
           }
-        ]);
+        ] : prev);
       }
     });
-    return () => unsubscribe();
-  }, []);
+    return unsubscribe;
+  }, [assistantName]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,6 +69,7 @@ const AIAssistant: React.FC = () => {
 
   const handleOpen = () => {
     setIsOpen(true);
+    loadSettingsIfNeeded();
     logEvent('ai_session_started');
   };
 
@@ -213,7 +223,7 @@ Available Tools: searchMenu, getItemDetails, getCartStatus, addToCart, removeFro
       // Build simplified message history for API
       const history = messages.filter(m => m.role !== 'system').slice(-6);
 
-      const res = await fetch('https://manaintibojanam-backend.onrender.com/api/ai/chat', {
+      const res = await fetch(`${EnvironmentConfig.getApiUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [...history.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), { role: 'user', parts: [{ text: userMessage }] }], systemInstruction })

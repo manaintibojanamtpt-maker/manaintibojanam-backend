@@ -23,19 +23,17 @@ import { TenantAnalytics, getTenantAnalytics, backfillAnalytics } from '../../se
 import { useTenant } from '../../context/TenantContext';
 import { generateDailyGrowthSnapshot, AIGrowthSnapshot } from '../../services/AIGrowthManager';
 import { calculateMerchantHealth, MerchantHealthResult } from '../../lib/merchantHealth';
+import { EnvironmentConfig } from '../../config/environment';
+import { useFeatureFlags } from '../../context/FeatureFlagContext';
 
-const OWNER_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
-
-const ACTIVE_STATUSES = new Set(['CREATED', 'PLACED', 'PENDING', 'PAYMENT_PENDING', 'PAYMENT_VERIFICATION', 'ACCEPTED', 'PREPARING', 'READY', 'COURIER_BOOKED', 'PICKED_UP', 'OUT_FOR_DELIVERY']);
-const PENDING_STATUSES = new Set(['CREATED', 'PLACED', 'PENDING']);
-
-const getStoreUrl = (slugOrId?: string) => slugOrId ? `${window.location.origin}/k/${slugOrId}` : '';
+const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
 const SparklineChart = React.lazy(() => import('../../components/owner/widgets/SparklineChart'));
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const { flags } = useFeatureFlags();
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const tenantName = userProfile?.name || 'Kitchen';
 
@@ -96,6 +94,30 @@ const OwnerDashboard = () => {
     };
     healTenantDoc();
   }, [tenantId, tenantName, userProfile]);
+
+  React.useEffect(() => {
+    const migrateTenant = async () => {
+      if (!tenantInfo || !tenantInfo.id || !flags.onboardingWizardV2) return;
+      
+      // If the tenant doesn't have an onboardingStatus object at all, they are a legacy merchant.
+      // We seamlessly migrate them so they aren't forced into the wizard.
+      if (tenantInfo.onboardingStatus === undefined) {
+        try {
+          await updateDoc(doc(getDb(), 'tenants', tenantInfo.id), {
+            onboardingStatus: {
+              isComplete: true,
+              currentStep: 7,
+              completedAt: serverTimestamp(),
+              migrated: true
+            }
+          });
+        } catch (e) {
+          console.error('Failed to migrate legacy tenant onboarding status:', e);
+        }
+      }
+    };
+    migrateTenant();
+  }, [tenantInfo, flags.onboardingWizardV2]);
 
   React.useEffect(() => {
     if (!tenantId) {
@@ -298,6 +320,28 @@ const OwnerDashboard = () => {
 
   return (
     <div className="text-white space-y-6">
+
+      {/* Onboarding Wizard Banner */}
+      {flags.onboardingWizardV2 && tenantInfo?.onboardingStatus && !tenantInfo.onboardingStatus.isComplete && !tenantInfo.onboardingStatus.migrated && (
+        <div className="bg-gradient-to-r from-orange-500/20 to-rose-500/10 border border-orange-500/30 rounded-2xl p-6 relative overflow-hidden mb-6">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                🚀 Continue Store Setup
+              </h2>
+              <p className="text-sm text-orange-200 mt-1 max-w-xl">
+                You are on step {tenantInfo.onboardingStatus.currentStep} of 7. Complete onboarding to publish your store and start accepting orders.
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate('/owner/setup')}
+              className="whitespace-nowrap px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20"
+            >
+              Resume Setup
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Sandbox Recovery Banner */}
       {tenantInfo?.storeStatus === 'draft' && !isBannerDismissed && (

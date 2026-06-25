@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
 import { activeTenantId } from '../services/api';
 import { useTenant } from '../context/TenantContext';
+import { EnvironmentConfig } from '../config/environment';
 import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
@@ -12,6 +13,7 @@ import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { m, AnimatePresence } from 'framer-motion';
+import { PaymentFactory } from '../lib/payments/PaymentFactory';
 import { logIncident } from '../lib/monitoring';
 import { triggerHaptic } from '../utils/haptics';
 import { getDb } from '../lib/firebase-db';
@@ -108,9 +110,6 @@ const Checkout: React.FC = () => {
   };
   
   useEffect(() => {
-    // Wake up backend to avoid Razorpay cold-start delays
-    fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
-
     const fetchRecommendations = async () => {
       setLoadingRecommendations(true);
       try {
@@ -411,8 +410,7 @@ const Checkout: React.FC = () => {
       const orderData: any = buildOrderData();
 
       if (state.paymentMethod === 'online') {
-        // Fallback to Render backend if VITE_API_URL is not set
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+        const API_BASE_URL = EnvironmentConfig.getApiUrl();
         
         let subscriptionData = null;
         if (hasSubscription && subscriptionItem && state.currentUser) {
@@ -435,6 +433,79 @@ const Checkout: React.FC = () => {
         // BATCH 2: Stage Draft Order
         const draftId = await stageOrderDraft(orderData, subscriptionData);
         
+        try {
+          const ff = localStorage.getItem('bhojanos_ff_overrides');
+          const flags = ff ? JSON.parse(ff) : {};
+          if (flags.paymentProviderAbstraction) {
+            const providerId = state.paymentMethod === 'online' ? (tenantInfo?.paymentConfig?.defaultProvider || 'razorpay') : 'cod';
+            const provider = PaymentFactory.getProvider(providerId);
+
+            const customerData = {
+              name: (state.name || '').trim(),
+              email: (state.email || '').trim().toLowerCase(),
+              phone: (state.phone || '').replace(/\D/g, '').slice(-10),
+              tenantId: tenantInfo?.id || ''
+            };
+
+            const config = tenantInfo?.paymentConfig?.providers?.[providerId] || {};
+
+            const initRes = await provider.initializePayment(state.finalTotal, draftId, customerData, config);
+            
+            if (!initRes.success) {
+              throw new Error(initRes.error || 'Payment initialization failed');
+            }
+
+            provider.executePayment(initRes, async (verificationData) => {
+              try {
+                setIsPlacingOrder(true);
+                const verifyRes = await provider.verifyPayment(verificationData, draftId, config);
+                if (verifyRes.success) {
+                  if (state.currentUser) {
+                    await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
+                      'preferences.lastPaymentMethod': state.paymentMethod
+                    });
+                  }
+                  
+                  if (providerId === 'cod') {
+                    const orderId = await createOrder(orderData);
+                    if (!orderId) throw new Error('Order creation failed');
+                    if (!state.currentUser) saveGuestOrder(orderId);
+                    
+                    state.clearCart();
+                    if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'cod' });
+                    navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { orderId } });
+                    return;
+                  }
+
+                  state.clearCart();
+                  sessionStorage.setItem('lastPendingOrderId', draftId);
+                  
+                  if (hasSubscription) {
+                    navigate(`${basePath}/subscription?new=true`);
+                  } else {
+                    if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId: draftId, method: providerId });
+                    navigate(`${basePath}/payment-success`);
+                  }
+                } else {
+                  toast.error('Payment verification failed');
+                  setIsPlacingOrder(false);
+                }
+              } catch (err: any) {
+                console.error(err);
+                logIncident('merchant_blockers', { blockerType: 'Payment Verification Failed', error: err?.message });
+                toast.error(err.message || 'Payment verification failed');
+                setIsPlacingOrder(false);
+              }
+            }, (err) => {
+              logIncident('merchant_blockers', { blockerType: 'Payment Abandoned/Failed', error: err?.message });
+              toast.error(err.message || 'Payment failed');
+              setIsPlacingOrder(false);
+            });
+            
+            return;
+          }
+        } catch (e) {}
+
         const createRes = await fetch(`${API_BASE_URL}/api/create-razorpay-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

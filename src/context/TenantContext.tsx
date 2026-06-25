@@ -28,6 +28,16 @@ export interface TenantInfo {
     baseFee: number;
     prepTime: number;
   };
+  onboardingStatus?: {
+    isComplete: boolean;
+    currentStep: number;
+    migrated?: boolean;
+    completedAt?: any;
+  };
+  paymentConfig?: {
+    defaultProvider: string;
+    providers: Record<string, any>;
+  };
   kyc?: any;
   fssai?: any;
   subscription?: any;
@@ -38,6 +48,8 @@ export interface TenantInfo {
   logo?: string;
   storeStatus?: string;
   legal?: any;
+  settings?: any;
+  socialLinks?: any;
 }
 
 interface TenantContextType {

@@ -16,10 +16,11 @@ import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
 import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent } from '../types';
 import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
+import { EnvironmentConfig } from '../config/environment';
 
-const API_BASE_URL = 'https://manaintibojanam-backend.onrender.com';
+const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
-export let activeTenantId = 'mana-inti';
+export let activeTenantId: string | null = 'mana-inti';
 export const setActiveTenantId = (id: string) => { activeTenantId = id; };
 
 import { auth } from '../firebase';

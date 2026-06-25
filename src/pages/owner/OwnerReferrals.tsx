@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { EnvironmentConfig } from '../../config/environment';
 import { useAuth } from '../../context/AuthContext';
 import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -45,7 +46,7 @@ const OwnerReferrals: React.FC = () => {
 
   const shareViaWhatsApp = () => {
     if (tenant?.referral?.referralCode) {
-      const text = encodeURIComponent(`Start your own food business with BhojanOS! Use my referral code ${tenant.referral.referralCode} to get exclusive onboarding support. Sign up at ${window.location.origin}`);
+      const text = encodeURIComponent(`Start your own food business with BhojanOS! Use my referral code ${tenant.referral.referralCode} to get exclusive onboarding support. Sign up at ${EnvironmentConfig.getBaseUrl()}`);
       window.open(`https://wa.me/?text=${text}`, '_blank');
     }
   };

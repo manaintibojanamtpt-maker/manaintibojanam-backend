@@ -9,6 +9,7 @@ import { getOrderDisplayState } from '../../lib/orderDisplay';
 import OrderDetailsModal from './OrderDetailsModal';
 import { Printer, MessageCircle, Plus, Send } from 'lucide-react';
 import { generateWhatsAppLink, getDeliveryMessage } from '../../utils/whatsapp';
+import { EnvironmentConfig } from '../../config/environment';
 
 const formatTime = (ts: any) => {
   if (!ts) return 'N/A';
@@ -379,7 +380,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
           {order.status === OrderStatus.DELIVERED && (
             <button
               onClick={() => {
-                const invoiceUrl = `https://bhojanos.web.app/order/${order.id}`;
+                const invoiceUrl = EnvironmentConfig.getInvoiceUrl(order.id);
                 const message = getDeliveryMessage(order.orderNumber?.toString() || order.id, order.customerName || 'Customer', invoiceUrl);
                 const link = generateWhatsAppLink(order.phone, message);
                 window.open(link, '_blank');

@@ -11,6 +11,7 @@ import {
 import { auth } from '../firebase';
 import { m, AnimatePresence } from 'framer-motion';
 import { Loader2, ArrowLeft, Shield, Fingerprint, Crown } from 'lucide-react';
+import { EnvironmentConfig } from '../config/environment';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import logo from '../assets/logo.webp';
@@ -53,7 +54,7 @@ const Login: React.FC = () => {
   // Handle redirect result for PWA standalone mode
   React.useEffect(() => {
     // Wake up backend to avoid cold-start delays on Render
-    fetch('https://manaintibojanam-backend.onrender.com/api/health').catch(() => {});
+    fetch(`${EnvironmentConfig.getApiUrl()}/api/health`).catch(() => {});
     
     const handleRedirectResult = async () => {
       try {

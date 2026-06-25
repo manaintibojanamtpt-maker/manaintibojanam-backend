@@ -5,6 +5,7 @@ import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
 import { CartProvider } from './context/CartContext';
+import { FeatureFlagProvider } from './context/FeatureFlagContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { TenantProvider, useTenant } from './context/TenantContext';
 import Header from './components/Header';
@@ -53,6 +54,7 @@ import { runEnterpriseMigration } from './scripts/migrateEnterprise';
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
+import OnboardingWizard from './pages/owner/OnboardingWizard';
 
 // Lazy load pages for code splitting
 const Checkout = lazy(() => import('./pages/Checkout'));
@@ -163,11 +165,11 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (!authLoading) {
-      // Ensure the premium splash animation plays for its full duration (4s)
+      // Splash screen is cosmetic only — do not block rendering on it
       const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
       const elapsed = Date.now() - startTime;
       const skipSplash = (window as any).__SKIP_SPLASH__;
-      const minDuration = skipSplash ? 0 : 4000;
+      const minDuration = skipSplash ? 0 : 800; // Reduced from 4000ms to 800ms cosmetic minimum
       const timeToWait = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
@@ -241,7 +243,11 @@ const AppContent: React.FC = () => {
 
   const mainRoutes = (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={
+        (window.location.hostname.includes('bhojanos') || window.location.hostname.includes('onrender'))
+          ? <Navigate to="/onboard" replace />
+          : <Home />
+      } />
       <Route path="/menu" element={<Menu />} />
       <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
       <Route path="/subscription" element={<SubscriptionPage />} />
@@ -294,6 +300,7 @@ const AppContent: React.FC = () => {
               <Route path="/owner/import-data" element={<OwnerRoute><OwnerLayout><DataImporter /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/operations" element={<OwnerRoute><OwnerLayout><ForecastDashboard /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/kyc" element={<OwnerRoute><OwnerLayout><OwnerKYC /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/setup" element={<OwnerRoute><OnboardingWizard /></OwnerRoute>} />
               <Route path="/owner/recipes" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="predictiveSupply"><OwnerRecipes /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/marketing" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="marketing"><OwnerMarketing /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/delivery" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="deliveryIntelligence"><DeliveryIntelligence /></EntitlementGate></OwnerLayout></OwnerRoute>} />
@@ -469,7 +476,7 @@ const App: React.FC = () => {
       const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
       const elapsed = Date.now() - startTime;
       const skipSplash = (window as any).__SKIP_SPLASH__;
-      const minDuration = skipSplash ? 0 : 4000;
+      const minDuration = skipSplash ? 0 : 800; // Reduced to 800ms
       const timeToWait = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
@@ -482,13 +489,15 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <TenantProvider>
-            <CartProvider>
-              <AppContent />
-            </CartProvider>
-          </TenantProvider>
-        </AuthProvider>
+        <FeatureFlagProvider>
+          <AuthProvider>
+            <TenantProvider>
+              <CartProvider>
+                <AppContent />
+              </CartProvider>
+            </TenantProvider>
+          </AuthProvider>
+        </FeatureFlagProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
