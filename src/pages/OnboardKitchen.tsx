@@ -392,13 +392,13 @@ const OnboardKitchen = () => {
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button onClick={() => navigate('/owner/login')} className="hidden sm:flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors">
-               Sign in
+          <div className="flex items-center gap-3 sm:gap-6">
+            <button onClick={() => navigate('/owner/login')} className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition-colors whitespace-nowrap">
+               Sign In
             </button>
             <button 
               onClick={() => navigate('/owner/register')}
-              className="bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-[#FF6B00]/90 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all w-full sm:w-auto"
+              className="bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-[#FF6B00]/90 hover:to-orange-400 text-white font-black uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-sm px-4 py-2 sm:px-8 sm:py-4 rounded-xl shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all whitespace-nowrap"
             >
               Start Free Trial
             </button>
