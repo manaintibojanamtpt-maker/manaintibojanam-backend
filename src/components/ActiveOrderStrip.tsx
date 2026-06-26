@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus } from '../types';
 import { Clock, CheckCircle2, Package, Truck, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { LEGACY_UNPAID_CUSTOMER_LABEL } from '../config/legacyPaymentCopy';
 
 const ActiveOrderStrip: React.FC = () => {
   const { currentUser } = useAuth();
@@ -78,9 +79,10 @@ const ActiveOrderStrip: React.FC = () => {
 
   const getStatusConfig = (status: OrderStatus) => {
     switch (status) {
+      case OrderStatus.PAYMENT_VERIFICATION:
+        return { label: LEGACY_UNPAID_CUSTOMER_LABEL, icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' };
       case OrderStatus.PENDING:
       case OrderStatus.PAYMENT_PENDING:
-      case OrderStatus.PAYMENT_VERIFICATION:
       case OrderStatus.PLACED:
       case OrderStatus.CREATED:
         return { label: 'Order Placed', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' };

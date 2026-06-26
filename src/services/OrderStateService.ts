@@ -5,6 +5,10 @@
  */
 
 import { OrderStatus } from '../types';
+import {
+  LEGACY_UNPAID_CUSTOMER_DESCRIPTION,
+  LEGACY_UNPAID_CUSTOMER_LABEL,
+} from '../config/legacyPaymentCopy';
 
 export class OrderStateService {
   /**
@@ -104,10 +108,10 @@ export class OrderStateService {
         description: 'Please complete payment to proceed',
       },
       [OrderStatus.PAYMENT_VERIFICATION]: {
-        label: 'Verifying Payment',
-        icon: '🔍',
-        color: 'blue',
-        description: 'We are verifying your payment',
+        label: LEGACY_UNPAID_CUSTOMER_LABEL,
+        icon: '⚠️',
+        color: 'yellow',
+        description: LEGACY_UNPAID_CUSTOMER_DESCRIPTION,
       },
       [OrderStatus.PENDING]: {
         label: 'Pending',

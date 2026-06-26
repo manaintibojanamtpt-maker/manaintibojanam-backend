@@ -176,7 +176,7 @@ class EmailService {
     try {
       const statusMessages: Record<string, string> = {
         verified: '✅ Payment Received and Verified',
-        pending: '⏳ Payment Verification Pending',
+        pending: '⏳ Payment not confirmed',
         failed: '❌ Payment Failed'
       };
 

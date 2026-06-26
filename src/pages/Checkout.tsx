@@ -493,13 +493,13 @@ const Checkout: React.FC = () => {
                     navigate(`${basePath}/payment-success`);
                   }
                 } else {
-                  toast.error('Payment verification failed');
+                  toast.error('Payment could not be confirmed');
                   setIsPlacingOrder(false);
                 }
               } catch (err: any) {
                 console.error(err);
                 logIncident('merchant_blockers', { blockerType: 'Payment Verification Failed', error: err?.message });
-                toast.error(err.message || 'Payment verification failed');
+                toast.error(err.message || 'Payment could not be confirmed');
                 setIsPlacingOrder(false);
               }
             }, (err) => {
@@ -597,13 +597,13 @@ const Checkout: React.FC = () => {
                   navigate(`${basePath}/payment-success`);
                 }
               } else {
-                toast.error('Payment verification failed');
+                toast.error('Payment could not be confirmed');
                 setIsPlacingOrder(false);
               }
             } catch (err: any) {
               console.error(err);
               logIncident('merchant_blockers', { blockerType: 'Payment Verification Failed', error: err?.message, orderId: createData?.order?.id });
-              toast.error(err?.message || 'Payment verification failed. Please try again.');
+              toast.error(err?.message || 'Payment could not be confirmed. Please try again.');
               setIsPlacingOrder(false);
             }
           },

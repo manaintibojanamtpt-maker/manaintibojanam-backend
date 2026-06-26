@@ -28,9 +28,7 @@ const PaymentSuccess: React.FC = () => {
   useEffect(() => {
     const loadOrder = async () => {
       try {
-        const stored = localStorage.getItem('manual_payment_order');
-        const storedOrder = stored ? JSON.parse(stored) : null;
-        const orderId = queryOrderId || storedOrder?.orderId;
+        const orderId = queryOrderId || sessionStorage.getItem('lastPendingOrderId');
         
         if (!orderId) {
           throw new Error('No order ID found');
@@ -80,7 +78,7 @@ const PaymentSuccess: React.FC = () => {
         <div className="w-24 h-24 bg-white rounded-[2rem] shadow-sm flex items-center justify-center text-green-600 mb-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
-        <p className="text-gray-500 font-medium text-center">Loading payment confirmation...</p>
+        <p className="text-gray-500 font-medium text-center">Checking payment status...</p>
       </div>
     );
   }
@@ -111,7 +109,7 @@ const PaymentSuccess: React.FC = () => {
         <div className="w-24 h-24 bg-amber-100 rounded-[2rem] shadow-sm flex items-center justify-center text-amber-600 mb-8">
           <Clock size={36} />
         </div>
-        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Payment pending verification</h2>
+        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Payment not confirmed</h2>
         <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-md">
           Your order was placed but payment has not been confirmed yet. If you completed Razorpay checkout, refresh in a moment or contact support with order #{order.orderNumber || order.id.slice(-6)}.
         </p>

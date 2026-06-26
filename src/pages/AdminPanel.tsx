@@ -81,6 +81,7 @@ import OrderCard from "../components/admin/OrderCard";
 import { seedMenuItems } from "../populateData";
 import PaymentVerificationPanel from "../components/admin/PaymentVerificationPanel";
 import { isManualPaymentVerificationEnabled, TENANT_ZERO_ID } from "../config/paymentRollout";
+import { LEGACY_UNPAID_ADMIN_LABEL } from "../config/legacyPaymentCopy";
 const CourierBookingModal = lazy(() => import("../components/admin/CourierBookingModal"));
 
 export default function AdminPanel() {
@@ -1333,6 +1334,9 @@ export default function AdminPanel() {
               <div className="flex flex-col gap-2 md:gap-0 md:justify-between md:items-center mb-8 md:mb-12">
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Manage Orders</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 font-semibold">
+                    Online = green SUCCESS only. Orange = do not cook.
+                  </p>
                   <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Last updated: {lastUpdated.toLocaleTimeString()}</p>
                 </div>
                 {newOrderIds.length > 0 && (
@@ -1363,7 +1367,7 @@ export default function AdminPanel() {
                   <option value={OrderStatus.PLACED}>Placed</option>
                   <option value={OrderStatus.ACCEPTED}>Accepted</option>
                   <option value={OrderStatus.PAYMENT_PENDING}>Payment Pending</option>
-                  <option value={OrderStatus.PAYMENT_VERIFICATION}>Payment Verification</option>
+                  <option value={OrderStatus.PAYMENT_VERIFICATION}>{LEGACY_UNPAID_ADMIN_LABEL}</option>
                   <option value={OrderStatus.PREPARING}>Preparing</option>
                   <option value={OrderStatus.READY}>Ready</option>
                   <option value={OrderStatus.OUT_FOR_DELIVERY}>Out for Delivery</option>
@@ -1378,13 +1382,13 @@ export default function AdminPanel() {
                   <div className="w-2 h-8 bg-red-500 rounded-full"></div>
                   <h3 className="text-lg md:text-xl lg:text-2xl font-black text-gray-900 dark:text-white">New Orders</h3>
                   <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-full font-bold text-xs uppercase tracking-widest">
-                    {activeOrderList.filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.PAYMENT_PENDING].includes(o.status as any) && 
+                    {activeOrderList.filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_PENDING].includes(o.status as any) && 
                                                (o.orderNumber?.toString().includes(search) || o.phone?.includes(search))).length}
                   </span>
                 </div>
                 <div className={`grid gap-2 md:gap-4 lg:gap-6 ${compactMode ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
                   {activeOrderList
-                    .filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.PAYMENT_PENDING].includes(o.status as any) && 
+                    .filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_PENDING].includes(o.status as any) && 
                                  (o.orderNumber?.toString().includes(search) || o.phone?.includes(search)))
                     .map(order => (
                       <OrderCard 
@@ -1397,7 +1401,7 @@ export default function AdminPanel() {
                       />
                     ))}
                 </div>
-                {activeOrderList.filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.PAYMENT_PENDING].includes(o.status as any)).length === 0 && (
+                {activeOrderList.filter(o => [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PAYMENT_PENDING].includes(o.status as any)).length === 0 && (
                   <div className="text-center py-8 md:py-12 bg-white dark:bg-gray-900 rounded-2xl md:rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-800">
                     <Package size={40} className="md:size-12 mx-auto text-gray-200 dark:text-gray-700 mb-3 md:mb-4" />
                     <p className="text-gray-400 dark:text-gray-500 font-bold text-sm">No new orders</p>

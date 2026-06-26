@@ -1359,8 +1359,8 @@ const buildOrderNotification = (order: any, status: string) => {
       body: `Your order ${orderLabel} has been cancelled.`
     },
     PAYMENT_VERIFICATION: {
-      title: "Payment submitted",
-      body: `Payment for order ${orderLabel} is waiting for verification.`
+      title: "Payment not confirmed",
+      body: `Payment for order ${orderLabel} was not confirmed. Please complete checkout or contact support.`
     }
   };
 

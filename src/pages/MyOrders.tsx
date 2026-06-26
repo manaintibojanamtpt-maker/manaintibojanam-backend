@@ -360,7 +360,7 @@ export default function MyOrders() {
                           <span className="flex h-2 w-2 rounded-full bg-red-500 animate-ping shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                         )}
                         <span className={`px-3 py-1.5 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-inner border border-black/10 ${getStatusColor(order.status)}`}>
-                          {getDisplayStatus(order.status)}
+                          {getDisplayStatus(order.status, 'customer')}
                         </span>
                         {displayState.orderStage === "future_scheduled" && (
                            <span className="text-amber-400 font-black text-[9px] uppercase tracking-widest bg-amber-900/30 border border-amber-500/30 px-3 py-1.5 rounded-lg shadow-inner">Scheduled</span>

@@ -17,6 +17,10 @@ import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent } from '.
 import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
 import { EnvironmentConfig } from '../config/environment';
+import {
+  LEGACY_UNPAID_ADMIN_LABEL,
+  LEGACY_UNPAID_CUSTOMER_LABEL,
+} from '../config/legacyPaymentCopy';
 
 const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
@@ -640,12 +644,18 @@ export const calculateDeliveryFee = (distance?: number): number => {
 
 // --- UI HELPERS ---
 
-export const getDisplayStatus = (status: OrderStatus): string => {
+export const getDisplayStatus = (
+  status: OrderStatus,
+  audience: 'admin' | 'customer' = 'admin'
+): string => {
+  if (status === OrderStatus.PAYMENT_VERIFICATION) {
+    return audience === 'customer' ? LEGACY_UNPAID_CUSTOMER_LABEL : LEGACY_UNPAID_ADMIN_LABEL;
+  }
+
   const mapping: Partial<Record<OrderStatus, string>> = {
     [OrderStatus.PLACED]: 'Placed',
     [OrderStatus.PENDING]: 'Pending',
     [OrderStatus.PAYMENT_PENDING]: 'Payment Pending',
-    [OrderStatus.PAYMENT_VERIFICATION]: 'Verifying Payment',
     [OrderStatus.ACCEPTED]: 'Accepted',
     [OrderStatus.PREPARING]: 'Preparing',
     [OrderStatus.READY]: 'Ready for Pickup',

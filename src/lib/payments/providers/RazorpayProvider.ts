@@ -82,7 +82,7 @@ export class RazorpayProvider implements IPaymentProvider {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Payment verification failed');
+        throw new Error(data.error || 'Payment could not be confirmed');
       }
 
       return {
@@ -91,7 +91,7 @@ export class RazorpayProvider implements IPaymentProvider {
       };
     } catch (err: any) {
       console.error('Razorpay Verify Error:', err);
-      return { success: false, error: err.message || 'Payment verification failed' };
+      return { success: false, error: err.message || 'Payment could not be confirmed' };
     }
   }
 

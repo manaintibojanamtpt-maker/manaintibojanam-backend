@@ -1,5 +1,10 @@
 import { safeParseDate } from './utils';
 import { Order, OrderStatus } from '../types';
+import {
+  LEGACY_UNPAID_ADMIN_LABEL,
+  LEGACY_UNPAID_CUSTOMER_DESCRIPTION,
+  LEGACY_UNPAID_CUSTOMER_LABEL,
+} from '../config/legacyPaymentCopy';
 
 export type PaymentStatus = 'pending' | 'success' | 'failed' | 'expired' | 'pending_verification' | 'verified' | 'paid' | 'unpaid';
 export type FulfillmentType = 'instant' | 'scheduled';
@@ -138,6 +143,9 @@ export const getOrderDisplayLabel = (phase: OrderPhase, paymentStatus: PaymentSt
 };
 
 export const getOrderDisplayState = (order: Partial<Order>, now: Date = new Date()): OrderDisplayState => {
+  const normalizedOrderStatus = String(order.status || '').trim().toUpperCase().replace(/\s+/g, '_');
+  const isLegacyUnpaidStatus =
+    normalizedOrderStatus === OrderStatus.PAYMENT_VERIFICATION || normalizedOrderStatus === 'PAYMENT_VERIFICATION';
   const paymentStatus = normalizePaymentStatus(order.paymentStatus);
   const fulfillmentType = getFulfillmentType(order.orderType || order.deliveryType, order.scheduledFor || order.scheduledTime);
   const scheduledFor = order.scheduledFor ? safeParseDate(order.scheduledFor) : order.scheduledTime ? safeParseDate(order.scheduledTime) : null;
@@ -159,7 +167,9 @@ export const getOrderDisplayState = (order: Partial<Order>, now: Date = new Date
   const allowReject = !['delivered', 'cancelled', 'expired'].includes(phase);
   const scheduledLabel = scheduledFor ? `${scheduledFor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} at ${scheduledTimeLabel}` : 'Scheduled time unavailable';
   
-  const customerTitle = isInvalidPayment
+  const customerTitle = isLegacyUnpaidStatus
+    ? LEGACY_UNPAID_CUSTOMER_LABEL
+    : isInvalidPayment
     ? paymentStatus === 'expired'
       ? 'Order expired before payment confirmation'
       : 'Payment failed'
@@ -182,7 +192,9 @@ export const getOrderDisplayState = (order: Partial<Order>, now: Date = new Date
                     ? 'Cash on Delivery - Pay at doorstep'
                     : 'Order received';
 
-  const customerSubtitle = isInvalidPayment
+  const customerSubtitle = isLegacyUnpaidStatus
+    ? LEGACY_UNPAID_CUSTOMER_DESCRIPTION
+    : isInvalidPayment
     ? paymentStatus === 'expired'
       ? 'Your order could not be completed because payment expired.'
       : 'Your payment could not be processed. Please contact support.'
@@ -205,7 +217,9 @@ export const getOrderDisplayState = (order: Partial<Order>, now: Date = new Date
                     ? 'Please have exact change ready for the delivery person.'
                     : 'Your order has been received and is being processed.';
 
-  const adminBadge = isInvalidPayment
+  const adminBadge = isLegacyUnpaidStatus
+    ? LEGACY_UNPAID_ADMIN_LABEL
+    : isInvalidPayment
     ? paymentStatus === 'expired'
       ? 'Order expired'
       : 'Payment failed'

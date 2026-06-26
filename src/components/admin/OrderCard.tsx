@@ -3,6 +3,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import { Package, Clock, CreditCard, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { OrderStatus, Order, PaymentStatus } from '../../types';
 import { getDisplayStatus, updatePaymentStatus } from '../../services/api';
+import { LEGACY_UNPAID_ADMIN_LABEL } from '../../config/legacyPaymentCopy';
 import { isManualPaymentVerificationEnabled } from '../../config/paymentRollout';
 import { safeParseDate } from '../../lib/utils';
 import { OrderStateService } from '../../services/OrderStateService';
@@ -235,7 +236,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
       case OrderStatus.DELIVERED:
         return 'Mark as Delivered';
       case OrderStatus.PAYMENT_VERIFICATION:
-        return 'Verify Payment';
+        return LEGACY_UNPAID_ADMIN_LABEL;
       case OrderStatus.PAYMENT_PENDING:
         return 'Mark Payment Pending';
       default:
@@ -266,6 +267,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
               <h3 className={`${compactMode ? 'text-[15px]' : 'text-lg'} font-black text-gray-900 dark:text-white tracking-tight`}>#{order.orderNumber || 'N/A'}</h3>
               {isNew && <span className="bg-blue-500 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded animate-pulse">New</span>}
               {isUrgent && <span className="bg-red-600 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded animate-pulse">Urgent</span>}
+              {isPaymentVerificationPending && (
+                <span className="bg-red-600 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded">
+                  NOT PAID — legacy
+                </span>
+              )}
             </div>
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
               {order.customerName || 'Guest'}
