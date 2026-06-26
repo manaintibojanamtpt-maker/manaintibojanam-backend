@@ -17,6 +17,7 @@ import { ExecutiveLeadership } from '../components/ExecutiveLeadership';
 import { FounderStory } from '../components/FounderStory';
 import { TrustSection } from '../components/TrustSection';
 import { TechnologyStack } from '../components/TechnologyStack';
+import { PricingSection } from '../components/pricing/PricingSection';
 import { CallToAction } from '../components/CallToAction';
 import { EnterpriseFooter } from '../components/EnterpriseFooter';
 import { EnterpriseSchema } from '../components/EnterpriseSchema';
@@ -332,6 +333,7 @@ const OnboardKitchen: React.FC = () => {
         <MissionVision />
         <ProductOverview />
         <WhyChooseBhojanOS />
+        <PricingSection />
         <ExecutiveLeadership />
         <FounderStory />
         <TrustSection variant="full" />

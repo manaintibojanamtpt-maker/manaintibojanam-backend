@@ -41,7 +41,7 @@ export const homepageSections = [
   { id: 'problem', label: 'The problem with aggregators' },
   { id: 'solution', label: 'How BhojanOS works' },
   { id: 'outcomes', label: 'What you get' },
-  { id: 'trust', label: 'Built for independent kitchens' },
+  { id: 'pricing', label: 'Plans & pricing' },
   { id: 'story', label: 'Our story' },
   { id: 'cta', label: 'Start free' },
 ];

@@ -56,7 +56,7 @@ export const EnterpriseHeader: React.FC = () => {
             onClick={() => navigate('/owner/register')}
             className="bg-[#FF6B00] hover:bg-[#E56D00] text-white font-semibold text-sm px-5 py-2.5 rounded-lg border border-[#FF6B00] transition-colors"
           >
-            Start Free Trial
+            Start free storefront
           </button>
         </div>
 
@@ -94,7 +94,7 @@ export const EnterpriseHeader: React.FC = () => {
                   onClick={() => { setMobileMenuOpen(false); navigate('/owner/register'); }}
                   className="bg-[#FF6B00] hover:bg-[#E56D00] text-white font-semibold py-3.5 rounded-lg text-center transition-colors"
                 >
-                  Start Free Trial
+                  Start free storefront
                 </button>
               </div>
             </div>
