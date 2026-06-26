@@ -343,7 +343,7 @@ const AppContent: React.FC = () => {
           <NotchNotification />
           <FlyToCartAnimation />
           <PwaUpdatePrompt />
-          <Toaster position="bottom-center" />
+          <Toaster position="bottom-center" containerStyle={{ zIndex: 9000 }} />
 
           <BiometricModal
             isOpen={isAppLocked}

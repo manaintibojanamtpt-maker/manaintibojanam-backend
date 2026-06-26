@@ -42,12 +42,14 @@ import { MenuItemSkeleton, CategorySkeleton, Skeleton } from '../components/Skel
 
 import { useTenant } from '../context/TenantContext';
 import { getSmartReorderRecommendations } from '../services/RecommendationEngine';
+import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { trackEvent } from '../services/AnalyticsService';
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
   const { tenantSlug, tenantId: contextTenantId } = useTenant();
   const activeTenantId = contextTenantId || fallbackTenantId;
+  const { isStoreOpenNow, isOpen: storeStatus, closedMessage } = useTenantStoreStatus();
   const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const [searchParams, setSearchParams] = useSearchParams();
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -350,7 +352,7 @@ const Menu: React.FC = () => {
         cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
         if (isMounted) setCategories(cats);
 
-        // Fetch Settings
+        // Legacy global settings (fees/other) — store open state comes from tenant storeOperations
         const settingsSnap = await getDoc(doc(db, "adminSettings", "global"));
         if (settingsSnap.exists() && isMounted) {
           setSettings(settingsSnap.data());
@@ -454,25 +456,6 @@ const Menu: React.FC = () => {
     return quantity;
   };
 
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const isStoreOpenNow = () => {
-    if (!settings) return true;
-    if (settings.isStoreOpen === false) return false;
-    if (!settings.storeTiming || settings.storeTiming.isManualOverride) return settings.isStoreOpen !== false;
-
-    const now = currentTime;
-    const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    return currentTimeStr >= settings.storeTiming.openTime && currentTimeStr <= settings.storeTiming.closeTime;
-  };
-
   const getClosingSoonStatus = () => {
     if (!settings || !settings.storeTiming || settings.storeTiming.isManualOverride) return false;
     const now = new Date();
@@ -484,7 +467,6 @@ const Menu: React.FC = () => {
     return diffMinutes > 0 && diffMinutes <= 30;
   };
 
-  const storeStatus = isStoreOpenNow();
   const closingSoon = getClosingSoonStatus();
 
   const getSmartRecommendations = (cartItems: any[]) => {
@@ -550,7 +532,7 @@ const Menu: React.FC = () => {
         {!storeStatus && (
           <div className="bg-orange-500/10 border-b border-orange-500/20 px-4 py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-400">
             <Clock size={14} className="text-orange-500" />
-            Kitchen Closed {settings?.storeTiming?.openTime ? `• Reopening at ${settings.storeTiming.openTime}` : ''}
+            {closedMessage || 'Kitchen Closed'}
           </div>
         )}
         

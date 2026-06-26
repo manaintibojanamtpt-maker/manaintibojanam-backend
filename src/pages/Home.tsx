@@ -36,6 +36,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { useTimeBasedSection } from '../hooks/useTimeBasedSection';
 import { useTenant } from '../context/TenantContext';
+import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { activeTenantId as fallbackTenantId } from '../services/api';
 import toast from 'react-hot-toast';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
@@ -63,8 +64,6 @@ const Home: React.FC = () => {
   const [specialItems, setSpecialItems] = useState<any[]>([]);
   const [orderAgainItems, setOrderAgainItems] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [isStoreOpen, setIsStoreOpen] = useState(true);
-  const [storeOpenTime, setStoreOpenTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -80,6 +79,8 @@ const Home: React.FC = () => {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   const { tenantId: contextTenantId, tenantInfo } = useTenant();
   const activeTenantId = contextTenantId || fallbackTenantId;
+  const { isStoreOpenNow, settings: storeSettings } = useTenantStoreStatus();
+  const storeOpenTime = storeSettings?.storeTiming.openTime || '09:00';
   const [deliveryState, setDeliveryState] = useDeliveryState();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const timeBasedHeader = useTimeBasedSection();
@@ -254,21 +255,6 @@ const Home: React.FC = () => {
       }
     };
 
-    const fetchSettings = async () => {
-      try {
-        const settingsDoc = await getDoc(doc(getDb(), "adminSettings", "global"));
-        if (settingsDoc.exists()) {
-          const settings = settingsDoc.data();
-          setIsStoreOpen(settings.isStoreOpen !== false);
-          if (settings.storeTiming?.openTime) {
-            setStoreOpenTime(settings.storeTiming.openTime);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch settings', e);
-      }
-    };
-
     const fetchOrderAgain = async () => {
       if (!currentUser) return;
 
@@ -309,7 +295,6 @@ const Home: React.FC = () => {
 
     fetchCategories();
     fetchMenu();
-    fetchSettings();
     fetchOrderAgain();
   }, [currentUser, activeTenantId]);
 
@@ -533,7 +518,7 @@ const Home: React.FC = () => {
                       addToCart={addToCart}
                       updateQuantity={updateQuantity}
                       getItemQuantity={getItemQuantity}
-                      isStoreOpenNow={() => isStoreOpen}
+                      isStoreOpenNow={isStoreOpenNow}
                       storeOpenTime={storeOpenTime}
                     />
                   </m.div>
@@ -625,7 +610,7 @@ const Home: React.FC = () => {
                       addToCart={addToCart}
                       updateQuantity={updateQuantity}
                       getItemQuantity={getItemQuantity}
-                      isStoreOpenNow={() => isStoreOpen}
+                      isStoreOpenNow={isStoreOpenNow}
                     />
                   </m.div>
                 ))
@@ -699,7 +684,7 @@ const Home: React.FC = () => {
                       addToCart={addToCart}
                       updateQuantity={updateQuantity}
                       getItemQuantity={getItemQuantity}
-                      isStoreOpenNow={() => isStoreOpen}
+                      isStoreOpenNow={isStoreOpenNow}
                       storeOpenTime={storeOpenTime}
                     />
                   </m.div>
@@ -732,7 +717,7 @@ const Home: React.FC = () => {
                   addToCart={addToCart}
                   updateQuantity={updateQuantity}
                   getItemQuantity={getItemQuantity}
-                  isStoreOpenNow={() => isStoreOpen}
+                  isStoreOpenNow={isStoreOpenNow}
                   storeOpenTime={storeOpenTime}
                 />
               ))}
@@ -764,7 +749,7 @@ const Home: React.FC = () => {
                     addToCart={addToCart}
                     updateQuantity={updateQuantity}
                     getItemQuantity={getItemQuantity}
-                    isStoreOpenNow={() => isStoreOpen}
+                    isStoreOpenNow={isStoreOpenNow}
                     storeOpenTime={storeOpenTime}
                   />
                 ))
@@ -797,7 +782,7 @@ const Home: React.FC = () => {
                   addToCart={addToCart}
                   updateQuantity={updateQuantity}
                   getItemQuantity={getItemQuantity}
-                  isStoreOpenNow={() => isStoreOpen}
+                  isStoreOpenNow={isStoreOpenNow}
                   storeOpenTime={storeOpenTime}
                 />
               ))}
@@ -1085,7 +1070,7 @@ const Home: React.FC = () => {
                   addToCart={addToCart}
                   updateQuantity={updateQuantity}
                   getItemQuantity={getItemQuantity}
-                  isStoreOpenNow={() => isStoreOpen}
+                  isStoreOpenNow={isStoreOpenNow}
                   storeOpenTime={storeOpenTime}
                 />
               ))}

@@ -758,6 +758,56 @@ app.post("/api/client-errors", (req: any, res) => {
   res.json({ status: "logged" });
 });
 
+// Monitoring / incident response intake
+app.post("/api/monitoring/log", async (req: any, res) => {
+  try {
+    const { type, payload } = req.body || {};
+    if (!type || typeof type !== "string") {
+      return res.status(400).json({ success: false, error: "Missing incident type" });
+    }
+
+    const correlationId = req.correlationId || `mon-${Date.now()}`;
+    const enrichedPayload = {
+      ...(payload || {}),
+      loggedAt: new Date().toISOString(),
+      correlationId,
+    };
+
+    await writeSystemIncident(type, "DETECTED", enrichedPayload, correlationId);
+
+    const shouldMirrorToClientErrors = [
+      "system_errors",
+      "merchant_blockers",
+      "payment_incidents",
+      "security_events",
+      "firestore_errors",
+    ].includes(type);
+
+    if (shouldMirrorToClientErrors && _db) {
+      await _db.collection("client_errors").add({
+        level: enrichedPayload.severity === "Critical" ? "CRITICAL" : "ERROR",
+        message:
+          enrichedPayload.error ||
+          enrichedPayload.blockerType ||
+          enrichedPayload.failureReason ||
+          type,
+        contextSummary: JSON.stringify(enrichedPayload).slice(0, 500),
+        tenantId: enrichedPayload.tenantId || "unknown",
+        route: enrichedPayload.route || "",
+        incidentType: type,
+        correlationId,
+        timestamp: FieldValue.serverTimestamp(),
+        resolved: false,
+      });
+    }
+
+    res.json({ success: true, correlationId });
+  } catch (err: any) {
+    logger.error({ message: "Monitoring log failed", err: err.message, correlationId: req.correlationId });
+    res.status(500).json({ success: false, error: "Failed to log incident" });
+  }
+});
+
 // Global Error Handler
 app.use((err: any, req: any, res: any, next: any) => {
   logger.error({ message: "Unhandled Express Error", err: err.message, stack: err.stack, correlationId: req.correlationId });

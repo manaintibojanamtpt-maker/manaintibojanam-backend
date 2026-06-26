@@ -6,10 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTenant } from '../context/TenantContext';
 import { m, AnimatePresence } from 'framer-motion';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
 
-import { isStoreOpenNow, getClosingSoonStatus } from '../lib/storeUtils';
+import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
+import { getClosingSoonStatus } from '../lib/storeUtils';
 
 import logo from '../assets/logo.webp';
 
@@ -23,7 +22,8 @@ const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [settings, setSettings] = useState<any>(null);
+  const { isOpen: isStoreOpen, settings } = useTenantStoreStatus();
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -34,25 +34,25 @@ const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(getDb(), "adminSettings", "global"), (snapshot) => {
-      if (snapshot.exists()) {
-        setSettings(snapshot.data());
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
 
-  const isStoreOpen = isStoreOpenNow(settings, currentTime);
-  const closingSoon = getClosingSoonStatus(settings, currentTime);
+  const closingSoon = getClosingSoonStatus(
+    settings
+      ? {
+          isStoreOpen: settings.isStoreOpen,
+          storeTiming: {
+            openTime: settings.storeTiming.openTime,
+            closeTime: settings.storeTiming.closeTime,
+            isManualOverride: !settings.storeTiming.businessHoursEnabled,
+          },
+        }
+      : null,
+    currentTime
+  );
 
   // Close menus on route change
   useEffect(() => {

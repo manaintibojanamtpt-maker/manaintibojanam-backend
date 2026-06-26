@@ -12,7 +12,7 @@ import { EnvironmentConfig } from '../../config/environment';
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
-  const { tenantInfo } = useTenant();
+  const { tenantInfo, tenantSlug } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount } = useOrderAlerts();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -53,7 +53,8 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const mobileBarItems = navItems.filter((item) => item.mobileBar);
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
-  const storeUrl = tenantId ? EnvironmentConfig.getStorefrontUrl(tenantId) : '';
+  const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
+  const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
   const currentPage = navItems.find(item => item.path === location.pathname)?.name || location.pathname.split('/').pop() || 'Dashboard';
 
   useEffect(() => {

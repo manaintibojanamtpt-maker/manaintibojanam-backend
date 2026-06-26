@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         srcDir: 'src',
         filename: 'sw.ts',
         registerType: 'prompt', // Wait for the user to explicitly accept the update
-        injectRegister: 'auto',
+        injectRegister: false, // Register only via PwaUpdatePrompt to avoid duplicate SW controllers
         devOptions: {
           enabled: false // Disable in dev to prevent caching issues while coding
         },

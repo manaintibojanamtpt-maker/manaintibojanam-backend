@@ -3,23 +3,29 @@ import { useSearchParams } from 'react-router-dom';
 import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { useTenant } from '../../context/TenantContext';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
+import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 
 const OwnerSettings: React.FC = () => {
   const { userProfile } = useAuth();
+  const { tenantId: resolvedTenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'location'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get('tab') === 'location') {
+    const tab = searchParams.get('tab');
+    if (tab === 'location') {
       setActiveTab('location');
+    } else if (tab === 'hours') {
+      setActiveTab('hours');
     }
   }, [searchParams]);
   
@@ -43,7 +49,7 @@ const OwnerSettings: React.FC = () => {
     prepTime: 20
   });
 
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const tenantId = resolvedTenantId || userProfile?.ownedTenantIds?.[0];
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -246,6 +252,10 @@ const OwnerSettings: React.FC = () => {
             <Settings size={18} />
             <span className="font-bold tracking-widest text-xs uppercase">General</span>
           </button>
+          <button onClick={() => setActiveTab('hours')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'hours' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Clock size={18} />
+            <span className="font-bold tracking-widest text-xs uppercase">Store Hours</span>
+          </button>
           <button onClick={() => setActiveTab('location')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'location' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
             <MapPin size={18} />
             <span className="font-bold tracking-widest text-xs uppercase">Location & Delivery</span>
@@ -253,6 +263,11 @@ const OwnerSettings: React.FC = () => {
         </div>
 
         <div className="bg-[#0f0f11] rounded-xl shadow-sm border border-white/10">
+          {activeTab === 'hours' ? (
+            <div className="p-6 md:p-8">
+              <StoreLiveControl variant="full" />
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             
             {activeTab === 'general' && (
@@ -485,6 +500,7 @@ const OwnerSettings: React.FC = () => {
             </div>
             
           </form>
+          )}
         </div>
       </div>
     </div>

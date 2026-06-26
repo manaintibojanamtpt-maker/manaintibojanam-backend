@@ -25,6 +25,7 @@ import { generateDailyGrowthSnapshot, AIGrowthSnapshot } from '../../services/AI
 import { calculateMerchantHealth, MerchantHealthResult } from '../../lib/merchantHealth';
 import { EnvironmentConfig } from '../../config/environment';
 import { useFeatureFlags } from '../../context/FeatureFlagContext';
+import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -34,6 +35,7 @@ const OwnerDashboard = () => {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { flags } = useFeatureFlags();
+  const { tenantInfo: contextTenant, tenantSlug } = useTenant();
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const tenantName = userProfile?.name || 'Kitchen';
 
@@ -50,26 +52,45 @@ const OwnerDashboard = () => {
   const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
 
-  const storeSlug = tenantInfo?.slug || tenantId;
+  const storeSlug = tenantInfo?.slug || contextTenant?.slug || tenantSlug || tenantId;
   const storeUrl = getStoreUrl(storeSlug);
 
+  const requireStoreUrl = (action: string) => {
+    if (storeUrl) return true;
+    toast.error('Store link is not ready yet. Check Storefront Settings.');
+    logIncident('merchant_blockers', {
+      blockerType: 'Share Store URL Missing',
+      severity: 'Warning',
+      action,
+      route: '/owner/dashboard',
+      tenantId: tenantInfo?.id || contextTenant?.id,
+    });
+    return false;
+  };
+
   const copyToClipboard = async () => {
-    if (!storeUrl) return;
+    if (!requireStoreUrl('copy')) return;
     await navigator.clipboard.writeText(storeUrl);
     toast.success('Store link copied!');
   };
 
   const shareToWhatsAppDirect = () => {
-    if (!storeUrl) return;
+    if (!requireStoreUrl('whatsapp_direct')) return;
     const text = encodeURIComponent(`We are now live on BhojanOS 🎉\n\nFresh homemade food delivered directly from our kitchen.\n\nOrder here:\n${storeUrl}\n\nPlease support us by sharing with your friends and family ❤️`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const shareToWhatsAppStatus = () => {
-    if (!storeUrl) return;
+    if (!requireStoreUrl('whatsapp_status')) return;
     const text = encodeURIComponent(`🍛 Fresh food now available online!\n\nOrder directly from our kitchen:\n${storeUrl}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
+  React.useEffect(() => {
+    if (contextTenant) {
+      setTenantInfo((prev: any) => (prev ? { ...prev, ...contextTenant } : contextTenant));
+    }
+  }, [contextTenant]);
+
   React.useEffect(() => {
     const healTenantDoc = async () => {
       if (!tenantId || !userProfile?.userId) return;
@@ -183,14 +204,8 @@ const OwnerDashboard = () => {
     }
   }, [tenantInfo, analytics, segments, orders]);
 
-  const repeatCustomers = deriveOwnerCustomerMemories(orders).slice(0, 4);
-
   // Mock Operational Recommendations based on intelligence
-  const recommendations = [
-    { priority: 'HIGH', label: 'Packaging bottleneck risk identified for the dinner rush.', icon: <AlertTriangle size={14}/>, color: 'text-red-400 bg-red-500/10 border-red-500/20' },
-    { priority: 'MED', label: 'Demand trending 18% above average. Prepare additional biryani inventory.', icon: <TrendingUp size={14}/>, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-    { priority: 'LOW', label: '3 high-value customers likely to reorder today. Send SMS campaign?', icon: <Users size={14}/>, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-  ];
+  const repeatCustomers = deriveOwnerCustomerMemories(orders).slice(0, 4);
 
   // Mock Activity Timeline
   const timeline = [
@@ -218,9 +233,10 @@ const OwnerDashboard = () => {
   const sandboxReady = completedSandboxSteps === sandboxSteps.length;
 
   const handleActivateSandbox = async () => {
-    if (!sandboxReady || !tenantInfo?.slug) return;
+    const tenantDocId = tenantInfo?.id || contextTenant?.id;
+    if (!sandboxReady || !tenantDocId) return;
     try {
-      await updateDoc(doc(getDb(), 'tenants', tenantInfo.slug), {
+      await updateDoc(doc(getDb(), 'tenants', tenantDocId), {
         storeStatus: 'published',
         sandboxMode: true,
         sandboxActivatedAt: new Date().toISOString(),
@@ -307,7 +323,7 @@ const OwnerDashboard = () => {
         title: 'Share Store Link',
         message: 'Keep the momentum going! Share your store link on Instagram, Facebook, and WhatsApp.',
         action: 'Share Store',
-        link: 'whatsapp',
+        link: 'whatsapp_direct',
         impact: 'Low Effort: Drives organic traffic',
         isPrimary: true
       });
@@ -318,8 +334,64 @@ const OwnerDashboard = () => {
 
   const priorityActions = getPriorityActions();
 
+  const handlePriorityAction = (action: { link: string | null; action: string }) => {
+    if (action.link === 'whatsapp' || action.link === 'whatsapp_direct') {
+      shareToWhatsAppDirect();
+      return;
+    }
+    if (action.link === 'whatsapp_status') {
+      shareToWhatsAppStatus();
+      return;
+    }
+    if (action.link === null) {
+      const sandboxSection = document.getElementById('sandbox-requirements');
+      if (sandboxSection) {
+        sandboxSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        navigate('/owner/setup');
+      }
+      return;
+    }
+    if (action.link.startsWith('/')) {
+      navigate(action.link);
+      return;
+    }
+    toast.error('This action is temporarily unavailable.');
+    logIncident('merchant_blockers', {
+      blockerType: 'Invalid Priority Action Link',
+      severity: 'Warning',
+      action: action.action,
+      link: action.link,
+      route: '/owner/dashboard',
+    });
+  };
+
+  const recommendationStyles = {
+    Risk: { priority: 'HIGH', icon: <AlertTriangle size={14} />, color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+    Opportunity: { priority: 'MED', icon: <TrendingUp size={14} />, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+    Recovery: { priority: 'MED', icon: <Users size={14} />, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  } as const;
+
+  const recommendations = growthSnapshot?.recommendations?.length
+    ? growthSnapshot.recommendations.slice(0, 3).map((rec) => {
+        const style = recommendationStyles[rec.type];
+        return {
+          priority: style.priority,
+          label: rec.message,
+          icon: style.icon,
+          color: style.color,
+        };
+      })
+    : [
+        { priority: 'HIGH', label: 'Packaging bottleneck risk identified for the dinner rush.', icon: <AlertTriangle size={14}/>, color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+        { priority: 'MED', label: 'Demand trending 18% above average. Prepare additional biryani inventory.', icon: <TrendingUp size={14}/>, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+        { priority: 'LOW', label: '3 high-value customers likely to reorder today. Send SMS campaign?', icon: <Users size={14}/>, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+      ];
+
   return (
     <div className="text-white space-y-6">
+
+      <StoreLiveControl variant="compact" />
 
       {/* Onboarding Wizard Banner */}
       {flags.onboardingWizardV2 && tenantInfo?.onboardingStatus && !tenantInfo.onboardingStatus.isComplete && !tenantInfo.onboardingStatus.migrated && (
@@ -388,7 +460,7 @@ const OwnerDashboard = () => {
 
       {/* Sandbox Readiness Checklist (Only show if not published/sandbox) */}
       {tenantInfo?.storeStatus === 'draft' && !isSandboxActive && (
-        <div className="bg-[#1C0E0A] border border-orange-500/20 rounded-2xl p-6 relative isolate overflow-hidden">
+        <div id="sandbox-requirements" className="bg-[#1C0E0A] border border-orange-500/20 rounded-2xl p-6 relative isolate overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-2">
@@ -435,15 +507,7 @@ const OwnerDashboard = () => {
                 <div className="w-full flex flex-col gap-3 mt-auto">
                   <span className="text-[10px] font-medium text-emerald-400/90 leading-snug">{action.impact}</span>
                   <button 
-                    onClick={() => {
-                      if (action.link === 'whatsapp_direct') {
-                        shareToWhatsAppDirect();
-                      } else if (action.link === 'whatsapp_status') {
-                        shareToWhatsAppStatus();
-                      } else if (action.link) {
-                        navigate(action.link);
-                      }
-                    }}
+                    onClick={() => handlePriorityAction(action)}
                     className={`w-full px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${action.isPrimary ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'}`}
                   >
                     {action.action}
@@ -671,8 +735,11 @@ const OwnerDashboard = () => {
            {/* Operational Recommendations */}
            <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-5">
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <BrainCircuit size={14} className="text-[#A855F7]"/> Recommendations
+                <BrainCircuit size={14} className="text-[#A855F7]"/> {growthSnapshot ? 'Autopilot Recommendations' : 'Recommendations'}
               </h3>
+              {growthSnapshot?.summary && (
+                <p className="text-xs text-gray-500 mb-4 leading-relaxed">{growthSnapshot.summary}</p>
+              )}
               <div className="space-y-3">
                 {recommendations.map((rec, i) => (
                   <div key={i} className={`p-3 rounded-xl border ${rec.color}`}>

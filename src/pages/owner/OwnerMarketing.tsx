@@ -22,7 +22,7 @@ const CAMPAIGN_OPTIONS = [
 
 const OwnerMarketing: React.FC = () => {
   const { userProfile } = useAuth();
-  const { tenantInfo } = useTenant();
+  const { tenantInfo, tenantSlug } = useTenant();
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const [segments, setSegments] = useState<CustomerSegmentSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,8 @@ const OwnerMarketing: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
 
   const tenantName = tenantInfo?.name || tenantInfo?.kyc?.businessName || 'your restaurant';
-  const storeLink = tenantId ? EnvironmentConfig.getStorefrontUrl(tenantId) : '';
+  const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
+  const storeLink = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
 
   const audienceDescriptions = useMemo(() => ({
     inactive: `Target ${Math.max(segments?.atRiskCustomers || 0, 0) + Math.max(segments?.churnedCustomers || 0, 0)} inactive or at-risk customers to recover lost revenue.`,

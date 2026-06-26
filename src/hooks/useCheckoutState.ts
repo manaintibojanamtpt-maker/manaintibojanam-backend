@@ -4,11 +4,14 @@ import { useCart } from '../context/CartContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { onSnapshot, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
+import { useTenant } from '../context/TenantContext';
+import { isTenantStoreOpenNow, resolveStoreSettings } from '../lib/tenantStoreOperations';
 import { calculateDeliveryFee as apiCalculateDeliveryFee } from '../services/api';
 
 export function useCheckoutState() {
   const { cart, total, clearCart, updateQuantity, removeFromCart, addToCart, aiAssisted } = useCart();
   const { currentUser, userProfile } = useAuth();
+  const { tenantId } = useTenant();
   const [deliveryState, setDeliveryState] = useDeliveryState();
 
   const [fees, setFees] = useState({ gst: 5, packingFee: 10, deliveryFee: 30, isStoreOpen: true, storeTiming: { openTime: '10:00', closeTime: '22:00' } });
@@ -64,19 +67,41 @@ export function useCheckoutState() {
       return;
     }
 
-    let unsub: any;
+    let unsub: (() => void) | undefined;
+    let unsubTenant: (() => void) | undefined;
     try {
       unsub = onSnapshot(doc(getDb(), 'adminSettings', 'global'), (snap) => {
         if (snap.exists()) {
-          setFees(snap.data() as any);
+          const globalData = snap.data() as any;
+          setFees((prev) => ({
+            ...prev,
+            ...globalData,
+            isStoreOpen: prev.isStoreOpen,
+            storeTiming: prev.storeTiming,
+          }));
         }
       });
+
+      if (tenantId) {
+        unsubTenant = onSnapshot(doc(getDb(), 'tenants', tenantId), (snap) => {
+          const resolved = resolveStoreSettings(snap.exists() ? snap.data() : null);
+          setFees((prev) => ({
+            ...prev,
+            isStoreOpen: isTenantStoreOpenNow(resolved),
+            storeTiming: {
+              openTime: resolved.storeTiming.openTime,
+              closeTime: resolved.storeTiming.closeTime,
+            },
+          }));
+        });
+      }
     } catch (e) {}
 
     return () => {
       if (unsub) unsub();
+      if (unsubTenant) unsubTenant();
     };
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     if (!currentUser && !hasInitialized.current) return;

@@ -47,6 +47,15 @@ export interface TenantInfo {
   description?: string;
   logo?: string;
   storeStatus?: string;
+  storeOperations?: {
+    isStoreOpen?: boolean;
+    businessHoursEnabled?: boolean;
+    openTime?: string;
+    closeTime?: string;
+    offlineMessage?: string;
+    updatedAt?: any;
+  };
+  sandboxMode?: boolean;
   legal?: any;
   settings?: any;
   socialLinks?: any;
@@ -118,7 +127,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
         setTenantId(data.id);
         setActiveTenantId(data.id);
-        setTenantSlug(slug);
+        setTenantSlug(data.slug || data.id);
         setTenantInfo(data);
         sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
       } else {
@@ -130,7 +139,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
           setTenantId(data.id);
           setActiveTenantId(data.id);
-          setTenantSlug(slug);
+          setTenantSlug(data.slug || data.id);
           setTenantInfo(data);
           sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
         } else {

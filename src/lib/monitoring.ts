@@ -27,6 +27,10 @@ export const logIncident = async (type: IncidentType, payload: any) => {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify({ type, payload })
+    }).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Monitoring API returned ${response.status}`);
+      }
     }).catch((err) => {
       console.warn('Telemetry fetch failed, queueing offline...', err);
       queueTelemetry(type, payload);
