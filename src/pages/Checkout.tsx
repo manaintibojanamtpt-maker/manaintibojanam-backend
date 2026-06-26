@@ -23,6 +23,7 @@ import { differenceInMinutes } from 'date-fns';
 import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
 import { getUpsellRecommendations } from '../services/RecommendationEngine';
+import { ensureRazorpayLoaded, loadRazorpay } from '../utils/loadRazorpay';
 
 // Countdown removed by request
 
@@ -47,7 +48,12 @@ const Checkout: React.FC = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
-  
+
+  useEffect(() => {
+    if (state.paymentMethod === 'online') {
+      loadRazorpay().catch(() => {});
+    }
+  }, [state.paymentMethod]);
   // Temporary state for new address before saving
   const [newAddressLat, setNewAddressLat] = useState<number | null>(null);
   const [newAddressLng, setNewAddressLng] = useState<number | null>(null);
@@ -610,9 +616,7 @@ const Checkout: React.FC = () => {
         };
 
         try {
-          if (typeof (window as any).Razorpay === 'undefined') {
-            throw new Error("Razorpay SDK failed to load. Please disable your adblocker or try Cash on Delivery.");
-          }
+          await ensureRazorpayLoaded();
           const rzp = new (window as any).Razorpay(options);
           rzp.on('payment.failed', function (response: any) {
             logIncident('merchant_blockers', { blockerType: 'Razorpay Payment Failed', error: response.error.description, metadata: response.error });

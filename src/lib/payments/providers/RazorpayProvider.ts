@@ -1,5 +1,6 @@
 import { IPaymentProvider, PaymentInitializationResponse, PaymentVerificationResponse } from '../IPaymentProvider';
 import { EnvironmentConfig } from '../../../config/environment';
+import { ensureRazorpayLoaded } from '../../../utils/loadRazorpay';
 
 export class RazorpayProvider implements IPaymentProvider {
   id = 'razorpay';
@@ -94,28 +95,13 @@ export class RazorpayProvider implements IPaymentProvider {
     }
   }
 
-  private loadRazorpaySdk(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (typeof (window as any).Razorpay !== 'undefined') {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
-      document.head.appendChild(script);
-    });
-  }
-
   async executePayment(
     initializationResponse: PaymentInitializationResponse,
     onSuccess: (verificationData: any) => Promise<void>,
     onError: (error: any) => void
   ): Promise<void> {
     try {
-      await this.loadRazorpaySdk();
+      await ensureRazorpayLoaded();
 
       const options = {
         ...initializationResponse.providerData,

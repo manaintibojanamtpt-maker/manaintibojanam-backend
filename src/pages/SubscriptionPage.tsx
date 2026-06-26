@@ -12,6 +12,7 @@ import { differenceInDays, format, addDays } from 'date-fns';
 import { useTenant } from '../context/TenantContext';
 import { useStoreBranding } from '../hooks/useStoreBranding';
 import { EnvironmentConfig } from '../config/environment';
+import { ensureRazorpayLoaded, loadRazorpay } from '../utils/loadRazorpay';
 
 const PLANS = [
   {
@@ -64,6 +65,7 @@ export default function SubscriptionPage() {
   useEffect(() => {
     // Wake up backend to avoid Razorpay cold-start delays
     fetch(`${EnvironmentConfig.getApiUrl()}/api/health`).catch(() => {});
+    loadRazorpay().catch(() => {});
 
     if (!currentUser) {
       setLoadingInitial(false);
@@ -397,6 +399,7 @@ export default function SubscriptionPage() {
       };
 
       try {
+        await ensureRazorpayLoaded();
         const rzp = new (window as any).Razorpay(options);
         rzp.on('payment.failed', function (response: any) {
           toast.error('Payment failed: ' + response.error.description);
