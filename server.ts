@@ -19,6 +19,8 @@ import {
 import base64url from "base64url";
 import winston from "winston";
 import cron from "node-cron";
+import { assertFulfillmentTransition } from "./server/paymentGate";
+import { writePaymentVerification } from "./server/paymentAudit";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -53,13 +55,34 @@ const writeSystemIncident = async (type: string, status: string, payload: any, c
 };
 
 // ================= PAYMENT RECONCILIATION =================
+const PAYMENT_PENDING_DRAFT_TTL_MS = 30 * 60 * 1000;
+
+const toTimestampMs = (value: any): number | null => {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  if (typeof value === 'object' && typeof value._seconds === 'number') {
+    return value._seconds * 1000;
+  }
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const isDraftPaymentExpired = (draftData: Record<string, any>): boolean => {
+  if (draftData.status === 'expired') return true;
+  const expiresMs = toTimestampMs(draftData.expiresAt);
+  return expiresMs !== null && expiresMs < Date.now();
+};
+
 const promoteDraftTransaction = async (
   draftId: string,
   paymentDetails: { razorpayOrderId: string, razorpayPaymentId: string },
   reconciliationSource: 'client_callback' | 'webhook_recovery',
   eventId?: string | null
-): Promise<boolean> => {
+): Promise<{ promoted: boolean; tenantId: string }> => {
   if (!_db) throw new Error("Firestore not initialized");
+
+  let promoted = false;
+  let resolvedTenantId = 'mana-inti';
   
   try {
     await _db.runTransaction(async (transaction) => {
@@ -71,9 +94,24 @@ const promoteDraftTransaction = async (
       }
       
       const draftData = draftSnap.data()!;
+      resolvedTenantId = draftData.orderPayload?.tenantId || draftData.tenantId || 'mana-inti';
+
       if (draftData.status === 'promoted') {
         logger.info({ message: "Draft already promoted", draftId, reconciliationSource });
-        return; // Already processed
+        return;
+      }
+
+      if (isDraftPaymentExpired(draftData)) {
+        transaction.update(draftRef, { status: 'expired', updatedAt: FieldValue.serverTimestamp() });
+        throw new Error('Payment session expired. Please place the order again.');
+      }
+
+      if (
+        draftData.razorpayOrderId &&
+        paymentDetails.razorpayOrderId &&
+        draftData.razorpayOrderId !== paymentDetails.razorpayOrderId
+      ) {
+        throw new Error('Razorpay order mismatch for this draft.');
       }
 
       if (eventId) {
@@ -91,13 +129,11 @@ const promoteDraftTransaction = async (
         });
       }
 
-      // Phase 2 Security Patch: Sandbox Enforcement
-      const tenantRef = _db!.collection('tenants').doc(draftData.orderPayload?.tenantId || draftData.tenantId || 'mana-inti');
+      const tenantRef = _db!.collection('tenants').doc(resolvedTenantId);
       const tenantSnap = await transaction.get(tenantRef);
       if (tenantSnap.exists) {
         const tenantData = tenantSnap.data()!;
         if (tenantData.sandboxMode) {
-          // Do a non-transactional count query (safe enough for sandbox limits)
           const ordersSnap = await _db!.collection('orders').where('tenantId', '==', tenantRef.id).count().get();
           if (ordersSnap.data().count >= 10) {
             throw new Error('Sandbox limit exceeded. Upgrade to full activation to accept more orders.');
@@ -105,33 +141,72 @@ const promoteDraftTransaction = async (
         }
       }
 
-      const orderRef = _db!.collection('orders').doc(draftId); // Draft ID becomes Order ID
+      const orderStatus = draftData.subscriptionPayload ? 'ACTIVE' : 'PLACED';
+      const verifiedAt = FieldValue.serverTimestamp();
+      const orderRef = _db!.collection('orders').doc(draftId);
       transaction.set(orderRef, {
         ...draftData.orderPayload,
-        tenantId: draftData.orderPayload?.tenantId || draftData.tenantId || 'mana-inti',
-        status: draftData.subscriptionPayload ? 'ACTIVE' : 'PLACED',
+        tenantId: resolvedTenantId,
+        status: orderStatus,
+        paymentMethod: 'razorpay',
+        paymentRail: 'gateway',
         paymentStatus: 'success',
+        paymentVerifiedAt: verifiedAt,
         razorpayOrderId: paymentDetails.razorpayOrderId,
         razorpayPaymentId: paymentDetails.razorpayPaymentId,
-        confirmedAt: FieldValue.serverTimestamp(),
+        confirmedAt: verifiedAt,
         reconciliationSource,
-        reconciliationEventId: eventId || null
+        reconciliationEventId: eventId || null,
+        timeline: [{
+          id: `pay-${draftId}`,
+          eventType: 'payment_verified',
+          description: `Payment verified via ${reconciliationSource === 'webhook_recovery' ? 'Razorpay webhook' : 'Razorpay checkout'}`,
+          triggeredBy: 'system',
+          metadata: {
+            razorpayOrderId: paymentDetails.razorpayOrderId,
+            razorpayPaymentId: paymentDetails.razorpayPaymentId,
+            reconciliationSource,
+          },
+          timestamp: new Date().toISOString(),
+        }],
       });
 
       if (draftData.subscriptionPayload) {
         const subRef = _db!.collection('subscriptions').doc();
         transaction.set(subRef, {
           ...draftData.subscriptionPayload,
-          tenantId: draftData.tenantId || 'mana-inti',
+          tenantId: resolvedTenantId,
           createdAt: FieldValue.serverTimestamp()
         });
       }
 
-      transaction.update(draftRef, { status: 'promoted' });
+      transaction.update(draftRef, {
+        status: 'promoted',
+        promotedAt: FieldValue.serverTimestamp(),
+        razorpayPaymentId: paymentDetails.razorpayPaymentId,
+      });
+      promoted = true;
     });
-    
-    logger.info({ message: "Draft successfully promoted to order", draftId, reconciliationSource });
-    return true;
+
+    if (promoted) {
+      await writePaymentVerification(_db, {
+        tenantId: resolvedTenantId,
+        orderId: draftId,
+        action: 'verified',
+        actorRole: 'system',
+        source: reconciliationSource === 'webhook_recovery' ? 'razorpay_webhook' : 'razorpay_callback',
+        razorpayOrderId: paymentDetails.razorpayOrderId,
+        razorpayPaymentId: paymentDetails.razorpayPaymentId,
+        previousPaymentStatus: 'pending',
+        newPaymentStatus: 'success',
+        reconciliationSource,
+        reconciliationEventId: eventId || null,
+        draftId,
+      });
+      logger.info({ message: "Draft successfully promoted to order", draftId, reconciliationSource });
+    }
+
+    return { promoted, tenantId: resolvedTenantId };
   } catch (error: any) {
     logger.error({ message: "Draft promotion failed", draftId, error: error.message });
     throw error;
@@ -502,6 +577,105 @@ const requireAdmin = async (req: any, res: any, next: any) => {
       return res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
     }
   });
+};
+
+const assertOrderStatusAccess = async (req: any, orderData: Record<string, any>): Promise<boolean> => {
+  if (req.user?.admin === true) return true;
+  const userDoc = await db.collection('users').doc(req.user.uid).get();
+  const ownedTenantIds: string[] = userDoc.data()?.ownedTenantIds || [];
+  return ownedTenantIds.includes(orderData.tenantId);
+};
+
+const applyOrderStatusUpdate = async (
+  orderId: string,
+  orderData: Record<string, any>,
+  status: string,
+  deliveryData?: Record<string, any>
+) => {
+  const currentStatus = orderData.status || 'UNKNOWN';
+  const gate = assertFulfillmentTransition(orderData, status);
+  if (!gate.allowed) {
+    const err: any = new Error(gate.error || 'Payment verification required.');
+    err.code = gate.code || 'PAYMENT_NOT_VERIFIED';
+    err.statusCode = 402;
+    throw err;
+  }
+
+  const updatePayload: Record<string, any> = {
+    status,
+    updatedAt: FieldValue.serverTimestamp(),
+    statusHistory: FieldValue.arrayUnion({
+      status,
+      timestamp: new Date().toISOString(),
+      description: `Order moved from ${currentStatus} to ${status}`,
+      metadata: deliveryData || {},
+    }),
+  };
+
+  if (deliveryData) {
+    if (deliveryData.deliveryPartner) updatePayload.deliveryPartner = deliveryData.deliveryPartner;
+    if (deliveryData.trackingUrl) updatePayload.trackingUrl = deliveryData.trackingUrl;
+    if (deliveryData.trackingLink) updatePayload.trackingLink = deliveryData.trackingLink;
+    if (deliveryData.riderName) updatePayload.riderName = deliveryData.riderName;
+    if (deliveryData.riderPhone) updatePayload.riderPhone = deliveryData.riderPhone;
+    if (deliveryData.deliveryAssignedAt) updatePayload.deliveryAssignedAt = deliveryData.deliveryAssignedAt;
+  }
+
+  await db.collection('orders').doc(orderId).update(updatePayload);
+  return { ...orderData, ...updatePayload, id: orderId };
+};
+
+const expireUnpaidPayments = async (): Promise<{ draftsExpired: number; ordersExpired: number }> => {
+  if (!_db) return { draftsExpired: 0, ordersExpired: 0 };
+
+  const now = Date.now();
+  let draftsExpired = 0;
+  let ordersExpired = 0;
+
+  const draftSnap = await _db.collection('order_drafts').where('status', '==', 'pending_payment').limit(200).get();
+  for (const draftDoc of draftSnap.docs) {
+    const draftData = draftDoc.data();
+    if (!isDraftPaymentExpired(draftData)) continue;
+    await draftDoc.ref.update({
+      status: 'expired',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    draftsExpired += 1;
+  }
+
+  const recentOrdersSnap = await _db.collection('orders').orderBy('createdAt', 'desc').limit(250).get();
+  for (const orderDoc of recentOrdersSnap.docs) {
+    const orderData = orderDoc.data();
+    if (orderData.isCOD || String(orderData.paymentMethod || '').toLowerCase() === 'cod') continue;
+
+    const paymentStatus = String(orderData.paymentStatus || 'pending').toLowerCase();
+    if (!['pending', 'pending_verification'].includes(paymentStatus)) continue;
+
+    const expiresMs = toTimestampMs(orderData.expiresAt);
+    if (expiresMs === null || expiresMs >= now) continue;
+
+    const status = String(orderData.status || '').toUpperCase();
+    if (['EXPIRED', 'CANCELLED', 'DELIVERED'].includes(status)) continue;
+
+    await orderDoc.ref.update({
+      status: 'EXPIRED',
+      paymentStatus: 'expired',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await writePaymentVerification(_db, {
+      tenantId: orderData.tenantId || 'mana-inti',
+      orderId: orderDoc.id,
+      action: 'expired',
+      actorRole: 'system',
+      source: 'system_expiry',
+      previousPaymentStatus: paymentStatus,
+      newPaymentStatus: 'expired',
+    });
+    ordersExpired += 1;
+  }
+
+  return { draftsExpired, ordersExpired };
 };
 
 app.use(cors());
@@ -1825,7 +1999,20 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
       if (!draftDoc.exists) {
         return res.status(404).json({ success: false, error: 'Draft not found' });
       }
-      const draftDocData = draftDoc.data();
+      const draftDocData = draftDoc.data() || {};
+
+      if (draftDocData.status === 'promoted') {
+        return res.status(409).json({ success: false, error: 'This order draft was already paid and promoted.' });
+      }
+
+      if (isDraftPaymentExpired(draftDocData)) {
+        await _db.collection('order_drafts').doc(draftId).update({
+          status: 'expired',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return res.status(410).json({ success: false, error: 'Payment session expired. Please place the order again.' });
+      }
+
       const draft = draftDocData.orderPayload || draftDocData;
 
       let calculatedSubtotal = 0;
@@ -1892,6 +2079,15 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
     };
     const order = await razorpay.orders.create(options);
     logger.info({ message: "Razorpay order created", amount, orderId: order.id, draftId, correlationId: (req as any).correlationId });
+
+    if (draftId) {
+      await _db.collection('order_drafts').doc(draftId).update({
+        razorpayOrderId: order.id,
+        expiresAt: new Date(Date.now() + PAYMENT_PENDING_DRAFT_TTL_MS),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     res.json({ success: true, order, key: RAZORPAY_KEY_ID });
   } catch (err: any) {
     const correlationId = (req as any).correlationId;
@@ -1925,14 +2121,26 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
       return res.status(400).json({ success: false, verified: false, error: 'Razorpay payment signature verification failed.' });
     }
 
-    // Call Canonical Promotion Flow
-    await promoteDraftTransaction(
+    const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
+    if (!draftDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Order draft not found.' });
+    }
+    const draftData = draftDoc.data() || {};
+    if (isDraftPaymentExpired(draftData)) {
+      await _db.collection('order_drafts').doc(draftId).update({
+        status: 'expired',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return res.status(410).json({ success: false, error: 'Payment session expired. Please place the order again.' });
+    }
+
+    const promotion = await promoteDraftTransaction(
       draftId,
       { razorpayOrderId: razorpay_order_id, razorpayPaymentId: razorpay_payment_id },
       'client_callback'
     );
 
-    res.json({ success: true, verified: true, orderId: draftId });
+    res.json({ success: true, verified: true, orderId: draftId, promoted: promotion.promoted });
   } catch (err: any) {
     console.error("Razorpay Payment Verification Error:", err);
     const errorMessage = err.message || "Failed to verify Razorpay payment.";
@@ -2360,6 +2568,15 @@ app.patch("/api/orders/:id", async (req, res) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
+    const orderData = orderDoc.data() || {};
+
+    if (status) {
+      const gate = assertFulfillmentTransition(orderData, status);
+      if (!gate.allowed) {
+        return res.status(402).json({ success: false, error: gate.error, code: gate.code });
+      }
+    }
+
     if (status === 'CANCELLED') {
       const currentStatus = orderDoc.data()?.status;
       if (!['PENDING', 'PLACED'].includes(String(currentStatus || '').toUpperCase())) {
@@ -2379,17 +2596,17 @@ app.patch("/api/orders/:id", async (req, res) => {
     await orderRef.update(updateData);
 
     // Trigger notification if needed
-    const orderData = { id: orderDoc.id, ...orderDoc.data(), ...updateData };
+    const mergedOrderData = { id: orderDoc.id, ...orderDoc.data(), ...updateData };
     if (status && status !== previousStatus) {
-      await notifyCustomer(orderData, status);
+      await notifyCustomer(mergedOrderData, status);
     }
 
     if (status === 'PAYMENT_VERIFICATION') {
       // Notify admin about payment submission
       const adminMsg = `💰 *Payment Submitted!* 💰\n\n` +
-        `*Order:* #${orderData.orderNumber}\n` +
-        `*Customer:* ${orderData.userName || 'Guest'}\n` +
-        `*Total:* ₹${orderData.total}\n\n` +
+        `*Order:* #${mergedOrderData.orderNumber}\n` +
+        `*Customer:* ${mergedOrderData.userName || 'Guest'}\n` +
+        `*Total:* ₹${mergedOrderData.total}\n\n` +
         `Please verify payment and update status to 'PENDING' in admin panel.`;
       await sendWhatsAppNotification("917666258454", adminMsg);
     }
@@ -2825,31 +3042,7 @@ app.put("/api/owner/orders/:id/status", verifyFirebaseToken, async (req: any, re
       return res.status(403).json({ error: "Order does not belong to your tenant" });
     }
 
-    const currentStatus = orderDoc.data()?.status || 'UNKNOWN';
-
-    const updatePayload: any = { 
-      status, 
-      updatedAt: FieldValue.serverTimestamp(),
-      statusHistory: FieldValue.arrayUnion({
-        status,
-        timestamp: new Date().toISOString(),
-        description: `Order moved from ${currentStatus} to ${status}`,
-        metadata: deliveryData || {}
-      })
-    };
-
-    if (deliveryData) {
-      if (deliveryData.deliveryPartner) updatePayload.deliveryPartner = deliveryData.deliveryPartner;
-      if (deliveryData.trackingUrl) updatePayload.trackingUrl = deliveryData.trackingUrl;
-      if (deliveryData.riderName) updatePayload.riderName = deliveryData.riderName;
-      if (deliveryData.riderPhone) updatePayload.riderPhone = deliveryData.riderPhone;
-      if (deliveryData.deliveryAssignedAt) updatePayload.deliveryAssignedAt = deliveryData.deliveryAssignedAt;
-    }
-
-    await orderRef.update(updatePayload);
-    
-    // Notify customer
-    const mergedOrder = { ...orderDoc.data(), ...updatePayload, id: orderId };
+    const mergedOrder = await applyOrderStatusUpdate(orderId, orderDoc.data() || {}, status, deliveryData);
     const shouldNotify = status === 'OUT_FOR_DELIVERY' ? (deliveryData?.notifyCustomer !== false) : true;
     
     if (shouldNotify) {
@@ -2859,11 +3052,58 @@ app.put("/api/owner/orders/:id/status", verifyFirebaseToken, async (req: any, re
     res.json({ success: true, message: `Order marked as ${status}` });
   } catch (error: any) {
     console.error("Owner Status Update Error:", error);
-    res.status(500).json({ error: error.message });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message, code: error.code });
+  }
+});
+
+app.patch("/api/orders/:id/status", verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const orderId = req.params.id;
+    const { status, trackingData } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'status is required' });
+    }
+
+    const orderDoc = await db.collection('orders').doc(orderId).get();
+    if (!orderDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    const orderData = orderDoc.data() || {};
+    const allowed = await assertOrderStatusAccess(req, orderData);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+
+    const mergedOrder = await applyOrderStatusUpdate(orderId, orderData, status, trackingData);
+    await notifyCustomer(mergedOrder, status).catch(console.error);
+
+    res.json({ success: true, message: `Order updated to ${status}` });
+  } catch (error: any) {
+    console.error('Order status update error:', error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ success: false, error: error.message, code: error.code });
   }
 });
 
 // ================= WORKER CRON =================
+app.post("/api/cron/expire-unpaid-payments", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await expireUnpaidPayments();
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    logger.error({ message: "Expire unpaid payments failed", error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/cron/process-workers", async (req, res) => {
   // Simple auth via cron secret (configure CRON_SECRET in environment)
   const authHeader = req.headers.authorization;
@@ -3150,6 +3390,14 @@ const initializeMonitoringJobs = () => {
       logger.error({ message: 'Heartbeat failure', error: e });
     }
   });
+
+  // Phase 1: Expire unpaid Razorpay drafts and legacy pending orders
+  cron.schedule("*/5 * * * *", withCronHealth("Expire Unpaid Payments", async () => {
+    const result = await expireUnpaidPayments();
+    if (result.draftsExpired > 0 || result.ordersExpired > 0) {
+      logger.info({ message: "Expired unpaid payment sessions", ...result });
+    }
+  }));
 
   // Phase 16: Hourly AutoPilot Aggregator (Extended)
   cron.schedule("0 * * * *", withCronHealth("Hourly AutoPilot Aggregator", async () => {

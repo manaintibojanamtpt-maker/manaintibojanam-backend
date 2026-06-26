@@ -251,7 +251,7 @@ export const stageOrderDraft = async (
     const orderPayload = prepareOrderBlueprint(orderData);
     
     const expiresAtDate = new Date();
-    expiresAtDate.setHours(expiresAtDate.getHours() + 24);
+    expiresAtDate.setMinutes(expiresAtDate.getMinutes() + 30);
 
     await setDoc(draftRef, {
       id: draftRef.id,
@@ -380,7 +380,6 @@ const notifyOrderStatusChange = async (orderId: string, status: OrderStatus) => 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, trackingData?: Record<string, any>): Promise<void> => {
   const path = `orders/${orderId}`;
   try {
-    // Status Flow Validation
     const orderDoc = await getDoc(doc(getDb(), 'orders', orderId));
     if (!orderDoc.exists()) throw new Error('Order not found');
     
@@ -397,10 +396,17 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
     }
 
     if (currentStatus === targetStatus) {
-      await updateDoc(doc(getDb(), 'orders', orderId), {
-        updatedAt: serverTimestamp(),
-        ...(trackingData || {}),
-      });
+      if (trackingData && Object.keys(trackingData).length > 0) {
+        const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: targetStatus, trackingData }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || payload?.success !== true) {
+          throw new Error(payload?.error || 'Failed to update order metadata');
+        }
+      }
       return;
     }
 
@@ -413,13 +419,11 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
     const isScheduledOrder = orderData.orderType === 'scheduled' || String(orderData.deliveryType || '').toLowerCase() === 'scheduled';
     if (isScheduledOrder && scheduledFor) {
       const prepStart = new Date(scheduledFor.getTime() - 60 * 60000).getTime();
-      // Allow admin to manually advance scheduled orders, but prevent automatic delivery before prep window
       if (Date.now() < prepStart && [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED].includes(targetStatus)) {
         throw new Error('Cannot deliver a scheduled order before its prep window opens.');
       }
     }
 
-    // Allow PENDING -> PREPARING when admin explicitly advances an order.
     const validTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
       [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
       [OrderStatus.PAYMENT_PENDING]: [OrderStatus.PAYMENT_VERIFICATION, OrderStatus.CANCELLED, OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
@@ -437,33 +441,40 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
       [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.SCHEDULED, OrderStatus.CANCELLED],
       [OrderStatus.SCHEDULED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
       [OrderStatus.DISPATCHED]: [OrderStatus.DELIVERED, OrderStatus.FAILED_DELIVERY, OrderStatus.CANCELLED],
-      // Customers can confirm manual payment after placing.
       [OrderStatus.PLACED]: [OrderStatus.PAYMENT_PENDING, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
       [OrderStatus.ACCEPTED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED]
     };
 
-    if (!validTransitions[currentStatus].includes(targetStatus)) {
+    if (!validTransitions[currentStatus]?.includes(targetStatus)) {
       throw new Error(`Invalid status transition from ${currentStatus} to ${targetStatus}`);
     }
 
-    const updatePayload: Record<string, any> = {
-      status: targetStatus,
-      updatedAt: serverTimestamp(),
-      ...(trackingData || {}),
-      timeline: arrayUnion(
-        buildTimelineEvent(
-          orderId,
-          'status_change',
-          `Order moved from ${currentStatus} to ${targetStatus}`,
-          targetStatus,
-          currentStatus,
-          'admin',
-          trackingData || {}
-        )
-      )
-    };
+    const fulfillmentStatuses = new Set([
+      OrderStatus.ACCEPTED,
+      OrderStatus.PREPARING,
+      OrderStatus.READY,
+      OrderStatus.COURIER_BOOKED,
+      OrderStatus.PICKED_UP,
+      OrderStatus.OUT_FOR_DELIVERY,
+      OrderStatus.DELIVERED,
+      OrderStatus.DISPATCHED,
+    ]);
+    const isCod = orderData.isCOD === true || orderData.paymentMethod === 'cod';
+    const paymentVerified = ['success', 'verified', 'paid'].includes(normalizedPayment);
+    if (fulfillmentStatuses.has(targetStatus) && !isCod && !paymentVerified) {
+      throw new Error('Payment must be verified before this order can move to kitchen or dispatch.');
+    }
 
-    await updateDoc(doc(getDb(), 'orders', orderId), updatePayload);
+    const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: targetStatus, trackingData }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || payload?.success !== true) {
+      throw new Error(payload?.error || 'Failed to update order status');
+    }
+
     notifyOrderStatusChange(orderId, targetStatus).catch(() => {});
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
@@ -479,7 +490,12 @@ export const updatePaymentStatus = async (
   const path = `orders/${orderId}`;
   try {
     const normalizedPayment = normalizePaymentStatus(paymentStatus as string);
-    const eventType = normalizedPayment === 'success' ? 'payment_verified' : normalizedPayment === 'failed' || normalizedPayment === 'expired' ? 'payment_failed' : 'status_change';
+
+    if (['success', 'verified', 'paid'].includes(normalizedPayment)) {
+      throw new Error('Payment success must be confirmed by the server after Razorpay verification.');
+    }
+
+    const eventType = normalizedPayment === 'failed' || normalizedPayment === 'expired' ? 'payment_failed' : 'status_change';
     const description = normalizedPayment === 'success'
       ? 'Payment verified'
       : normalizedPayment === 'failed'
