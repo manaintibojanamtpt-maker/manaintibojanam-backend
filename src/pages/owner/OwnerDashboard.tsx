@@ -26,6 +26,10 @@ import { calculateMerchantHealth, MerchantHealthResult } from '../../lib/merchan
 import { EnvironmentConfig } from '../../config/environment';
 import { useFeatureFlags } from '../../context/FeatureFlagContext';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
+import { DashboardStatusBar } from '../../components/owner/DashboardStatusBar';
+import { AIInsightCard } from '../../components/owner/AIInsightCard';
+import { useTenantStoreStatus } from '../../hooks/useTenantStoreStatus';
+import { aiInsightLabels } from '../../config/productMessaging';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -51,13 +55,15 @@ const OwnerDashboard = () => {
   const [latestRelease, setLatestRelease] = React.useState<ReleaseNote | null>(null);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
+  const [dismissedInsights, setDismissedInsights] = React.useState<Set<number>>(new Set());
+  const { isOpen: storeAcceptingOrders } = useTenantStoreStatus();
 
   const storeSlug = tenantInfo?.slug || contextTenant?.slug || tenantSlug || tenantId;
   const storeUrl = getStoreUrl(storeSlug);
 
   const requireStoreUrl = (action: string) => {
     if (storeUrl) return true;
-    toast.error('Store link is not ready yet. Check Storefront Settings.');
+    toast.error('Store link is not ready yet. Open Storefront settings to finish setup.');
     logIncident('merchant_blockers', {
       blockerType: 'Share Store URL Missing',
       severity: 'Warning',
@@ -213,11 +219,11 @@ const OwnerDashboard = () => {
     { time: '2m ago', event: 'Inventory automatically deducted: 250g Basmati Rice.', icon: <Database size={12}/> },
     { time: '14m ago', event: 'Kitchen health score recalculated to 98.', icon: <Activity size={12}/> },
     { time: '30m ago', event: 'VIP Customer Viswa returned after 12 days.', icon: <Heart size={12}/> },
-    { time: '1h ago', event: 'Command Center initialized for dinner service.', icon: <Power size={12}/> },
+    { time: '1h ago', event: 'Dashboard ready for dinner service.', icon: <Power size={12}/> },
   ];
 
   if (loading) {
-    return <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">Initializing Command Center...</div>;
+    return <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">Loading your dashboard…</div>;
   }
 
   // --- Sandbox Mode & Today's Priority Logic ---
@@ -388,8 +394,34 @@ const OwnerDashboard = () => {
         { priority: 'LOW', label: '3 high-value customers likely to reorder today. Send SMS campaign?', icon: <Users size={14}/>, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
       ];
 
+  const ordersToday = orders.filter((o) => {
+    const d = safeParseDate(o.createdAt);
+    if (!d) return false;
+    const now = new Date();
+    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const storeLive = tenantInfo?.storeStatus === 'published' || !!tenantInfo?.sandboxMode || storeAcceptingOrders;
+  const deliveryActive = !!(tenantInfo?.deliveryConfig?.freeRadius || tenantInfo?.deliveryConfig?.maxRadius);
+  const payoutsActive = tenantInfo?.kyc?.verificationLevel !== undefined && tenantInfo?.kyc?.verificationLevel >= 0;
+  const urgentCount = inventoryAlerts.filter((a) => a.isCritical).length + (priorityActions.some((a) => a.isPrimary) ? 1 : 0);
+
+  const aiRecommendations = growthSnapshot?.recommendations?.length
+    ? growthSnapshot.recommendations.slice(0, 3)
+    : [];
+
   return (
     <div className="text-white space-y-6">
+
+      <DashboardStatusBar
+        storeLive={storeLive}
+        acceptingOrders={storeAcceptingOrders}
+        ordersToday={ordersToday}
+        payoutsActive={payoutsActive}
+        deliveryActive={deliveryActive}
+        urgentCount={urgentCount}
+        storeUrl={storeUrl}
+      />
 
       <StoreLiveControl variant="compact" />
 
@@ -496,7 +528,7 @@ const OwnerDashboard = () => {
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-             <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Today's Priority</span>
+             <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Do this next</span>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
@@ -660,8 +692,8 @@ const OwnerDashboard = () => {
            <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                  <div>
-                   <h2 className="text-lg font-bold text-white mb-1">Actual vs Predicted Demand</h2>
-                   <p className="text-sm text-gray-500">AI forecasting analyzing last 14 days of historical volume.</p>
+                   <h2 className="text-lg font-bold text-white mb-1">Today&apos;s order trend</h2>
+                   <p className="text-sm text-gray-500">How today compares to your usual pattern (last 14 days).</p>
                  </div>
                  <div className="flex items-center gap-4 text-xs font-bold">
                     <div className="flex items-center gap-2">
@@ -686,7 +718,7 @@ const OwnerDashboard = () => {
               
               {/* Activity Timeline */}
               <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-6">
-                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Live Network Activity</h3>
+                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Recent activity</h3>
                  <div className="space-y-5">
                    {timeline.map((item, i) => (
                      <div key={i} className="flex gap-4 relative">
@@ -709,9 +741,9 @@ const OwnerDashboard = () => {
               <div className="bg-gradient-to-br from-red-600/10 to-orange-500/5 border border-red-500/20 rounded-2xl p-6 flex flex-col justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Store size={14} /> Storefront Console
+                    <Store size={14} /> Your storefront
                   </h3>
-                  <p className="text-sm text-white/70 mb-4">Your digital storefront is active. Share it to bring in the next order.</p>
+                  <p className="text-sm text-white/70 mb-4">Share this link so customers order directly — zero commission.</p>
                   <div className="bg-black/50 border border-white/10 rounded-lg px-3 py-3 font-mono text-xs text-white/80 select-all mb-4 break-all">
                     {storeUrl || 'Store link initializing...'}
                   </div>
@@ -733,24 +765,45 @@ const OwnerDashboard = () => {
         <div className="xl:col-span-1 space-y-6">
            
            {/* Operational Recommendations */}
-           <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-5">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <BrainCircuit size={14} className="text-[#A855F7]"/> {growthSnapshot ? 'Autopilot Recommendations' : 'Recommendations'}
-              </h3>
-              {growthSnapshot?.summary && (
-                <p className="text-xs text-gray-500 mb-4 leading-relaxed">{growthSnapshot.summary}</p>
-              )}
-              <div className="space-y-3">
-                {recommendations.map((rec, i) => (
-                  <div key={i} className={`p-3 rounded-xl border ${rec.color}`}>
-                     <div className="flex items-center gap-2 mb-2">
-                       {rec.icon}
-                       <span className="text-[10px] font-black uppercase tracking-widest">{rec.priority} PRIORITY</span>
-                     </div>
-                     <p className="text-xs font-medium text-white/90 leading-relaxed">{rec.label}</p>
-                  </div>
-                ))}
+           <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <BrainCircuit size={14} className="text-[#A855F7]" /> {aiInsightLabels.sectionTitle}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">{aiInsightLabels.sectionHelper}</p>
               </div>
+              {aiRecommendations.length > 0 ? (
+                aiRecommendations.map((rec, i) => {
+                  if (dismissedInsights.has(i)) return null;
+                  const tone = rec.type === 'Risk' ? 'risk' : rec.type === 'Recovery' ? 'recovery' : 'opportunity';
+                  return (
+                    <AIInsightCard
+                      key={`${rec.actionTitle}-${i}`}
+                      title={rec.actionTitle}
+                      insight={rec.message}
+                      why={rec.category === 'Customer' ? 'Repeat and inactive customers affect weekly revenue.' : rec.category === 'Inventory' ? 'Stock-outs during peak hours lose orders.' : 'Based on your recent orders and store settings.'}
+                      expectedOutcome={rec.potentialRecovery > 0 ? `Could recover about ₹${rec.potentialRecovery.toLocaleString('en-IN')} if acted on.` : 'Improves operations and customer experience.'}
+                      actionLabel={rec.actionTitle}
+                      tone={tone}
+                      potentialValue={rec.confidenceScore ? `${rec.confidenceScore}% confidence` : undefined}
+                      onAction={() => {
+                        if (rec.actionPayload?.campaignType) navigate('/owner/marketing');
+                        else if (rec.category === 'Inventory') navigate('/owner/recipes');
+                        else if (rec.category === 'Delivery') navigate('/owner/settings?tab=location');
+                        else navigate('/owner/marketing');
+                      }}
+                      onDismiss={() => setDismissedInsights((prev) => new Set(prev).add(i))}
+                      onSnooze={() => setDismissedInsights((prev) => new Set(prev).add(i))}
+                    />
+                  );
+                })
+              ) : (
+                recommendations.slice(0, 2).map((rec, i) => (
+                  <div key={i} className={`p-3 rounded-xl border ${rec.color}`}>
+                    <p className="text-xs font-medium text-white/90 leading-relaxed">{rec.label}</p>
+                  </div>
+                ))
+              )}
            </div>
 
            {/* VIP Activity */}

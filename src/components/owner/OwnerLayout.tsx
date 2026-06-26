@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Store, ShoppingBag, Settings, LogOut, BarChart3, Users, Menu as MenuIcon, Copy, ExternalLink, CheckCircle2, Bell, ChevronRight, X, LayoutDashboard, Rocket, BrainCircuit, BookOpen, AlertCircle, Crown, Gift, MessageCircle } from 'lucide-react';
+import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { m, AnimatePresence } from 'framer-motion';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
+import { NotificationBell } from '../../modules/notifications/NotificationBell';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { useTenant } from '../../context/TenantContext';
 import { sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { EnvironmentConfig } from '../../config/environment';
+import { ownerNavItems, ownerNavGroups, getOwnerPageTitle, OwnerNavItem } from '../../config/ownerNavigation';
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
   const { tenantInfo, tenantSlug } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount } = useOrderAlerts();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
@@ -35,31 +36,20 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const navItems = [
-    { name: 'Command Center', path: '/owner/dashboard', icon: LayoutDashboard, mobileBar: true },
-    { name: 'Commerce Engine', path: '/owner/orders', icon: ShoppingBag, mobileBar: true },
-    { name: 'My Customers', path: '/owner/customers', icon: Users, disabled: !entitlements.features.customerInsights },
-    { name: 'Compliance & KYC', path: '/owner/kyc', icon: CheckCircle2, mobileBar: true },
-    { name: 'Stock Alerts', path: '/owner/recipes', icon: BookOpen, disabled: !entitlements.features.predictiveSupply },
-    { name: 'Menu Engine', path: '/owner/menu', icon: MenuIcon, hideOnMobile: true },
-    { name: 'Ways to Increase Sales', path: '/owner/marketing', icon: BrainCircuit, hideOnMobile: true, disabled: !entitlements.features.marketing },
-    { name: 'Delivery Intel', path: '/owner/delivery', icon: Rocket, hideOnMobile: true, disabled: !entitlements.features.deliveryIntelligence },
-    { name: 'Storefront Settings', path: '/owner/settings', icon: Settings, mobileBar: true },
-    { name: 'Plans & Billing', path: '/owner/subscription', icon: Crown, hideOnMobile: true },
-    { name: 'Refer & Earn', path: '/owner/referrals', icon: Gift, hideOnMobile: false },
-    { name: 'Help & Feedback', path: '/owner/feedback', icon: MessageCircle, hideOnMobile: false }
-  ];
+  const navItems = ownerNavItems.map((item) => ({
+    ...item,
+    disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
+  }));
 
   const mobileBarItems = navItems.filter((item) => item.mobileBar);
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
-  const currentPage = navItems.find(item => item.path === location.pathname)?.name || location.pathname.split('/').pop() || 'Dashboard';
+  const currentPage = getOwnerPageTitle(location.pathname);
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setNotificationsOpen(false);
   }, [location.pathname]);
 
   const copyStoreLink = () => {
@@ -74,14 +64,9 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setMobileMenuOpen(false);
   };
 
-  const mobileShortLabels: Record<string, string> = {
-    'Command Center': 'Home',
-    'Commerce Engine': 'Orders',
-    'Compliance & KYC': 'KYC',
-    'Storefront Settings': 'Settings',
-    'Refer & Earn': 'Refer',
-    'Help & Feedback': 'Help',
-  };
+  const mobileShortLabels = Object.fromEntries(
+    navItems.map((item) => [item.label, item.shortLabel])
+  ) as Record<string, string>;
 
   return (
     <div className="flex h-[100dvh] bg-[#0a0a0a] text-white overflow-hidden font-sans">
@@ -96,7 +81,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
           <div>
             <h1 className="font-black text-lg tracking-tight leading-none">BhojanOS</h1>
-            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Tenant Portal</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Owner portal</p>
           </div>
         </div>
 
@@ -114,41 +99,46 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-1 mt-2 overflow-y-auto no-scrollbar">
-          <div className="px-3 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Menu</span>
-          </div>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            return (
-              <button
-                key={item.name}
-                onClick={() => !item.disabled && navigate(item.path)}
-                disabled={item.disabled}
-                className={`w-full flex items-center min-w-0 px-4 py-3 rounded-xl transition-all group relative ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-red-600/10 to-transparent text-red-500' 
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                } ${item.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                {isActive && (
-                  <m.div 
-                    layoutId="ownerSidebarActive"
-                    className="absolute left-0 w-1 h-6 bg-red-500 rounded-r-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  />
-                )}
-                <Icon size={18} className={`mr-3 shrink-0 ${isActive ? 'text-red-500' : 'text-white/40 group-hover:text-white/80'}`} />
-                <span className="font-semibold text-sm tracking-wide truncate flex-1 text-left">{item.name}</span>
-                {item.disabled && (
-                  <span className="ml-auto text-[9px] uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">Pro</span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 px-4 space-y-4 mt-2 overflow-y-auto no-scrollbar">
+          {(Object.keys(ownerNavGroups) as Array<keyof typeof ownerNavGroups>).map((groupKey) => (
+            <div key={groupKey}>
+              <div className="px-3 mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{ownerNavGroups[groupKey]}</span>
+              </div>
+              <div className="space-y-1">
+                {navItems.filter((item) => item.group === groupKey).map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => !item.disabled && navigate(item.path)}
+                      disabled={item.disabled}
+                      className={`w-full flex items-center min-w-0 px-4 py-3 rounded-xl transition-all group relative ${
+                        isActive
+                          ? 'bg-gradient-to-r from-red-600/10 to-transparent text-red-500'
+                          : 'text-white/60 hover:text-white hover:bg-white/5'
+                      } ${item.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                      {isActive && (
+                        <m.div
+                          layoutId="ownerSidebarActive"
+                          className="absolute left-0 w-1 h-6 bg-red-500 rounded-r-full"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                        />
+                      )}
+                      <Icon size={18} className={`mr-3 shrink-0 ${isActive ? 'text-red-500' : 'text-white/40 group-hover:text-white/80'}`} />
+                      <span className="font-semibold text-sm tracking-wide truncate flex-1 text-left">{item.label}</span>
+                      {item.disabled && (
+                        <span className="ml-auto text-[9px] uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">Upgrade</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Bottom Actions */}
@@ -244,7 +234,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
                   return (
                     <button
-                      key={item.name}
+                      key={item.id}
                       type="button"
                       onClick={() => !item.disabled && goTo(item.path)}
                       disabled={item.disabled}
@@ -255,7 +245,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       } ${item.disabled ? 'cursor-not-allowed opacity-40' : ''}`}
                     >
                       <Icon size={18} className="mr-3 shrink-0" />
-                      <span className="truncate text-sm font-bold">{item.name}</span>
+                      <span className="truncate text-sm font-bold">{item.label}</span>
                     </button>
                   );
                 })}
@@ -324,54 +314,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
           
           <div className="relative flex items-center space-x-2 sm:space-x-4">
-            <button
-              type="button"
-              onClick={() => setNotificationsOpen((open) => !open)}
-              className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors relative"
-              aria-label="Order notifications"
-            >
-              <Bell size={18} />
-              {pendingCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
-                  {pendingCount > 9 ? '9+' : pendingCount}
-                </span>
-              )}
-            </button>
-
-            <AnimatePresence>
-              {notificationsOpen && (
-                <m.div
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/10 bg-[#111111] shadow-2xl z-50 overflow-hidden"
-                >
-                  <div className="px-4 py-3 border-b border-white/10">
-                    <p className="text-sm font-bold text-white">Order Alerts</p>
-                    <p className="text-xs text-white/50 mt-0.5">Live updates from your kitchen queue</p>
-                  </div>
-                  <div className="p-4">
-                    {pendingCount > 0 ? (
-                      <p className="text-sm text-white/80 mb-4">
-                        You have <span className="font-bold text-red-400">{pendingCount}</span> order{pendingCount === 1 ? '' : 's'} waiting for action.
-                      </p>
-                    ) : (
-                      <p className="text-sm text-white/50 mb-4">No pending orders right now.</p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNotificationsOpen(false);
-                        navigate('/owner/orders');
-                      }}
-                      className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
-                    >
-                      Open Commerce Engine
-                    </button>
-                  </div>
-                </m.div>
-              )}
-            </AnimatePresence>
+            <NotificationBell tenantId={tenantId} />
             <button onClick={logout} className="hidden sm:flex lg:hidden w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 items-center justify-center text-red-500 hover:text-red-400 transition-colors">
               <LogOut size={18} />
             </button>
@@ -418,7 +361,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
                 return (
                   <button
-                    key={item.name}
+                    key={item.id}
                     type="button"
                     onClick={() => !item.disabled && goTo(item.path)}
                     disabled={item.disabled}
@@ -433,7 +376,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       </span>
                     )}
                     <span className="w-full truncate text-center leading-tight">
-                      {mobileShortLabels[item.name] || item.name.replace('Storefront ', '')}
+                      {mobileShortLabels[item.label] || item.shortLabel}
                     </span>
                   </button>
                 );

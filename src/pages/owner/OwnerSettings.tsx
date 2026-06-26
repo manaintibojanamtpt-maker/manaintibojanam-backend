@@ -5,10 +5,11 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings, Clock } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings, Clock, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
+import { NotificationSettingsPanel } from '../../modules/notifications/NotificationSettingsPanel';
 
 const OwnerSettings: React.FC = () => {
   const { userProfile } = useAuth();
@@ -17,7 +18,7 @@ const OwnerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'notifications'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
 
   useEffect(() => {
@@ -26,6 +27,8 @@ const OwnerSettings: React.FC = () => {
       setActiveTab('location');
     } else if (tab === 'hours') {
       setActiveTab('hours');
+    } else if (tab === 'notifications') {
+      setActiveTab('notifications');
     }
   }, [searchParams]);
   
@@ -242,8 +245,8 @@ const OwnerSettings: React.FC = () => {
         <header className="mb-8 flex items-center space-x-4">
           <img src={logo} alt="BhojanOS" className="h-12 w-12 rounded-xl shadow-sm border border-white/10" />
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Kitchen Settings</h1>
-            <p className="text-white/50 mt-1">Manage your storefront presence and logistics</p>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Storefront</h1>
+            <p className="text-white/50 mt-1">Your public store, hours, delivery area, and contact details</p>
           </div>
         </header>
 
@@ -260,6 +263,10 @@ const OwnerSettings: React.FC = () => {
             <MapPin size={18} />
             <span className="font-bold tracking-widest text-xs uppercase">Location & Delivery</span>
           </button>
+          <button onClick={() => setActiveTab('notifications')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'notifications' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Bell size={18} />
+            <span className="font-bold tracking-widest text-xs uppercase">Notifications</span>
+          </button>
         </div>
 
         <div className="bg-[#0f0f11] rounded-xl shadow-sm border border-white/10">
@@ -267,6 +274,8 @@ const OwnerSettings: React.FC = () => {
             <div className="p-6 md:p-8">
               <StoreLiveControl variant="full" />
             </div>
+          ) : activeTab === 'notifications' && tenantId ? (
+            <NotificationSettingsPanel tenantId={tenantId} />
           ) : (
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             

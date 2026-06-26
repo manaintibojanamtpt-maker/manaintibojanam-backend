@@ -121,15 +121,15 @@ const OwnerMarketing: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <Rocket className="text-[#FF6B00]" />
-            Smart Campaign Center
+            Growth
           </h1>
-          <p className="text-white/50 mt-1">1-Click revenue recovery & customer retention for {tenantName}.</p>
+          <p className="text-white/50 mt-1">Send WhatsApp campaigns to bring customers back and increase repeat orders for {tenantName}.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4 max-h-[600px] overflow-y-auto no-scrollbar pr-2">
-          <h2 className="text-lg font-bold text-white mb-4 sticky top-0 bg-[#050505] z-10 py-2">Select Target Audience</h2>
+          <h2 className="text-lg font-bold text-white mb-4 sticky top-0 bg-[#050505] z-10 py-2">Choose who to reach</h2>
 
           {CAMPAIGN_OPTIONS.map((c) => (
             <button

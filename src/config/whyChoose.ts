@@ -1,34 +1,34 @@
 export const whyChooseFeatures = [
   {
-    title: "Simplify Daily Operations",
-    description: "Replace 5 different tablets and spreadsheets with one unified, intuitive dashboard."
+    title: "Zero commission on every direct order",
+    description: "Customers order from your link — not a marketplace. You keep the full order value."
   },
   {
-    title: "Improve Customer Experience",
-    description: "Deliver faster service, accurate orders, and personalized engagement."
+    title: "No onboarding fee to go live",
+    description: "Add your menu, set delivery, and publish your storefront in minutes."
   },
   {
-    title: "Reduce Manual Work",
-    description: "Automate billing, KOT generation, and end-of-day reconciliation."
+    title: "Your own branded storefront",
+    description: "A dedicated store URL with your kitchen name, menu, and contact details."
   },
   {
-    title: "AI Powered Automation",
-    description: "Let our AI predict what you need to prep before the rush hour begins."
+    title: "Orders, kitchen, and delivery in one place",
+    description: "Stop juggling tablets and spreadsheets. Run daily operations from one dashboard."
   },
   {
-    title: "Centralize Restaurant Operations",
-    description: "Manage front-of-house, kitchen, delivery, and inventory in one place."
+    title: "Direct customer relationships",
+    description: "You own your customer list. Share on WhatsApp, Instagram, and repeat orders stay with you."
   },
   {
-    title: "Business Intelligence",
-    description: "Understand your true food costs and profit margins per menu item."
+    title: "Payments your way",
+    description: "Accept cash, UPI, and online payments with clear settlement tracking."
   },
   {
-    title: "Scalable Growth",
-    description: "Easily add new locations and franchises with a single click."
+    title: "Clear suggestions when you need help",
+    description: "Optional tips on stock, repeat customers, and slow hours — with one action to take."
   },
   {
-    title: "Data Ownership",
-    description: "You own your customer data. Build your own direct audience."
+    title: "Built for independent kitchens",
+    description: "Home chefs, cloud kitchens, and small restaurants — not enterprise chains."
   }
 ];

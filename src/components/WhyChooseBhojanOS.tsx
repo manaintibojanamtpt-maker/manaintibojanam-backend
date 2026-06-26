@@ -9,9 +9,9 @@ export const WhyChooseBhojanOS: React.FC = () => {
   return (
     <Section background="subtle">
       <SectionHeader 
-        label="Business Outcomes"
-        title="Why Restaurants Choose BhojanOS"
-        description="We focus on metrics that matter: increasing your revenue and reducing your operational headaches."
+        label="Why direct ordering wins"
+        title="Keep more of every order"
+        description="BhojanOS is built for independent kitchens that want their own customers — not another aggregator taking a cut."
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {whyChooseFeatures.map((feature, i) => (

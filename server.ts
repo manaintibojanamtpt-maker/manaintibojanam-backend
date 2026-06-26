@@ -2896,6 +2896,94 @@ app.post("/api/cron/process-outbox", async (req, res) => {
   }
 });
 
+// ================= TENANT NOTIFICATION CENTER =================
+
+const STOREFRONT_BASE_URL = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+
+app.post("/api/notifications/analyze", async (req, res) => {
+  try {
+    const { tenantId, jobType = "morning_brief" } = req.body || {};
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: "tenantId required" });
+    }
+    if (!_db) {
+      return res.status(503).json({ success: false, error: "Database unavailable" });
+    }
+
+    const { processTenantNotifications } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const count = await processTenantNotifications(
+      _db,
+      tenantId,
+      jobType,
+      sendWhatsAppNotification,
+      STOREFRONT_BASE_URL
+    );
+
+    res.json({ success: true, notificationsCreated: count });
+  } catch (err: any) {
+    logger.error({ message: "Notification analyze failed", error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/cron/tenant-notifications", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const jobType = req.body?.jobType || "morning_brief";
+    if (!_db) {
+      return res.status(503).json({ success: false, error: "Database unavailable" });
+    }
+
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const result = await processAllTenants(_db, jobType, sendWhatsAppNotification, STOREFRONT_BASE_URL);
+    res.json({ success: true, ...result, jobType });
+  } catch (err: any) {
+    logger.error({ message: "Tenant notification cron failed", error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/notifications/push", async (req, res) => {
+  try {
+    const { userId, tenantId, title, body, actionUrl } = req.body || {};
+    if (!title || !body) {
+      return res.status(400).json({ success: false, error: "title and body required" });
+    }
+
+    let targetUserId = userId;
+    if (!targetUserId && tenantId && _db) {
+      const tenantSnap = await _db.collection("tenants").doc(tenantId).get();
+      targetUserId = tenantSnap.data()?.ownerId;
+    }
+
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, error: "userId or tenantId required" });
+    }
+
+    await sendPushNotificationToUser(targetUserId, title, body, { actionUrl: actionUrl || "/owner/dashboard" });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/notifications/email", async (req, res) => {
+  try {
+    const { to, subject, htmlBody } = req.body || {};
+    if (!to || !subject || !htmlBody) {
+      return res.status(400).json({ success: false, error: "to, subject, and htmlBody required" });
+    }
+    await sendEmailNotification(to, subject, htmlBody);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 let outboxInterval: NodeJS.Timeout | null = null;
 const startOutboxWorker = () => {
   if (outboxInterval) return;
@@ -3127,6 +3215,46 @@ const initializeMonitoringJobs = () => {
   cron.schedule("0 8 * * *", withCronHealth("Daily Founder Digest", async () => {
     logger.info({ message: "Running Daily Founder Digest" });
     await sendFounderAlert("Daily Digest", "<h2>BhojanOS Daily Digest</h2><p>Report generated at 08:00 AM.</p><p>Check Dashboard for full metrics.</p>");
+  }));
+
+  // Tenant AI Notification Center — Morning Brief (8 AM)
+  cron.schedule("0 8 * * *", withCronHealth("Tenant Morning Brief", async () => {
+    if (!_db) return;
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+    await processAllTenants(_db, "morning_brief", sendWhatsAppNotification, baseUrl);
+  }));
+
+  // Tenant Evening Report (8 PM)
+  cron.schedule("0 20 * * *", withCronHealth("Tenant Evening Report", async () => {
+    if (!_db) return;
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+    await processAllTenants(_db, "evening_report", sendWhatsAppNotification, baseUrl);
+  }));
+
+  // Tenant Weekly Report (Monday 8 AM)
+  cron.schedule("0 8 * * 1", withCronHealth("Tenant Weekly Report", async () => {
+    if (!_db) return;
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+    await processAllTenants(_db, "weekly_report", sendWhatsAppNotification, baseUrl);
+  }));
+
+  // Tenant Monthly Report (1st of month 8 AM)
+  cron.schedule("0 8 1 * *", withCronHealth("Tenant Monthly Report", async () => {
+    if (!_db) return;
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+    await processAllTenants(_db, "monthly_report", sendWhatsAppNotification, baseUrl);
+  }));
+
+  // Critical alert scan every 15 minutes
+  cron.schedule("*/15 * * * *", withCronHealth("Tenant Critical Alert Scan", async () => {
+    if (!_db) return;
+    const { processAllTenants } = await import("./src/modules/notifications/server/TenantNotificationWorker");
+    const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
+    await processAllTenants(_db, "critical_scan", sendWhatsAppNotification, baseUrl);
   }));
 };
 

@@ -6,6 +6,7 @@ import { getDb } from '../../lib/firebase-db';
 import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
+import { pricingMessaging } from '../../config/productMessaging';
 
 const OwnerSubscription = () => {
   const { tenantInfo } = useTenant();
@@ -70,13 +71,32 @@ const OwnerSubscription = () => {
   return (
     <div className="space-y-6 text-white max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-black tracking-tight">Subscription & Plans</h1>
-        <p className="text-white/50 text-sm mt-1 mb-6">Manage your BhojanOS plan and entitlements.</p>
+        <h1 className="text-2xl font-black tracking-tight">Payments & plans</h1>
+        <p className="text-white/50 text-sm mt-1 mb-2">{pricingMessaging.subheadline}</p>
         <FounderBetaTrustBanner />
       </div>
 
+      <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/25 rounded-2xl p-6">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+            {pricingMessaging.freeTier.badge}
+          </span>
+        </div>
+        <h2 className="text-xl font-black text-white">{pricingMessaging.freeTier.name}</h2>
+        <p className="text-3xl font-black text-emerald-400 mt-1">{pricingMessaging.freeTier.price} <span className="text-sm font-medium text-white/50">{pricingMessaging.freeTier.period}</span></p>
+        <ul className="mt-4 space-y-2 text-sm text-white/70">
+          {pricingMessaging.freeTier.highlights.map((h) => (
+            <li key={h} className="flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" /> {h}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-xs text-white/40">{currentPlan === 'starter' ? pricingMessaging.freeTier.cta : 'Included with your account'}</p>
+      </div>
+
       <div className="bg-[#111] border border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-bold mb-4">Current Plan: <span className="uppercase text-orange-500">{currentPlan}</span></h2>
+        <h2 className="text-lg font-bold mb-1">Your current plan: <span className="uppercase text-orange-500">{currentPlan === 'starter' ? 'Direct Storefront (Free)' : currentPlan}</span></h2>
+        <p className="text-sm text-white/45 mb-6">{pricingMessaging.upgradeIntro}</p>
         
         {isTrialActive && (
           <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl mb-6">
@@ -84,7 +104,8 @@ const OwnerSubscription = () => {
           </div>
         )}
 
-        <h3 className="font-bold mb-4">Premium Evaluation Program (3-Day Trial)</h3>
+        <h3 className="font-bold mb-2">Try advanced tools — optional 3-day trial</h3>
+        <p className="text-xs text-white/45 mb-4">{pricingMessaging.trialNote}</p>
         
         {!canActivate && (
           <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl mb-6">

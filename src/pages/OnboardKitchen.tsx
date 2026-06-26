@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
 import { CTAButton } from '../components/ui/CTAButton';
+import { homepageHero } from '../config/productMessaging';
 
 // Marketing UI Components
 import { EnterpriseHeader } from '../components/marketing/EnterpriseHeader';
@@ -48,7 +49,7 @@ const InteractiveCommandCenter = () => {
           </div>
           <div className="flex-1 max-w-md mx-auto h-7 rounded-md bg-[#030303] border border-white/[0.06] flex items-center justify-center text-[10px] sm:text-[11px] font-mono text-neutral-500 gap-1.5 px-3 truncate">
             <LockKeyhole size={10} className="shrink-0" />
-            <span className="truncate">bhojanos.com/owner/command-center</span>
+            <span className="truncate">bhojanos.com/your-kitchen</span>
           </div>
         </div>
 
@@ -283,27 +284,43 @@ const OnboardKitchen: React.FC = () => {
             className="max-w-3xl mx-auto w-full"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0A0A0A] border border-white/[0.08] text-[10px] sm:text-xs font-semibold uppercase tracking-[0.18em] mb-6 sm:mb-8 text-neutral-400">
-              The All-In-One Restaurant System
+              {homepageHero.eyebrow}
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold tracking-tight mb-5 sm:mb-6 leading-[1.08] text-white">
-              Automate Your Kitchen.
+              {homepageHero.headline}
               <br />
-              Double Your <span className="text-[#FF6B00]">Margins.</span>
+              <span className="text-[#FF6B00]">{homepageHero.headlineAccent}</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-neutral-400 font-normal leading-relaxed mb-8 sm:mb-10 max-w-2xl mx-auto px-1">
-              <BrandText /> replaces your messy POS, delivery tablets, and inventory spreadsheets with a single smart platform that runs your food business on autopilot.
+            <p className="text-base sm:text-lg text-neutral-400 font-normal leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto px-1">
+              {homepageHero.subheadline}
             </p>
+
+            <ul className="text-left max-w-xl mx-auto mb-8 sm:mb-10 space-y-3 text-sm text-neutral-300">
+              {[
+                'Zero commission on direct orders',
+                'No onboarding fee — start free',
+                'Your own branded storefront URL',
+                'Orders, delivery, payments & kitchen in one place',
+                'Smart tips when you need them — not AI hype',
+              ].map((bullet) => (
+                <li key={bullet} className="flex items-start gap-2">
+                  <Check size={16} className="text-[#FF6B00] shrink-0 mt-0.5" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 max-w-md mx-auto w-full">
               <CTAButton to="/owner/register" variant="primary" className="w-full sm:flex-1">
-                Start Free Trial <ArrowRight size={16} />
+                {homepageHero.primaryCta} <ArrowRight size={16} />
               </CTAButton>
               <CTAButton to="/owner/login" variant="outline" className="w-full sm:flex-1">
-                Owner Login
+                {homepageHero.secondaryCta}
               </CTAButton>
             </div>
+            <p className="text-xs text-neutral-500 mt-4">{homepageHero.trustLine}</p>
           </m.div>
 
           <InteractiveCommandCenter />

@@ -123,7 +123,7 @@ export const DeliveryIntelligence: React.FC = () => {
           <div>
             <h1 className="text-3xl font-black text-white flex items-center gap-3">
               <Rocket className="text-red-500" />
-              Delivery Intelligence
+              Delivery
             </h1>
             <p className="text-gray-400 mt-2 text-sm">Analyze your delivery performance and optimize service areas.</p>
           </div>

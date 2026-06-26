@@ -41,6 +41,7 @@ const DeliveryIntelligence = lazy(() => import('./pages/owner/DeliveryIntelligen
 const OwnerKYC = lazy(() => import('./pages/owner/OwnerKYC').then(module => ({ default: module.OwnerKYC })));
 import { EntitlementGate } from './components/owner/EntitlementGate';
 const OwnerFeedback = lazy(() => import('./pages/owner/OwnerFeedback'));
+const NotificationCenter = lazy(() => import('./modules/notifications/NotificationCenter'));
 import { populateSampleData } from './populateData';
 import { runEnterpriseMigration } from './scripts/migrateEnterprise';
 
@@ -333,6 +334,7 @@ const AppContent: React.FC = () => {
               <Route path="/owner/customers" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="customerInsights"><OwnerCustomers /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/referrals" element={<OwnerRoute><OwnerLayout><OwnerReferrals /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/feedback" element={<OwnerRoute><OwnerLayout><OwnerFeedback /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/notifications" element={<OwnerRoute><OwnerLayout><NotificationCenter /></OwnerLayout></OwnerRoute>} />
               
               <Route path="/k/:tenantSlug/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />
               <Route path="/*" element={<LayoutWrapper>{mainRoutes}</LayoutWrapper>} />
