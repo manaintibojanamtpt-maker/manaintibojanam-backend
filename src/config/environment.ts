@@ -61,15 +61,19 @@ export const EnvironmentConfig = {
    * Returns the backend API URL.
    */
   getApiUrl(): string {
-    if (this.isProduction()) {
-      return import.meta.env.VITE_API_URL || 'https://api.bhojanos.com';
+    if (import.meta.env.VITE_API_URL) {
+      return import.meta.env.VITE_API_URL.replace(/\/$/, '');
     }
-    
-    if (this.isPreview()) {
-      return import.meta.env.VITE_API_URL || 'https://preview-api.bhojanos.com';
+
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname.toLowerCase();
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return window.location.origin;
+      }
     }
-    
-    return import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+
+    // Render backend — used until api.bhojanos.com DNS is configured
+    return 'https://manaintibojanam-backend.onrender.com';
   },
 
   getStorefrontUrl(slug: string): string {
