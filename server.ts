@@ -595,6 +595,16 @@ const applyOrderStatusUpdate = async (
   const currentStatus = orderData.status || 'UNKNOWN';
   const gate = assertFulfillmentTransition(orderData, status);
   if (!gate.allowed) {
+    logger.warn({
+      message: 'Payment gate blocked order status transition',
+      orderId,
+      tenantId: orderData.tenantId,
+      fromStatus: currentStatus,
+      toStatus: status,
+      paymentMethod: orderData.paymentMethod,
+      paymentStatus: orderData.paymentStatus,
+      code: gate.code,
+    });
     const err: any = new Error(gate.error || 'Payment verification required.');
     err.code = gate.code || 'PAYMENT_NOT_VERIFIED';
     err.statusCode = 402;
@@ -2118,6 +2128,7 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
 
     const verified = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
     if (!verified) {
+      logger.warn({ message: 'Razorpay signature verification failed', draftId, razorpay_order_id });
       return res.status(400).json({ success: false, verified: false, error: 'Razorpay payment signature verification failed.' });
     }
 
@@ -2127,6 +2138,7 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
     }
     const draftData = draftDoc.data() || {};
     if (isDraftPaymentExpired(draftData)) {
+      logger.warn({ message: 'Verify rejected: draft payment session expired', draftId });
       await _db.collection('order_drafts').doc(draftId).update({
         status: 'expired',
         updatedAt: FieldValue.serverTimestamp(),
@@ -2143,6 +2155,7 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
     res.json({ success: true, verified: true, orderId: draftId, promoted: promotion.promoted });
   } catch (err: any) {
     console.error("Razorpay Payment Verification Error:", err);
+    logger.error({ message: 'Razorpay payment verification error', draftId: req.body?.draftId, error: err.message });
     const errorMessage = err.message || "Failed to verify Razorpay payment.";
     res.status(500).json({ success: false, error: errorMessage });
   }
@@ -2573,6 +2586,16 @@ app.patch("/api/orders/:id", async (req, res) => {
     if (status) {
       const gate = assertFulfillmentTransition(orderData, status);
       if (!gate.allowed) {
+        logger.warn({
+          message: 'Payment gate blocked PATCH order status',
+          orderId: id,
+          tenantId: orderData.tenantId,
+          fromStatus: orderData.status,
+          toStatus: status,
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: orderData.paymentStatus,
+          code: gate.code,
+        });
         return res.status(402).json({ success: false, error: gate.error, code: gate.code });
       }
     }

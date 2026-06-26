@@ -80,6 +80,7 @@ import { getStatusColor, formatPrice, safeParseDate } from "../lib/utils";
 import OrderCard from "../components/admin/OrderCard";
 import { seedMenuItems } from "../populateData";
 import PaymentVerificationPanel from "../components/admin/PaymentVerificationPanel";
+import { isManualPaymentVerificationEnabled, TENANT_ZERO_ID } from "../config/paymentRollout";
 const CourierBookingModal = lazy(() => import("../components/admin/CourierBookingModal"));
 
 export default function AdminPanel() {
@@ -2328,9 +2329,19 @@ export default function AdminPanel() {
 
           {tab === "payments" && (
             <m.div key="payments" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <Suspense fallback={<div className="py-16 text-center text-gray-500">Loading payment verification...</div>}>
-                <PaymentVerificationPanel />
-              </Suspense>
+              {isManualPaymentVerificationEnabled(TENANT_ZERO_ID) ? (
+                <Suspense fallback={<div className="py-16 text-center text-gray-500">Loading payment verification...</div>}>
+                  <PaymentVerificationPanel />
+                </Suspense>
+              ) : (
+                <div className="max-w-2xl mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Razorpay gateway only</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Mana Inti Bojanam uses verified Razorpay payments. Manual UPI confirmation is disabled until Phase 2.
+                    Orders unlock for kitchen only after Razorpay verification on the server.
+                  </p>
+                </div>
+              )}
             </m.div>
           )}
 

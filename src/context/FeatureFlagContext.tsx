@@ -3,8 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Default configuration for the entire SaaS platform
 export const defaultFeatureFlags = {
   onboardingWizardV2: true,         // Temporary true for implementation testing
-  paymentProviderAbstraction: true, // Temporary true for implementation testing
-  merchantUPI: false,                // Direct UPI payment method
+  paymentProviderAbstraction: false, // Phase 1: direct Razorpay path only for Tenant 0
+  merchantUPI: false,                // Direct UPI payment method (Phase 2)
   cod: false,                        // Cash on Delivery
   guestCheckout: false,              // No-login checkout
 };

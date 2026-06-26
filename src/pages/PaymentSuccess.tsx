@@ -4,15 +4,13 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { updateOrderStatus, updatePaymentStatus } from '../services/api';
+import { updateOrderStatus } from '../services/api';
 import { Order, OrderStatus } from '../types';
 import { m } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, ArrowRight, RefreshCw, ShoppingBag, Clock, X, Home } from 'lucide-react';
 import { saveGuestOrder } from '../lib/guestOrders';
 import toast from 'react-hot-toast';
 import { safeParseDate } from '../lib/utils';
-
-const RAZORPAY_ME_LINK = 'https://razorpay.me/@manaintibojanampune492610';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +21,6 @@ const PaymentSuccess: React.FC = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
 
   const searchParams = new URLSearchParams(location.search);
   const queryOrderId = searchParams.get('orderId');
@@ -104,8 +101,42 @@ const PaymentSuccess: React.FC = () => {
     );
   }
 
-  const isExpired = order.status === OrderStatus.EXPIRED;
+  const isExpired = order.status === OrderStatus.EXPIRED || order.paymentStatus === 'expired';
+  const isPaymentVerified = ['success', 'verified', 'paid'].includes(String(order.paymentStatus || '').toLowerCase());
   const amountLabel = order.totalAmount ? `₹${order.totalAmount.toFixed(2)}` : '₹0.00';
+
+  if (!isPaymentVerified && !isExpired) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg p-6">
+        <div className="w-24 h-24 bg-amber-100 rounded-[2rem] shadow-sm flex items-center justify-center text-amber-600 mb-8">
+          <Clock size={36} />
+        </div>
+        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Payment pending verification</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-md">
+          Your order was placed but payment has not been confirmed yet. If you completed Razorpay checkout, refresh in a moment or contact support with order #{order.orderNumber || order.id.slice(-6)}.
+        </p>
+        <div className="flex gap-4">
+          <button type="button" onClick={() => window.location.reload()} className="btn-orange px-8 py-3 flex items-center gap-2">
+            <RefreshCw size={16} /> Refresh
+          </button>
+          <Link to="/my-orders" className="btn-secondary px-8 py-3">My Orders</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg p-6">
+        <div className="w-24 h-24 bg-red-100 rounded-[2rem] shadow-sm flex items-center justify-center text-red-600 mb-8">
+          <XCircle size={36} />
+        </div>
+        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4">Payment session expired</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-center mb-8">This order was not paid in time. Please place a new order.</p>
+        <Link to="/checkout" className="btn-orange px-8 py-3">Return to Checkout</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg dark:bg-dark-bg">

@@ -30,6 +30,22 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
     }
     
+    function allowsClientPaymentStatusChange() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus'])
+        || request.resource.data.paymentStatus in ['pending', 'pending_verification', 'failed', 'expired', 'unpaid'];
+    }
+
+    function protectsServerPaymentFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'paymentVerifiedAt',
+        'paymentVerifiedBy',
+        'razorpayPaymentId',
+        'paymentRail',
+        'reconciliationSource',
+        'reconciliationEventId'
+      ]);
+    }
+
     function isValidOrderStatusTransition(oldStatus, newStatus) {
       return 
         (oldStatus in ['CREATED', 'PLACED', 'PENDING'] && newStatus == 'ACCEPTED') ||
@@ -96,13 +112,12 @@ service cloud.firestore {
         isTenantOwner(resource.data.tenantId)
       );
       allow create: if (isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid)) || (!isAuthenticated() && request.resource.data.userId == null);
-      allow update: if isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && (
+      allow update: if isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && allowsClientPaymentStatusChange() && protectsServerPaymentFields() && (
         (isAdmin() && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
         (isTenantOwner(resource.data.tenantId) && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
         (
           resource.data.userId == request.auth.uid &&
           (
-            // Customer cancellation: ONLY within cancellation window, only when order is newly placed
             (
               request.resource.data.status == 'CANCELLED' &&
               resource.data.status in ['PLACED', 'PENDING'] &&
@@ -110,7 +125,6 @@ service cloud.firestore {
               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'timeline'])
             )
             ||
-            // Customer feedback fields (no status changes)
             (
               request.resource.data.status == resource.data.status &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -124,11 +138,9 @@ service cloud.firestore {
               ])
             )
             ||
-            // Customer payment self-confirmation/proof submission (no status changes)
             (
               request.resource.data.status == resource.data.status &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'paymentStatus',
                 'paymentSubmittedAt',
                 'paymentProofType',
                 'paymentProofValue',
@@ -140,6 +152,11 @@ service cloud.firestore {
           )
         )
       );
+    }
+
+    match /payment_verifications/{verificationId} {
+      allow read: if isAdmin() || isTenantOwner(resource.data.tenantId);
+      allow write: if false;
     }
 
     match /order_drafts/{draftId} {

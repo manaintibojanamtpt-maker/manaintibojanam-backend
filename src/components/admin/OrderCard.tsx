@@ -3,6 +3,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import { Package, Clock, CreditCard, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { OrderStatus, Order, PaymentStatus } from '../../types';
 import { getDisplayStatus, updatePaymentStatus } from '../../services/api';
+import { isManualPaymentVerificationEnabled } from '../../config/paymentRollout';
 import { safeParseDate } from '../../lib/utils';
 import { OrderStateService } from '../../services/OrderStateService';
 import { getOrderDisplayState } from '../../lib/orderDisplay';
@@ -173,6 +174,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
   };
 
   const isPaymentVerificationPending = normalizedOrderStatus === OrderStatus.PAYMENT_VERIFICATION;
+  const manualVerificationEnabled = isManualPaymentVerificationEnabled(order.tenantId);
   const isOrderPlaced = normalizedOrderStatus === OrderStatus.PLACED || normalizedOrderStatus === OrderStatus.PENDING;
 
   const getAdminTargetStatus = () => {
@@ -337,7 +339,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, updateOrderStatus, getStat
             </button>
           )}
 
-          {isPaymentVerificationPending && !isTerminalState && (
+          {manualVerificationEnabled && isPaymentVerificationPending && !isTerminalState && (
             <button
               onClick={() => handleConfirmPayment(order.id)}
               disabled={isUpdating}
