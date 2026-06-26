@@ -9,7 +9,7 @@ const BlogPage = () => {
     <div className="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-[#FF6B00]/30 relative">
       <EnterpriseHeader />
 
-      <main className="flex-grow pt-32 pb-24 px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto w-full flex flex-col justify-center items-center text-center relative z-10">
+      <main className="flex-grow marketing-main-offset pb-24 px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto w-full flex flex-col justify-center items-center text-center relative z-10">
         <m.div 
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }} 

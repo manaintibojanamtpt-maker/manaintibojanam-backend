@@ -15,7 +15,7 @@ export const EnterpriseHeader: React.FC = () => {
           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
             <img src={bhojanOsLogo} alt="BhojanOS Logo" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight leading-none text-white truncate">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight leading-snug text-white truncate">
             Bhojan<span className="text-[#FF6B00]">OS</span>
           </h1>
         </Link>

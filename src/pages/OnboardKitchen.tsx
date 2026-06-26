@@ -9,6 +9,7 @@ import { homepageHero } from '../config/productMessaging';
 
 // Marketing UI Components
 import { EnterpriseHeader } from '../components/marketing/EnterpriseHeader';
+import { HeroEyebrow } from '../components/marketing/HeroEyebrow';
 import { RestaurantProblems } from '../components/RestaurantProblems';
 import { MissionVision } from '../components/MissionVision';
 import { ProductOverview } from '../components/ProductOverview';
@@ -272,33 +273,31 @@ const OnboardKitchen: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-[#FF6B00]/20 relative">
+    <div className="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-[#FF6B00]/20 relative overflow-x-hidden">
       <EnterpriseSchema />
       <EnterpriseHeader />
 
       <main className="flex-grow">
-        <section className="pt-28 pb-16 sm:pt-32 sm:pb-20 md:pb-24 px-4 sm:px-6 lg:px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center relative">
+        <section className="marketing-hero-offset pb-16 sm:pb-20 md:pb-24 px-4 sm:px-6 lg:px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center relative">
           <m.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-3xl mx-auto w-full"
+            className="max-w-3xl mx-auto w-full min-w-0"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0A0A0A] border border-white/[0.08] text-[10px] sm:text-xs font-semibold uppercase tracking-[0.18em] mb-6 sm:mb-8 text-neutral-400">
-              {homepageHero.eyebrow}
-            </div>
+            <HeroEyebrow>{homepageHero.eyebrow}</HeroEyebrow>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold tracking-tight mb-5 sm:mb-6 leading-[1.08] text-white">
+            <h1 className="text-[1.75rem] leading-[1.12] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold tracking-tight mb-5 sm:mb-6 sm:leading-[1.08] text-white px-0.5">
               {homepageHero.headline}
               <br />
               <span className="text-[#FF6B00]">{homepageHero.headlineAccent}</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-neutral-400 font-normal leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto px-1">
+            <p className="text-[15px] sm:text-lg text-neutral-400 font-normal leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto px-0.5">
               {homepageHero.subheadline}
             </p>
 
-            <ul className="text-left max-w-xl mx-auto mb-8 sm:mb-10 space-y-3 text-sm text-neutral-300">
+            <ul className="text-left max-w-xl mx-auto mb-8 sm:mb-10 space-y-3 text-sm sm:text-[15px] text-neutral-300 px-1">
               {[
                 'Zero commission on direct orders',
                 'No onboarding fee — start free',
@@ -321,7 +320,7 @@ const OnboardKitchen: React.FC = () => {
                 {homepageHero.secondaryCta}
               </CTAButton>
             </div>
-            <p className="text-xs text-neutral-500 mt-4">{homepageHero.trustLine}</p>
+            <p className="text-xs sm:text-sm text-neutral-500 mt-4 px-2 leading-relaxed">{homepageHero.trustLine}</p>
           </m.div>
 
           <InteractiveCommandCenter />

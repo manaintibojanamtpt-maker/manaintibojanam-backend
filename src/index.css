@@ -179,6 +179,25 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Marketing pages: clear fixed EnterpriseHeader + iOS safe area */
+  .marketing-hero-offset {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem + 1.25rem);
+  }
+
+  .marketing-main-offset {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+  }
+
+  @media (min-width: 640px) {
+    .marketing-hero-offset {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem + 1.75rem);
+    }
+
+    .marketing-main-offset {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem);
+    }
+  }
   
   .bottom-nav,
   .sticky-cart-bar {
