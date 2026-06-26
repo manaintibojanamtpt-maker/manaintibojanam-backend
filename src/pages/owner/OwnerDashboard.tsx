@@ -432,7 +432,8 @@ const OwnerDashboard = () => {
               <div key={idx} className={`flex flex-col items-start p-5 rounded-xl border transition-all ${action.isPrimary ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}>
                 <h3 className="text-lg font-bold text-white mb-2">{action.title}</h3>
                 <p className="text-sm text-gray-400 mb-4 flex-1">{action.message}</p>
-                <div className="w-full flex flex-col sm:flex-row items-center gap-3">
+                <div className="w-full flex flex-col gap-3 mt-auto">
+                  <span className="text-[10px] font-medium text-emerald-400/90 leading-snug">{action.impact}</span>
                   <button 
                     onClick={() => {
                       if (action.link === 'whatsapp_direct') {
@@ -443,11 +444,10 @@ const OwnerDashboard = () => {
                         navigate(action.link);
                       }
                     }}
-                    className={`w-full sm:w-auto px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${action.isPrimary ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                    className={`w-full px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${action.isPrimary ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'}`}
                   >
                     {action.action}
                   </button>
-                  <span className="text-[10px] font-mono text-emerald-400/80">{action.impact}</span>
                 </div>
               </div>
             ))}

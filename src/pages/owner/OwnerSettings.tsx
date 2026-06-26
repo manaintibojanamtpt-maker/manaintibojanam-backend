@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
@@ -9,11 +10,18 @@ import logo from '../../assets/bhojan-os-logo.png';
 
 const OwnerSettings: React.FC = () => {
   const { userProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'location'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'location') {
+      setActiveTab('location');
+    }
+  }, [searchParams]);
   
   const [formData, setFormData] = useState({
     name: '',

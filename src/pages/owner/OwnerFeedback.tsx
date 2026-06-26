@@ -6,6 +6,9 @@ import { MessageCircle, Bug, Lightbulb, HelpCircle, Star, ArrowRight, CheckCircl
 import toast from 'react-hot-toast';
 import { calculateMerchantHealth } from '../../lib/merchantHealth';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
+import { auth } from '../../firebase';
+import { EnvironmentConfig } from '../../config/environment';
+import { CONTACT_INFO } from '../../constants';
 
 const OwnerFeedback: React.FC = () => {
   const { userProfile } = useAuth();
@@ -49,8 +52,43 @@ const OwnerFeedback: React.FC = () => {
         timestamp: serverTimestamp()
       });
 
+      let emailSent = false;
+      try {
+        const idToken = await auth.currentUser?.getIdToken();
+        if (idToken) {
+          const response = await fetch(`${EnvironmentConfig.getApiUrl()}/api/owner/feedback`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`,
+              'x-tenant-id': tenantId,
+            },
+            body: JSON.stringify({
+              type,
+              description: type === 'rating' ? `Rating: ${rating}/5` : description,
+              rating: type === 'rating' ? rating : null,
+              plan,
+              businessType,
+              merchantHealthSnapshot: healthScore,
+              ownerName: userProfile?.name,
+              ownerEmail: userProfile?.email,
+            }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            emailSent = Boolean(data.emailSent);
+          }
+        }
+      } catch (emailErr) {
+        console.error('Feedback email dispatch failed:', emailErr);
+      }
+
       setSuccess(true);
-      toast.success('Feedback sent to founders!');
+      toast.success(
+        emailSent
+          ? 'Feedback sent to founders!'
+          : 'Feedback saved. Email delivery requires server mail configuration.'
+      );
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to submit feedback.');
@@ -148,7 +186,7 @@ const OwnerFeedback: React.FC = () => {
                   disabled={submitting || (type === 'rating' ? rating === 0 : description.trim().length < 10)}
                   className="w-full py-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white font-bold rounded-xl transition-all flex justify-center items-center gap-2"
                 >
-                  {submitting ? 'Sending...' : 'Send to bhojanos26@gmail.com'} <ArrowRight size={18} />
+                  {submitting ? 'Sending...' : `Send to ${CONTACT_INFO.email}`} <ArrowRight size={18} />
                 </button>
                 <p className="text-center text-xs text-gray-500 mt-4">Support Contact: +91 7666258454</p>
               </form>

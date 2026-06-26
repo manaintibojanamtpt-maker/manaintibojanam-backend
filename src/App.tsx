@@ -83,6 +83,12 @@ const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
 const OwnerSubscription = lazy(() => import('./pages/owner/OwnerSubscription'));
 
+const AboutPage = lazy(() => import('./pages/marketing/AboutPage'));
+const PlatformPage = lazy(() => import('./pages/marketing/PlatformPage'));
+const SecurityPage = lazy(() => import('./pages/marketing/SecurityPage'));
+const ContactPage = lazy(() => import('./pages/marketing/ContactPage'));
+const BlogPage = lazy(() => import('./pages/marketing/BlogPage'));
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { currentUser, userProfile, loading } = useAuth();
 
@@ -130,6 +136,20 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   return <>{children}</>;
+};
+
+const StorefrontRootRoute: React.FC = () => {
+  const location = useLocation();
+
+  if (EnvironmentConfig.isTenantStorefrontPath(location.pathname)) {
+    return <Home />;
+  }
+
+  if (EnvironmentConfig.isBhojanOSRoot()) {
+    return <OnboardKitchen />;
+  }
+
+  return <Home />;
 };
 
 const AppContent: React.FC = () => {
@@ -244,11 +264,7 @@ const AppContent: React.FC = () => {
 
   const mainRoutes = (
     <Routes>
-      <Route path="/" element={
-        EnvironmentConfig.isBhojanOSRoot()
-          ? <Navigate to="/onboard" replace />
-          : <Home />
-      } />
+      <Route path="/" element={<StorefrontRootRoute />} />
       <Route path="/menu" element={<Menu />} />
       <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
       <Route path="/subscription" element={<SubscriptionPage />} />
@@ -294,6 +310,11 @@ const AppContent: React.FC = () => {
               <Route path="/owner/login" element={<OwnerLogin />} />
               <Route path="/owner/register" element={<OwnerRegister />} />
               <Route path="/onboard" element={<OnboardKitchen />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/platform" element={<PlatformPage />} />
+              <Route path="/security" element={<SecurityPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/blog" element={<BlogPage />} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
               <Route path="/admin/system-health" element={<ProtectedRoute adminOnly><SystemHealth /></ProtectedRoute>} />
@@ -406,11 +427,11 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isLogin = isRoute('/login') || path === '/owner/login' || path === '/owner/register';
   const isAdmin = path.startsWith('/admin');
   const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
-  const isOnboard = path === '/onboard';
+  const isMarketing = path === '/onboard' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && EnvironmentConfig.isBhojanOSRoot());
   const isMyOrders = isRoute('/orders'); // also fixing my-orders path since route is /orders
   const isOrderTracking = path.startsWith('/order/') || !!path.match(/^\/k\/[^/]+\/order\//);
   
-  if (isLogin || isAdmin || isOwnerRoute || isOnboard) {
+  if (isLogin || isAdmin || isOwnerRoute || isMarketing) {
     return <>{children}</>;
   }
 

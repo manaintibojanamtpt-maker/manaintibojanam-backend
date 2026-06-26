@@ -1,8 +1,8 @@
 export interface Executive {
   id: string;
   name: string;
-  title: string;
-  image: string;
+  designation: string;
+  imageUrl?: string;
   alt: string;
   bio: string;
   responsibilities: string[];
@@ -14,9 +14,9 @@ export const executiveTeam: Executive[] = [
   {
     id: 'vishwa-kalyan',
     name: 'M. Vishwa Kalyan',
-    title: 'Founder & Chief Executive Officer (CEO)',
-    image: '/team/vishwa-kalyan.jpg',
-    alt: 'M. Vishwa Kalyan Founder and CEO of BhojanOS',
+    designation: 'Founder & Chief Executive Officer (CEO)',
+    imageUrl: '/team/vishwa_kalyan.png',
+    alt: 'M. Vishwa Kalyan - Founder & CEO of BhojanOS',
     bio: "M. Vishwa Kalyan founded BhojanOS with the vision of building the world's most intelligent AI-powered Restaurant Operating System. He leads the company's product strategy, engineering, artificial intelligence initiatives, SaaS platform architecture, and global expansion.",
     responsibilities: [
       'Company Vision',
@@ -32,9 +32,9 @@ export const executiveTeam: Executive[] = [
   {
     id: 'lakshmi-prasanna',
     name: 'Lakshmi Prasanna',
-    title: 'Co-Founder & Chief Financial Officer (CFO)',
-    image: '/team/lakshmi-prasanna.jpg',
-    alt: 'Lakshmi Prasanna Co-Founder and CFO of BhojanOS',
+    designation: 'Co-Founder & Chief Financial Officer (CFO)',
+    imageUrl: '/team/lakshmi_prasanna.png',
+    alt: 'Lakshmi Prasanna - Co-Founder & CFO of BhojanOS',
     bio: 'Lakshmi Prasanna oversees financial strategy, operations, governance, compliance, and long-term sustainability while ensuring exceptional merchant success and operational excellence.',
     responsibilities: [
       'Finance',
@@ -50,9 +50,9 @@ export const executiveTeam: Executive[] = [
   {
     id: 'sunil-kumar',
     name: 'M. Sunil Kumar',
-    title: 'Chief Growth Officer (CGO) & Director of Marketing',
-    image: '/team/sunil-kumar.jpg',
-    alt: 'M. Sunil Kumar Chief Growth Officer of BhojanOS',
+    designation: 'Chief Growth Officer (CGO) & Director of Marketing',
+    imageUrl: '/team/sunil_kumar.png',
+    alt: 'M. Sunil Kumar - Chief Growth Officer of BhojanOS',
     bio: "M. Sunil Kumar leads BhojanOS's growth strategy, branding, digital marketing, customer acquisition, and strategic partnerships, driving expansion across India and global markets.",
     responsibilities: [
       'Marketing',
@@ -67,9 +67,9 @@ export const executiveTeam: Executive[] = [
   {
     id: 'ganesh',
     name: 'M. Ganesh',
-    title: 'Director of Sales & Customer Success',
-    image: '/team/ganesh.jpg',
-    alt: 'M. Ganesh Director of Sales and Customer Success at BhojanOS',
+    designation: 'Director of Sales & Customer Success',
+    imageUrl: '/team/ganesh.png',
+    alt: 'M. Ganesh - Director of Sales and Customer Success at BhojanOS',
     bio: 'M. Ganesh leads enterprise sales, merchant onboarding, customer success, account management, and long-term merchant relationships to ensure every customer achieves measurable business growth.',
     responsibilities: [
       'Enterprise Sales',

@@ -4,7 +4,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-comp
 // Match the active production database (bhojanos2) instead of the legacy hosting project
 firebase.initializeApp({
   apiKey: "AIzaSyBBKia1hM4ZU0hYS52dTy63KTkwzZFYzgI",
-  authDomain: "auth.bhojanos.com", // Migrated from forbidden firebaseapp.com URL
+  authDomain: "bhojanos2.firebaseapp.com",
   projectId: "bhojanos2",
   storageBucket: "bhojanos2.firebasestorage.app",
   messagingSenderId: "928117320950",

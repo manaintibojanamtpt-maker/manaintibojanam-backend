@@ -7,7 +7,7 @@ export const EnvironmentConfig = {
   // --- Environment State ---
   
   isProduction(): boolean {
-    return import.meta.env.VITE_APP_ENV === 'production';
+    return import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
   },
 
   isPreview(): boolean {
@@ -15,14 +15,25 @@ export const EnvironmentConfig = {
   },
 
   isDevelopment(): boolean {
-    return import.meta.env.VITE_APP_ENV === 'development' || !import.meta.env.VITE_APP_ENV;
+    return import.meta.env.DEV || import.meta.env.VITE_APP_ENV === 'development' || (!import.meta.env.PROD && !import.meta.env.VITE_APP_ENV);
   },
 
   isBhojanOSRoot(): boolean {
-    if (this.isProduction()) return true; // Assuming production always runs on root domain for the main app
-    if (this.isPreview()) return true; // Preview is also root
-    // In development, we might be testing locally
-    return typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (typeof window === 'undefined') return false;
+    const hostname = window.location.hostname.toLowerCase();
+    return hostname === 'bhojanos.com' || 
+           hostname === 'www.bhojanos.com' || 
+           hostname.includes('bhojanos.vercel.app') || 
+           hostname.includes('bhojanos.web.app') ||
+           hostname.includes('bhojanos2.web.app') ||
+           hostname.includes('firebaseapp.com') ||
+           hostname === 'localhost' || 
+           hostname === '127.0.0.1';
+  },
+
+  isTenantStorefrontPath(pathname?: string): boolean {
+    const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+    return /^\/k\/[^/]+(?:\/|$)/.test(path);
   },
 
   // --- URL Builders ---
@@ -31,6 +42,10 @@ export const EnvironmentConfig = {
    * Returns the canonical base URL of the application.
    */
   getBaseUrl(): string {
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+
     if (this.isProduction()) {
       return 'https://bhojanos.com';
     }
@@ -39,8 +54,7 @@ export const EnvironmentConfig = {
       return 'https://bhojanos.vercel.app';
     }
     
-    // Development fallback
-    return 'http://localhost:5173';
+    return 'http://localhost:8080';
   },
 
   /**

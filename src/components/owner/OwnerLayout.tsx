@@ -13,13 +13,14 @@ import { EnvironmentConfig } from '../../config/environment';
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
   const { tenantInfo } = useTenant();
-  useOrderAlerts();
+  const entitlements = useEntitlements();
+  const { pendingCount } = useOrderAlerts();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-  const entitlements = useEntitlements();
 
   const handleResendEmail = async () => {
     if (!currentUser || sendingEmail) return;
@@ -35,19 +36,21 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   const navItems = [
-    { name: 'Command Center', path: '/owner/dashboard', icon: LayoutDashboard },
-    { name: 'Commerce Engine', path: '/owner/orders', icon: ShoppingBag },
+    { name: 'Command Center', path: '/owner/dashboard', icon: LayoutDashboard, mobileBar: true },
+    { name: 'Commerce Engine', path: '/owner/orders', icon: ShoppingBag, mobileBar: true },
     { name: 'My Customers', path: '/owner/customers', icon: Users, disabled: !entitlements.features.customerInsights },
-    { name: 'Compliance & KYC', path: '/owner/kyc', icon: CheckCircle2 },
+    { name: 'Compliance & KYC', path: '/owner/kyc', icon: CheckCircle2, mobileBar: true },
     { name: 'Stock Alerts', path: '/owner/recipes', icon: BookOpen, disabled: !entitlements.features.predictiveSupply },
     { name: 'Menu Engine', path: '/owner/menu', icon: MenuIcon, hideOnMobile: true },
     { name: 'Ways to Increase Sales', path: '/owner/marketing', icon: BrainCircuit, hideOnMobile: true, disabled: !entitlements.features.marketing },
     { name: 'Delivery Intel', path: '/owner/delivery', icon: Rocket, hideOnMobile: true, disabled: !entitlements.features.deliveryIntelligence },
-    { name: 'Storefront Settings', path: '/owner/settings', icon: Settings },
+    { name: 'Storefront Settings', path: '/owner/settings', icon: Settings, mobileBar: true },
     { name: 'Plans & Billing', path: '/owner/subscription', icon: Crown, hideOnMobile: true },
     { name: 'Refer & Earn', path: '/owner/referrals', icon: Gift, hideOnMobile: false },
     { name: 'Help & Feedback', path: '/owner/feedback', icon: MessageCircle, hideOnMobile: false }
-  ].filter(item => !item.disabled); // Completely hide them if disabled, or you can gray them out. Let's gray them out.
+  ];
+
+  const mobileBarItems = navItems.filter((item) => item.mobileBar);
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const storeUrl = tenantId ? EnvironmentConfig.getStorefrontUrl(tenantId) : '';
@@ -55,6 +58,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setNotificationsOpen(false);
   }, [location.pathname]);
 
   const copyStoreLink = () => {
@@ -67,6 +71,15 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const goTo = (path: string) => {
     navigate(path);
     setMobileMenuOpen(false);
+  };
+
+  const mobileShortLabels: Record<string, string> = {
+    'Command Center': 'Home',
+    'Commerce Engine': 'Orders',
+    'Compliance & KYC': 'KYC',
+    'Storefront Settings': 'Settings',
+    'Refer & Earn': 'Refer',
+    'Help & Feedback': 'Help',
   };
 
   return (
@@ -113,7 +126,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 key={item.name}
                 onClick={() => !item.disabled && navigate(item.path)}
                 disabled={item.disabled}
-                className={`w-full flex items-center px-4 py-3 rounded-xl transition-all group relative ${
+                className={`w-full flex items-center min-w-0 px-4 py-3 rounded-xl transition-all group relative ${
                   isActive 
                     ? 'bg-gradient-to-r from-red-600/10 to-transparent text-red-500' 
                     : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -127,8 +140,8 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     animate={{ opacity: 1 }}
                   />
                 )}
-                <Icon size={18} className={`mr-4 ${isActive ? 'text-red-500' : 'text-white/40 group-hover:text-white/80'}`} />
-                <span className="font-semibold text-sm tracking-wide">{item.name}</span>
+                <Icon size={18} className={`mr-3 shrink-0 ${isActive ? 'text-red-500' : 'text-white/40 group-hover:text-white/80'}`} />
+                <span className="font-semibold text-sm tracking-wide truncate flex-1 text-left">{item.name}</span>
                 {item.disabled && (
                   <span className="ml-auto text-[9px] uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full">Pro</span>
                 )}
@@ -234,14 +247,14 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       type="button"
                       onClick={() => !item.disabled && goTo(item.path)}
                       disabled={item.disabled}
-                      className={`flex w-full items-center rounded-2xl px-4 py-3 text-left transition-all ${
+                      className={`flex w-full min-w-0 items-center rounded-2xl px-4 py-3 text-left transition-all ${
                         isActive
                           ? 'bg-red-600/15 text-red-400'
                           : 'text-white/65 hover:bg-white/5 hover:text-white'
                       } ${item.disabled ? 'cursor-not-allowed opacity-40' : ''}`}
                     >
-                      <Icon size={18} className="mr-4" />
-                      <span className="text-sm font-bold">{item.name}</span>
+                      <Icon size={18} className="mr-3 shrink-0" />
+                      <span className="truncate text-sm font-bold">{item.name}</span>
                     </button>
                   );
                 })}
@@ -309,11 +322,55 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <span className="truncate text-white capitalize text-lg tracking-tight drop-shadow-sm">{currentPage}</span>
           </div>
           
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors relative">
+          <div className="relative flex items-center space-x-2 sm:space-x-4">
+            <button
+              type="button"
+              onClick={() => setNotificationsOpen((open) => !open)}
+              className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors relative"
+              aria-label="Order notifications"
+            >
               <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              {pendingCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              )}
             </button>
+
+            <AnimatePresence>
+              {notificationsOpen && (
+                <m.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                  className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/10 bg-[#111111] shadow-2xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <p className="text-sm font-bold text-white">Order Alerts</p>
+                    <p className="text-xs text-white/50 mt-0.5">Live updates from your kitchen queue</p>
+                  </div>
+                  <div className="p-4">
+                    {pendingCount > 0 ? (
+                      <p className="text-sm text-white/80 mb-4">
+                        You have <span className="font-bold text-red-400">{pendingCount}</span> order{pendingCount === 1 ? '' : 's'} waiting for action.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-white/50 mb-4">No pending orders right now.</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotificationsOpen(false);
+                        navigate('/owner/orders');
+                      }}
+                      className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
+                    >
+                      Open Commerce Engine
+                    </button>
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
             <button onClick={logout} className="hidden sm:flex lg:hidden w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 items-center justify-center text-red-500 hover:text-red-400 transition-colors">
               <LogOut size={18} />
             </button>
@@ -341,38 +398,58 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         )}
 
         {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto w-full pb-28 lg:pb-20">
+        <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">
+          <div className="max-w-6xl mx-auto w-full pb-4 lg:pb-8">
             {children}
           </div>
         </div>
 
-        <nav 
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}
-          className="fixed inset-x-4 bottom-4 z-30 rounded-[2rem] border border-white/10 bg-[#141416]/80 px-2 pt-2 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl lg:hidden"
+        <div
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
+          className="shrink-0 border-t border-white/5 bg-[#0a0a0a]/95 px-3 pt-2 backdrop-blur-md lg:hidden"
         >
-          <div className="grid grid-cols-5 gap-1">
-            {navItems.filter(item => !item.hideOnMobile).map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+          <nav className="mx-auto max-w-lg rounded-[1.75rem] border border-white/10 bg-[#141416]/90 px-1 py-1 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+            <div className="grid grid-cols-5 gap-0.5">
+              {mobileBarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                const showOrderBadge = item.path === '/owner/orders' && pendingCount > 0;
 
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => !item.disabled && goTo(item.path)}
-                  disabled={item.disabled}
-                  className={`flex min-w-0 flex-col items-center justify-center rounded-[1.5rem] px-1 py-2 text-[10px] font-bold transition-all ${
-                    isActive ? 'bg-red-500/10 text-red-500 scale-105' : 'text-white/40 hover:text-white/70'
-                  } ${item.disabled ? 'opacity-40' : ''}`}
-                >
-                  <Icon size={isActive ? 22 : 20} className={`mb-1 transition-all ${isActive ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`} />
-                  <span className="w-full truncate text-center tracking-tight">{item.name.replace('Storefront ', '')}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => !item.disabled && goTo(item.path)}
+                    disabled={item.disabled}
+                    className={`relative flex min-w-0 flex-col items-center justify-center rounded-[1.25rem] px-1 py-2 text-[10px] font-bold transition-colors ${
+                      isActive ? 'bg-red-500/10 text-red-500' : 'text-white/45 active:text-white/70'
+                    } ${item.disabled ? 'opacity-40' : ''}`}
+                  >
+                    <Icon size={isActive ? 20 : 18} className="mb-0.5 shrink-0" />
+                    {showOrderBadge && (
+                      <span className="absolute right-2 top-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[9px] font-bold leading-4 text-center">
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </span>
+                    )}
+                    <span className="w-full truncate text-center leading-tight">
+                      {mobileShortLabels[item.name] || item.name.replace('Storefront ', '')}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="flex min-w-0 flex-col items-center justify-center rounded-[1.25rem] px-1 py-2 text-[10px] font-bold text-white/45 active:text-white/70"
+                aria-label="Open full menu"
+              >
+                <MenuIcon size={18} className="mb-0.5 shrink-0" />
+                <span className="w-full truncate text-center leading-tight">More</span>
+              </button>
+            </div>
+          </nav>
+        </div>
 
       </main>
 

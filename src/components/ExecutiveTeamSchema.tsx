@@ -7,15 +7,15 @@ export const ExecutiveTeamSchema: React.FC = () => {
     "@type": "Organization",
     "name": "BhojanOS",
     "url": "https://bhojanos.com",
-    "founder": executiveTeam.filter(e => e.title.includes('Founder')).map(e => ({
+    "founder": executiveTeam.filter(e => e.designation.includes('Founder')).map(e => ({
       "@type": "Person",
       "name": e.name,
-      "jobTitle": e.title
+      "jobTitle": e.designation
     })),
     "employee": executiveTeam.map(e => ({
       "@type": "Person",
       "name": e.name,
-      "jobTitle": e.title,
+      "jobTitle": e.designation,
       "description": e.bio
     }))
   };

@@ -141,5 +141,23 @@ export const useEntitlements = (): Entitlements => {
     entitlements.features.aiBusinessCoach = false;
   }
 
+  // 4. Founder Bypass (Master Store)
+  if (currentUser?.email === 'manaintibojanamtpt@gmail.com') {
+    return {
+      maxOrders: Infinity,
+      maxUsers: Infinity,
+      canPublish: true,
+      features: {
+        marketing: true,
+        revenueInsights: true,
+        customerInsights: true,
+        predictiveSupply: true,
+        deliveryIntelligence: true,
+        aiBusinessCoach: true,
+        apiAccess: true,
+      }
+    };
+  }
+
   return entitlements;
 };

@@ -51,6 +51,22 @@ export const OwnerKYC: React.FC = () => {
 
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
+  const getKycStatusDisplay = () => {
+    const level = tenantInfo?.kyc?.verificationLevel;
+    const status = tenantInfo?.kyc?.status;
+
+    if (status === 'verified' || level === 2 || level === 3) {
+      return { label: 'Verified', className: 'text-green-400 bg-green-500/10 border-green-500/20' };
+    }
+    if (status === 'pending_verification' || level === 1) {
+      return { label: 'Pending Review', className: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+    }
+    if (level === 0) {
+      return { label: 'Draft', className: 'text-orange-400 bg-orange-500/10 border-orange-500/20' };
+    }
+    return { label: 'Not Started', className: 'text-neutral-400 bg-white/5 border-white/10' };
+  };
+
   const handleSaveKYC = async () => {
     if (!tenantInfo?.id) {
       toast.error('Tenant information is missing. Please refresh.');
@@ -77,7 +93,9 @@ export const OwnerKYC: React.FC = () => {
         'kyc.gstNumber': kycForm.gstNumber,
         'kyc.panNumber': kycForm.panNumber,
         'fssai.number': kycForm.fssaiNumber,
-        'fssai.verificationStatus': kycForm.fssaiNumber ? 'submitted' : tenantInfo.fssai?.verificationStatus || 'not_submitted'
+        'fssai.verificationStatus': kycForm.fssaiNumber ? 'submitted' : tenantInfo.fssai?.verificationStatus || 'not_submitted',
+        'kyc.verificationLevel': tenantInfo.kyc?.verificationLevel ?? 0,
+        'kyc.status': tenantInfo.kyc?.status || 'draft',
       });
       toast.success('KYC Profile Saved');
       refreshTenant();
@@ -147,13 +165,16 @@ export const OwnerKYC: React.FC = () => {
             </h1>
             <p className="text-gray-400 mt-2 text-sm">Complete your KYC to unlock publishing and payment features.</p>
           </div>
-          <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-2">
+          <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-gray-400">Status:</span>
-            {tenantInfo?.kyc?.verificationLevel === 0 ? (
-              <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-1 rounded-md">Level 0 (Draft)</span>
-            ) : (
-              <span className="text-green-500 font-bold text-sm bg-green-500/10 px-2 py-1 rounded-md">Verified</span>
-            )}
+            {(() => {
+              const status = getKycStatusDisplay();
+              return (
+                <span className={`font-bold text-sm px-2 py-1 rounded-md border ${status.className}`}>
+                  {status.label}
+                </span>
+              );
+            })()}
           </div>
         </div>
 

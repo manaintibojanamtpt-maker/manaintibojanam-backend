@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { Store, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
@@ -75,9 +75,12 @@ const OwnerLogin = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 relative overflow-hidden shrink-0"
         >
+          <Link to="/" className="absolute top-6 left-6 text-white/40 hover:text-white flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors z-20">
+            <ArrowLeft size={14} /> Back
+          </Link>
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
           
-          <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
+          <div className="flex items-center justify-center gap-2 mb-8 mt-4 relative z-10">
             <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
               <Store size={20} className="text-white" />
             </div>

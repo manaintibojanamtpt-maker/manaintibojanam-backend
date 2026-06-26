@@ -199,21 +199,21 @@ const OwnerOrders: React.FC = () => {
   const isSuspended = tenantInfo?.status === 'suspended' || isTrialExpired;
 
   return (
-    <div className="min-h-full bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-8 lg:p-12 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-[calc(4rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-full pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 sm:mb-8 gap-4">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <img src={logo} alt="BhojanOS" className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Orders Dashboard</h1>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">Manage incoming orders for your kitchen</p>
+          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <img src={logo} alt="BhojanOS" className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-white/10 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Orders Dashboard</h1>
+              <p className="text-xs sm:text-sm text-white/50 mt-1">Manage incoming orders for your kitchen</p>
             </div>
           </div>
           
           <div className="flex w-full items-center gap-2 md:w-auto">
             <button 
               onClick={handleOpenStockModal}
-              className="flex w-full md:w-auto items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 px-4 py-3 md:py-2 rounded-2xl md:rounded-full font-bold transition-all whitespace-nowrap border border-gray-200 dark:border-gray-700 shadow-sm"
+              className="flex w-full md:w-auto items-center justify-center bg-white/5 hover:bg-white/10 text-white px-4 py-3 md:py-2 rounded-xl font-semibold transition-all whitespace-nowrap border border-white/10"
             >
               <PackageX size={16} className="mr-2" />
               Quick Stock
@@ -222,7 +222,7 @@ const OwnerOrders: React.FC = () => {
               <m.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="flex w-full items-center justify-center bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 px-4 py-3 md:py-2 rounded-2xl md:rounded-full font-medium"
+                className="flex w-full items-center justify-center bg-red-500/15 text-red-400 px-4 py-3 md:py-2 rounded-xl font-medium border border-red-500/20"
               >
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2" />
                 {pendingOrders.length} New {pendingOrders.length === 1 ? 'Order' : 'Orders'}
@@ -268,13 +268,13 @@ const OwnerOrders: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6"
+                  className="bg-[#0f0f11] rounded-2xl border border-white/10 p-4 sm:p-6"
                 >
-                  <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div className="flex flex-col xl:flex-row xl:justify-between gap-6">
                     
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                        <span className="text-sm font-mono text-gray-500 dark:text-gray-400">#{order.id.slice(-6).toUpperCase()}</span>
+                        <span className="text-sm font-mono text-white/40">#{order.id.slice(-6).toUpperCase()}</span>
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
                           ${order.status === 'PENDING' || order.status === 'CREATED' || order.status === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
                           ${order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
@@ -290,10 +290,10 @@ const OwnerOrders: React.FC = () => {
                         </span>
                       </div>
                       
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <h3 className="text-lg font-semibold text-white">
                         {order.customerName || 'Guest Customer'}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 break-words">
+                      <p className="text-sm text-white/50 mt-1 break-words">
                         {order.customerPhone || order.phone || 'Phone unavailable'} • {order.deliveryAddress?.addressLine1 || order.address || 'No address provided'}
                       </p>
                       
@@ -302,7 +302,7 @@ const OwnerOrders: React.FC = () => {
                         <div className="flex items-center gap-3 mt-3">
                           <a 
                             href={`tel:${order.customerPhone || order.phone}`} 
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/15 transition-colors"
                           >
                             <Phone className="w-3.5 h-3.5" /> Call Customer
                           </a>
@@ -310,7 +310,7 @@ const OwnerOrders: React.FC = () => {
                             href={`https://wa.me/${(order.customerPhone || order.phone)?.replace(/\D/g, '')}?text=Hi%20${order.customerName || 'Customer'}!%20This%20is%20regarding%20your%20recent%20order%20%23${order.id.slice(-6).toUpperCase()}.`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
                           >
                             <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                           </a>
@@ -318,31 +318,30 @@ const OwnerOrders: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col md:items-end gap-4 w-full">
-                      {/* ORDER ITEMS LIST */}
-                      <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
-                        <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest mb-2">Order Items</h4>
+                    <div className="w-full xl:w-[340px] shrink-0 flex flex-col gap-4">
+                      <div className="w-full bg-black/30 rounded-xl p-4 border border-white/10 space-y-3">
+                        <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest">Order Items</h4>
                         {order.items?.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-brand-primary">{item.quantity}x</span>
-                                <span className="font-medium text-white">{item.name}</span>
+                          <div key={idx} className="flex justify-between items-start gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-[#FF6B00]">{item.quantity}x</span>
+                                <span className="font-medium text-white break-words">{item.name}</span>
                               </div>
                               {item.specialInstructions && (
-                                <p className="text-sm text-yellow-500/80 mt-1 pl-6">Note: {item.specialInstructions}</p>
+                                <p className="text-sm text-yellow-500/80 mt-1">Note: {item.specialInstructions}</p>
                               )}
                             </div>
-                            <span className="text-white/70">₹{(Number(item.unitPrice ?? item.price ?? 0)) * item.quantity}</span>
+                            <span className="text-white/70 shrink-0">₹{(Number(item.unitPrice ?? item.price ?? 0)) * item.quantity}</span>
                           </div>
                         ))}
+                        <div className="pt-3 border-t border-white/10 flex justify-between items-center">
+                          <span className="text-sm font-semibold text-white/60">Total</span>
+                          <span className="text-lg font-bold text-white">₹{order.totalAmount}</span>
+                        </div>
                       </div>
 
-                      <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                        Total: ₹{order.totalAmount}
-                      </div>
-
-                      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+                      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                         {isSuspended ? (
                           <div className="text-sm text-red-500 font-medium px-3 py-1.5 border border-red-200 bg-red-50 rounded-md">
                             Action Disabled (Trial Expired)
@@ -361,7 +360,7 @@ const OwnerOrders: React.FC = () => {
                                 <button 
                                   onClick={() => updateOrderStatus(order.id, 'REJECTED')}
                                   disabled={updatingOrderId === order.id}
-                                  className="flex items-center justify-center px-4 py-3 sm:py-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                  className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                                 >
                                   <XCircle className="w-4 h-4 mr-2" /> Reject
                                 </button>
@@ -408,10 +407,10 @@ const OwnerOrders: React.FC = () => {
               ))}
               
               {orders.length === 0 && (
-                <div className="text-center py-16 sm:py-20 px-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">No orders yet</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mt-1">When customers place orders, they will appear here.</p>
+                <div className="text-center py-16 sm:py-20 px-4 bg-[#0f0f11] rounded-2xl border border-white/10">
+                  <Bell className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-white">No orders yet</h3>
+                  <p className="text-white/50 mt-1">When customers place orders, they will appear here.</p>
                 </div>
               )}
             </AnimatePresence>

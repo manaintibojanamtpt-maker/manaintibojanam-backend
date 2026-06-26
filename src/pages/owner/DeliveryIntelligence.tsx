@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { m } from 'framer-motion';
 import { MapPin, TrendingUp, AlertCircle, CheckCircle2, Rocket, BrainCircuit, Activity, Target, Navigation } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { formatPrice } from '../../lib/utils';
 
 export const DeliveryIntelligence: React.FC = () => {
+  const navigate = useNavigate();
   const { userProfile } = useAuth();
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,7 @@ export const DeliveryIntelligence: React.FC = () => {
     const fetchDeliveryData = async () => {
       try {
         const ordersRef = collection(getDb(), 'orders');
-        const q = query(ordersRef, where('tenantId', '==', tenantId), where('status', 'in', ['delivered', 'cancelled']));
+        const q = query(ordersRef, where('tenantId', '==', tenantId), where('status', 'in', ['DELIVERED', 'CANCELLED']));
         const snapshot = await getDocs(q);
 
         let totalDistance = 0;
@@ -32,21 +35,36 @@ export const DeliveryIntelligence: React.FC = () => {
         let totalFee = 0;
         const areaMap = new Map<string, { revenue: number; orders: number }>();
 
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const isDelivered = data.status === 'delivered';
+        const extractArea = (deliveryAddress: unknown): string => {
+          if (!deliveryAddress) return 'Local Area';
+          if (typeof deliveryAddress === 'string') {
+            const parts = deliveryAddress.split(',');
+            return parts.length > 2 ? parts[parts.length - 2].trim() : parts[0]?.trim() || 'Local Area';
+          }
+          if (typeof deliveryAddress === 'object') {
+            const addr = deliveryAddress as { city?: string; addressLine1?: string; address?: string };
+            if (addr.city) return addr.city;
+            if (addr.addressLine1) return addr.addressLine1.split(',')[0]?.trim() || 'Local Area';
+            if (addr.address) return addr.address.split(',')[0]?.trim() || 'Local Area';
+          }
+          return 'Local Area';
+        };
+
+        snapshot.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          const status = String(data.status || '').toUpperCase();
+          const isDelivered = status === 'DELIVERED';
           
           if (isDelivered) {
             successful++;
             if (data.deliveryFee) totalFee += data.deliveryFee;
             
-            // Extract area name from address
-            const addressParts = data.deliveryAddress?.split(',') || [];
-            const area = addressParts.length > 2 ? addressParts[addressParts.length - 2].trim() : 'Local Area';
+            const area = extractArea(data.deliveryAddress);
             
+            const orderTotal = Number(data.totalAmount ?? data.total ?? 0) || 0;
             const current = areaMap.get(area) || { revenue: 0, orders: 0 };
             areaMap.set(area, {
-              revenue: current.revenue + (data.totalAmount || 0),
+              revenue: current.revenue + orderTotal,
               orders: current.orders + 1
             });
           }
@@ -58,7 +76,11 @@ export const DeliveryIntelligence: React.FC = () => {
 
         const total = snapshot.docs.length;
         const topAreas = Array.from(areaMap.entries())
-          .map(([name, stats]) => ({ name, ...stats }))
+          .map(([name, stats]) => ({
+            name,
+            orders: stats.orders,
+            revenue: Math.round(stats.revenue),
+          }))
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 5);
 
@@ -126,7 +148,11 @@ export const DeliveryIntelligence: React.FC = () => {
                 {aiRecommendation}
               </p>
               <div className="mt-4 flex gap-3">
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-bold transition-colors">
+                <button
+                  type="button"
+                  onClick={() => navigate('/owner/settings?tab=location')}
+                  className="px-4 py-2 bg-[#FF6B00] hover:bg-[#E56D00] text-white rounded-lg text-sm font-semibold transition-colors"
+                >
                   Review Delivery Zones
                 </button>
               </div>
@@ -218,7 +244,7 @@ export const DeliveryIntelligence: React.FC = () => {
                         <p className="text-sm text-gray-400">{area.orders} orders</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-green-400">₹{area.revenue}</p>
+                        <p className="font-black text-green-400 tabular-nums">{formatPrice(area.revenue)}</p>
                         <p className="text-xs text-gray-500">Revenue</p>
                       </div>
                     </div>

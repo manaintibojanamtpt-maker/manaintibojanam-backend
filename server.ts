@@ -1712,7 +1712,8 @@ app.post("/api/reviews/submit", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// ================= REGISTRATION APIs =================
+
+// ================= REGISTRATION APIs =================
 app.post("/api/register-owner-check", strictLimiter, async (req, res) => {
   try {
     const { email, fingerprint, recaptchaToken } = req.body;
@@ -2700,6 +2701,52 @@ app.get("/api/owner/orders", verifyFirebaseToken, async (req: any, res: any) => 
     res.json({ success: true, orders });
   } catch (error: any) {
     console.error("Owner Orders Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/owner/feedback", verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) return res.status(403).json({ error: "User not found" });
+    const userData = userDoc.data();
+
+    if (!userData?.ownedTenantIds?.length) {
+      return res.status(403).json({ error: "Unauthorized. Not a tenant owner." });
+    }
+
+    const tenantId = userData.ownedTenantIds[0];
+    const { type, description, rating, plan, businessType, merchantHealthSnapshot, ownerName, ownerEmail } = req.body;
+
+    const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+    const tenantName = tenantDoc.exists ? (tenantDoc.data()?.name || tenantId) : tenantId;
+
+    const founderEmail = process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com";
+    const subject = `[BhojanOS Merchant Feedback] ${type || "general"} — ${tenantName}`;
+    const body = [
+      "Merchant feedback received",
+      "",
+      `Tenant: ${tenantName} (${tenantId})`,
+      `Owner: ${ownerName || userData.name || userId}`,
+      `Owner Email: ${ownerEmail || userData.email || req.user.email || "N/A"}`,
+      `Category: ${type || "general"}`,
+      `Plan: ${plan || "unknown"}`,
+      `Business Type: ${businessType || "unknown"}`,
+      `Merchant Health Score: ${merchantHealthSnapshot ?? "N/A"}`,
+      rating ? `Rating: ${rating}/5` : "",
+      "",
+      "Message:",
+      description || "No additional message provided.",
+    ].filter(Boolean).join("\n");
+
+    await sendEmailNotification(founderEmail, subject, body);
+
+    const transporter = getTransporter();
+    res.json({ success: true, emailSent: Boolean(transporter) });
+  } catch (error: any) {
+    console.error("Owner Feedback Email Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

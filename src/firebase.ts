@@ -6,7 +6,7 @@ import { EnvironmentConfig } from './config/environment';
 // We avoid hardcoding firebaseapp.com directly by deriving it or using env var
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBBKia1hM4ZU0hYS52dTy63KTkwzZFYzgI",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (EnvironmentConfig.isProduction() ? "auth.bhojanos.com" : "bhojanos2.firebaseapp.com"),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "bhojanos2.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "bhojanos2",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "bhojanos2.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "928117320950",
