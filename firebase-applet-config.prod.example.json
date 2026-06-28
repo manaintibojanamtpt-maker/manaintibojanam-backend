@@ -1,0 +1,9 @@
+{
+  "apiKey": "REPLACE_FROM_FIREBASE_CONSOLE",
+  "authDomain": "bhojanos-prod.firebaseapp.com",
+  "projectId": "bhojanos-prod",
+  "storageBucket": "bhojanos-prod.firebasestorage.app",
+  "messagingSenderId": "REPLACE",
+  "appId": "REPLACE",
+  "measurementId": "OPTIONAL"
+}

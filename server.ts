@@ -1115,6 +1115,7 @@ app.get("/api/health", async (req, res) => {
     },
     platform: {
       tier: isFreeTierPlatform() ? "free" : "standard",
+      build: process.env.RENDER_GIT_COMMIT?.slice(0, 7) || "local",
     },
     firebase: {
       projectId: projectId || "unknown",
@@ -1332,59 +1333,53 @@ const seedCategories = async () => {
 let settingsCache: { data: any; expiresAt: number } | null = null;
 const SETTINGS_CACHE_MS = Number(process.env.SETTINGS_CACHE_MS || 5 * 60 * 1000);
 
+const DEFAULT_ADMIN_SETTINGS = {
+  gst: 5,
+  packingFee: 10,
+  deliveryFee: 30,
+  isStoreOpen: true,
+  storeTiming: {
+    openTime: "09:00",
+    closeTime: "22:30",
+    isManualOverride: false,
+  },
+  workflow: {
+    autoMode: true,
+    autoRetryWorker: true,
+  },
+};
+
 const getSettings = async () => {
   if (settingsCache && Date.now() < settingsCache.expiresAt) {
     return settingsCache.data;
   }
 
+  if (isFirestoreBackedOff()) {
+    return settingsCache?.data ?? DEFAULT_ADMIN_SETTINGS;
+  }
+
   try {
     if (!_db) {
       console.warn("⚠️ [Firestore Admin] _db not initialized in getSettings, using defaults.");
-      return {
-        gst: 5,
-        packingFee: 10,
-        deliveryFee: 30,
-        isStoreOpen: true,
-        storeTiming: {
-          openTime: "09:00",
-          closeTime: "22:30",
-          isManualOverride: false
-        },
-        workflow: {
-          autoMode: true
-        }
-      };
+      return DEFAULT_ADMIN_SETTINGS;
     }
     const doc: any = await withTimeout(
       db.collection("adminSettings").doc("global").get(),
       "adminSettings/global read"
     );
     if (!doc.exists) {
-      const defaultSettings = {
-        gst: 5,
-        packingFee: 10,
-        deliveryFee: 30,
-        isStoreOpen: true,
-        storeTiming: {
-          openTime: "09:00",
-          closeTime: "22:30",
-          isManualOverride: false
-        },
-        workflow: {
-          autoMode: true
+      if (!isFreeTierPlatform()) {
+        try {
+          await withTimeout(
+            db.collection("adminSettings").doc("global").set(DEFAULT_ADMIN_SETTINGS),
+            "adminSettings/global default write"
+          );
+        } catch (e: any) {
+          console.warn("⚠️ Failed to save default settings (might be read-only):", e.message);
         }
-      };
-      // Don't block on setting defaults if it fails
-      try {
-        await withTimeout(
-          db.collection("adminSettings").doc("global").set(defaultSettings),
-          "adminSettings/global default write"
-        );
-      } catch (e: any) {
-        console.warn("⚠️ Failed to save default settings (might be read-only):", e.message);
       }
-      settingsCache = { data: defaultSettings, expiresAt: Date.now() + SETTINGS_CACHE_MS };
-      return defaultSettings;
+      settingsCache = { data: DEFAULT_ADMIN_SETTINGS, expiresAt: Date.now() + SETTINGS_CACHE_MS };
+      return DEFAULT_ADMIN_SETTINGS;
     }
     const data = doc.data();
     settingsCache = { data, expiresAt: Date.now() + SETTINGS_CACHE_MS };
@@ -1397,61 +1392,17 @@ const getSettings = async () => {
 
     // If it's code 5 (NOT_FOUND), it just means the document doesn't exist yet
     if (isFirestoreNotFoundError(err)) {
-      const defaultSettings = {
-        gst: 5,
-        packingFee: 10,
-        deliveryFee: 30,
-        isStoreOpen: true,
-        storeTiming: {
-          openTime: "09:00",
-          closeTime: "22:30",
-          isManualOverride: false
-        },
-        workflow: {
-          autoMode: true
-        }
-      };
-      return defaultSettings;
+      settingsCache = { data: DEFAULT_ADMIN_SETTINGS, expiresAt: Date.now() + SETTINGS_CACHE_MS };
+      return DEFAULT_ADMIN_SETTINGS;
     }
 
-    // Handle PERMISSION_DENIED
     if (isFirestorePermissionError(err)) {
       console.warn("⚠️ [Firestore Admin] Permission denied in getSettings.");
-      
-      // Return defaults instead of crashing
-      return {
-        gst: 5,
-        packingFee: 10,
-        deliveryFee: 30,
-        isStoreOpen: true,
-        storeTiming: {
-          openTime: "09:00",
-          closeTime: "22:30",
-          isManualOverride: false
-        },
-        workflow: {
-          autoMode: true
-        }
-      };
+      return DEFAULT_ADMIN_SETTINGS;
     }
 
     console.error("❌ [Firestore Admin] Error fetching settings:", err.message);
-    // If we get permission denied here, it means our verified _db is still failing
-    // This could happen if permissions changed or if verifyConnection gave a false positive
-    return {
-      gst: 5,
-      packingFee: 10,
-      deliveryFee: 30,
-      isStoreOpen: true,
-      storeTiming: {
-        openTime: "09:00",
-        closeTime: "22:30",
-        isManualOverride: false
-      },
-      workflow: {
-        autoMode: true
-      }
-    };
+    return DEFAULT_ADMIN_SETTINGS;
   }
 };
 
@@ -3794,9 +3745,15 @@ const WORKER_INTERVAL_MS = Number(process.env.WORKER_INTERVAL_MS || defaultWorke
 
 const startOutboxWorker = () => {
   if (outboxInterval) return;
+  const freeTier = isFreeTierPlatform();
   outboxInterval = setInterval(async () => {
     if (isFirestoreBackedOff()) return;
     try {
+      if (freeTier) {
+        // Spark-safe: email outbox only, no settings read, no prep-alerts scan
+        await processOutboxBatch();
+        return;
+      }
       const settings = await getSettings();
       if (settings.workflow?.autoRetryWorker !== false) {
         await processOutboxBatch();
@@ -3810,7 +3767,9 @@ const startOutboxWorker = () => {
       }
     }
   }, WORKER_INTERVAL_MS);
-  console.log(`✅ Background workers scheduled every ${Math.round(WORKER_INTERVAL_MS / 1000)}s`);
+  console.log(
+    `✅ Background workers every ${Math.round(WORKER_INTERVAL_MS / 1000)}s (${freeTier ? "free-tier: outbox only" : "standard"})`
+  );
 };
 
 async function startServer() {
@@ -3880,6 +3839,9 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", async () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(
+      `📦 Build ${process.env.RENDER_GIT_COMMIT?.slice(0, 7) || "local"} | tier=${isFreeTierPlatform() ? "free" : "standard"} | project=${projectId}`
+    );
     try {
       // await seedMenu();
       // await seedCategories();
