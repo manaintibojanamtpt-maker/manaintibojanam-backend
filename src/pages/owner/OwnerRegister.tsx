@@ -13,6 +13,7 @@ import { EnvironmentConfig } from '../../config/environment';
 import { onboardingPlanMessaging } from '../../config/pricing';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
+import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 
 const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
 
@@ -186,12 +187,14 @@ const OwnerRegister = () => {
       // Create user doc
       const db = getDb();
       
-      await provisionOwnerTenant(userCredential.user.uid, {
+      const tenantSlug = await provisionOwnerTenant(userCredential.user.uid, {
         name,
         email,
         restaurantName,
         mobileNumber,
       });
+
+      void requestOwnerWelcomeEmail(tenantSlug);
 
       toast.success('Account created successfully!');
       navigate('/owner/setup');
@@ -221,12 +224,14 @@ const OwnerRegister = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      await provisionOwnerTenant(user.uid, {
+      const tenantSlug = await provisionOwnerTenant(user.uid, {
         name: name.trim() || user.displayName || 'Owner',
         email: user.email || email,
         restaurantName: restaurantName.trim(),
         mobileNumber,
       });
+
+      void requestOwnerWelcomeEmail(tenantSlug);
 
       toast.success('Welcome!');
       navigate('/owner/setup');

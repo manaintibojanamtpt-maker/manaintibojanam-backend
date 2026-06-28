@@ -1518,11 +1518,89 @@ const enqueueNotification = async (payload: any) => {
   }
 };
 
+const getFounderDisplayName = (): string =>
+  (process.env.FOUNDER_NAME || "The BhojanOS Team").trim();
+
+const getPublicAppBaseUrl = (): string =>
+  (process.env.PUBLIC_APP_URL || "https://www.bhojanos.com").replace(/\/$/, "");
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const buildOwnerWelcomeEmailHtml = (params: {
+  ownerName: string;
+  restaurantName: string;
+  tenantSlug: string;
+}): string => {
+  const founderName = getFounderDisplayName();
+  const founderEmail = getFounderEmail();
+  const setupUrl = `${getPublicAppBaseUrl()}/owner/setup`;
+  const storefrontUrl = `${getPublicAppBaseUrl()}/k/${encodeURIComponent(params.tenantSlug)}`;
+  const safeOwner = escapeHtml(params.ownerName || "there");
+  const safeRestaurant = escapeHtml(params.restaurantName || "your kitchen");
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1410; max-width: 560px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1A0505 0%, #2d1208 100%); padding: 28px 24px; border-radius: 12px 12px 0 0;">
+        <h1 style="margin: 0; color: #ff9f1c; font-size: 22px;">Welcome to BhojanOS</h1>
+        <p style="margin: 8px 0 0; color: #f5e6dc; font-size: 14px;">Your direct ordering OS is ready to set up.</p>
+      </div>
+      <div style="padding: 24px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
+        <p>Hi ${safeOwner},</p>
+        <p>
+          Thank you for joining BhojanOS with <strong>${safeRestaurant}</strong>.
+          We're excited to help you launch your own storefront, accept orders, and grow repeat customers — with 0% commission.
+        </p>
+        <p><strong>Your next steps:</strong></p>
+        <ol>
+          <li>Finish store setup (location, delivery, payments, menu)</li>
+          <li>Publish your storefront when you're ready to go live</li>
+          <li>Share your store link with customers</li>
+        </ol>
+        <p style="margin: 24px 0;">
+          <a href="${setupUrl}" style="display: inline-block; background: #ff6b35; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: bold;">
+            Continue setup
+          </a>
+        </p>
+        <p style="font-size: 14px; color: #555;">
+          Your storefront will be available at:<br />
+          <a href="${storefrontUrl}" style="color: #ff6b35;">${storefrontUrl}</a>
+        </p>
+        <p style="margin-top: 28px; font-size: 14px; color: #555;">
+          — ${founderName}<br />
+          BhojanOS<br />
+          <a href="mailto:${founderEmail}" style="color: #ff6b35;">${founderEmail}</a>
+        </p>
+      </div>
+    </div>
+  `;
+};
+
+async function sendOwnerWelcomeEmail(params: {
+  to: string;
+  ownerName: string;
+  restaurantName: string;
+  tenantSlug: string;
+}): Promise<EmailSendResult> {
+  const founderEmail = getFounderEmail();
+  const subject = `Welcome to BhojanOS — ${params.restaurantName} is ready to set up`;
+  const html = buildOwnerWelcomeEmailHtml(params);
+
+  return sendEmailNotification(params.to, subject, html, {
+    fromLabel: "BhojanOS",
+    replyTo: founderEmail,
+  });
+}
+
 async function sendEmailNotification(
   to: string,
   subject: string,
   body: string,
-  options?: { fromLabel?: string }
+  options?: { fromLabel?: string; replyTo?: string }
 ): Promise<EmailSendResult> {
   const transporter = getTransporter();
   const emailFrom = getEmailFromAddress();
@@ -1540,6 +1618,7 @@ async function sendEmailNotification(
     const info = await transporter.sendMail({
       from: formatEmailFromHeader(options?.fromLabel),
       to,
+      replyTo: options?.replyTo,
       subject,
       html: body,
     });
@@ -2311,6 +2390,108 @@ app.post("/api/register-owner-check", strictLimiter, async (req, res) => {
   } catch (err: any) {
     logger.error({ message: "Registration check error", err: err.message });
     res.status(500).json({ success: false, error: 'Registration validation failed' });
+  }
+});
+
+app.post("/api/owner/welcome-email", strictLimiter, verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const { tenantSlug } = req.body || {};
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(403).json({ success: false, error: "User not found" });
+    }
+
+    const userData = userDoc.data() || {};
+    const ownedTenantIds: string[] = userData.ownedTenantIds || [];
+    const resolvedTenantSlug = tenantSlug || ownedTenantIds[0];
+
+    if (!resolvedTenantSlug) {
+      return res.status(400).json({ success: false, error: "No tenant associated with this account" });
+    }
+
+    if (!ownedTenantIds.includes(resolvedTenantSlug)) {
+      return res.status(403).json({ success: false, error: "Unauthorized for this tenant" });
+    }
+
+    const tenantRef = db.collection("tenants").doc(resolvedTenantSlug);
+    const tenantDoc = await tenantRef.get();
+    if (!tenantDoc.exists) {
+      return res.status(404).json({ success: false, error: "Tenant not found" });
+    }
+
+    const tenantData = tenantDoc.data() || {};
+    if (tenantData.ownerId && tenantData.ownerId !== userId) {
+      return res.status(403).json({ success: false, error: "Unauthorized for this tenant" });
+    }
+
+    if (tenantData.communications?.welcomeEmailSentAt) {
+      return res.json({
+        success: true,
+        alreadySent: true,
+        sentAt: tenantData.communications.welcomeEmailSentAt,
+      });
+    }
+
+    const recipientEmail = (
+      tenantData.kyc?.email ||
+      userData.email ||
+      req.user.email ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!recipientEmail) {
+      return res.status(400).json({ success: false, error: "Tenant email address is missing" });
+    }
+
+    const ownerName = tenantData.kyc?.ownerName || userData.name || req.user.name || "there";
+    const restaurantName = tenantData.name || resolvedTenantSlug;
+
+    const emailResult = await sendOwnerWelcomeEmail({
+      to: recipientEmail,
+      ownerName,
+      restaurantName,
+      tenantSlug: resolvedTenantSlug,
+    });
+
+    if (!emailResult.sent) {
+      return res.status(503).json({
+        success: false,
+        error: emailResult.reason || "Welcome email could not be sent",
+        skipped: emailResult.skipped,
+      });
+    }
+
+    await tenantRef.set(
+      {
+        communications: {
+          ...(tenantData.communications || {}),
+          welcomeEmailSentAt: new Date().toISOString(),
+          welcomeEmailRecipient: recipientEmail,
+        },
+      },
+      { merge: true }
+    );
+
+    logger.info({
+      message: "Owner welcome email sent",
+      tenantSlug: resolvedTenantSlug,
+      recipientEmail,
+      messageId: emailResult.messageId,
+    });
+
+    res.json({
+      success: true,
+      emailSent: true,
+      recipientEmail,
+      messageId: emailResult.messageId,
+    });
+  } catch (err: any) {
+    logger.error({ message: "Owner welcome email error", error: err.message });
+    res.status(500).json({ success: false, error: err.message || "Failed to send welcome email" });
   }
 });
 

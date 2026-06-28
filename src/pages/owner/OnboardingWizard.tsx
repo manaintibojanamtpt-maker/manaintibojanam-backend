@@ -15,6 +15,7 @@ import { STORE_SETUP_STEPS, getSetupStepByWizardStep } from '../../config/storeS
 import SetupStepInstructions from '../../components/owner/SetupStepInstructions';
 import { computeStoreSetupProgress } from '../../lib/storeSetupProgress';
 import SoftButton from '../../components/ui/SoftButton';
+import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 
 const WIZARD_STEPS = STORE_SETUP_STEPS.filter((s) => s.wizardStep != null).map((s) => ({
   id: s.wizardStep!,
@@ -196,6 +197,7 @@ const OnboardingWizard: React.FC = () => {
       } else {
         await saveProgress(currentStep, true);
         await activateGrowthOnboardingTrial(tenantInfo.slug);
+        void requestOwnerWelcomeEmail(tenantInfo.slug);
         toast.success(`Store is live! Your ${PLAN_TRIALS.growthOnboardingDays}-day Growth trial has started.`);
         navigate('/owner/dashboard');
       }
