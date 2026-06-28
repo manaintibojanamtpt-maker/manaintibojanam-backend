@@ -81,9 +81,9 @@ const Home: React.FC = () => {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { cart, addToCart, updateQuantity, total } = useCart();
   const { currentUser, userProfile, loading: authLoading } = useStorefrontAuth();
-  const { tenantId: contextTenantId, tenantInfo, tenantSlug } = useTenant();
+  const { tenantId: contextTenantId, tenantInfo, tenantSlug, loading: tenantLoading } = useTenant();
   const { to, loginPath } = useStorefrontPath();
-  const activeTenantId = contextTenantId || fallbackTenantId;
+  const activeTenantId = contextTenantId || tenantSlug || fallbackTenantId || '';
   const { isStoreOpenNow, settings: storeSettings } = useTenantStoreStatus();
   const storeOpenTime = storeSettings?.storeTiming.openTime || '09:00';
   const [deliveryState, setDeliveryState] = useDeliveryState();
@@ -125,6 +125,8 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (tenantLoading || !activeTenantId) return;
+
     const locationStatus = localStorage.getItem('locationStatus');
     // Removed automatic location prompt to defer until user intent is shown
 
@@ -303,7 +305,7 @@ const Home: React.FC = () => {
     fetchCategories();
     fetchMenu();
     fetchOrderAgain();
-  }, [currentUser, activeTenantId]);
+  }, [currentUser, activeTenantId, tenantLoading]);
 
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1.1, 1]);

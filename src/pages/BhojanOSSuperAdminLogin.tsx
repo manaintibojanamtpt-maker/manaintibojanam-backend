@@ -17,11 +17,11 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { currentUser, userProfile, loading: authLoading, logout } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, profileLoading, logout } = useAuth();
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || profileLoading) return;
 
     if (currentUser && userProfile) {
       if (userProfile.role === 'superadmin') {
@@ -31,7 +31,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
         navigate('/admin');
       }
     }
-  }, [currentUser, userProfile, authLoading, navigate]);
+  }, [currentUser, userProfile, authLoading, profileLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +63,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (currentUser && profileLoading && !userProfile)) {
     return (
       <div className="min-h-[100dvh] min-h-[100svh] bg-[#030303] flex items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <Loader2 className="animate-spin text-red-500" size={40} />

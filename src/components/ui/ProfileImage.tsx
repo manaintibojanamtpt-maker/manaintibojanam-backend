@@ -23,7 +23,7 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({ name, imageUrl, alt,
   const showFallback = !imageUrl || imageError;
 
   return (
-    <div className={`relative w-32 h-32 rounded-full flex-shrink-0 group ${className}`}>
+    <div className={`relative rounded-full flex-shrink-0 group ${className || 'w-32 h-32'}`}>
       {/* Soft orange-purple gradient glow */}
       <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#A855F7] animate-pulse opacity-20 blur-md group-hover:opacity-60 transition-opacity duration-500" />
       

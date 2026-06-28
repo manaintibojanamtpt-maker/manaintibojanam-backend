@@ -46,7 +46,7 @@ export const EnterpriseHeader: React.FC = () => {
             />
           </div>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight leading-snug text-white truncate">
-            Bhojan<span className="text-[#FF6B00]">OS</span>
+            Bhojan<span className="text-[#FF7A00]">OS</span>
           </h1>
         </Link>
 

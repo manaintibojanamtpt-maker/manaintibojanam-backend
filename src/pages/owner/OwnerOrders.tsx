@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { getDb } from '../../lib/firebase-db';
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { useTenant } from '../../context/TenantContext';
 import { format } from 'date-fns';
 import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -32,7 +33,8 @@ interface Order {
 }
 
 const OwnerOrders: React.FC = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, profileLoading } = useAuth();
+  const { tenantId: contextTenantId, loading: tenantLoading } = useTenant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
@@ -51,13 +53,14 @@ const OwnerOrders: React.FC = () => {
     notifyCustomer: true
   });
   const remindedDeliveriesRef = useRef<Set<string>>(new Set());
+  const ordersErrorToastRef = useRef(false);
 
   // Quick Stock Modal State
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [fetchingMenu, setFetchingMenu] = useState(false);
 
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const tenantId = contextTenantId || userProfile?.ownedTenantIds?.[0] || null;
 
   const parseTrialDate = (value: any): Date | null => {
     if (!value) return null;
@@ -67,8 +70,9 @@ const OwnerOrders: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (!tenantId || tenantLoading || profileLoading) return;
 
+    ordersErrorToastRef.current = false;
     const db = getDb();
     const q = query(
       collection(db, 'orders'),
@@ -81,7 +85,6 @@ const OwnerOrders: React.FC = () => {
         ...doc.data()
       })) as Order[];
       
-      // Sort and limit in memory to avoid needing a composite index
       fetchedOrders = fetchedOrders.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
@@ -91,23 +94,28 @@ const OwnerOrders: React.FC = () => {
       setOrders(fetchedOrders);
       setHasMore(snapshot.docs.length === orderLimit);
       setLoading(false);
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Error fetching orders:", error);
-      toast.error("Failed to load live orders");
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: string }).code)
+        : '';
+      if (!ordersErrorToastRef.current && code !== 'permission-denied') {
+        ordersErrorToastRef.current = true;
+        toast.error("Failed to load live orders");
+      }
       setLoading(false);
     });
 
     const fetchTenant = async () => {
-      const db = getDb();
       const tDoc = await getDoc(doc(db, 'tenants', tenantId));
       if (tDoc.exists()) {
         setTenantInfo(tDoc.data());
       }
     };
-    fetchTenant();
+    void fetchTenant();
 
     return () => unsubscribe();
-  }, [tenantId, orderLimit]);
+  }, [tenantId, tenantLoading, profileLoading, orderLimit]);
 
   useEffect(() => {
     orders.forEach((order) => {

@@ -2,9 +2,9 @@ import React from 'react';
 import { LazyMotion, domAnimation } from 'framer-motion';
 import { PlatformFeatures } from './PlatformFeatures';
 import { CommissionComparison } from './CommissionComparison';
-import { AIManagerSection } from './AIManagerSection';
-import { OwnerDashboardPreview } from './OwnerDashboardPreview';
 import { HowItWorksTimeline } from './HowItWorksTimeline';
+import { OwnerDashboardPreview } from './OwnerDashboardPreview';
+import { AIManagerSection } from './AIManagerSection';
 import { SocialProofGrid } from './SocialProofGrid';
 import { ExecutiveLeadership } from '../ExecutiveLeadership';
 import { LandingPricing } from './LandingPricing';
@@ -17,12 +17,12 @@ export default function MarketingLandingSections() {
     <LazyMotion features={domAnimation}>
       <PlatformFeatures />
       <CommissionComparison />
-      <AIManagerSection />
-      <OwnerDashboardPreview />
       <HowItWorksTimeline />
+      <OwnerDashboardPreview />
+      <AIManagerSection />
       <SocialProofGrid />
-      <ExecutiveLeadership />
       <LandingPricing />
+      <ExecutiveLeadership compact />
       <LandingFAQ />
       <CallToAction />
     </LazyMotion>

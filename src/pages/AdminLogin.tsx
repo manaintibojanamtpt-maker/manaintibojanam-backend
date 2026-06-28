@@ -17,14 +17,14 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { currentUser, userProfile, loading: authLoading } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, profileLoading } = useAuth();
   
   const isBhojanOS = EnvironmentConfig.isBhojanOSRoot();
   const displayLogo = isBhojanOS ? '/bhojan-os-icon.png' : '/logo-v20-final.png';
 
   // Redirect if already logged in
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || profileLoading) return;
 
     if (currentUser && userProfile) {
       if (userProfile.role === 'admin' || userProfile.role === 'superadmin') {
@@ -39,7 +39,7 @@ const AdminLogin: React.FC = () => {
         // away unless they specifically try to access /admin
       }
     }
-  }, [currentUser, userProfile, authLoading, navigate]);
+  }, [currentUser, userProfile, authLoading, profileLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +69,7 @@ const AdminLogin: React.FC = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (currentUser && profileLoading && !userProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
         <Loader2 className="animate-spin text-red-600" size={48} />

@@ -19,7 +19,7 @@ export const HowItWorksTimeline = memo(function HowItWorksTimeline() {
           aria-hidden
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 lg:gap-3">
           {howItWorksSteps.map((step, i) => (
             <m.div
               key={step.step}

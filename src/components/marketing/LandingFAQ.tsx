@@ -5,19 +5,24 @@ import { SectionHeader } from '../ui/SectionHeader';
 import { landingFaq } from '../../config/landing';
 
 export const LandingFAQ = memo(function LandingFAQ() {
-  const [open, setOpen] = useState<number | null>(0);
+  const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <Section id="faq" background="default" className="scroll-mt-24">
-      <SectionHeader label="FAQ" title="Questions From Restaurant Owners" description="Everything you need to know before launching your direct storefront." />
+    <Section id="faq" background="subtle" className="scroll-mt-24">
+      <SectionHeader
+        label="FAQ"
+        title="Questions From Restaurant Owners"
+        description="Everything you need to know before launching your direct storefront."
+      />
 
-      <div className="max-w-2xl mx-auto space-y-2">
+      <div className="marketing-faq-list max-w-2xl mx-auto">
         {landingFaq.map((item, i) => {
           const isOpen = open === i;
           return (
-            <div
+            <article
               key={item.question}
-              className="rounded-[1.25rem] border border-white/[0.08] overflow-hidden bg-[#0A0A0A]/80"
+              className="marketing-faq-item"
+              data-open={isOpen ? 'true' : 'false'}
             >
               <button
                 type="button"
@@ -25,12 +30,16 @@ export const LandingFAQ = memo(function LandingFAQ() {
                 aria-expanded={isOpen}
                 aria-controls={`faq-panel-${i}`}
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="w-full flex items-center justify-between gap-4 p-4 sm:p-5 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]/40"
+                className="marketing-faq-trigger"
               >
-                <span className="font-semibold text-white text-sm sm:text-base">{item.question}</span>
+                <span className="font-semibold text-white text-sm sm:text-[15px] leading-snug pr-1">
+                  {item.question}
+                </span>
                 <ChevronDown
                   size={18}
-                  className={`text-neutral-500 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                  className={`text-neutral-500 shrink-0 transition-transform duration-200 ${
+                    isOpen ? 'rotate-180 text-[#FF7A00]' : ''
+                  }`}
                   aria-hidden
                 />
               </button>
@@ -38,12 +47,14 @@ export const LandingFAQ = memo(function LandingFAQ() {
                 id={`faq-panel-${i}`}
                 role="region"
                 aria-labelledby={`faq-trigger-${i}`}
-                hidden={!isOpen}
-                className="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-neutral-400 leading-relaxed"
+                aria-hidden={!isOpen}
+                className="marketing-faq-panel"
               >
-                {item.answer}
+                <div className="marketing-faq-panel-inner">
+                  <p className="marketing-faq-answer">{item.answer}</p>
+                </div>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>

@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { setActiveTenantId } from '../services/api';
 import { getDb } from '../lib/firebase-db';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import {
+  parseStorefrontSlug,
+  readCachedTenant,
+  writeCachedTenant,
+} from '../lib/tenantPath';
 
 export interface TenantInfo {
   id: string;
@@ -81,11 +86,31 @@ interface TenantContextType {
   refreshTenant: () => Promise<void>;
 }
 
+function needsTenantResolution(pathname: string): boolean {
+  return pathname.startsWith('/owner') || /^\/k\/[^/]+/.test(pathname);
+}
+
+function applyTenantState(
+  data: TenantInfo,
+  setters: {
+    setTenantId: (id: string) => void;
+    setTenantSlug: (slug: string) => void;
+    setTenantInfo: (info: TenantInfo | null) => void;
+  },
+  cacheKey?: string,
+) {
+  setters.setTenantId(data.id);
+  setActiveTenantId(data.id);
+  setters.setTenantSlug(data.slug || data.id);
+  setters.setTenantInfo(data);
+  if (cacheKey) writeCachedTenant(cacheKey, data);
+}
+
 const TenantContext = createContext<TenantContextType>({
-  tenantId: 'mana-inti',
+  tenantId: '',
   tenantSlug: '',
   tenantInfo: null,
-  loading: true,
+  loading: false,
   tenantNotFound: false,
   refreshTenant: async () => {},
 });
@@ -96,37 +121,56 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { userProfile, loading: authLoading } = useAuth();
   const ownerTenantId = userProfile?.ownedTenantIds?.[0];
 
-  const [tenantId, setTenantId] = useState<string>('mana-inti');
-  const [tenantSlug, setTenantSlug] = useState<string>('');
-  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    const path = window.location.pathname;
-    const isOwnerPanel = path.startsWith('/owner');
-    const isStorefront = /^\/k\/[^/]+/.test(path);
-    return isOwnerPanel || isStorefront;
-  });
+  const initialPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const initialStoreSlug = parseStorefrontSlug(initialPath);
+  const initialCached = initialStoreSlug ? readCachedTenant(initialStoreSlug) : null;
+
+  const [tenantId, setTenantId] = useState<string>(() => initialCached?.id || initialStoreSlug || '');
+  const [tenantSlug, setTenantSlug] = useState<string>(() => initialCached?.slug || initialStoreSlug || '');
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(() => initialCached);
+  const [loading, setLoading] = useState(() => needsTenantResolution(initialPath) && !initialCached);
   const [tenantNotFound, setTenantNotFound] = useState(false);
+
+  useEffect(() => {
+    if (tenantInfo?.name && typeof document !== 'undefined') {
+      const path = window.location.pathname;
+      if (/^\/k\/[^/]+/.test(path)) {
+        document.title = `${tenantInfo.name} | Order Online`;
+      }
+    }
+  }, [tenantInfo?.name]);
+
+  useEffect(() => {
+    if (tenantId) setActiveTenantId(tenantId);
+  }, [tenantId]);
 
   const resolveTenant = useCallback(async () => {
     const path = window.location.pathname;
-    const match = path.match(/^\/k\/([^/]+)/);
+    const storefrontSlug = parseStorefrontSlug(path);
     const isOwnerPanel = path.startsWith('/owner');
-    
+
     const sessionTenant = sessionStorage.getItem('tenant_preview');
     if (sessionTenant) {
-      const data = JSON.parse(sessionTenant) as TenantInfo;
-      setTenantId(data.id);
-      setActiveTenantId(data.id);
-      setTenantSlug(data.slug);
-      setTenantInfo(data);
-      setLoading(false);
-      return;
+      try {
+        const data = JSON.parse(sessionTenant) as TenantInfo;
+        applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo });
+        setTenantNotFound(false);
+        setLoading(false);
+        return;
+      } catch {
+        sessionStorage.removeItem('tenant_preview');
+      }
     }
 
-    let slug = '';
-    if (match) {
-      slug = match[1];
+    if (storefrontSlug) {
+      const cached = readCachedTenant(storefrontSlug);
+      if (cached) {
+        applyTenantState(cached, { setTenantId, setTenantSlug, setTenantInfo });
+      } else {
+        setTenantId(storefrontSlug);
+        setTenantSlug(storefrontSlug);
+        setActiveTenantId(storefrontSlug);
+      }
     } else if (isOwnerPanel) {
       if (authLoading) {
         setLoading(true);
@@ -139,56 +183,64 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setLoading(false);
         return;
       }
-      slug = ownerTenantId;
-    }
-
-    if (!slug) {
+    } else {
       setLoading(false);
       return;
     }
 
+    const lookupKey = storefrontSlug || (isOwnerPanel ? ownerTenantId : '');
+    if (!lookupKey) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setTenantNotFound(false);
+
     try {
-      const docRef = doc(getDb(), 'tenants', slug);
+      const docRef = doc(getDb(), 'tenants', lookupKey);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
-        setTenantId(data.id);
-        setActiveTenantId(data.id);
-        setTenantSlug(data.slug || data.id);
-        setTenantInfo(data);
-        sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
+        applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo }, lookupKey);
       } else {
-        const q = query(collection(getDb(), 'tenants'), where('slug', '==', slug), limit(1));
+        const q = query(collection(getDb(), 'tenants'), where('slug', '==', lookupKey), limit(1));
         const snapshot = await getDocs(q);
-        
+
         if (!snapshot.empty) {
           const docSnapQuery = snapshot.docs[0];
           const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
-          setTenantId(data.id);
-          setActiveTenantId(data.id);
-          setTenantSlug(data.slug || data.id);
-          setTenantInfo(data);
-          sessionStorage.setItem(`tenant_${slug}`, JSON.stringify(data));
-        } else {
+          applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo }, lookupKey);
+        } else if (storefrontSlug) {
           setTenantNotFound(true);
         }
       }
     } catch (error) {
-      console.error("Failed to resolve tenant slug:", error);
-      setTenantNotFound(true);
+      console.error('Failed to resolve tenant slug:', error);
+      if (storefrontSlug && !readCachedTenant(storefrontSlug)) {
+        setTenantNotFound(true);
+      }
     } finally {
       setLoading(false);
     }
   }, [ownerTenantId, authLoading]);
 
   useEffect(() => {
-    resolveTenant();
+    void resolveTenant();
   }, [resolveTenant]);
 
-  return (
-    <TenantContext.Provider value={{ tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, refreshTenant: resolveTenant }}>
-      {children}
-    </TenantContext.Provider>
+  const value = useMemo(
+    () => ({
+      tenantId,
+      tenantSlug,
+      tenantInfo,
+      loading,
+      tenantNotFound,
+      refreshTenant: resolveTenant,
+    }),
+    [tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, resolveTenant],
   );
+
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 };

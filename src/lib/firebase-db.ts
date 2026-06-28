@@ -1,11 +1,11 @@
 import { initializeFirestore, doc, getDocFromServer, Firestore, enableNetwork, getFirestore } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { app } from '../firebase';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { getFirestoreDatabaseId, getResolvedFirebaseProjectId } from '../config/firebaseClientConfig';
 
-const databaseId = (firebaseConfig as any).firestoreDatabaseId || "(default)";
+const databaseId = getFirestoreDatabaseId();
 
-console.log(`[Firestore Client] Initializing with Project: ${firebaseConfig.projectId}, Database: ${databaseId}`);
+console.log(`[Firestore Client] Initializing with Project: ${getResolvedFirebaseProjectId()}, Database: ${databaseId}`);
 
 let _dbInstance: Firestore | null = null;
 let _initError: Error | null = null;

@@ -26,8 +26,10 @@ import {
 
 const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
-export let activeTenantId: string | null = 'mana-inti';
-export const setActiveTenantId = (id: string) => { activeTenantId = id; };
+export let activeTenantId: string | null = null;
+export const setActiveTenantId = (id: string) => {
+  activeTenantId = id || null;
+};
 
 import { auth } from '../firebase';
 

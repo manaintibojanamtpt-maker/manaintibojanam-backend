@@ -18,10 +18,10 @@ export interface StoreBranding {
 }
 
 export function useStoreBranding(): StoreBranding {
-  const { tenantId, tenantInfo } = useTenant();
+  const { tenantId, tenantSlug, tenantInfo } = useTenant();
 
   return useMemo(() => {
-    const isDefaultStorefront = !tenantId || tenantId === 'mana-inti';
+    const isDefaultStorefront = !tenantSlug && (!tenantId || tenantId === 'mana-inti');
     const brandName = tenantInfo?.name || 'BhojanOS';
 
     if (isDefaultStorefront) {
@@ -55,5 +55,5 @@ export function useStoreBranding(): StoreBranding {
       fssaiNumber: tenantInfo?.fssai?.licenseNumber || tenantInfo?.fssai?.number || null,
       isDefaultStorefront,
     };
-  }, [tenantId, tenantInfo]);
+  }, [tenantId, tenantSlug, tenantInfo]);
 }

@@ -30,6 +30,12 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --color-primary: #ff7a00;
+  --color-marketing-bg: #030303;
+  --color-marketing-surface: #0a0a0a;
+  --color-marketing-muted: rgba(163, 163, 163, 0.95);
+  --radius-marketing-card: 1.25rem;
+  --radius-marketing-lg: 1.75rem;
+  --shadow-marketing-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 40px -20px rgba(0, 0, 0, 0.65);
 }
 
 * {
@@ -558,4 +564,155 @@ body {
 .marketing-hero-demo-frame > * {
   position: relative;
   z-index: 1;
+}
+
+/* ── Design system utilities ── */
+.marketing-muted {
+  color: var(--color-marketing-muted);
+}
+
+.marketing-card {
+  border-radius: var(--radius-marketing-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 10, 0.85);
+  box-shadow: var(--shadow-marketing-card);
+}
+
+.marketing-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Comparison: mobile stacked cards ── */
+.marketing-compare-card {
+  border-radius: var(--radius-marketing-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 10, 0.9);
+  overflow: hidden;
+}
+
+.marketing-compare-card--highlight {
+  border-color: rgba(255, 122, 0, 0.22);
+  background: linear-gradient(180deg, rgba(255, 122, 0, 0.06) 0%, rgba(10, 10, 10, 0.95) 100%);
+}
+
+.marketing-compare-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  min-width: 1.75rem;
+}
+
+/* ── FAQ accordion ── */
+.marketing-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.marketing-faq-item {
+  border-radius: var(--radius-marketing-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 10, 0.88);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.marketing-faq-item[data-open='true'] {
+  border-color: rgba(255, 122, 0, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 122, 0, 0.06);
+}
+
+.marketing-faq-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  min-height: 3.25rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.marketing-faq-trigger:focus-visible {
+  outline: 2px solid rgba(255, 122, 0, 0.45);
+  outline-offset: 2px;
+  border-radius: var(--radius-marketing-card);
+}
+
+.marketing-faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.marketing-faq-item[data-open='true'] .marketing-faq-panel {
+  grid-template-rows: 1fr;
+}
+
+.marketing-faq-panel-inner {
+  overflow: hidden;
+}
+
+.marketing-faq-answer {
+  padding: 0 1.125rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: rgba(163, 163, 163, 0.95);
+}
+
+/* ── Compact leadership strip ── */
+.marketing-leadership-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .marketing-leadership-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .marketing-leadership-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ── Focus + reduced motion ── */
+.soft-btn:focus-visible,
+.marketing-soft-cta:focus-visible {
+  outline: 2px solid rgba(255, 122, 0, 0.55);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-hero-enter,
+  .marketing-hero-eyebrow-loop,
+  .marketing-soft-pill--eyebrow,
+  .soft-btn,
+  .marketing-soft-cta {
+    animation: none !important;
+  }
+
+  .marketing-faq-panel {
+    transition: none;
+  }
 }

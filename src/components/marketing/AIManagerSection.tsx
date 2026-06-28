@@ -23,14 +23,14 @@ const typeIcon = {
 export const AIManagerSection = memo(function AIManagerSection() {
   return (
     <Section id="ai" background="gradient" className="scroll-mt-24">
-      <RevealOnScroll className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+      <RevealOnScroll className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
         <MarketingSoftPill variant="accent" className="mb-6">
           <Sparkles size={13} className="text-[#FF7A00]" />
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FF7A00]">
             AI Copilot
           </span>
         </MarketingSoftPill>
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-4">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mb-3">
           Meet Your AI Restaurant Manager
         </h2>
         <p className="text-base sm:text-lg text-neutral-400 leading-relaxed">

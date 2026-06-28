@@ -321,7 +321,7 @@ const AppContent: React.FC = () => {
   }, [authLoading]);
 
   useEffect(() => {
-    if (!authLoading && connected && !isMarketingPath()) {
+    if (!authLoading && connected && !isMarketingPath() && import.meta.env.DEV) {
       if (typeof window !== 'undefined' && window.localStorage.getItem('menuSeeded') !== 'true') {
         import('./populateData').then(({ seedMenuItems }) => {
           seedMenuItems().catch((error) => {

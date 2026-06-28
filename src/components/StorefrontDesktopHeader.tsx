@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useTenant } from '../context/TenantContext';
 import { useStorefrontPath } from '../hooks/useStorefrontPath';
+import { slugToDisplayName } from '../lib/tenantPath';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import HeaderLocationDropdown from './HeaderLocationDropdown';
 
@@ -14,6 +15,7 @@ const StorefrontDesktopHeader = () => {
   const { itemCount } = useCart();
   const { currentUser, userProfile } = useStorefrontAuth();
   const { tenantSlug, tenantInfo, tenantId } = useTenant();
+  const displayName = tenantInfo?.name || (tenantSlug ? slugToDisplayName(tenantSlug) : 'BhojanOS');
   const { to, loginPath } = useStorefrontPath();
   const ownsThisStore = Boolean(
     userProfile?.ownedTenantIds?.some((id) => id === tenantId || id === tenantSlug),
@@ -38,7 +40,7 @@ const StorefrontDesktopHeader = () => {
         <Link to={to('/')} className="flex items-center gap-2 group">
           <img src={bhojanOsLogo} alt="BhojanOS" className="w-8 h-8 object-contain" />
           <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
-            {tenantInfo?.name || 'BhojanOS'}
+            {displayName}
           </span>
         </Link>
         

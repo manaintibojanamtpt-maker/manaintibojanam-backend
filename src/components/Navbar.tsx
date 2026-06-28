@@ -10,13 +10,14 @@ import { m, AnimatePresence } from 'framer-motion';
 import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { getClosingSoonStatus } from '../lib/storeUtils';
 
+import { slugToDisplayName } from '../lib/tenantPath';
 import logo from '../assets/logo.webp';
 
 const Navbar: React.FC = () => {
   const { cart, total } = useCart();
   const { currentUser, userProfile, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { tenantSlug, tenantInfo } = useTenant();
+  const { tenantSlug, tenantInfo, loading: tenantLoading } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -67,9 +68,13 @@ const Navbar: React.FC = () => {
 
   const isHome = location.pathname === '/';
 
-  const storeName = tenantInfo?.name || 'MANA INTI';
+  const isStorefrontPath = /^\/k\/[^/]+/.test(location.pathname);
+  const storeName =
+    tenantInfo?.name ||
+    (tenantSlug && tenantLoading ? slugToDisplayName(tenantSlug) : null) ||
+    (isStorefrontPath && tenantSlug ? slugToDisplayName(tenantSlug) : null);
   const hasCustomLogo = !!tenantInfo?.branding?.logoUrl;
-  const isDefaultStore = !tenantSlug || tenantSlug === 'mana-inti' || storeName === 'MANA INTI';
+  const isDefaultStore = !isStorefrontPath && (!tenantSlug || tenantSlug === 'mana-inti');
 
   const renderBranding = (isMobile = false) => {
     if (hasCustomLogo) {
@@ -95,7 +100,7 @@ const Navbar: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <span className={`font-bold ${isMobile ? 'text-lg text-gray-900 dark:text-white' : 'text-sm md:text-base'} leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-gray-900 dark:text-white' : !isMobile ? 'text-gray-900 md:text-white' : ''}`}>
-              MANA INTI
+              {storeName || 'MANA INTI'}
             </span>
             <span className={`font-bold text-[7px] md:text-[8px] leading-none tracking-[0.2em] uppercase drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-red-600' : !isMobile ? 'text-red-600 md:text-red-400' : 'text-red-600'}`}>
               Bojanam
@@ -109,7 +114,7 @@ const Navbar: React.FC = () => {
       <div className="flex items-center gap-2 md:gap-3 group">
         <div className="flex flex-col">
           <span className={`font-serif italic font-black ${isMobile ? 'text-xl text-gray-900 dark:text-white' : 'text-lg md:text-xl'} leading-none tracking-tight drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-gray-900 dark:text-white' : !isMobile ? 'text-gray-900 md:text-white' : ''}`}>
-            {storeName}
+            {storeName || slugToDisplayName(tenantSlug)}
           </span>
           <span className={`font-bold text-[6px] md:text-[7px] leading-none tracking-[0.3em] uppercase drop-shadow-sm transition-colors duration-500 ${!isMobile && (isScrolled || !isHome) ? 'text-red-600' : !isMobile ? 'text-red-600 md:text-red-400' : 'text-red-600'}`}>
             Premium Kitchen

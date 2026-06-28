@@ -317,8 +317,10 @@ const isFreeTierPlatform = (): boolean => {
 const ambientProjectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
 const configProjectId = firebaseConfig.projectId;
 const configStorageBucket =
-  process.env.FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket || "bhojanos2.firebasestorage.app";
-const projectId = ambientProjectId || configProjectId || "bhojanos2"; 
+  process.env.FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket ||
+  (process.env.NODE_ENV === 'production' ? 'bhojanos-prod.firebasestorage.app' : 'bhojanos2.firebasestorage.app');
+const projectId = ambientProjectId || configProjectId ||
+  (process.env.NODE_ENV === 'production' ? 'bhojanos-prod' : 'bhojanos2');
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 

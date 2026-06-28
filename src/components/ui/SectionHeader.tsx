@@ -17,22 +17,26 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 }) => {
   return (
     <header
-      className={`mb-8 sm:mb-12 ${align === 'center' ? 'text-center mx-auto' : 'text-left'} max-w-3xl ${className}`}
+      className={`mb-6 sm:mb-10 ${align === 'center' ? 'text-center mx-auto' : 'text-left'} max-w-3xl ${className}`}
     >
       {label && (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.05] text-[#FF7A00] font-semibold text-xs tracking-wide uppercase mb-6">
+        <div className="marketing-section-eyebrow mb-4 sm:mb-5">
           {label}
         </div>
       )}
 
       {title && (
-        <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.12] mb-4">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-[1.12] mb-3 sm:mb-4">
           {title}
         </h2>
       )}
 
       {description && (
-        <p className="text-lg sm:text-xl text-neutral-400 font-medium leading-relaxed">
+        <p
+          className={`text-[15px] sm:text-lg text-neutral-400 font-medium leading-relaxed max-w-2xl ${
+            align === 'center' ? 'mx-auto' : ''
+          }`}
+        >
           {description}
         </p>
       )}

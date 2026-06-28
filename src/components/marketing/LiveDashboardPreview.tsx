@@ -7,7 +7,6 @@ import {
   Package,
   Truck,
   MessageCircle,
-  CreditCard,
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
@@ -56,7 +55,11 @@ const StatTile = memo(function StatTile({
   );
 });
 
-export const LiveDashboardPreview = memo(function LiveDashboardPreview() {
+export const LiveDashboardPreview = memo(function LiveDashboardPreview({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
@@ -79,9 +82,9 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview() {
       />
 
       <m.div
-        animate={{ y: [0, -6, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-        className="relative marketing-hero-glass-card rounded-[1.75rem] border border-white/[0.08] overflow-hidden shadow-[0_40px_80px_-24px_rgba(0,0,0,0.75)]"
+        animate={compact ? undefined : { y: [0, -6, 0] }}
+        transition={compact ? undefined : { duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        className="relative marketing-hero-glass-card rounded-[1.35rem] sm:rounded-[1.75rem] border border-white/[0.08] overflow-hidden shadow-[0_32px_64px_-24px_rgba(0,0,0,0.75)]"
       >
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-white/[0.06] bg-[#080808]/90">
           <div className="flex items-center gap-2">
@@ -94,8 +97,8 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview() {
           <span className="text-[10px] font-mono text-neutral-600">bhojanos.com/your-kitchen</span>
         </div>
 
-        <div className="p-4 sm:p-5 space-y-4 bg-[#0A0A0A]/95">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-4 bg-[#0A0A0A]/95">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <StatTile
               icon={TrendingUp}
               label="Today's Revenue"
@@ -105,25 +108,29 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview() {
             />
             <StatTile icon={ShoppingBag} label="Orders" value={String(orders)} delay={0.28} />
             <StatTile icon={ChefHat} label="Kitchen" value={`Preparing ${preparing}`} delay={0.36} />
-            <StatTile
-              icon={Package}
-              label="Inventory"
-              value={`${alerts} Alerts`}
-              sub="Paneer, spices"
-              delay={0.44}
-            />
-            <StatTile icon={Truck} label="Delivery" value={`${deliveries} Active`} delay={0.52} />
-            <StatTile icon={MessageCircle} label="WhatsApp" value="Connected" delay={0.6} />
-            <StatTile icon={CreditCard} label="Payments" value="Live" delay={0.68} />
+            {!compact && (
+              <>
+                <StatTile
+                  icon={Package}
+                  label="Inventory"
+                  value={`${alerts} Alerts`}
+                  sub="Paneer, spices"
+                  delay={0.44}
+                />
+                <StatTile icon={Truck} label="Delivery" value={`${deliveries} Active`} delay={0.52} />
+                <StatTile icon={MessageCircle} label="WhatsApp" value="Connected" delay={0.6} />
+              </>
+            )}
             <StatTile
               icon={Sparkles}
               label="AI Copilot"
-              value={`${suggestions} Suggestions`}
+              value={compact ? `${suggestions} tips` : `${suggestions} Suggestions`}
               accent
               delay={0.76}
             />
           </div>
 
+          {!compact && (
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div className="sm:col-span-3 rounded-[1.25rem] border border-white/[0.08] bg-white/[0.02] p-4">
               <div className="flex items-center justify-between mb-3">
@@ -161,6 +168,7 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </m.div>
     </div>
