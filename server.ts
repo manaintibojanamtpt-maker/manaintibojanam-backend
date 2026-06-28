@@ -4579,6 +4579,91 @@ app.post("/api/ai/chat", strictLimiter, async (req, res) => {
 });
 
 
+/** Merge duplicate users/{docId} rows for one email onto Firebase Auth UID. */
+async function reconcileUserDocsForEmail(
+  email: string,
+  options?: { preferredRole?: string; deleteOrphans?: boolean },
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const authAdmin = getAdminAuth(appAdmin);
+  const authUser = await authAdmin.getUserByEmail(normalizedEmail);
+  const canonicalUid = authUser.uid;
+
+  const snap = await db.collection("users").where("email", "==", normalizedEmail).get();
+  const duplicateDocIds: string[] = [];
+  const merged: Record<string, unknown> = {
+    userId: canonicalUid,
+    email: normalizedEmail,
+    name: authUser.displayName || normalizedEmail.split("@")[0] || "User",
+    updatedAt: new Date().toISOString(),
+  };
+
+  const roleRank: Record<string, number> = {
+    user: 0,
+    owner: 1,
+    admin: 2,
+    superadmin: 3,
+  };
+
+  let bestRole = "user";
+
+  for (const userDoc of snap.docs) {
+    const data = userDoc.data() || {};
+    if (userDoc.id !== canonicalUid) {
+      duplicateDocIds.push(userDoc.id);
+    }
+
+    const docRole = typeof data.role === "string" ? data.role : "user";
+    if ((roleRank[docRole] ?? 0) > (roleRank[bestRole] ?? 0)) {
+      bestRole = docRole;
+    }
+
+    if (Array.isArray(data.ownedTenantIds) && data.ownedTenantIds.length > 0) {
+      const existing = Array.isArray(merged.ownedTenantIds) ? (merged.ownedTenantIds as string[]) : [];
+      merged.ownedTenantIds = Array.from(new Set([...existing, ...data.ownedTenantIds.filter(Boolean)]));
+    }
+
+    if (data.referralCode && !merged.referralCode) merged.referralCode = data.referralCode;
+    if (data.phone && !merged.phone) merged.phone = data.phone;
+    if (data.name && !merged.name) merged.name = data.name;
+
+    const tokens = [
+      ...(Array.isArray(data.deviceTokens) ? data.deviceTokens : []),
+      ...(Array.isArray(data.fcmTokens) ? data.fcmTokens : []),
+    ].filter(Boolean);
+    if (tokens.length > 0) {
+      const existing = Array.isArray(merged.deviceTokens) ? (merged.deviceTokens as string[]) : [];
+      merged.deviceTokens = Array.from(new Set([...existing, ...tokens]));
+    }
+
+    if (data.notifications && typeof data.notifications === "object") {
+      merged.notifications = data.notifications;
+    }
+  }
+
+  if (options?.preferredRole) {
+    bestRole = options.preferredRole;
+  }
+
+  merged.role = bestRole;
+
+  await db.collection("users").doc(canonicalUid).set(merged, { merge: true });
+
+  if (options?.deleteOrphans) {
+    for (const orphanId of duplicateDocIds) {
+      await db.collection("users").doc(orphanId).delete();
+    }
+  }
+
+  return {
+    canonicalUid,
+    email: normalizedEmail,
+    duplicateDocIds,
+    mergedRole: bestRole,
+    authDisplayName: authUser.displayName || null,
+  };
+}
+
 // ================= BOOTSTRAP ADMIN CLAIM =================
 app.post("/api/admin/grant-claim", async (req, res) => {
   const { secret, uid } = req.body;
@@ -4629,8 +4714,13 @@ app.post("/api/platform/grant-superadmin", async (req, res) => {
     const userRecord = await authAdmin.getUser(targetUid);
     targetEmail = targetEmail || userRecord.email || "";
 
+    const reconciled = targetEmail
+      ? await reconcileUserDocsForEmail(targetEmail, { preferredRole: "superadmin", deleteOrphans: false })
+      : null;
+
     await db.collection("users").doc(targetUid).set(
       {
+        userId: targetUid,
         role: "superadmin",
         email: targetEmail,
         name: userRecord.displayName || targetEmail.split("@")[0] || "Super Admin",
@@ -4641,16 +4731,51 @@ app.post("/api/platform/grant-superadmin", async (req, res) => {
 
     await authAdmin.setCustomUserClaims(targetUid, { admin: true });
 
-    logger.info({ message: "Superadmin granted", uid: targetUid, email: targetEmail });
+    logger.info({ message: "Superadmin granted", uid: targetUid, email: targetEmail, reconciled });
     res.json({
       success: true,
       uid: targetUid,
       email: targetEmail,
-      message: "Superadmin role granted. Sign out and sign in again at /super-admin/login.",
+      duplicateDocIds: reconciled?.duplicateDocIds || [],
+      message:
+        "Superadmin role granted on Auth UID doc. Sign out and sign in again at /super-admin/login." +
+        (reconciled?.duplicateDocIds?.length
+          ? ` Found ${reconciled.duplicateDocIds.length} duplicate user doc(s) — safe to delete after verifying login.`
+          : ""),
     });
   } catch (err: any) {
     logger.error({ message: "Failed to grant superadmin", error: err.message });
     const status = err.code === "auth/user-not-found" ? 404 : 500;
     res.status(status).json({ success: false, error: err.message || "Failed to grant superadmin" });
+  }
+});
+
+/** Diagnose + merge duplicate users/{docId} profiles for one email onto Firebase Auth UID. */
+app.post("/api/platform/repair-user-by-email", async (req, res) => {
+  const { secret, email, deleteOrphans } = req.body || {};
+  if (!process.env.CRON_SECRET) {
+    return res.status(500).json({ success: false, error: "No bootstrap secret configured" });
+  }
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({ success: false, error: "Invalid bootstrap secret" });
+  }
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ success: false, error: "email is required" });
+  }
+
+  try {
+    const result = await reconcileUserDocsForEmail(email, { deleteOrphans: deleteOrphans === true });
+    res.json({
+      success: true,
+      ...result,
+      message:
+        result.duplicateDocIds.length > 0
+          ? `Merged profile onto users/${result.canonicalUid}. Duplicate doc IDs: ${result.duplicateDocIds.join(", ")}`
+          : `Profile OK at users/${result.canonicalUid} (no duplicates found).`,
+    });
+  } catch (err: any) {
+    logger.error({ message: "Failed to repair user by email", error: err.message });
+    const status = err.code === "auth/user-not-found" ? 404 : 500;
+    res.status(status).json({ success: false, error: err.message || "Repair failed" });
   }
 });

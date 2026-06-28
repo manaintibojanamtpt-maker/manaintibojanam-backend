@@ -82,6 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (snap.exists()) {
         const data = snap.data() as UserProfile;
+        if (data.userId && data.userId !== user.uid) {
+          console.warn(
+            `[Auth] users/${user.uid} has mismatched userId field (${data.userId}). App uses document ID; run repair-user-by-email if login fails.`,
+          );
+        }
         const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
         if (ownedIds.length > 0) {
           setUserProfile({ userId: snap.id, ...data, ownedTenantIds: ownedIds, role: data.role || 'owner' } as UserProfile);
