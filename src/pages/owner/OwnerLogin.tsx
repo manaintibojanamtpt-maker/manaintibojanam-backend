@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { getOwnerDashboardPath, getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
 import { EnvironmentConfig } from '../../config/environment';
 
 const GoogleIcon = () => (
@@ -26,31 +26,52 @@ const OwnerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const redirectChecked = useRef(false);
   const navigate = useNavigate();
   const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
 
-  if (authLoading || profileLoading) {
+  // Already signed-in owners: one stable redirect (setup or dashboard), no render-time bounce.
+  useEffect(() => {
+    if (authLoading || profileLoading || loading || redirecting || redirectChecked.current) return;
+    if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) === 0) return;
+
+    redirectChecked.current = true;
+    setRedirecting(true);
+    void getOwnerPostAuthPath(currentUser.uid, currentUser.email).then((path) => {
+      navigate(path, { replace: true });
+    });
+  }, [
+    authLoading,
+    profileLoading,
+    loading,
+    redirecting,
+    currentUser,
+    userProfile?.ownedTenantIds,
+    navigate,
+  ]);
+
+  if (authLoading || profileLoading || redirecting) {
     return (
-      <div className="min-h-[100dvh] bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        {redirecting && <p className="text-sm text-white/60">Taking you to your store…</p>}
       </div>
     );
   }
 
-  if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
-    return <Navigate to={getOwnerDashboardPath()} />;
-  }
-
   const completeOwnerLogin = async (uid: string, email: string | null) => {
+    setRedirecting(true);
     const tenantIds = await waitForOwnerTenantIds(uid, refreshProfile, { email });
     if (tenantIds.length > 0) {
       toast.success('Welcome back!');
       const path = await getOwnerPostAuthPath(uid, email);
-      navigate(path);
+      navigate(path, { replace: true });
       return;
     }
+    setRedirecting(false);
     toast.error('No store found for this account. Use the same sign-in method you used when registering.');
   };
 

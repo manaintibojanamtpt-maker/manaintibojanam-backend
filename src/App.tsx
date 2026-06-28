@@ -2,7 +2,7 @@ import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
-import { resolveOwnerTenantIds } from './lib/ownerAccess';
+import { waitForOwnerTenantIds } from './lib/ownerAccess';
 
 import { useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
@@ -186,19 +186,19 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, loading, profileLoading, refreshProfile } = useAuth();
   const [repairing, setRepairing] = React.useState(false);
   const [repairAttempted, setRepairAttempted] = React.useState(false);
+  const [repairedTenantIds, setRepairedTenantIds] = React.useState<string[]>([]);
 
   const ownedTenants = userProfile?.ownedTenantIds ?? [];
+  const effectiveOwnedTenants = ownedTenants.length > 0 ? ownedTenants : repairedTenantIds;
 
   React.useEffect(() => {
     if (!currentUser || loading || profileLoading || ownedTenants.length > 0 || repairAttempted) return;
 
     setRepairAttempted(true);
     setRepairing(true);
-    void resolveOwnerTenantIds(currentUser.uid, currentUser.email)
-      .then(async (ids) => {
-        if (ids.length > 0) {
-          await refreshProfile();
-        }
+    void waitForOwnerTenantIds(currentUser.uid, refreshProfile, { email: currentUser.email, maxAttempts: 12 })
+      .then((ids) => {
+        if (ids.length > 0) setRepairedTenantIds(ids);
       })
       .finally(() => setRepairing(false));
   }, [currentUser, loading, profileLoading, ownedTenants.length, repairAttempted, refreshProfile]);
@@ -241,10 +241,8 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  const ownedTenantsAfterRepair = userProfile?.ownedTenantIds ?? [];
-
   // Owner portal is only for users who own a kitchen — never for platform admin impersonation.
-  if (ownedTenantsAfterRepair.length === 0) {
+  if (effectiveOwnedTenants.length === 0) {
     if (userProfile.role === 'superadmin') {
       return <Navigate to="/super-admin" replace />;
     }

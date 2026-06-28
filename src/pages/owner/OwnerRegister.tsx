@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
@@ -14,6 +14,7 @@ import { onboardingPlanMessaging } from '../../config/pricing';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
+import { getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
 
 const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
 
@@ -131,16 +132,51 @@ const OwnerRegister = () => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = React.useRef<ReCAPTCHA>(null);
+  const redirectChecked = useRef(false);
   const navigate = useNavigate();
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
   const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
-  // If already logged in, redirect to dashboard
-  if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
-    return <Navigate to="/owner/dashboard" />;
+  // Already registered owners: route once to setup or dashboard (never bounce mid-provision).
+  useEffect(() => {
+    if (authLoading || profileLoading || provisioning || loading || redirectChecked.current) return;
+    if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) === 0) return;
+
+    redirectChecked.current = true;
+    void getOwnerPostAuthPath(currentUser.uid, currentUser.email).then((path) => {
+      navigate(path, { replace: true });
+    });
+  }, [
+    authLoading,
+    profileLoading,
+    provisioning,
+    loading,
+    currentUser,
+    userProfile?.ownedTenantIds,
+    navigate,
+  ]);
+
+  const finishOwnerRegistration = async (uid: string, ownerEmail: string | null, tenantSlug: string) => {
+    void requestOwnerWelcomeEmail(tenantSlug);
+    await waitForOwnerTenantIds(uid, refreshProfile, { email: ownerEmail });
+    const path = await getOwnerPostAuthPath(uid, ownerEmail);
+    toast.success('Welcome!');
+    navigate(path, { replace: true });
+  };
+
+  if (authLoading || profileLoading || provisioning) {
+    return (
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6">
+        <Loader2 className="w-10 h-10 animate-spin text-[#FF6B00]" />
+        <p className="text-sm text-white/60 text-center">
+          {provisioning ? 'Setting up your kitchen…' : 'Loading…'}
+        </p>
+      </div>
+    );
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -194,20 +230,19 @@ const OwnerRegister = () => {
         mobileNumber,
       });
 
-      void requestOwnerWelcomeEmail(tenantSlug);
-
-      toast.success('Account created successfully!');
-      navigate('/owner/setup');
+      setProvisioning(true);
+      await finishOwnerRegistration(userCredential.user.uid, userCredential.user.email, tenantSlug);
     } catch (error: any) {
       console.error('Owner Register Error:', error);
       toast.error(error.message || 'Failed to create account.');
     } finally {
       setLoading(false);
+      setProvisioning(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    if (loading) return;
+    if (loading || provisioning) return;
     if (!restaurantName.trim()) {
       toast.error('Enter your restaurant name above, then continue with Google.');
       return;
@@ -218,6 +253,7 @@ const OwnerRegister = () => {
     }
 
     setLoading(true);
+    setProvisioning(true);
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -231,16 +267,14 @@ const OwnerRegister = () => {
         mobileNumber,
       });
 
-      void requestOwnerWelcomeEmail(tenantSlug);
-
-      toast.success('Welcome!');
-      navigate('/owner/setup');
+      await finishOwnerRegistration(user.uid, user.email, tenantSlug);
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         toast.error(error.message || 'Google signup failed');
       }
     } finally {
       setLoading(false);
+      setProvisioning(false);
     }
   };
 

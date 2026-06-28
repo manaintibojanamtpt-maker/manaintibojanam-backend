@@ -21,6 +21,29 @@ export const saveUserIfNotExists = async (user: {
 
     if (!userDoc.exists()) {
       const referralCode = generateReferralCode(user.displayName || 'USER');
+      const userRef = doc(getDb(), 'users', user.uid);
+
+      await setDoc(
+        userRef,
+        {
+          userId: user.uid,
+          tenantId: 'mana-inti',
+          name: user.displayName || '',
+          phone: user.phone || '',
+          email: user.email || '',
+          address: '',
+          referralCode,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      const createdSnap = await getDoc(userRef);
+      const createdData = createdSnap.data() || {};
+      if (!createdData.role) {
+        await updateDoc(userRef, { role: 'user' });
+      }
 
       const newUser: UserProfile = {
         userId: user.uid,
@@ -29,13 +52,11 @@ export const saveUserIfNotExists = async (user: {
         phone: user.phone || '',
         email: user.email || '',
         address: '',
-        role: 'user',
+        role: (createdData.role as UserProfile['role']) || 'user',
         referralCode,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-
-      await setDoc(doc(getDb(), 'users', user.uid), newUser);
 
       try {
         await setDoc(doc(getDb(), 'referrals', user.uid), {

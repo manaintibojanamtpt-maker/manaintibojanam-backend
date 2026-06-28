@@ -20,6 +20,29 @@ import { UserProfile } from '../types';
 import { saveUserIfNotExists } from '../services/api';
 import { resolveOwnerTenantIds } from '../lib/ownerAccess';
 
+/** Keep owner tenant ids stable when Firestore snapshots arrive without them. */
+function mergeProfileFromSnapshot(
+  uid: string,
+  data: Record<string, unknown>,
+  prev: UserProfile | null,
+): UserProfile {
+  const fromSnap = { userId: uid, ...data } as UserProfile;
+  const snapOwned = Array.isArray(fromSnap.ownedTenantIds)
+    ? fromSnap.ownedTenantIds.filter(Boolean)
+    : [];
+  const prevOwned =
+    prev?.userId === uid && Array.isArray(prev.ownedTenantIds)
+      ? prev.ownedTenantIds.filter(Boolean)
+      : [];
+  const ownedTenantIds = snapOwned.length > 0 ? snapOwned : prevOwned;
+  const role =
+    ownedTenantIds.length > 0 && (!fromSnap.role || fromSnap.role === 'user')
+      ? 'owner'
+      : fromSnap.role;
+
+  return { ...fromSnap, ownedTenantIds, role };
+}
+
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
@@ -109,6 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfileLoading(true);
 
       void (async () => {
+        let profileBootstrapDone = false;
+
         try {
           const { getDb } = await import('../lib/firebase-db');
           const { doc, onSnapshot } = await import('firebase/firestore');
@@ -118,13 +143,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             userRef,
             (docSnap) => {
               if (docSnap.exists()) {
-                setUserProfile({ userId: docSnap.id, ...docSnap.data() } as UserProfile);
+                setUserProfile((prev) =>
+                  mergeProfileFromSnapshot(user.uid, docSnap.data(), prev),
+                );
               }
-              setProfileLoading(false);
+              if (profileBootstrapDone) {
+                setProfileLoading(false);
+              }
             },
             (err) => {
               console.warn('Real-time profile sync blocked or failed.', err);
-              setProfileLoading(false);
+              if (profileBootstrapDone) {
+                setProfileLoading(false);
+              }
             },
           );
 
@@ -142,18 +173,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ]);
 
             const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
+            const elevatedRole =
+              ownedIds.length > 0 && (!profile.role || profile.role === 'user')
+                ? 'owner'
+                : profile.role;
             if (ownedIds.length > 0) {
-              setUserProfile({ ...profile, ownedTenantIds: ownedIds, role: profile.role || 'owner' } as UserProfile);
+              setUserProfile({
+                ...profile,
+                ownedTenantIds: ownedIds,
+                role: elevatedRole || 'owner',
+              } as UserProfile);
             } else {
-              setUserProfile(profile as UserProfile);
+              setUserProfile({ ...profile, role: elevatedRole || profile.role } as UserProfile);
             }
-            setProfileLoading(false);
           } catch (err) {
             console.error('Auth Profile Error:', err);
             await refreshProfile();
+          } finally {
+            profileBootstrapDone = true;
+            setProfileLoading(false);
           }
         } catch (err) {
           console.error('Auth Profile Sync Error:', err);
+          profileBootstrapDone = true;
           setProfileLoading(false);
         }
       })();
