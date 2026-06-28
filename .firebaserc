@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "bhojanos2"
+    "default": "bhojanos2",
+    "bhojanos-prod": "bhojanos-prod"
   },
   "targets": {
     "mana-inti-bojanam-pune-492610": {
