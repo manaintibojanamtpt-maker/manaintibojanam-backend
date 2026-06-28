@@ -1,13 +1,12 @@
-import { collection, doc, getDoc, getDocFromServer, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocFromServer, getDocs, query, where } from 'firebase/firestore';
 import { getDb } from './firebase-db';
+import { syncOwnerTenantsViaApi } from './ownerProvisioning';
 
-/** Ensure the signed-in user has ownedTenantIds populated from their tenant docs. */
-export async function resolveOwnerTenantIds(uid: string, email?: string | null): Promise<string[]> {
+/** Read ownedTenantIds from Firestore (no client writes — rules block role/ownedTenantIds updates). */
+async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
   const db = getDb();
-  const userRef = doc(db, 'users', uid);
-
   try {
-    const userSnap = await getDocFromServer(userRef).catch(() => getDoc(userRef));
+    const userSnap = await getDocFromServer(doc(db, 'users', uid)).catch(() => getDoc(doc(db, 'users', uid)));
     if (userSnap.exists()) {
       const owned = userSnap.data()?.ownedTenantIds;
       if (Array.isArray(owned) && owned.length > 0) {
@@ -21,43 +20,41 @@ export async function resolveOwnerTenantIds(uid: string, email?: string | null):
   try {
     const tenantSnap = await getDocs(query(collection(db, 'tenants'), where('ownerId', '==', uid)));
     const tenantIds = tenantSnap.docs.map((d) => d.id);
-    if (tenantIds.length > 0) {
-      await setDoc(
-        userRef,
-        {
-          ownedTenantIds: tenantIds,
-          role: 'owner',
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-      return tenantIds;
-    }
+    if (tenantIds.length > 0) return tenantIds;
   } catch (error) {
     console.warn('resolveOwnerTenantIds: ownerId lookup failed', error);
   }
 
+  return [];
+}
+
+/** Ensure the signed-in user has ownedTenantIds populated (server sync when needed). */
+export async function resolveOwnerTenantIds(uid: string, email?: string | null): Promise<string[]> {
+  const fromUserDoc = await readOwnedTenantIdsFromFirestore(uid);
+  if (fromUserDoc.length > 0) return fromUserDoc;
+
+  try {
+    const synced = await syncOwnerTenantsViaApi();
+    if (synced.length > 0) return synced;
+  } catch (error) {
+    console.warn('resolveOwnerTenantIds: server sync failed', error);
+  }
+
+  // Fallback: email match may exist on tenant but ownerId not linked yet
   if (email) {
     try {
-      const emailSnap = await getDocs(query(collection(db, 'tenants'), where('kyc.email', '==', email)));
-      const tenantIds = emailSnap.docs.map((d) => d.id);
-      if (tenantIds.length > 0) {
-        await Promise.all(
-          tenantIds.map((tenantId) =>
-            setDoc(doc(db, 'tenants', tenantId), { ownerId: uid }, { merge: true }),
-          ),
-        );
-        await setDoc(
-          userRef,
-          {
-            ownedTenantIds: tenantIds,
-            role: 'owner',
-            email,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        );
-        return tenantIds;
+      const db = getDb();
+      const emailSnap = await getDocs(
+        query(collection(db, 'tenants'), where('kyc.email', '==', email.trim().toLowerCase())),
+      );
+      if (emailSnap.docs.length > 0) {
+        try {
+          const synced = await syncOwnerTenantsViaApi();
+          if (synced.length > 0) return synced;
+        } catch (retryErr) {
+          console.warn('resolveOwnerTenantIds: retry sync failed', retryErr);
+        }
+        return emailSnap.docs.map((d) => d.id);
       }
     } catch (error) {
       console.warn('resolveOwnerTenantIds: email lookup failed', error);

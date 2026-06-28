@@ -2393,6 +2393,192 @@ app.post("/api/register-owner-check", strictLimiter, async (req, res) => {
   }
 });
 
+// ================= OWNER PROVISIONING (Admin SDK — bypasses client Firestore rules) =================
+
+const OWNER_RESERVED_SLUGS = [
+  'dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway',
+  'admin', 'support', 'api', 'system', 'bhojanos',
+];
+
+const slugFromRestaurantName = (restaurantName: string): string =>
+  restaurantName
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+const isReservedOwnerSlug = (slug: string): boolean =>
+  OWNER_RESERVED_SLUGS.some((reserved) => slug.startsWith(reserved));
+
+/** Link tenant docs to user via Admin SDK (client cannot write ownedTenantIds/role). */
+async function syncOwnerTenantsForUser(
+  userId: string,
+  email?: string | null,
+): Promise<string[]> {
+  const userRef = db.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+  const existingOwned: string[] = userDoc.exists ? userDoc.data()?.ownedTenantIds || [] : [];
+  if (existingOwned.length > 0) {
+    return existingOwned.filter(Boolean);
+  }
+
+  const byOwnerSnap = await db.collection('tenants').where('ownerId', '==', userId).get();
+  let tenantIds = byOwnerSnap.docs.map((d) => d.id);
+
+  const normalizedEmail = (email || userDoc.data()?.email || '').trim().toLowerCase();
+  if (tenantIds.length === 0 && normalizedEmail) {
+    const byEmailSnap = await db.collection('tenants').where('kyc.email', '==', normalizedEmail).get();
+    tenantIds = byEmailSnap.docs.map((d) => d.id);
+    await Promise.all(
+      tenantIds.map((tenantId) =>
+        db.collection('tenants').doc(tenantId).set({ ownerId: userId }, { merge: true }),
+      ),
+    );
+  }
+
+  if (tenantIds.length > 0) {
+    await userRef.set(
+      {
+        ownedTenantIds: tenantIds,
+        role: 'owner',
+        ...(normalizedEmail ? { email: normalizedEmail } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
+
+  return tenantIds;
+}
+
+app.post('/api/owner/sync-tenants', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const ownedTenantIds = await syncOwnerTenantsForUser(userId, req.user.email);
+    res.json({ success: true, ownedTenantIds });
+  } catch (err: any) {
+    logger.error({ message: 'Owner tenant sync failed', err: err.message, uid: req.user?.uid });
+    res.status(500).json({ success: false, error: err.message || 'Failed to sync owner tenants' });
+  }
+});
+
+app.post('/api/owner/provision', strictLimiter, verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const { name, email, restaurantName, mobileNumber } = req.body || {};
+
+    if (!restaurantName || typeof restaurantName !== 'string') {
+      return res.status(400).json({ success: false, error: 'Restaurant name is required.' });
+    }
+
+    const slug = slugFromRestaurantName(restaurantName);
+    if (!slug) {
+      return res.status(400).json({ success: false, error: 'Please enter a valid restaurant name.' });
+    }
+    if (isReservedOwnerSlug(slug)) {
+      return res.status(400).json({ success: false, error: 'This store name is reserved or unavailable. Please choose another.' });
+    }
+
+    const ownerEmail = (email || req.user.email || '').trim().toLowerCase();
+    const ownerName = (name || req.user.name || 'Owner').trim();
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const existingOwned: string[] = userDoc.exists ? userDoc.data()?.ownedTenantIds || [] : [];
+    if (existingOwned.length > 0) {
+      return res.json({ success: true, tenantSlug: existingOwned[0], alreadyProvisioned: true });
+    }
+
+    const tenantRef = db.collection('tenants').doc(slug);
+    const tenantDoc = await tenantRef.get();
+    if (tenantDoc.exists) {
+      const existingOwnerId = tenantDoc.data()?.ownerId;
+      if (existingOwnerId && existingOwnerId !== userId) {
+        return res.status(409).json({ success: false, error: 'This store name is already taken. Please choose another.' });
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    await userRef.set(
+      {
+        userId,
+        name: ownerName,
+        email: ownerEmail,
+        role: 'owner',
+        ownedTenantIds: [slug],
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(userDoc.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+
+    await tenantRef.set(
+      {
+        name: restaurantName.trim(),
+        slug,
+        ownerId: userId,
+        status: 'draft',
+        storeStatus: 'draft',
+        subscription: {
+          planId: 'starter',
+          status: 'active',
+          startDate: nowIso,
+          trialUsed: false,
+        },
+        legal: { status: 'pending' },
+        fssai: {
+          verificationStatus: 'not_submitted',
+          registrationDate: nowIso,
+        },
+        kyc: {
+          ownerName,
+          email: ownerEmail,
+          emailVerificationStatus: 'pending',
+          mobileNumber: mobileNumber || '',
+          mobileVerificationStatus: 'pending',
+          verificationLevel: 0,
+        },
+        onboardingStatus: {
+          isComplete: false,
+          currentStep: 1,
+          migrated: false,
+        },
+        paymentConfig: {
+          defaultProvider: 'cod',
+          providers: {
+            cod: { enabled: true },
+            razorpay: { enabled: false },
+          },
+        },
+        pricingConfig: {
+          gstPercent: 0,
+          packingFee: 0,
+        },
+        deliveryConfig: {
+          enabled: true,
+          freeRadius: 2,
+          paidRadius: 5,
+          maxRadius: 10,
+          baseFee: 0,
+          perKmCharge: 0,
+          prepTime: 20,
+          feesConfigured: false,
+        },
+        settings: { theme: 'orange' },
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(tenantDoc.exists ? {} : { createdAt: nowIso }),
+      },
+      { merge: true },
+    );
+
+    logger.info({ message: 'Owner store provisioned', userId, tenantSlug: slug });
+    res.json({ success: true, tenantSlug: slug });
+  } catch (err: any) {
+    logger.error({ message: 'Owner provision failed', err: err.message, uid: req.user?.uid });
+    res.status(500).json({ success: false, error: err.message || 'Failed to provision store' });
+  }
+});
+
 app.post("/api/owner/welcome-email", strictLimiter, verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const userId = req.user.uid;

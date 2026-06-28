@@ -6,8 +6,6 @@ import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from '
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { getDb } from '../../lib/firebase-db';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { EnvironmentConfig } from '../../config/environment';
 import { onboardingPlanMessaging } from '../../config/pricing';
@@ -15,101 +13,12 @@ import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { provisionOwnerStore } from '../../lib/ownerProvisioning';
 
 const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
 
 const slugFromRestaurantName = (restaurantName: string) =>
   restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-const provisionOwnerTenant = async (
-  uid: string,
-  params: { name: string; email: string; restaurantName: string; mobileNumber?: string }
-): Promise<string> => {
-  const slug = slugFromRestaurantName(params.restaurantName);
-  if (!slug) throw new Error('Please enter a valid restaurant name.');
-  if (RESERVED_SLUGS.some((reserved) => slug.startsWith(reserved))) {
-    throw new Error('This store name is reserved or unavailable. Please choose another.');
-  }
-
-  const db = getDb();
-  const userRef = doc(db, 'users', uid);
-  const existingUser = await getDoc(userRef);
-  if (existingUser.exists() && (existingUser.data()?.ownedTenantIds?.length ?? 0) > 0) {
-    return existingUser.data()!.ownedTenantIds[0];
-  }
-
-  const tenantRef = doc(db, 'tenants', slug);
-  const existingTenant = await getDoc(tenantRef);
-  if (existingTenant.exists() && existingTenant.data()?.ownerId !== uid) {
-    throw new Error('This store name is already taken. Please choose another.');
-  }
-
-  await setDoc(userRef, {
-    name: params.name,
-    email: params.email,
-    role: 'owner',
-    ownedTenantIds: [slug],
-    updatedAt: new Date(),
-    ...(existingUser.exists() ? {} : { createdAt: new Date() }),
-  }, { merge: true });
-
-  await setDoc(tenantRef, {
-    name: params.restaurantName,
-    slug,
-    ownerId: uid,
-    status: 'draft',
-    storeStatus: 'draft',
-    subscription: {
-      planId: 'starter',
-      status: 'active',
-      startDate: new Date().toISOString(),
-      trialUsed: false,
-    },
-    legal: { status: 'pending' },
-    fssai: {
-      verificationStatus: 'not_submitted',
-      registrationDate: new Date().toISOString(),
-    },
-    kyc: {
-      ownerName: params.name,
-      email: params.email,
-      emailVerificationStatus: 'pending',
-      mobileNumber: params.mobileNumber || '',
-      mobileVerificationStatus: 'pending',
-      verificationLevel: 0,
-    },
-    onboardingStatus: {
-      isComplete: false,
-      currentStep: 1,
-      migrated: false,
-    },
-    paymentConfig: {
-      defaultProvider: 'cod',
-      providers: {
-        cod: { enabled: true },
-        razorpay: { enabled: false },
-      },
-    },
-    pricingConfig: {
-      gstPercent: 0,
-      packingFee: 0,
-    },
-    deliveryConfig: {
-      enabled: true,
-      freeRadius: 2,
-      paidRadius: 5,
-      maxRadius: 10,
-      baseFee: 0,
-      perKmCharge: 0,
-      prepTime: 20,
-      feesConfigured: false,
-    },
-    createdAt: new Date().toISOString(),
-    settings: { theme: 'orange' },
-  }, { merge: true });
-
-  return slug;
-};
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -220,10 +129,7 @@ const OwnerRegister = () => {
         console.error("Email verification send failed", err);
       }
       
-      // Create user doc
-      const db = getDb();
-      
-      const tenantSlug = await provisionOwnerTenant(userCredential.user.uid, {
+      const tenantSlug = await provisionOwnerStore({
         name,
         email,
         restaurantName,
@@ -260,7 +166,7 @@ const OwnerRegister = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      const tenantSlug = await provisionOwnerTenant(user.uid, {
+      const tenantSlug = await provisionOwnerStore({
         name: name.trim() || user.displayName || 'Owner',
         email: user.email || email,
         restaurantName: restaurantName.trim(),
