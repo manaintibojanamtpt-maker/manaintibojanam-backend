@@ -4600,3 +4600,57 @@ app.post("/api/admin/grant-claim", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+/** Grant superadmin role in Firestore (client cannot write role field). Lookup by uid or email. */
+app.post("/api/platform/grant-superadmin", async (req, res) => {
+  const { secret, uid, email } = req.body || {};
+  if (!process.env.CRON_SECRET) {
+    return res.status(500).json({ success: false, error: "No bootstrap secret configured" });
+  }
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({ success: false, error: "Invalid bootstrap secret" });
+  }
+
+  try {
+    const authAdmin = getAdminAuth(appAdmin);
+    let targetUid = typeof uid === "string" ? uid.trim() : "";
+    let targetEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (!targetUid && targetEmail) {
+      const userRecord = await authAdmin.getUserByEmail(targetEmail);
+      targetUid = userRecord.uid;
+      targetEmail = userRecord.email || targetEmail;
+    }
+
+    if (!targetUid) {
+      return res.status(400).json({ success: false, error: "Provide uid or email of an existing Firebase Auth user" });
+    }
+
+    const userRecord = await authAdmin.getUser(targetUid);
+    targetEmail = targetEmail || userRecord.email || "";
+
+    await db.collection("users").doc(targetUid).set(
+      {
+        role: "superadmin",
+        email: targetEmail,
+        name: userRecord.displayName || targetEmail.split("@")[0] || "Super Admin",
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+
+    await authAdmin.setCustomUserClaims(targetUid, { admin: true });
+
+    logger.info({ message: "Superadmin granted", uid: targetUid, email: targetEmail });
+    res.json({
+      success: true,
+      uid: targetUid,
+      email: targetEmail,
+      message: "Superadmin role granted. Sign out and sign in again at /super-admin/login.",
+    });
+  } catch (err: any) {
+    logger.error({ message: "Failed to grant superadmin", error: err.message });
+    const status = err.code === "auth/user-not-found" ? 404 : 500;
+    res.status(status).json({ success: false, error: err.message || "Failed to grant superadmin" });
+  }
+});

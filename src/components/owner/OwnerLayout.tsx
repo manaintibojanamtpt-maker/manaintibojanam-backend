@@ -17,7 +17,7 @@ import { needsStoreSetup } from '../../lib/storeSetupProgress';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
-  const { tenantInfo, tenantSlug } = useTenant();
+  const { tenantInfo, tenantSlug, tenantId: contextTenantId } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount, soundEnabled, showSoundPrompt, setSoundEnabled, enableSoundAlerts } = useOrderAlerts();
   const navigate = useNavigate();
@@ -67,7 +67,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const mobileBarItems = navItemsWithSetup.filter((item) => item.mobileBar);
 
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const tenantId = contextTenantId || userProfile?.ownedTenantIds?.[0];
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
   const customerPreviewUrl = storeUrl ? buildCustomerPreviewStoreUrl(storeUrl) : '';
@@ -216,12 +216,13 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
             />
             <m.aside
               className="fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-sm flex-col border-r border-white/10 bg-[#0f0f11] shadow-2xl lg:hidden"
+              style={{ paddingTop: 'env(safe-area-inset-top)' }}
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
             >
-              <div className="flex h-16 items-center justify-between border-b border-white/5 px-4">
+              <div className="flex min-h-[4rem] items-center justify-between border-b border-white/5 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-orange-500 shadow-lg shadow-red-500/20">
                     <Store size={18} className="text-white" />
@@ -321,8 +322,8 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         
         {/* Topbar */}
         <header 
-          style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
-          className="pb-3 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0 relative z-20"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+          className="pb-3 px-3 sm:px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md flex-shrink-0 relative z-20 min-h-[3.5rem]"
         >
           <div className="flex min-w-0 items-center gap-2 text-white/50 text-sm font-bold">
             <button

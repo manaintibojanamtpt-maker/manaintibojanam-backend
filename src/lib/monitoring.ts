@@ -116,17 +116,10 @@ import { PlatformTierConfig } from "../config/platformTier";
 export const initializeMonitoring = () => {
   if (typeof window === "undefined") return;
 
-  if (!PlatformTierConfig.enableClientTelemetry()) {
-    console.info("[Monitoring] Free tier: client Firestore telemetry disabled");
-    return;
-  }
-
-  // Phase 14: Flush queue on load, network recovery, and interval
   flushMonitoringQueue();
   window.addEventListener('online', flushMonitoringQueue);
-  setInterval(flushMonitoringQueue, 300000); // 5 minutes
 
-  // Phase 2: Global Runtime Monitoring
+  // Always capture runtime failures — free tier previously skipped all monitoring.
   window.addEventListener('error', (event) => {
     logIncident('system_errors', {
       ...getCommonMetadata(),
@@ -144,6 +137,17 @@ export const initializeMonitoring = () => {
       stackTrace: event.reason?.stack || 'No stack trace'
     });
   });
+
+  if (!PlatformTierConfig.enableClientTelemetry()) {
+    console.info("[Monitoring] Free tier: extended telemetry disabled (basic error capture active)");
+    setInterval(flushMonitoringQueue, 300000);
+    return;
+  }
+
+  setInterval(flushMonitoringQueue, 300000); // 5 minutes
+
+  // Phase 2: Global Runtime Monitoring — extended tier only below
+  // (error handlers registered above for all tiers)
 
   // Phase 3: API Monitoring
   const originalFetch = window.fetch;

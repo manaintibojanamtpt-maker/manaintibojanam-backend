@@ -39,6 +39,7 @@ import {
   getDashboardPriorityActions,
 } from '../../lib/dashboardPriorityActions';
 import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -46,11 +47,12 @@ const SparklineChart = React.lazy(() => import('../../components/owner/widgets/S
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
+  const { userProfile, profileLoading } = useAuth();
   const { flags } = useFeatureFlags();
-  const { tenantInfo: contextTenant, tenantSlug } = useTenant();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
-  const tenantName = userProfile?.name || 'Kitchen';
+  const { tenantInfo: contextTenant, tenantSlug, loading: tenantContextLoading } = useTenant();
+  const resolvedTenantId = useOwnerTenantId();
+  const tenantId = resolvedTenantId || userProfile?.ownedTenantIds?.[0] || null;
+  const tenantName = userProfile?.name || contextTenant?.name || 'Kitchen';
 
   const [tenantInfo, setTenantInfo] = React.useState<any>(null);
   const [orders, setOrders] = React.useState<Order[]>([]);
@@ -161,44 +163,77 @@ const OwnerDashboard = () => {
   }, [tenantInfo, flags.onboardingWizardV2]);
 
   React.useEffect(() => {
+    if (profileLoading || tenantContextLoading) return;
+
     if (!tenantId) {
       setLoading(false);
       return;
     }
+
     setLoading(true);
+    let settled = false;
+    const finishLoading = () => {
+      if (settled) return;
+      settled = true;
+      setLoading(false);
+    };
+    const loadTimeout = window.setTimeout(finishLoading, 10_000);
 
     const ordersQuery = query(collection(getDb(), 'orders'), where('tenantId', '==', tenantId));
-    const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
-      let fetchedOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
-      fetchedOrders = fetchedOrders.filter(o => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''));
-      setOrders(fetchedOrders);
-      setLoading(false);
-    });
+    const unsubscribeOrders = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        let fetchedOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
+        fetchedOrders = fetchedOrders.filter(
+          (o) => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''),
+        );
+        setOrders(fetchedOrders);
+        finishLoading();
+      },
+      (error) => {
+        console.error('Owner dashboard orders listener failed:', error);
+        finishLoading();
+      },
+    );
 
-    getTenantAnalytics(tenantId).then(data => {
-      if (!data) backfillAnalytics(tenantId).then(newData => setAnalytics(newData as any));
+    getTenantAnalytics(tenantId).then((data) => {
+      if (!data) backfillAnalytics(tenantId).then((newData) => setAnalytics(newData as any));
       else setAnalytics(data);
+    }).catch((error) => {
+      console.error('Owner dashboard analytics failed:', error);
     });
 
-    getCustomerSegmentsSummary(tenantId).then(setSegments);
+    getCustomerSegmentsSummary(tenantId).then(setSegments).catch((error) => {
+      console.error('Owner dashboard segments failed:', error);
+    });
 
     const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantId));
-    const unsubscribeMenu = onSnapshot(menuQuery, (snapshot) => {
-      const alerts: any[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.stockCount !== undefined && data.lowStockThreshold !== undefined && data.stockCount <= data.lowStockThreshold) {
-          alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
-        }
-      });
-      setMenuCount(snapshot.size);
-      setInventoryAlerts(alerts);
-    });
+    const unsubscribeMenu = onSnapshot(
+      menuQuery,
+      (snapshot) => {
+        const alerts: any[] = [];
+        snapshot.forEach((menuDoc) => {
+          const data = menuDoc.data();
+          if (
+            data.stockCount !== undefined &&
+            data.lowStockThreshold !== undefined &&
+            data.stockCount <= data.lowStockThreshold
+          ) {
+            alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
+          }
+        });
+        setMenuCount(snapshot.size);
+        setInventoryAlerts(alerts);
+      },
+      (error) => {
+        console.error('Owner dashboard menu listener failed:', error);
+      },
+    );
 
     const fetchLatestRelease = async () => {
       try {
         const snap = await getDocs(query(collection(getDb(), 'release_notes'), where('isPublished', '==', true)));
-        const releases = snap.docs.map(d => ({ id: d.id, ...d.data() } as ReleaseNote));
+        const releases = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ReleaseNote));
         releases.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
         if (releases.length > 0) {
           setLatestRelease(releases[0]);
@@ -207,10 +242,14 @@ const OwnerDashboard = () => {
         console.error('Failed to fetch release note', e);
       }
     };
-    fetchLatestRelease();
+    void fetchLatestRelease();
 
-    return () => { unsubscribeOrders(); unsubscribeMenu(); };
-  }, [tenantId]);
+    return () => {
+      window.clearTimeout(loadTimeout);
+      unsubscribeOrders();
+      unsubscribeMenu();
+    };
+  }, [tenantId, profileLoading, tenantContextLoading]);
 
   React.useEffect(() => {
     if (tenantInfo) {
@@ -236,8 +275,38 @@ const OwnerDashboard = () => {
     { time: '1h ago', event: 'Dashboard ready for dinner service.', icon: <Power size={12}/> },
   ];
 
-  if (loading) {
-    return <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">Loading your dashboard…</div>;
+  if (profileLoading || tenantContextLoading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />
+        Loading your dashboard…
+      </div>
+    );
+  }
+
+  if (!tenantId) {
+    return (
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
+        <p className="text-lg font-bold text-white">No kitchen linked to this account</p>
+        <p className="mt-2 text-sm text-white/60">Finish owner registration or sign in with the account that owns your store.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/owner/register')}
+          className="mt-6 rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white"
+        >
+          Set up my kitchen
+        </button>
+      </div>
+    );
+  }
+
+  if (loading && !tenantInfo && !contextTenant) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />
+        Loading your dashboard…
+      </div>
+    );
   }
 
   // --- Sandbox Mode ---
