@@ -9,6 +9,7 @@ import logo from '../assets/logo.webp';
 import { useAuth } from '../context/AuthContext';
 import { logIncident } from '../lib/monitoring';
 import { EnvironmentConfig } from '../config/environment';
+import SoftButton from '../components/ui/SoftButton';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -136,11 +137,7 @@ const AdminLogin: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-3xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
-            >
+            <SoftButton type="submit" tone="danger" fullWidth disabled={loading}>
               {loading ? (
                 <Loader2 className="animate-spin" />
               ) : (
@@ -149,7 +146,7 @@ const AdminLogin: React.FC = () => {
                   <ArrowRight size={18} />
                 </>
               )}
-            </button>
+            </SoftButton>
           </form>
 
           <div className="mt-8 pt-8 border-t border-gray-50 dark:border-gray-800 text-center">

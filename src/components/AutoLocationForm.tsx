@@ -3,6 +3,9 @@ import { MapPin, X, Check, Loader2, Navigation, AlertCircle, Search } from 'luci
 import { m, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Tenant } from '../types';
+import { computeDeliveryFee, calculateDeliveryDistanceKm } from '../lib/deliveryFee';
+
+export { computeDeliveryFee as getDeliveryFee, calculateDeliveryDistanceKm };
 
 interface LocationData {
   lat: number;
@@ -26,36 +29,6 @@ interface AutoLocationFormProps {
   tenant?: Tenant | null;
   title?: string;
 }
-
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371; 
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const distance = R * c; 
-  return distance * 1.2; 
-};
-
-export const getDeliveryFee = (distanceKm: number, tenant?: Tenant | null) => {
-  if (!tenant?.deliveryConfig) {
-    if (distanceKm <= 2) return 30;
-    if (distanceKm <= 5) return 50;
-    if (distanceKm <= 8) return 80;
-    return 100 + Math.ceil((distanceKm - 8) * 12);
-  }
-  
-  const config = tenant.deliveryConfig;
-  if (distanceKm <= config.freeRadius) return 0;
-  if (distanceKm <= config.paidRadius) return config.baseFee;
-  if (distanceKm > config.maxRadius) return -1; // Unserviceable
-  
-  const extraDistance = distanceKm - config.paidRadius;
-  return config.baseFee + Math.ceil(extraDistance * config.perKmCharge);
-};
 
 const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
   isOpen,
@@ -101,10 +74,10 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
     try {
       // Calculate Distance and Fee
       const dist = tenant?.location?.lat 
-        ? calculateDistance(tenant.location.lat, tenant.location.lng, lat, lng)
+        ? calculateDeliveryDistanceKm(tenant.location.lat, tenant.location.lng, lat, lng)
         : 0;
       
-      const fee = getDeliveryFee(dist, tenant);
+      const fee = computeDeliveryFee(dist, tenant?.deliveryConfig);
       
       setCoordinates({ lat, lng });
       setDistanceInfo({ distance: dist, fee });

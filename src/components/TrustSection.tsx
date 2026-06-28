@@ -7,16 +7,17 @@ import { CheckCircle2 } from 'lucide-react';
 
 interface TrustSectionProps {
   variant?: 'full' | 'strip';
+  className?: string;
 }
 
-export const TrustSection: React.FC<TrustSectionProps> = ({ variant = 'full' }) => {
+export const TrustSection: React.FC<TrustSectionProps> = ({ variant = 'full', className = '' }) => {
   if (variant === 'strip') {
     const stripItems = trustIndicators.slice(0, 4);
 
     return (
       <div className="border-y border-white/[0.06] bg-[#0A0A0A]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 text-center mb-5">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 text-center mb-4">
             Enterprise-grade platform foundations
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
@@ -33,7 +34,7 @@ export const TrustSection: React.FC<TrustSectionProps> = ({ variant = 'full' }) 
   }
 
   return (
-    <Section background="subtle">
+    <Section background="subtle" className={className}>
       <SectionHeader
         label="Security & Scale"
         title="Enterprise-Grade Reliability"

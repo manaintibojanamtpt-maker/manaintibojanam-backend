@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, MapPin } from 'lucide-react';
+import { Search, ShoppingCart, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useTenant } from '../context/TenantContext';
+import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import HeaderLocationDropdown from './HeaderLocationDropdown';
 
@@ -11,27 +12,30 @@ const StorefrontDesktopHeader = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount } = useCart();
-  const { currentUser } = useAuth();
-  const { tenantSlug, tenantInfo } = useTenant();
-  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
+  const { currentUser, userProfile } = useStorefrontAuth();
+  const { tenantSlug, tenantInfo, tenantId } = useTenant();
+  const { to, loginPath } = useStorefrontPath();
+  const ownsThisStore = Boolean(
+    userProfile?.ownedTenantIds?.some((id) => id === tenantId || id === tenantSlug),
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`${basePath}/menu?search=${encodeURIComponent(searchQuery)}`);
+      navigate(to(`/menu?search=${encodeURIComponent(searchQuery)}`));
     } else {
-      navigate(`${basePath}/menu`);
+      navigate(to('/menu'));
     }
   };
 
   return (
-    <header className="hidden xl:flex sticky top-0 z-50 w-full bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-white/5 shadow-sm transition-all h-20 items-center justify-between px-6 lg:px-10">
+    <header className="hidden md:flex sticky top-0 z-50 w-full bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-white/5 shadow-sm transition-all h-20 items-center justify-between px-6 lg:px-10">
       
       {/* Brand & Location */}
       <div className="flex items-center gap-8">
-        <Link to={`${basePath}/`} className="flex items-center gap-2 group">
+        <Link to={to('/')} className="flex items-center gap-2 group">
           <img src={bhojanOsLogo} alt="BhojanOS" className="w-8 h-8 object-contain" />
           <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
             {tenantInfo?.name || 'BhojanOS'}
@@ -61,15 +65,20 @@ const StorefrontDesktopHeader = () => {
       {/* Actions */}
       <div className="flex items-center gap-6">
         <nav className="flex items-center gap-6">
-          <Link to={`${basePath}/`} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname === `${basePath}/` || location.pathname === '/' ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
+          <Link to={to('/')} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname === to('/') || location.pathname === `${to('/')}/` || location.pathname === '/' ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
             Home
           </Link>
-          <Link to={`${basePath}/menu`} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname.includes('/menu') ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
+          <Link to={to('/menu')} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname.includes('/menu') ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
             Menu
           </Link>
           {currentUser && (
-            <Link to={`${basePath}/orders`} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname.includes('/orders') ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
+            <Link to={to('/orders')} className={`text-sm font-bold transition-colors hover:text-orange-500 ${location.pathname.includes('/orders') ? 'text-orange-500' : 'text-gray-600 dark:text-white/70'}`}>
               Orders
+            </Link>
+          )}
+          {ownsThisStore && (
+            <Link to="/owner/dashboard" className="text-sm font-bold text-orange-600 dark:text-orange-400 hover:text-orange-500 transition-colors">
+              Owner Dashboard
             </Link>
           )}
         </nav>
@@ -77,7 +86,7 @@ const StorefrontDesktopHeader = () => {
         <div className="w-px h-8 bg-gray-200 dark:bg-white/10"></div>
 
         <Link
-          to={currentUser ? `${basePath}/account` : `${basePath}/login`}
+          to={currentUser ? to('/account') : loginPath()}
           className="flex items-center gap-2 text-gray-700 dark:text-white/80 hover:text-orange-500 transition-colors font-bold text-sm"
         >
           <User size={20} />
@@ -85,7 +94,7 @@ const StorefrontDesktopHeader = () => {
         </Link>
 
         <button
-          onClick={() => navigate(`${basePath}/checkout`)}
+          onClick={() => navigate(to('/checkout'))}
           className="relative flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-transform shadow-lg shadow-black/10 dark:shadow-white/5"
         >
           <ShoppingCart size={18} />

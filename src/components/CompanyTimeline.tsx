@@ -19,7 +19,6 @@ export const CompanyTimeline: React.FC = () => {
             title={item.title} 
             description={item.description} 
             isLast={i === companyTimeline.length - 1}
-            delay={i * 0.1}
           />
         ))}
       </div>

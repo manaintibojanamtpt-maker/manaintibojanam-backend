@@ -6,7 +6,7 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v24-diagnostic';
+const SW_VERSION = 'v27-owner-alerts';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates
@@ -64,7 +64,8 @@ self.addEventListener('push', (event) => {
     body: notification.body || data.body || 'New notification from BhojanOS',
     icon: notification.icon || '/icon-v20-192.png',
     badge: '/icon-v20-192.png',
-    vibrate: [200, 100, 200],
+    vibrate: [200, 100, 200, 100, 200],
+    silent: false,
     data,
     requireInteraction: true,
     actions: [

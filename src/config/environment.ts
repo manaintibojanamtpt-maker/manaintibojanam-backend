@@ -57,6 +57,11 @@ export const EnvironmentConfig = {
     return 'http://localhost:8080';
   },
 
+  /** Marketing landing route — BhojanOS root uses /onboard. */
+  getMarketingHomePath(): string {
+    return this.isBhojanOSRoot() ? '/onboard' : '/';
+  },
+
   /**
    * Returns the backend API URL.
    */

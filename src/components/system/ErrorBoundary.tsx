@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { logIncident } from '../../lib/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -23,16 +22,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
-    
-    // Log to Monitoring System
-    logIncident('system_errors', {
-      error: error.message,
-      stackTrace: error.stack || errorInfo.componentStack,
-      route: window.location.pathname,
-      browser: navigator.userAgent,
-      device: window.innerWidth < 768 ? 'Mobile' : 'Desktop',
-      timestamp: new Date().toISOString()
-    });
+
+    import('../../lib/monitoring')
+      .then(({ logIncident }) => {
+        logIncident('system_errors', {
+          error: error.message,
+          stackTrace: error.stack || errorInfo.componentStack,
+          route: window.location.pathname,
+          browser: navigator.userAgent,
+          device: window.innerWidth < 768 ? 'Mobile' : 'Desktop',
+          timestamp: new Date().toISOString(),
+        });
+      })
+      .catch(() => {});
   }
 
   public render() {

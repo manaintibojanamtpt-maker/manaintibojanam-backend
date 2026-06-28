@@ -27,9 +27,18 @@ import { EnvironmentConfig } from '../../config/environment';
 import { useFeatureFlags } from '../../context/FeatureFlagContext';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { DashboardStatusBar } from '../../components/owner/DashboardStatusBar';
+import { FreeStorefrontBanner } from '../../components/owner/FreeStorefrontBanner';
+import { StoreSetupGuide } from '../../components/owner/StoreSetupGuide';
+import { needsStoreSetup } from '../../lib/storeSetupProgress';
+import { needsGrowthTrialActivation, isStoreLiveForOrders } from '../../lib/planStatus';
 import { AIInsightCard } from '../../components/owner/AIInsightCard';
 import { useTenantStoreStatus } from '../../hooks/useTenantStoreStatus';
 import { aiInsightLabels } from '../../config/productMessaging';
+import {
+  countUrgentAttentionItems,
+  getDashboardPriorityActions,
+} from '../../lib/dashboardPriorityActions';
+import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -59,6 +68,11 @@ const OwnerDashboard = () => {
   const { isOpen: storeAcceptingOrders } = useTenantStoreStatus();
 
   const storeSlug = tenantInfo?.slug || contextTenant?.slug || tenantSlug || tenantId;
+  const { unreadCount: notificationUnreadCount } = useNotifications(
+    tenantInfo?.id || contextTenant?.id,
+    5,
+    storeSlug
+  );
   const storeUrl = getStoreUrl(storeSlug);
 
   const requireStoreUrl = (action: string) => {
@@ -226,119 +240,17 @@ const OwnerDashboard = () => {
     return <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">Loading your dashboard…</div>;
   }
 
-  // --- Sandbox Mode & Today's Priority Logic ---
+  // --- Sandbox Mode ---
   const isSandboxActive = tenantInfo?.storeStatus === 'published' && tenantInfo?.sandboxMode;
-  
-  const sandboxSteps = [
-    { name: 'Store Name', complete: !!tenantInfo?.name, link: '/owner/settings' },
-    { name: 'Kitchen Address', complete: !!tenantInfo?.location?.lat, link: '/owner/settings' },
-    { name: 'Mobile Number', complete: !!tenantInfo?.kyc?.mobileNumber, link: '/owner/kyc' },
-    { name: 'At least 3 Menu Items', complete: menuCount >= 3, link: '/owner/menu' }
-  ];
-  const completedSandboxSteps = sandboxSteps.filter(s => s.complete).length;
-  const sandboxReady = completedSandboxSteps === sandboxSteps.length;
 
-  const handleActivateSandbox = async () => {
-    const tenantDocId = tenantInfo?.id || contextTenant?.id;
-    if (!sandboxReady || !tenantDocId) return;
-    try {
-      await updateDoc(doc(getDb(), 'tenants', tenantDocId), {
-        storeStatus: 'published',
-        sandboxMode: true,
-        sandboxActivatedAt: new Date().toISOString(),
-        deliveryConfig: {
-          enabled: true,
-          freeRadius: 2,
-          paidRadius: 5,
-          maxRadius: 10,
-          baseFee: 30,
-          extraFeePerKm: 12
-        }
-      });
-      toast.success('🚀 Sandbox Mode Activated! Your store is now live.');
-    } catch (err: any) {
-      console.error(err);
-      logIncident('merchant_blockers', {
-        blockerType: 'Sandbox Activation Failure',
-        severity: 'Critical',
-        details: err?.message,
-        merchantName: tenantInfo?.name
-      });
-      toast.error('Failed to activate Sandbox Mode.');
-    }
-  };
-
-  const getPriorityActions = () => {
-    const priorities = [];
-    
-    if (tenantInfo?.storeStatus === 'draft' && !isSandboxActive) {
-      priorities.push({
-        title: 'Activate Sandbox Mode',
-        message: 'Complete the minimum requirements to publish your store and start receiving orders.',
-        action: 'Review Sandbox Requirements',
-        link: null, // Custom click handled in UI
-        impact: 'High Impact: Start earning revenue today',
-        isPrimary: true
-      });
-    }
-
-    if (isSandboxActive && analytics?.totalOrders === 0) {
-      priorities.push({
-        title: 'Get Your First Customer',
-        message: 'Send a direct message to family and friends.',
-        action: 'Share on WhatsApp',
-        link: 'whatsapp_direct',
-        impact: 'High Impact: Generates initial traction',
-        isPrimary: true
-      });
-      priorities.push({
-        title: 'Share to WhatsApp Status',
-        message: 'Let your entire contacts list know you are open for business.',
-        action: 'Share to Status',
-        link: 'whatsapp_status',
-        impact: 'High Impact: Drives local awareness',
-        isPrimary: true
-      });
-    }
-
-    if (!tenantInfo?.deliveryConfig?.freeRadius) {
-      priorities.push({
-        title: 'Complete Delivery Settings',
-        message: 'Set your delivery radius and minimum order value to avoid declining out-of-range orders.',
-        action: 'Configure Delivery',
-        link: '/owner/settings',
-        impact: 'Medium Impact: Reduces canceled orders',
-        isPrimary: false
-      });
-    }
-
-    if (menuCount < 5) {
-      priorities.push({
-        title: 'Expand Your Menu',
-        message: 'Stores with 5+ items receive 3x more orders. You currently have ' + menuCount + ' items.',
-        action: 'Add Menu Items',
-        link: '/owner/menu',
-        impact: 'High Impact: Increases order conversion',
-        isPrimary: false
-      });
-    }
-
-    // Default priority if everything is perfect
-    if (priorities.length === 0) {
-      priorities.push({
-        title: 'Share Store Link',
-        message: 'Keep the momentum going! Share your store link on Instagram, Facebook, and WhatsApp.',
-        action: 'Share Store',
-        link: 'whatsapp_direct',
-        impact: 'Low Effort: Drives organic traffic',
-        isPrimary: true
-      });
-    }
-
-    return priorities.slice(0, 3);
-  };
-
-  const priorityActions = getPriorityActions();
+  const priorityActions = getDashboardPriorityActions({
+    storeStatus: tenantInfo?.storeStatus,
+    sandboxMode: tenantInfo?.sandboxMode,
+    isSandboxActive,
+    deliveryFreeRadius: tenantInfo?.deliveryConfig?.freeRadius,
+    menuCount,
+    totalOrders: analytics?.totalOrders,
+  });
 
   const handlePriorityAction = (action: { link: string | null; action: string }) => {
     if (action.link === 'whatsapp' || action.link === 'whatsapp_direct') {
@@ -350,12 +262,20 @@ const OwnerDashboard = () => {
       return;
     }
     if (action.link === null) {
-      const sandboxSection = document.getElementById('sandbox-requirements');
-      if (sandboxSection) {
-        sandboxSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const setupSection = document.getElementById('store-setup-guide');
+      if (setupSection) {
+        setupSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         navigate('/owner/setup');
       }
+      return;
+    }
+    if (action.link.includes('#')) {
+      const [path, hash] = action.link.split('#');
+      navigate(path);
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
       return;
     }
     if (action.link.startsWith('/')) {
@@ -402,9 +322,41 @@ const OwnerDashboard = () => {
   }).length;
 
   const storeLive = tenantInfo?.storeStatus === 'published' || !!tenantInfo?.sandboxMode || storeAcceptingOrders;
+  const storeAlreadyLive = isStoreLiveForOrders(tenantInfo, storeAcceptingOrders);
+  const showStoreSetupGuide = needsStoreSetup(tenantInfo, menuCount);
+  const showGrowthTrialBanner = needsGrowthTrialActivation(tenantInfo);
+  const tenantDocId = tenantInfo?.id || contextTenant?.id || tenantId || '';
+
+  const handleGrowthTrialActivated = () => {
+    const trialExpiresAt = new Date();
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + 14);
+    const iso = trialExpiresAt.toISOString();
+    setTenantInfo((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            storeStatus: 'active',
+            status: 'trialing',
+            trialEndsAt: iso,
+            subscription: {
+              ...(prev.subscription || {}),
+              planId: 'growth',
+              status: 'trialing',
+              trialExpiresAt: iso,
+              trialType: 'growth',
+              onboardingTrial: true,
+            },
+          }
+        : prev
+    );
+  };
   const deliveryActive = !!(tenantInfo?.deliveryConfig?.freeRadius || tenantInfo?.deliveryConfig?.maxRadius);
   const payoutsActive = tenantInfo?.kyc?.verificationLevel !== undefined && tenantInfo?.kyc?.verificationLevel >= 0;
-  const urgentCount = inventoryAlerts.filter((a) => a.isCritical).length + (priorityActions.some((a) => a.isPrimary) ? 1 : 0);
+  const urgentCount = countUrgentAttentionItems(
+    priorityActions,
+    inventoryAlerts.filter((a) => a.isCritical).length,
+    notificationUnreadCount
+  );
 
   const aiRecommendations = growthSnapshot?.recommendations?.length
     ? growthSnapshot.recommendations.slice(0, 3)
@@ -425,28 +377,21 @@ const OwnerDashboard = () => {
 
       <StoreLiveControl variant="compact" />
 
-      {/* Onboarding Wizard Banner */}
-      {flags.onboardingWizardV2 && tenantInfo?.onboardingStatus && !tenantInfo.onboardingStatus.isComplete && !tenantInfo.onboardingStatus.migrated && (
-        <div className="bg-gradient-to-r from-orange-500/20 to-rose-500/10 border border-orange-500/30 rounded-2xl p-6 relative overflow-hidden mb-6">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-black text-white flex items-center gap-2">
-                🚀 Continue Store Setup
-              </h2>
-              <p className="text-sm text-orange-200 mt-1 max-w-xl">
-                You are on step {tenantInfo.onboardingStatus.currentStep} of 7. Complete onboarding to publish your store and start accepting orders.
-              </p>
-            </div>
-            <button 
-              onClick={() => navigate('/owner/setup')}
-              className="whitespace-nowrap px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20"
-            >
-              Resume Setup
-            </button>
-          </div>
-        </div>
+      {showStoreSetupGuide && (
+        <StoreSetupGuide tenantInfo={tenantInfo} menuCount={menuCount} variant="full" />
       )}
-      
+
+      {showGrowthTrialBanner && (
+        <FreeStorefrontBanner
+          tenantSlug={storeSlug || tenantId || 'default'}
+          tenantDocId={tenantDocId}
+          storeAlreadyLive={storeAlreadyLive}
+          onboarding={tenantInfo?.onboardingStatus}
+          showWizardProgress
+          onTrialActivated={handleGrowthTrialActivated}
+        />
+      )}
+
       {/* Sandbox Recovery Banner */}
       {tenantInfo?.storeStatus === 'draft' && !isBannerDismissed && (
         <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6 relative overflow-hidden">
@@ -486,36 +431,6 @@ const OwnerDashboard = () => {
             >
               Complete Verification
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Sandbox Readiness Checklist (Only show if not published/sandbox) */}
-      {tenantInfo?.storeStatus === 'draft' && !isSandboxActive && (
-        <div id="sandbox-requirements" className="bg-[#1C0E0A] border border-orange-500/20 rounded-2xl p-6 relative isolate overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-black text-white flex items-center gap-2">
-                <Target className="text-orange-500" />
-                Sandbox Requirements: {completedSandboxSteps}/{sandboxSteps.length}
-              </h2>
-              <p className="text-sm text-orange-200/70 mt-1">Complete these minimum steps to activate Sandbox Mode and start receiving orders today.</p>
-            </div>
-            <button 
-              onClick={handleActivateSandbox}
-              disabled={!sandboxReady}
-              className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${sandboxReady ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'bg-white/10 text-white/40 cursor-not-allowed'}`}
-            >
-              Activate Sandbox Mode
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {sandboxSteps.map(step => (
-              <div key={step.name} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-white/5 transition-colors ${step.complete ? 'bg-green-500/10 border-green-500/20' : 'bg-black/40 border-white/5'}`} onClick={() => navigate(step.link)}>
-                <span className={`text-sm font-bold ${step.complete ? 'text-green-100' : 'text-gray-400'}`}>{step.name}</span>
-                {step.complete ? <CheckCircle2 className="text-green-500" size={18} /> : <ChevronRight className="text-white/20" size={16} />}
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -836,7 +751,15 @@ const OwnerDashboard = () => {
       </div>
       <ReleaseNotesModal
         isOpen={isReleaseModalOpen}
-        onClose={() => setIsReleaseModalOpen(false)}
+        onClose={() => {
+          setIsReleaseModalOpen(false);
+          if (latestRelease && tenantId && tenantInfo) {
+            setTenantInfo({ ...tenantInfo, lastViewedReleaseVersion: latestRelease.version });
+            void updateDoc(doc(getDb(), 'tenants', tenantId), {
+              lastViewedReleaseVersion: latestRelease.version,
+            });
+          }
+        }}
         release={latestRelease}
         tenantId={tenantId}
       />

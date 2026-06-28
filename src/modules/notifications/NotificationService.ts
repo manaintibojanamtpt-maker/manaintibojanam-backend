@@ -60,6 +60,11 @@ export class NotificationService {
     await notificationRepository.archive(tenantId, notificationId);
   }
 
+  async archiveAll(tenantId: string, ownedTenantIds: string[] | undefined) {
+    this.assertTenantAccess(tenantId, ownedTenantIds);
+    return notificationRepository.archiveAll(tenantId);
+  }
+
   async handleClick(
     tenantId: string,
     ownedTenantIds: string[] | undefined,

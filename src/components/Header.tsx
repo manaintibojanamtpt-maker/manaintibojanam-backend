@@ -1,13 +1,17 @@
 import React from 'react';
-import { ChevronLeft, ShoppingCart, Menu } from 'lucide-react';
+import { ChevronLeft, ShoppingCart, Menu, User, LogIn } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useTenant } from '../context/TenantContext';
+import { useStorefrontPath } from '../hooks/useStorefrontPath';
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { tenantSlug } = useTenant();
+  const { to, loginPath } = useStorefrontPath();
+  const { currentUser } = useStorefrontAuth();
   const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
   const isHome = location.pathname === '/' || location.pathname === basePath || location.pathname === `${basePath}/`;
   const ControlIcon = isHome ? Menu : ChevronLeft;
@@ -32,7 +36,15 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(`${basePath}/checkout`)} aria-label="View cart" className="relative w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors">
+          <button
+            type="button"
+            onClick={() => navigate(currentUser ? to('/account') : loginPath())}
+            aria-label={currentUser ? 'Account' : 'Sign in'}
+            className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"
+          >
+            {currentUser ? <User size={20} className="text-gray-900 dark:text-white" /> : <LogIn size={20} className="text-gray-900 dark:text-white" />}
+          </button>
+          <button type="button" onClick={() => navigate(to('/checkout'))} aria-label="View cart" className="relative w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors">
             <ShoppingCart size={20} className="text-gray-900 dark:text-white" />
             {itemCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">

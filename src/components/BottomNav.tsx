@@ -6,14 +6,13 @@ import { m, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
 import ActiveOrderStrip from './ActiveOrderStrip';
 import { cn } from '../lib/utils';
-import { useTenant } from '../context/TenantContext';
+import { useStorefrontPath } from '../hooks/useStorefrontPath';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount } = useCart();
-  const { tenantSlug } = useTenant();
-  const basePath = tenantSlug ? `/k/${tenantSlug}` : '';
+  const { to } = useStorefrontPath();
   const [isVisible, setIsVisible] = useState(true);
 
   // Auto-hide navigation on scroll down, show on scroll up
@@ -53,10 +52,10 @@ const BottomNav = () => {
   }, [location.pathname]);
 
   const navItems = [
-    { label: 'Home', path: `${basePath}/`, icon: Home },
-    { label: 'Menu', path: `${basePath}/menu`, icon: Utensils },
-    { label: 'Orders', path: `${basePath}/my-orders`, icon: ShoppingBag, badge: 0 }, // Using 0 for badge as placeholder
-    { label: 'Profile', path: `${basePath}/account`, icon: User },
+    { label: 'Home', path: to('/'), icon: Home },
+    { label: 'Menu', path: to('/menu'), icon: Utensils },
+    { label: 'Orders', path: to('/orders'), icon: ShoppingBag, badge: 0 },
+    { label: 'Profile', path: to('/account'), icon: User },
   ];
 
   return (
@@ -71,7 +70,10 @@ const BottomNav = () => {
         <ActiveOrderStrip />
         <div className="max-w-lg mx-auto bg-black/80 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] px-2 py-2 flex items-center justify-around shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden pointer-events-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path.endsWith('/') && location.pathname === item.path.slice(0, -1)) ||
+              (item.label === 'Home' && (location.pathname === item.path || location.pathname === `${item.path}/`));
             const Icon = item.icon;
 
             return (

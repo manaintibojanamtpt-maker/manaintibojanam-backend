@@ -2,13 +2,11 @@ import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
+import { resolveOwnerTenantIds } from './lib/ownerAccess';
 
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
-import { CartProvider } from './context/CartContext';
-import { FeatureFlagProvider } from './context/FeatureFlagContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { TenantProvider, useTenant } from './context/TenantContext';
+import { useTenant } from './context/TenantContext';
 import Header from './components/Header';
 import { Store } from 'lucide-react';
 import BottomNav from './components/BottomNav';
@@ -22,12 +20,14 @@ import NotchNotification from './components/NotchNotification';
 import FlyToCartAnimation from './components/FlyToCartAnimation';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { useFCMInitialization } from './hooks/useFCMInitialization';
-import { seedMenuItems } from './populateData';
 import NetworkAwareness from './components/NetworkAwareness';
 import { useBiometrics } from './hooks/useBiometrics';
 import BiometricModal from './components/BiometricModal';
 import AIAssistant from './components/AIAssistant';
 import { TelemetryService } from './core/reliability/TelemetryService';
+import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './lib/splashScreen';
+import { activateCustomerPreviewFromUrl, isCustomerPreviewMode, exitCustomerPreviewMode } from './lib/storefrontPreview';
+import CustomerPreviewBanner from './components/CustomerPreviewBanner';
 import OwnerLayout from './components/owner/OwnerLayout';
 const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'));
 const DataImporter = lazy(() => import('./pages/DataImporter'));
@@ -42,23 +42,25 @@ const OwnerKYC = lazy(() => import('./pages/owner/OwnerKYC').then(module => ({ d
 import { EntitlementGate } from './components/owner/EntitlementGate';
 const OwnerFeedback = lazy(() => import('./pages/owner/OwnerFeedback'));
 const NotificationCenter = lazy(() => import('./modules/notifications/NotificationCenter'));
-import { populateSampleData } from './populateData';
-import { runEnterpriseMigration } from './scripts/migrateEnterprise';
 
-// Expose seeder to window for easy DB initialization after Firebase swap
-(window as any).populateSampleData = populateSampleData;
-(window as any).runEnterpriseMigration = runEnterpriseMigration;
+// Dev-only DB helpers — lazy so marketing pages don't pull Firestore seed logic up front
+(window as any).populateSampleData = async () => (await import('./populateData')).populateSampleData();
+(window as any).runEnterpriseMigration = async () => (await import('./scripts/migrateEnterprise')).runEnterpriseMigration();
 (window as any).runDatabaseSeeder = async () => {
   console.log("Starting Database Seeder...");
+  const { populateSampleData } = await import('./populateData');
   await populateSampleData();
   console.log("Seeding complete! Please refresh the page.");
 };
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
-import OnboardingWizard from './pages/owner/OnboardingWizard';
+const OnboardingWizard = lazy(() => import('./pages/owner/OnboardingWizard'));
+const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
+const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
 
 // Lazy load pages for code splitting
+const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
@@ -77,11 +79,8 @@ const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const CancellationPolicy = lazy(() => import('./pages/CancellationPolicy'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
-const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
 const OwnerOrders = lazy(() => import('./pages/owner/OwnerOrders'));
 const OwnerSettings = lazy(() => import('./pages/owner/OwnerSettings'));
-const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
-const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
 const OwnerSubscription = lazy(() => import('./pages/owner/OwnerSubscription'));
 
 const AboutPage = lazy(() => import('./pages/marketing/AboutPage'));
@@ -89,24 +88,93 @@ const PlatformPage = lazy(() => import('./pages/marketing/PlatformPage'));
 const SecurityPage = lazy(() => import('./pages/marketing/SecurityPage'));
 const ContactPage = lazy(() => import('./pages/marketing/ContactPage'));
 const BlogPage = lazy(() => import('./pages/marketing/BlogPage'));
+const PricingPage = lazy(() => import('./pages/marketing/PricingPage'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
-  const { currentUser, userProfile, loading } = useAuth();
+  const { currentUser, userProfile, loading, profileLoading, refreshProfile, logout } = useAuth();
+  const location = useLocation();
+  const { tenantSlug } = useTenant();
+  const previewGuest = isCustomerPreviewMode();
 
-  if (loading) {
-    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+  useEffect(() => {
+    if (superAdminOnly || adminOnly) {
+      exitCustomerPreviewMode();
+    }
+  }, [superAdminOnly, adminOnly]);
+
+  if (loading || (currentUser && profileLoading && !userProfile)) {
+    return <div className="min-h-[100dvh] flex items-center justify-center bg-[#0c0c0c]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
   }
   if (!currentUser) {
-    if (adminOnly) return <Navigate to="/admin/login" />;
-    if (superAdminOnly) return <Navigate to="/super-admin/login" />;
-    return <Navigate to="/login" />;
+    if (adminOnly) return <Navigate to="/admin/login" replace />;
+    if (superAdminOnly) return <Navigate to="/super-admin/login" replace />;
+    const returnPath = `${location.pathname}${location.search}`;
+    const loginPath = tenantSlug ? `/k/${tenantSlug}/login` : '/login';
+    return <Navigate to={`${loginPath}?redirect=${encodeURIComponent(returnPath)}`} replace />;
+  }
+  // Customer preview is for storefront QA only — never block platform admin portals.
+  if (previewGuest && !adminOnly && !superAdminOnly) {
+    const returnPath = `${location.pathname}${location.search}`;
+    const loginPath = tenantSlug ? `/k/${tenantSlug}/login` : '/login';
+    return <Navigate to={`${loginPath}?redirect=${encodeURIComponent(returnPath)}`} replace />;
   }
   if (!userProfile) {
-    return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-[#0c0c0c] gap-6 px-6 text-center">
+        <h2 className="text-2xl font-bold text-white">Profile not loaded</h2>
+        <p className="text-white/70 max-w-md">
+          You are signed in, but your account profile could not be loaded. Retry or sign out and use your Super Admin account.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={() => void refreshProfile()}
+            className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (superAdminOnly) {
-    if (userProfile.role !== 'superadmin') return <Navigate to="/" />;
+    if (userProfile.role !== 'superadmin') {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-[#0c0c0c] gap-6 px-6 text-center">
+          <h2 className="text-2xl font-bold text-white">Super Admin access required</h2>
+          <p className="text-white/70 max-w-md">
+            You are signed in as <span className="text-white font-semibold">{currentUser.email}</span> ({userProfile.role}).
+            This portal is only for platform super admins.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors"
+            >
+              Sign out &amp; use Super Admin account
+            </button>
+            {(userProfile.ownedTenantIds?.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => { window.location.href = `${EnvironmentConfig.getBaseUrl()}/owner/dashboard`; }}
+                className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl transition-colors"
+              >
+                Go to My Kitchen Dashboard
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
   } else if (adminOnly) {
     if (userProfile.role !== 'admin' && userProfile.role !== 'superadmin') return <Navigate to="/" />;
   }
@@ -115,25 +183,83 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean;
 };
 
 const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, userProfile, loading } = useAuth();
+  const { currentUser, userProfile, loading, profileLoading, refreshProfile } = useAuth();
+  const [repairing, setRepairing] = React.useState(false);
+  const [repairAttempted, setRepairAttempted] = React.useState(false);
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-brand-bg dark:bg-dark-bg"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
-  if (!currentUser) return <Navigate to="/login" />;
-  
-  if (!userProfile) {
+  const ownedTenants = userProfile?.ownedTenantIds ?? [];
+
+  React.useEffect(() => {
+    if (!currentUser || loading || profileLoading || ownedTenants.length > 0 || repairAttempted) return;
+
+    setRepairAttempted(true);
+    setRepairing(true);
+    void resolveOwnerTenantIds(currentUser.uid, currentUser.email)
+      .then(async (ids) => {
+        if (ids.length > 0) {
+          await refreshProfile();
+        }
+      })
+      .finally(() => setRepairing(false));
+  }, [currentUser, loading, profileLoading, ownedTenants.length, repairAttempted, refreshProfile]);
+
+  if (loading || profileLoading || repairing) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6">
-        <h2 className="text-2xl font-bold text-white">Unauthorized</h2>
-        <p className="text-white/70">You do not have owner permissions.</p>
-        <button onClick={() => window.location.href = EnvironmentConfig.getBaseUrl() + '/login'} className="text-orange-500 underline">Return to Login</button>
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+        <p className="text-sm text-white/60">Loading your owner profile…</p>
       </div>
     );
   }
 
-  if (userProfile?.role !== 'superadmin' && userProfile?.role !== 'admin') {
-    if (!userProfile?.ownedTenantIds || userProfile.ownedTenantIds.length === 0) {
-      return <Navigate to="/" />;
+  if (!currentUser) {
+    return <Navigate to="/owner/login" replace />;
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6 px-6 text-center">
+        <h2 className="text-2xl font-bold text-white">Profile not loaded</h2>
+        <p className="text-white/70 max-w-md">
+          You are signed in, but your owner profile could not be loaded. This usually clears after a retry.
+        </p>
+        <button
+          type="button"
+          onClick={() => void refreshProfile()}
+          className="px-6 py-3 bg-orange-500 hover:bg-orange-400 text-black font-bold rounded-xl transition-colors"
+        >
+          Retry
+        </button>
+        <button
+          type="button"
+          onClick={() => { window.location.href = `${EnvironmentConfig.getBaseUrl()}/owner/login`; }}
+          className="text-orange-500 underline text-sm"
+        >
+          Return to Owner Login
+        </button>
+      </div>
+    );
+  }
+
+  const ownedTenantsAfterRepair = userProfile?.ownedTenantIds ?? [];
+
+  // Owner portal is only for users who own a kitchen — never for platform admin impersonation.
+  if (ownedTenantsAfterRepair.length === 0) {
+    if (userProfile.role === 'superadmin') {
+      return <Navigate to="/super-admin" replace />;
     }
+    if (userProfile.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    if (userProfile.role === 'owner' && !repairAttempted) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+          <p className="text-sm text-white/60">Linking your store…</p>
+        </div>
+      );
+    }
+    return <Navigate to="/owner/register" replace />;
   }
 
   return <>{children}</>;
@@ -186,29 +312,23 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading) {
-      // Splash screen is cosmetic only — do not block rendering on it
-      const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
-      const elapsed = Date.now() - startTime;
-      const skipSplash = (window as any).__SKIP_SPLASH__;
-      const minDuration = skipSplash ? 0 : 800; // Reduced from 4000ms to 800ms cosmetic minimum
-      const timeToWait = Math.max(0, minDuration - elapsed);
+    dismissSplash();
+    scheduleSplashSafetyTimeout();
+  }, []);
 
-      setTimeout(() => {
-        const loader = document.getElementById('initial-loader');
-        if (loader) {
-          loader.style.opacity = '0';
-          setTimeout(() => loader.remove(), 800);
-        }
-      }, timeToWait);
+  useEffect(() => {
+    if (!authLoading) {
+      dismissSplash();
     }
   }, [authLoading]);
 
   useEffect(() => {
-    if (!authLoading && connected) {
+    if (!authLoading && connected && !isMarketingPath()) {
       if (typeof window !== 'undefined' && window.localStorage.getItem('menuSeeded') !== 'true') {
-        seedMenuItems().catch((error) => {
-          console.error('Seed menu items failed:', error);
+        import('./populateData').then(({ seedMenuItems }) => {
+          seedMenuItems().catch((error) => {
+            console.error('Seed menu items failed:', error);
+          });
         });
       }
     }
@@ -219,7 +339,13 @@ const AppContent: React.FC = () => {
   const [hasCheckedLock, setHasCheckedLock] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && currentUser && biometricsEnabled && !hasCheckedLock) {
+    const path = window.location.pathname;
+    const isAdminPortal =
+      path.startsWith('/super-admin') ||
+      path.startsWith('/admin') ||
+      path.startsWith('/owner');
+
+    if (!authLoading && currentUser && biometricsEnabled && !hasCheckedLock && !isCustomerPreviewMode() && !isAdminPortal) {
       setIsAppLocked(true);
       setHasCheckedLock(true);
     }
@@ -263,6 +389,32 @@ const AppContent: React.FC = () => {
     </div>
   );
 
+  const MarketingPageFallback = () => (
+    <div className="min-h-screen bg-[#030303] flex flex-col">
+      <div className="h-16 border-b border-white/5 bg-[#030303]/95" />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full border-2 border-[#FF7A00]/30 border-t-[#FF7A00] animate-spin" />
+      </div>
+    </div>
+  );
+
+  const AdminPageFallback = () => (
+    <div className="min-h-[100dvh] bg-[#0c0c0c] flex flex-col items-center justify-center gap-4">
+      <div className="h-10 w-10 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
+      <p className="text-sm text-white/50 font-medium">Loading admin portal…</p>
+    </div>
+  );
+
+  const routeFallback = (() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/super-admin') || path.startsWith('/admin')) {
+        return <AdminPageFallback />;
+      }
+    }
+    return isMarketingPath() ? <MarketingPageFallback /> : <GlobalLoading />;
+  })();
+
   const mainRoutes = (
     <Routes>
       <Route path="/" element={<StorefrontRootRoute />} />
@@ -304,13 +456,14 @@ const AppContent: React.FC = () => {
         <div className="flex-1 flex flex-col w-full min-h-screen bg-brand-bg dark:bg-dark-bg transition-colors duration-300">
           <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
           
-          <Suspense fallback={<GlobalLoading />}>
+          <Suspense fallback={routeFallback}>
             <Routes>
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/super-admin/login" element={<BhojanOSSuperAdminLogin />} />
               <Route path="/owner/login" element={<OwnerLogin />} />
               <Route path="/owner/register" element={<OwnerRegister />} />
               <Route path="/onboard" element={<OnboardKitchen />} />
+              <Route path="/pricing" element={<PricingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/platform" element={<PlatformPage />} />
               <Route path="/security" element={<SecurityPage />} />
@@ -406,9 +559,11 @@ const StoreNotFound = () => (
 );
 
 const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  activateCustomerPreviewFromUrl();
   const location = useLocation();
   const { tenantNotFound } = useTenant();
   const path = location.pathname;
+  const customerPreview = isCustomerPreviewMode();
   
   const isRoute = (targetPath: string) => {
     if (path === targetPath) return true;
@@ -427,9 +582,9 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   
   const isMenu = isRoute('/menu');
   const isLogin = isRoute('/login') || path === '/owner/login' || path === '/owner/register';
-  const isAdmin = path.startsWith('/admin');
+  const isAdmin = path.startsWith('/admin') || path.startsWith('/super-admin');
   const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
-  const isMarketing = path === '/onboard' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && EnvironmentConfig.isBhojanOSRoot());
+  const isMarketing = path === '/onboard' || path === '/pricing' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && EnvironmentConfig.isBhojanOSRoot());
   const isMyOrders = isRoute('/orders'); // also fixing my-orders path since route is /orders
   const isOrderTracking = path.startsWith('/order/') || !!path.match(/^\/k\/[^/]+\/order\//);
   
@@ -453,7 +608,8 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return (
       <div className="flex-1 flex w-full min-h-screen bg-brand-bg dark:bg-dark-bg">
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {!isFullScreen && <StorefrontDesktopHeader />}
+        {customerPreview && <CustomerPreviewBanner />}
+        {!isFullScreen && !isHome && <StorefrontDesktopHeader />}
         {!hideHeader && <Header />}
         <main id="main-scroll-container" className="flex-1 relative" style={{ paddingTop: isEdgeToEdge ? '0' : 'env(safe-area-inset-top)', paddingBottom: isFullScreen ? 'env(safe-area-inset-bottom)' : 'calc(140px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
           {isEdgeToEdge ? (
@@ -494,35 +650,9 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 };
 
 const App: React.FC = () => {
-  useEffect(() => {
-    const nativeSplash = document.getElementById('mib-splash-screen');
-    if (nativeSplash) {
-      const startTime = (window as any).__SPLASH_START_TIME__ || Date.now();
-      const elapsed = Date.now() - startTime;
-      const skipSplash = (window as any).__SKIP_SPLASH__;
-      const minDuration = skipSplash ? 0 : 800; // Reduced to 800ms
-      const timeToWait = Math.max(0, minDuration - elapsed);
-
-      setTimeout(() => {
-        nativeSplash.classList.add('hide');
-        setTimeout(() => nativeSplash.remove(), 1000);
-      }, timeToWait);
-    }
-  }, []);
-
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <FeatureFlagProvider>
-          <AuthProvider>
-            <TenantProvider>
-              <CartProvider>
-                <AppContent />
-              </CartProvider>
-            </TenantProvider>
-          </AuthProvider>
-        </FeatureFlagProvider>
-      </ThemeProvider>
+      <AppContent />
     </ErrorBoundary>
   );
 };

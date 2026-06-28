@@ -15,7 +15,22 @@ import {
 
 export type IncidentType = 'system_errors' | 'api_errors' | 'firestore_errors' | 'payment_incidents' | 'security_events' | 'performance_metrics' | 'merchant_blockers' | 'onboarding_events';
 
+let lastIncidentSentAt = 0;
+const INCIDENT_MIN_INTERVAL_MS = 10_000;
+
+const isQuotaNoise = (payload: any) => {
+  const text = JSON.stringify(payload || {}).toLowerCase();
+  return text.includes("quota exceeded") || text.includes("resource-exhausted") || text.includes("resource_exhausted");
+};
+
 export const logIncident = async (type: IncidentType, payload: any) => {
+  if (isQuotaNoise(payload)) return;
+  const now = Date.now();
+  if (type !== "payment_incidents" && type !== "merchant_blockers" && now - lastIncidentSentAt < INCIDENT_MIN_INTERVAL_MS) {
+    return;
+  }
+  lastIncidentSentAt = now;
+
   try {
     const auth = getAuth();
     const token = await auth.currentUser?.getIdToken();
@@ -96,8 +111,15 @@ const getCommonMetadata = () => {
   };
 };
 
+import { PlatformTierConfig } from "../config/platformTier";
+
 export const initializeMonitoring = () => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
+
+  if (!PlatformTierConfig.enableClientTelemetry()) {
+    console.info("[Monitoring] Free tier: client Firestore telemetry disabled");
+    return;
+  }
 
   // Phase 14: Flush queue on load, network recovery, and interval
   flushMonitoringQueue();
@@ -137,6 +159,9 @@ export const initializeMonitoring = () => {
       }
 
       if (!response.ok) {
+        if (response.status === 202 || response.status === 503) {
+          return response;
+        }
         logIncident('api_errors', {
           ...getCommonMetadata(),
           endpoint: typeof args[0] === 'string' ? args[0] : (args[0] as any)?.url || (args[0] as any)?.href,

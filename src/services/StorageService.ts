@@ -2,10 +2,11 @@ import {
   getStorage, 
   ref, 
   uploadBytes, 
+  uploadBytesResumable,
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
-import { app } from '../firebase';
+import { app, auth } from '../firebase';
 
 /**
  * Firebase Storage Service
@@ -193,27 +194,68 @@ class StorageService {
   /**
    * Upload KYC document (Private, secure path)
    */
-  async uploadKYCDocument(file: File, tenantId: string, docType: string): Promise<string> {
-    try {
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error(`File size exceeds 10MB limit.`);
-      }
-
-      const timestamp = Date.now();
-      const extension = file.name.split('.').pop();
-      const fileName = `${docType}-${timestamp}.${extension}`;
-      const storageRef = ref(this.storage, `kyc/${tenantId}/${fileName}`);
-
-      const snapshot = await uploadBytes(storageRef, file, {
-        contentType: file.type,
-      });
-
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
-    } catch (error: any) {
-      console.error('Error uploading KYC document:', error);
-      throw new Error(error.message || 'Failed to upload KYC document');
+  async uploadKYCDocument(
+    file: File,
+    tenantId: string,
+    docType: string,
+    onProgress?: (percent: number) => void,
+  ): Promise<string> {
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('File size exceeds 10MB limit.');
     }
+
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Please sign in again to upload documents.');
+    }
+
+    await user.getIdToken(true);
+
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop() || 'bin';
+    const fileName = `${docType}-${timestamp}.${extension}`;
+    const storageRef = ref(this.storage, `kyc/${tenantId}/${fileName}`);
+
+    const uploadTask = uploadBytesResumable(storageRef, file, {
+      contentType: file.type || 'application/octet-stream',
+    });
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        uploadTask.cancel();
+        reject(new Error('Upload timed out. Check your connection and try again.'));
+      }, 90000);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = snapshot.totalBytes
+            ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+            : 0;
+          onProgress?.(progress);
+        },
+        (error) => {
+          window.clearTimeout(timeoutId);
+          console.error('Error uploading KYC document:', error);
+          const code = (error as { code?: string }).code;
+          if (code === 'storage/unauthorized') {
+            reject(new Error('Upload denied. Confirm you are signed in as the kitchen owner.'));
+            return;
+          }
+          reject(new Error(error.message || 'Failed to upload KYC document'));
+        },
+        async () => {
+          window.clearTimeout(timeoutId);
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to get download URL';
+            reject(new Error(message));
+          }
+        },
+      );
+    });
   }
 
   /**

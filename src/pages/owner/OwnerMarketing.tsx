@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { useTenant } from '../../context/TenantContext';
 import { CustomerSegmentSummary, getCustomerSegmentsSummary, generateCampaign } from '../../services/CustomerIntelligenceService';
 import { m } from 'framer-motion';
@@ -21,11 +21,10 @@ const CAMPAIGN_OPTIONS = [
 ];
 
 const OwnerMarketing: React.FC = () => {
-  const { userProfile } = useAuth();
+  const tenantId = useOwnerTenantId();
   const { tenantInfo, tenantSlug } = useTenant();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
   const [segments, setSegments] = useState<CustomerSegmentSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [segmentsLoading, setSegmentsLoading] = useState(true);
   const [selectedAudience, setSelectedAudience] = useState<string | null>(null);
 
   const [generatedCampaign, setGeneratedCampaign] = useState<{
@@ -56,12 +55,25 @@ const OwnerMarketing: React.FC = () => {
   }), [segments]);
 
   useEffect(() => {
-    if (tenantId) {
-      getCustomerSegmentsSummary(tenantId).then((data) => {
-        setSegments(data);
-        setLoading(false);
-      });
+    if (!tenantId) {
+      setSegmentsLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    setSegmentsLoading(true);
+
+    getCustomerSegmentsSummary(tenantId)
+      .then((data) => {
+        if (!cancelled) setSegments(data);
+      })
+      .finally(() => {
+        if (!cancelled) setSegmentsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [tenantId]);
 
   const handleGenerate = (audience: string) => {
@@ -73,7 +85,7 @@ const OwnerMarketing: React.FC = () => {
   };
 
   const handleLaunch = async () => {
-    if (!tenantId || !selectedAudience || !segments || !generatedCampaign) return;
+    if (!tenantId || !selectedAudience || !generatedCampaign) return;
     setIsSending(true);
 
     try {
@@ -107,10 +119,10 @@ const OwnerMarketing: React.FC = () => {
     toast.success('Copied to clipboard');
   };
 
-  if (loading) {
+  if (!tenantId) {
     return (
       <div className="flex items-center justify-center h-full text-white/50">
-        <Loader2 className="animate-spin mr-2" size={20} /> Loading Campaign Center...
+        <Loader2 className="animate-spin mr-2" size={20} /> Loading your kitchen...
       </div>
     );
   }
@@ -129,7 +141,10 @@ const OwnerMarketing: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4 max-h-[600px] overflow-y-auto no-scrollbar pr-2">
-          <h2 className="text-lg font-bold text-white mb-4 sticky top-0 bg-[#050505] z-10 py-2">Choose who to reach</h2>
+          <h2 className="text-lg font-bold text-white mb-4 sticky top-0 bg-[#050505] z-10 py-2 flex items-center gap-2">
+            Choose who to reach
+            {segmentsLoading && <Loader2 className="animate-spin text-white/40" size={16} />}
+          </h2>
 
           {CAMPAIGN_OPTIONS.map((c) => (
             <button
@@ -142,7 +157,9 @@ const OwnerMarketing: React.FC = () => {
               <div className={`flex items-center gap-2 font-bold mb-2 ${selectedAudience === c.id ? c.iconClass : 'text-white/70'}`}>
                 <c.icon size={18} /> {c.id}
               </div>
-              <p className="text-sm text-white/50 leading-relaxed">{audienceDescriptions[c.descKey]}</p>
+              <p className={`text-sm text-white/50 leading-relaxed ${segmentsLoading ? 'animate-pulse' : ''}`}>
+                {audienceDescriptions[c.descKey]}
+              </p>
             </button>
           ))}
         </div>

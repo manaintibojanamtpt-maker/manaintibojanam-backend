@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
-import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
-import { auth } from '../../firebase';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
-import { updateMenuItem } from '../../services/api';
-import { EnvironmentConfig } from '../../config/environment';
+import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../../services/api';
+import { OrderStatus } from '../../types';
+import { DELIVERY_PARTNER_OPTIONS, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 
 interface Order {
   id: string;
@@ -23,6 +23,12 @@ interface Order {
   status: string;
   createdAt: any;
   items?: any[];
+  deliveryPartner?: string;
+  trackingUrl?: string;
+  trackingLink?: string;
+  riderName?: string;
+  riderPhone?: string;
+  deliveryAssignedAt?: string;
 }
 
 const OwnerOrders: React.FC = () => {
@@ -38,12 +44,13 @@ const OwnerOrders: React.FC = () => {
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [dispatchOrder, setDispatchOrder] = useState<string | null>(null);
   const [dispatchData, setDispatchData] = useState({
-    deliveryPartner: 'Manual Delivery',
+    deliveryPartner: 'Rapido',
     trackingUrl: '',
     riderName: '',
     riderPhone: '',
     notifyCustomer: true
   });
+  const remindedDeliveriesRef = useRef<Set<string>>(new Set());
 
   // Quick Stock Modal State
   const [stockModalOpen, setStockModalOpen] = useState(false);
@@ -102,6 +109,24 @@ const OwnerOrders: React.FC = () => {
     return () => unsubscribe();
   }, [tenantId, orderLimit]);
 
+  useEffect(() => {
+    orders.forEach((order) => {
+      if (order.status !== 'OUT_FOR_DELIVERY') return;
+      if (!isThirdPartyDeliveryPartner(order.deliveryPartner)) return;
+      if (remindedDeliveriesRef.current.has(order.id)) return;
+
+      const assignedAt = order.deliveryAssignedAt ? new Date(order.deliveryAssignedAt).getTime() : 0;
+      const ageMs = assignedAt ? Date.now() - assignedAt : 0;
+      if (assignedAt && ageMs < 45 * 60 * 1000) return;
+
+      remindedDeliveriesRef.current.add(order.id);
+      toast(
+        `Order #${order.id.slice(-6).toUpperCase()} is still out via ${order.deliveryPartner}. Confirm delivery in the partner app, then tap Mark Delivered.`,
+        { duration: 8000, icon: '🛵' },
+      );
+    });
+  }, [orders]);
+
   const loadMoreOrders = () => {
     setOrderLimit(prev => prev + 50);
   };
@@ -109,33 +134,17 @@ const OwnerOrders: React.FC = () => {
   const updateOrderStatus = async (orderId: string, status: string, deliveryData?: any): Promise<boolean> => {
     try {
       setUpdatingOrderId(orderId);
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error('Owner session expired. Please sign in again.');
-
-      const response = await fetch(`${EnvironmentConfig.getApiUrl()}/api/owner/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-          'x-tenant-id': tenantId || ''
-        },
-        body: JSON.stringify({ status, deliveryData })
-      });
-
-      const result = await response.json().catch(() => null);
-      if (!response.ok || result?.success !== true) {
-        throw new Error(result?.error || "Failed to update status");
-      }
+      const normalized = status.toUpperCase() as OrderStatus;
+      await apiUpdateOrderStatus(orderId, normalized, deliveryData);
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
-          order.id === orderId ? { ...order, status, ...deliveryData } : order
+          order.id === orderId ? { ...order, status: normalized, ...deliveryData } : order
         )
       );
-      toast.success(`Order marked as ${status}`);
+      toast.success(`Order marked as ${normalized}`);
 
-      // Update analytics if order is completed
-      if (status === 'DELIVERED') {
+      if (normalized === OrderStatus.DELIVERED) {
         const completedOrder = orders.find(o => o.id === orderId);
         if (completedOrder) {
           recordOrderCompletion(tenantId, completedOrder as any);
@@ -145,7 +154,12 @@ const OwnerOrders: React.FC = () => {
       return true;
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Action failed");
+      const message = error instanceof Error ? error.message : 'Action failed';
+      if (message.toLowerCase().includes('quota')) {
+        toast.error('Firestore quota exceeded. Wait a minute and try again.');
+      } else {
+        toast.error(message);
+      }
       return false;
     } finally {
       setUpdatingOrderId(null);
@@ -193,7 +207,9 @@ const OwnerOrders: React.FC = () => {
 
   const pendingOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'CREATED' || o.status === 'PLACED');
 
-  const trialEndsAt = parseTrialDate(tenantInfo?.trialEndsAt);
+  const trialEndsAt = parseTrialDate(
+    tenantInfo?.subscription?.trialExpiresAt || tenantInfo?.trialEndsAt
+  );
   const isTrialExpired = trialEndsAt && trialEndsAt < new Date();
   const trialDaysRemaining = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
   const isSuspended = tenantInfo?.status === 'suspended' || isTrialExpired;
@@ -235,10 +251,10 @@ const OwnerOrders: React.FC = () => {
           <div className="mb-6 sm:mb-8 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-start text-red-800 dark:text-red-400">
               <XCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span><strong>Your Free Trial has expired.</strong> You can no longer accept new orders.</span>
+              <span><strong>Your Growth trial has expired.</strong> Upgrade to keep accepting live orders.</span>
             </div>
             <button className="w-full md:w-auto px-4 py-3 md:py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
-              Upgrade to Starter Plan (₹599/mo)
+              Upgrade to Growth (₹999/mo)
             </button>
           </div>
         )}
@@ -247,7 +263,7 @@ const OwnerOrders: React.FC = () => {
           <div className="mb-6 sm:mb-8 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-start text-blue-800 dark:text-blue-400">
               <Clock className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span><strong>Trial Active.</strong> You have {trialDaysRemaining} days remaining on your free trial.</span>
+              <span><strong>Growth trial active.</strong> You have {trialDaysRemaining} days left to accept live orders.</span>
             </div>
             <button className="w-full md:w-auto px-4 py-3 md:py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
               Upgrade Now
@@ -279,6 +295,7 @@ const OwnerOrders: React.FC = () => {
                           ${order.status === 'PENDING' || order.status === 'CREATED' || order.status === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
                           ${order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
                           ${order.status === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
+                          ${order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
                           ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
                           ${order.status === 'REJECTED' || order.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
                         `}>
@@ -296,6 +313,50 @@ const OwnerOrders: React.FC = () => {
                       <p className="text-sm text-white/50 mt-1 break-words">
                         {order.customerPhone || order.phone || 'Phone unavailable'} • {order.deliveryAddress?.addressLine1 || order.address || 'No address provided'}
                       </p>
+
+                      {order.status === 'OUT_FOR_DELIVERY' && (
+                        <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
+                          <div className="flex items-start gap-2">
+                            <Truck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-white">
+                                {order.deliveryPartner || 'Delivery'} • Out for delivery
+                              </p>
+                              {(order.riderName || order.riderPhone) && (
+                                <p className="text-xs text-white/50 mt-1">
+                                  Rider: {order.riderName || 'Assigned'}{order.riderPhone ? ` • ${order.riderPhone}` : ''}
+                                </p>
+                              )}
+                              {isThirdPartyDeliveryPartner(order.deliveryPartner) && (
+                                <p className="text-xs text-amber-300/90 mt-2 flex items-start gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                  Partner apps (Rapido/Uber/Porter/Dunzo/Shadowfox) do not auto-update BhojanOS. Confirm in their app, then mark delivered here.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {getTrackingUrl(order) && (
+                              <a
+                                href={getTrackingUrl(order)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" /> Open tracking
+                              </a>
+                            )}
+                            {order.riderPhone && (
+                              <a
+                                href={`tel:${order.riderPhone}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white/5 text-blue-300 border border-white/10 hover:bg-white/10 transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" /> Call rider
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* LIVE SUPPORT CONTACT BUTTONS */}
                       {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(order.status || '') && (order.customerPhone || order.phone) && (
@@ -390,13 +451,22 @@ const OwnerOrders: React.FC = () => {
                             )}
 
                             {order.status === 'OUT_FOR_DELIVERY' && (
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                                disabled={updatingOrderId === order.id}
-                                className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Delivered'}
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
+                                  disabled={updatingOrderId === order.id}
+                                  className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Delivered'}
+                                </button>
+                                <button
+                                  onClick={() => updateOrderStatus(order.id, 'FAILED_DELIVERY')}
+                                  disabled={updatingOrderId === order.id}
+                                  className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+                                >
+                                  <PackageX className="w-4 h-4 mr-2" /> Delivery failed / returned
+                                </button>
+                              </>
                             )}
                           </>
                         )}
@@ -444,17 +514,20 @@ const OwnerOrders: React.FC = () => {
                   value={dispatchData.deliveryPartner}
                   onChange={e => setDispatchData({...dispatchData, deliveryPartner: e.target.value})}
                 >
-                  <option value="Porter">Porter</option>
-                  <option value="Rapido">Rapido</option>
-                  <option value="Dunzo">Dunzo</option>
-                  <option value="Shadowfax">Shadowfax</option>
-                  <option value="Self Pickup">Self Pickup</option>
-                  <option value="Manual Delivery">Manual / Own Delivery</option>
+                  {DELIVERY_PARTNER_OPTIONS.map((partner) => (
+                    <option key={partner} value={partner}>{partner}</option>
+                  ))}
                 </select>
               </div>
+
+              {isThirdPartyDeliveryPartner(dispatchData.deliveryPartner) && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-3 py-2">
+                  Paste the partner tracking link if available. BhojanOS cannot auto-detect delivery completion from {dispatchData.deliveryPartner} yet — you will confirm delivery manually when the partner marks it done.
+                </p>
+              )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tracking URL (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tracking URL (recommended for partner apps)</label>
                 <input 
                   type="url"
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"

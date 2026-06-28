@@ -525,12 +525,19 @@ export interface Tenant {
     lng: number;
   };
   deliveryConfig?: {
+    enabled?: boolean;
     freeRadius: number; // in km
     paidRadius: number; // in km (base limit for standard fee)
     maxRadius: number; // in km (absolute max delivery limit)
     perKmCharge: number; // charge per km beyond freeRadius
     baseFee: number; // base fee for paidRadius
     prepTime: number; // minutes to prepare order
+    feesConfigured?: boolean;
+    freeDeliveryMinOrder?: number;
+  };
+  pricingConfig?: {
+    gstPercent?: number;
+    packingFee?: number;
   };
   
   tenantHealthScore?: number; // 0-100

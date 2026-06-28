@@ -90,53 +90,66 @@ class NotificationService {
   }
 
   /**
-   * Request notification permission from user
-   * Called contextually: after login or on first order
+   * Request notification permission from user.
+   * Must be called from a click/tap handler — browsers block unprompted requests.
+   * Returns true when the browser permission is granted (even if FCM is unavailable in dev).
    */
-  async requestPermission(): Promise<boolean> {
+  async requestPermission(userId?: string): Promise<boolean> {
     if (!('Notification' in window)) {
       console.warn('This browser does not support desktop notification');
       return false;
     }
 
+    this.permission = Notification.permission;
+
     if (Notification.permission === 'granted') {
-      // Already granted, try to get token if not initialized
-      if (!this.fcmInitialized && this.authReady) {
-        await this.initializeFCM();
-      }
-      if (!this.currentToken && this.fcmInitialized) {
-        await this.retrieveFCMToken();
-      }
+      await this.trySetupPush(userId);
       return true;
     }
 
     if (Notification.permission === 'denied') {
-      // User explicitly denied - respect their choice
       console.log('User denied notification permission');
       return false;
     }
 
-    // Permission is 'default' - ask user
     try {
       const permission = await Notification.requestPermission();
       this.permission = permission;
 
       if (permission === 'granted') {
-        // Only initialize FCM if auth is ready
-        if (this.authReady) {
-          await this.initializeFCM();
-          await this.retrieveFCMToken();
-          return true;
-        } else {
-          console.warn('NotificationService: Permission granted but auth not ready, skipping FCM init');
-          return false;
-        }
+        await this.trySetupPush(userId);
+        return true;
       }
+
       return false;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return false;
     }
+  }
+
+  private async trySetupPush(userId?: string): Promise<void> {
+    if (!this.authReady) {
+      console.warn('NotificationService: Auth not ready yet — browser permission saved, FCM deferred');
+      return;
+    }
+
+    try {
+      await this.initializeFCM();
+      await this.retrieveFCMToken();
+      if (userId && this.currentToken) {
+        await this.registerDeviceToken(userId);
+      }
+    } catch (error) {
+      console.warn('NotificationService: Push setup skipped (in-app updates still work):', error);
+    }
+  }
+
+  getBrowserPermission(): NotificationPermission {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      this.permission = Notification.permission;
+    }
+    return this.permission;
   }
 
   /**

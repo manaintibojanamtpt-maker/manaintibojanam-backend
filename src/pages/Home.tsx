@@ -29,14 +29,18 @@ import {
   HelpCircle,
   Truck,
   ChefHat,
-  Timer
+  Timer,
+  LayoutDashboard,
+  LogIn,
+  User,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { useTimeBasedSection } from '../hooks/useTimeBasedSection';
 import { useTenant } from '../context/TenantContext';
 import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
+import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import { activeTenantId as fallbackTenantId } from '../services/api';
 import toast from 'react-hot-toast';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
@@ -76,8 +80,9 @@ const Home: React.FC = () => {
   const [cravingLineIndex, setCravingLineIndex] = useState(0);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { cart, addToCart, updateQuantity, total } = useCart();
-  const { currentUser, userProfile, loading: authLoading } = useAuth();
-  const { tenantId: contextTenantId, tenantInfo } = useTenant();
+  const { currentUser, userProfile, loading: authLoading } = useStorefrontAuth();
+  const { tenantId: contextTenantId, tenantInfo, tenantSlug } = useTenant();
+  const { to, loginPath } = useStorefrontPath();
   const activeTenantId = contextTenantId || fallbackTenantId;
   const { isStoreOpenNow, settings: storeSettings } = useTenantStoreStatus();
   const storeOpenTime = storeSettings?.storeTiming.openTime || '09:00';
@@ -85,7 +90,9 @@ const Home: React.FC = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const timeBasedHeader = useTimeBasedSection();
 
-  const isPrivileged = currentUser && userProfile && ['admin', 'superadmin', 'owner'].includes(userProfile.role);
+  const ownsThisStore = Boolean(
+    userProfile?.ownedTenantIds?.some((id) => id === activeTenantId || id === tenantSlug),
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -318,7 +325,7 @@ const Home: React.FC = () => {
         className="fixed top-0 inset-x-0 z-50 p-3 sm:px-4 bg-dark-bg/95 backdrop-blur-xl border-b border-white/5"
       >
         <div 
-          onClick={() => navigate('/menu')}
+          onClick={() => navigate(to('/menu'))}
           className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 cursor-pointer"
         >
           <Search size={18} className="text-orange-500" />
@@ -359,13 +366,45 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* Search Pill (Top right) */}
-          <button 
-            onClick={() => navigate('/menu')}
-            className="mib-glass flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg active:scale-95 transition-all border border-white/10"
-          >
-            <Search size={20} className="text-white" />
-          </button>
+          {/* Search + account actions */}
+          <div className="flex items-center gap-2">
+            {ownsThisStore && (
+              <button
+                type="button"
+                onClick={() => navigate('/owner/dashboard')}
+                className="mib-glass hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-lg border border-orange-400/30 bg-orange-500/20 text-orange-100 text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all"
+              >
+                <LayoutDashboard size={16} />
+                Dashboard
+              </button>
+            )}
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={() => navigate(to('/account'))}
+                className="mib-glass flex items-center gap-2 px-3 py-2 rounded-2xl shadow-lg border border-white/10 active:scale-95 transition-all"
+              >
+                <User size={18} className="text-white" />
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider text-white">Account</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate(loginPath(to('/account')))}
+                className="mib-glass flex items-center gap-2 px-3 py-2 rounded-2xl shadow-lg border border-white/10 active:scale-95 transition-all"
+              >
+                <LogIn size={18} className="text-white" />
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider text-white">Sign In</span>
+              </button>
+            )}
+            <button 
+              type="button"
+              onClick={() => navigate(to('/menu'))}
+              className="mib-glass flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg active:scale-95 transition-all border border-white/10"
+            >
+              <Search size={20} className="text-white" />
+            </button>
+          </div>
         </div>
 
         {/* MAIN CONTENT LAYER - CENTERED FOR PREMIUM FEEL */}
@@ -413,7 +452,7 @@ const Home: React.FC = () => {
               <button
                 onClick={() => {
                   triggerHaptic('medium');
-                  navigate('/menu');
+                  navigate(to('/menu'));
                 }}
                 className="group relative flex flex-1 items-center justify-center gap-3 bg-white text-black px-8 sm:px-10 py-4 sm:py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all w-full"
               >
@@ -489,7 +528,7 @@ const Home: React.FC = () => {
                   <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1.5">Our community's favorite comfort</p>
                 </div>
               </div>
-              <Link to="/menu" className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
+              <Link to={to('/menu')} className="flex items-center gap-1 text-orange-200/90 font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors">
                 View All <ChevronRight size={14} strokeWidth={3} />
               </Link>
             </div>
@@ -548,7 +587,7 @@ const Home: React.FC = () => {
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
-                      navigate(`/menu?cat=${encodeURIComponent(cat.name)}`);
+                      navigate(to(`/menu?cat=${encodeURIComponent(cat.name)}`));
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     whileInView={{ opacity: 1, scale: 1 }}
@@ -588,7 +627,7 @@ const Home: React.FC = () => {
                   {timeBasedHeader} Favorites
                 </h2>
               </div>
-              <Link to="/menu" className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+              <Link to={to('/menu')} className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
                 Explore More <ChevronRight size={16} />
               </Link>
             </div>
@@ -771,7 +810,7 @@ const Home: React.FC = () => {
                   <p className="text-[9px] font-bold text-orange-200/90 uppercase tracking-wider">Everyday comfort, affordable prices</p>
                 </div>
               </div>
-              <Link to="/menu" className="text-orange-200/90 font-bold text-[10px] uppercase tracking-wider hover:underline">View All</Link>
+              <Link to={to('/menu')} className="text-orange-200/90 font-bold text-[10px] uppercase tracking-wider hover:underline">View All</Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
@@ -857,7 +896,7 @@ const Home: React.FC = () => {
                   type="text"
                   placeholder="Search for 'Biryani' or 'Meals'..."
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-white/5 border-none rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                  onFocus={() => navigate('/menu')}
+                  onFocus={() => navigate(to('/menu'))}
                 />
               </div>
             </div>
@@ -1059,7 +1098,7 @@ const Home: React.FC = () => {
                   <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Starting from just ₹49</p>
                 </div>
               </div>
-              <Link to="/menu" className="text-red-600 font-black text-[10px] uppercase tracking-widest hover:underline">View All</Link>
+              <Link to={to('/menu')} className="text-red-600 font-black text-[10px] uppercase tracking-widest hover:underline">View All</Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
@@ -1195,7 +1234,7 @@ const Home: React.FC = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <button 
-                  onClick={() => navigate('/menu')}
+                  onClick={() => navigate(to('/menu'))}
                   className="w-full sm:w-auto px-12 py-6 bg-red-600 text-white rounded-2xl font-black text-xl shadow-2xl shadow-red-600/40 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3"
                 >
                   Order Now

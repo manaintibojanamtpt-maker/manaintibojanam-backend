@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTenant } from '../context/TenantContext';
+import { formatTenantPickupAddress } from '../lib/tenantCheckoutConfig';
 
 export interface StoreBranding {
   brandName: string;
@@ -48,10 +49,10 @@ export function useStoreBranding(): StoreBranding {
       heroDescription: `Order directly from ${brandName}. Freshly prepared food, repeat-friendly ordering, and a smoother local experience.`,
       promiseLabel: `${brandName} Promise`,
       subscriptionLabel: `${brandName} Meal Subscription`,
-      supportEmail: null,
-      supportPhone: null,
-      supportLocation: null,
-      fssaiNumber: null,
+      supportEmail: tenantInfo?.contactEmail || tenantInfo?.kyc?.email || null,
+      supportPhone: tenantInfo?.contactPhone || tenantInfo?.kyc?.mobileNumber || null,
+      supportLocation: formatTenantPickupAddress(tenantInfo?.location),
+      fssaiNumber: tenantInfo?.fssai?.licenseNumber || tenantInfo?.fssai?.number || null,
       isDefaultStorefront,
     };
   }, [tenantId, tenantInfo]);

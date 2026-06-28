@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '../context/AuthContext';
+import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
+import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, LogOut, ChevronRight, MapPin, LayoutDashboard, Utensils, Heart, HelpCircle, CreditCard, Sparkles, X, Mail, Phone, Edit2, CheckCircle2, User, MessageCircle, Activity } from 'lucide-react';
 import { EnvironmentConfig } from '../config/environment';
@@ -14,7 +15,8 @@ import { triggerHaptic } from '../utils/haptics';
 import { useTenant } from '../context/TenantContext';
 
 const Account: React.FC = () => {
-  const { currentUser, userProfile, logout } = useAuth();
+  const { currentUser, userProfile, logout, isCustomerPreview } = useStorefrontAuth();
+  const { loginPath } = useStorefrontPath();
   const { isSupported: bioSupported, isEnabled: bioEnabled, enroll: bioEnroll, disable: bioDisable, biometryType, enrollLoading, disableLoading } = useBiometrics();
   const navigate = useNavigate();
   const { tenantSlug, tenantInfo } = useTenant();
@@ -25,6 +27,12 @@ const Account: React.FC = () => {
   const [editName, setEditName] = useState(userProfile?.name || '');
   const [editPhone, setEditPhone] = useState(userProfile?.phone || '');
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) {
+      navigate(loginPath('/account'), { replace: true });
+    }
+  }, [currentUser, loginPath, navigate]);
 
   useEffect(() => {
     if (currentUser) {
@@ -124,6 +132,14 @@ const Account: React.FC = () => {
     );
     return typeof document !== 'undefined' ? createPortal(content, document.body) : <>{content}</>;
   };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg text-white pb-[calc(2rem+env(safe-area-inset-bottom))]">

@@ -9,9 +9,19 @@ import toast from 'react-hot-toast';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { PricingPlanCard, PricingComparisonTable } from '../../components/pricing/PricingPlanCard';
 import {
+  getEffectivePlanId,
+  getOwnerPlanActionLabel,
+  getOwnerTrialNote,
+  growthTrialDaysRemaining,
+  isOnGrowthOnboardingTrial,
+  isTrialCurrentlyActive,
+  activateGrowthOnboardingTrial,
+} from '../../lib/planStatus';
+import {
   FREE_PLAN,
   PAID_PLANS,
   PaidPlanId,
+  PLAN_TRIALS,
   PRICING_ZERO_COMMISSION_NOTE,
   formatPlanDisplayName,
   getPlanById,
@@ -34,15 +44,22 @@ const OwnerSubscription = () => {
   const hasMobileNumber = !!tenantInfo.kyc?.mobileNumber;
   const canActivate = isEmailVerified && isMerchantAgreementAccepted && isKycCompleted && hasBusinessAddress && hasMobileNumber;
 
-  const currentPlanId = tenantInfo.subscription?.planId || 'starter';
+  const effectivePlanId = getEffectivePlanId(tenantInfo);
   const trialExpiresAt = tenantInfo.subscription?.trialExpiresAt
     ? new Date(tenantInfo.subscription.trialExpiresAt)
     : null;
-  const isTrialActive = trialExpiresAt && trialExpiresAt.getTime() > Date.now();
-  const currentPlan = getPlanById(currentPlanId) || FREE_PLAN;
+  const isTrialActive = isTrialCurrentlyActive(tenantInfo);
+  const growthOnboardingTrial = isOnGrowthOnboardingTrial(tenantInfo);
+  const trialDaysLeft = growthTrialDaysRemaining(tenantInfo);
+  const currentPlan = getPlanById(effectivePlanId) || FREE_PLAN;
+
+  const getOwnerPlanActionLabelWithEnterprise = (plan: (typeof PAID_PLANS)[number]) => {
+    if (plan.id === 'enterprise' && !canActivate) return copy.contactSales;
+    return getOwnerPlanActionLabel(plan.id, plan.name, plan.ownerCta, tenantInfo);
+  };
 
   const handleUpgrade = async (planId: PaidPlanId) => {
-    if (planId === currentPlanId) return;
+    if (planId === effectivePlanId) return;
 
     if (planId === 'enterprise' && !canActivate) {
       toast.error('Complete verification to upgrade, or contact us for Enterprise onboarding.');
@@ -61,18 +78,24 @@ const OwnerSubscription = () => {
       return;
     }
 
-    if (tenantInfo.subscription?.trialUsed && currentPlanId === 'starter') {
-      // Allow trial once; after that still update plan for demo — production would use payment gateway
-    }
-
     setLoadingPlan(planId);
     try {
       const db = getDb();
       const tenantRef = doc(db, 'tenants', tenantInfo.slug);
 
-      if (!tenantInfo.subscription?.trialUsed && currentPlanId === 'starter') {
+      if (
+        planId === 'growth' &&
+        effectivePlanId === 'starter' &&
+        !tenantInfo.subscription?.trialUsed
+      ) {
+        await activateGrowthOnboardingTrial(tenantInfo.slug);
+        toast.success(`${PLAN_TRIALS.growthOnboardingDays}-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
+        return;
+      }
+
+      if (!tenantInfo.subscription?.trialUsed && effectivePlanId === 'starter') {
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 3);
+        expiresAt.setDate(expiresAt.getDate() + PLAN_TRIALS.paidUpgradeDays);
         await updateDoc(tenantRef, {
           'subscription.planId': planId,
           'subscription.status': 'trialing',
@@ -81,7 +104,7 @@ const OwnerSubscription = () => {
           'subscription.trialUsed': true,
           'subscription.trialType': planId,
         });
-        toast.success(`3-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
+        toast.success(`${PLAN_TRIALS.paidUpgradeDays}-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
       } else {
         await updateDoc(tenantRef, {
           'subscription.planId': planId,
@@ -113,19 +136,21 @@ const OwnerSubscription = () => {
       <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#111] to-[#0A0A0A] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{copy.currentPlanLabel}</p>
-          <h2 className="text-xl font-black text-white mt-1">{formatPlanDisplayName(currentPlanId)}</h2>
+          <h2 className="text-xl font-black text-white mt-1">{formatPlanDisplayName(effectivePlanId)}</h2>
           {isTrialActive && trialExpiresAt && (
             <p className="text-sm text-orange-400 mt-1">
-              Trial active until {trialExpiresAt.toLocaleDateString('en-IN')}
+              {growthOnboardingTrial
+                ? `${PLAN_TRIALS.growthOnboardingDays}-day Growth trial · ${trialDaysLeft ?? '—'} days left · ends ${trialExpiresAt.toLocaleDateString('en-IN')}`
+                : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
             </p>
           )}
-          {currentPlanId === 'starter' && (
+          {effectivePlanId === 'starter' && (
             <p className="text-sm text-white/45 mt-1">
               {currentPlan.priceLabel} · {currentPlan.period}
             </p>
           )}
         </div>
-        {currentPlanId !== 'starter' && (
+        {effectivePlanId !== 'starter' && (
           <div className="text-right">
             <p className="text-3xl font-black text-white">{currentPlan.priceLabel}</p>
             <p className="text-xs text-white/40">{currentPlan.period}</p>
@@ -138,31 +163,27 @@ const OwnerSubscription = () => {
         <p className="text-sm text-white/45 mb-6">{copy.compareHelper}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
-          <PricingPlanCard plan={FREE_PLAN} variant="owner" isCurrent={currentPlanId === 'starter'} />
+          <PricingPlanCard plan={FREE_PLAN} variant="owner" isCurrent={effectivePlanId === 'starter'} />
           {PAID_PLANS.map((plan) => (
             <PricingPlanCard
               key={plan.id}
-              plan={plan}
+              plan={{
+                ...plan,
+                trialNote: getOwnerTrialNote(plan.id, tenantInfo, plan.trialNote),
+              }}
               variant="owner"
-              isCurrent={currentPlanId === plan.id}
+              isCurrent={effectivePlanId === plan.id}
               loading={loadingPlan === plan.id}
-              disabled={!canActivate && plan.id !== 'enterprise'}
+              disabled={(!canActivate && plan.id !== 'enterprise') || effectivePlanId === plan.id}
               onSelect={() => {
+                if (plan.id === effectivePlanId) return;
                 if (plan.id === 'enterprise' && !canActivate) {
                   navigate('/contact');
                   return;
                 }
                 handleUpgrade(plan.id);
               }}
-              actionLabel={
-                plan.id === 'enterprise' && !canActivate
-                  ? copy.contactSales
-                  : currentPlanId === plan.id
-                    ? 'Current plan'
-                    : tenantInfo.subscription?.trialUsed || currentPlanId !== 'starter'
-                      ? plan.ownerCta
-                      : `Try ${plan.name} — 3 days free`
-              }
+              actionLabel={getOwnerPlanActionLabelWithEnterprise(plan)}
             />
           ))}
         </div>

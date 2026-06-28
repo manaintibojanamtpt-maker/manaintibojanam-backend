@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@import "./styles/soft-buttons.css";
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
@@ -182,21 +183,190 @@ body {
 
   /* Marketing pages: clear fixed EnterpriseHeader + iOS safe area */
   .marketing-hero-offset {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem + 1.25rem);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem + 0.75rem);
   }
 
   .marketing-main-offset {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+  }
+
+  .marketing-header-nav a,
+  .marketing-header-nav button {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .command-center-tabs .command-center-tab {
+    min-height: 0;
+    min-width: 0;
   }
 
   @media (min-width: 640px) {
     .marketing-hero-offset {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem + 1.75rem);
+      padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem + 1rem);
     }
 
     .marketing-main-offset {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem);
+      padding-top: calc(env(safe-area-inset-top, 0px) + 4.5rem);
     }
+  }
+
+  .marketing-hero-grid-bg {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 40%, transparent 100%);
+  }
+
+  .marketing-hero-accent-text {
+    background: linear-gradient(135deg, #ff9a4d 0%, #ff7a00 50%, #ffb347 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  @property --hero-glow-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes marketing-hero-eyebrow-spin {
+    to {
+      --hero-glow-angle: 360deg;
+    }
+  }
+
+  @keyframes marketing-hero-eyebrow-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 14px rgba(255, 122, 0, 0.2),
+        0 0 28px rgba(255, 122, 0, 0.08);
+    }
+    50% {
+      box-shadow:
+        0 0 22px rgba(255, 122, 0, 0.38),
+        0 0 44px rgba(255, 122, 0, 0.16);
+    }
+  }
+
+  @keyframes marketing-hero-eyebrow-shimmer {
+    0% {
+      background-position: 200% center;
+    }
+    100% {
+      background-position: -200% center;
+    }
+  }
+
+  .marketing-hero-eyebrow-loop {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px;
+    border-radius: 9999px;
+    background: conic-gradient(
+      from var(--hero-glow-angle),
+      transparent 0deg,
+      rgba(255, 122, 0, 0.15) 40deg,
+      #ff7a00 120deg,
+      #ffb347 180deg,
+      #ff7a00 240deg,
+      rgba(255, 122, 0, 0.15) 320deg,
+      transparent 360deg
+    );
+    animation:
+      marketing-hero-eyebrow-spin 3.5s linear infinite,
+      marketing-hero-eyebrow-pulse 2.8s ease-in-out infinite;
+  }
+
+  .marketing-hero-eyebrow-loop-inner {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    background: rgba(8, 8, 8, 0.92);
+    padding: 0.45rem 1.05rem;
+  }
+
+  .marketing-hero-eyebrow-loop-text {
+    display: inline-block;
+    background: linear-gradient(
+      90deg,
+      #a3a3a3 0%,
+      #fafafa 18%,
+      #ffb347 38%,
+      #ff7a00 50%,
+      #ffb347 62%,
+      #fafafa 82%,
+      #a3a3a3 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    animation: marketing-hero-eyebrow-shimmer 4s linear infinite;
+  }
+
+  @media (min-width: 640px) {
+    .marketing-hero-eyebrow-loop-inner {
+      padding: 0.5rem 1.15rem;
+    }
+
+    .marketing-hero-eyebrow-loop-text {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .marketing-hero-eyebrow-glow {
+    box-shadow: 0 0 28px rgba(255, 107, 0, 0.1);
+  }
+
+  .marketing-hero-glass-card {
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: blur(16px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+      0 32px 64px -16px rgba(0, 0, 0, 0.55);
+  }
+
+  .marketing-hero-cta-primary {
+    box-shadow:
+      0 0 32px rgba(255, 107, 0, 0.22),
+      0 4px 14px rgba(255, 107, 0, 0.12);
+  }
+
+  .marketing-hero-cta-primary:hover {
+    box-shadow:
+      0 0 44px rgba(255, 107, 0, 0.32),
+      0 6px 20px rgba(255, 107, 0, 0.18);
+  }
+
+  .marketing-hero-demo-frame {
+    position: relative;
+  }
+
+  .marketing-hero-demo-frame::before {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: -8%;
+    height: 40%;
+    border-radius: 9999px;
+    background: radial-gradient(ellipse at center, rgba(255, 107, 0, 0.14) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .marketing-hero-demo-frame > * {
+    position: relative;
+    z-index: 1;
   }
   
   .bottom-nav,

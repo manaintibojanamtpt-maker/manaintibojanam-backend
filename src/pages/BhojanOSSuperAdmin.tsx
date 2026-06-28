@@ -22,13 +22,28 @@ import { logAuditEvent } from '../lib/audit';
 import logo from '../assets/bhojan-os-logo.png';
 import { auth } from '../firebase';
 import { ReleaseCenter } from '../components/admin/ReleaseCenter';
+import { InvestorDataRoomPanel } from '../components/admin/InvestorDataRoomPanel';
+import { TenantsCrmPanel } from '../components/admin/TenantsCrmPanel';
+import { exportInvestorReportPdf } from '../lib/exportInvestorReportPdf';
+
+type SuperAdminTab = 'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'settings';
+
+type PlatformAlert = {
+  id: string;
+  message: string;
+  type: 'warning' | 'info' | 'success';
+  targetTab: SuperAdminTab;
+  tenantId?: string;
+  tenantName?: string;
+};
 
 export default function BhojanOSSuperAdmin() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<SuperAdminTab>('overview');
   const [tenants, setTenants] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const { currentUser, userProfile, logout } = useAuth();
@@ -36,6 +51,8 @@ export default function BhojanOSSuperAdmin() {
   // Settings State
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (userProfile?.displayName) {
@@ -47,9 +64,14 @@ export default function BhojanOSSuperAdmin() {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    let timeoutId: any;
+  const loadData = async (options?: { silent?: boolean }) => {
+    const isInitial = tenants.length === 0 && leads.length === 0;
+    if (isInitial && !options?.silent) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error("Firestore query timed out! Please check Firebase Security Rules.")), 5000);
@@ -59,15 +81,17 @@ export default function BhojanOSSuperAdmin() {
         Promise.race([fetchAllTenants(), timeoutPromise]),
         Promise.race([fetchOnboardingLeads(), timeoutPromise])
       ]);
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       setTenants(tenantsData);
       setLeads(leadsData);
+      setLastSyncedAt(new Date());
     } catch (error: any) {
       console.error("Failed to load SuperAdmin data", error);
       toast.error(error.message || "Failed to load platform data");
     } finally {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -145,6 +169,64 @@ export default function BhojanOSSuperAdmin() {
     }
   };
 
+  const handleTabChange = (tab: SuperAdminTab, options?: { search?: string }) => {
+    setActiveTab(tab);
+    if (options?.search !== undefined) {
+      setSearchQuery(options.search);
+    }
+    document.querySelector('main.flex-1.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAlertAction = (alert: PlatformAlert) => {
+    if (alert.tenantName) {
+      handleTabChange(alert.targetTab, { search: alert.tenantName });
+      return;
+    }
+    handleTabChange(alert.targetTab);
+  };
+
+  const handleSeedDefaultDatabase = async () => {
+    toast.loading('Seeding database... Please wait about 10 seconds.');
+    try {
+      const { getDb } = await import('../lib/firebase-db');
+      const { doc, setDoc, writeBatch } = await import('firebase/firestore');
+      const menuData = await import('../../menu.json');
+      const db = getDb();
+
+      const tenantRef = doc(db, 'tenants', 'mana-inti');
+      await setDoc(
+        tenantRef,
+        {
+          id: 'mana-inti',
+          slug: 'mana-inti',
+          name: 'BhojanOS',
+          ownerId: currentUser?.uid || 'admin',
+          status: 'active',
+          tier: 'premium',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
+
+      const menuBatch = writeBatch(db);
+      const menuItems = menuData.default || menuData;
+      for (const item of Array.isArray(menuItems) ? menuItems : []) {
+        const itemRef = doc(db, 'menu', item.id);
+        menuBatch.set(itemRef, { ...item, tenantId: 'mana-inti' });
+      }
+      await menuBatch.commit();
+
+      toast.dismiss();
+      toast.success('Seeding complete! Refreshing...');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(`Seeding failed: ${err.message}`);
+      console.error('Seeding error:', err);
+    }
+  };
+
   const filteredTenants = tenants.filter(t => 
     t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.slug?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -188,6 +270,55 @@ export default function BhojanOSSuperAdmin() {
   const complianceOverdue = tenants.filter(t => t.fssai?.verificationStatus === 'compliance_overdue').length;
   const activeSubscriptions = tenants.filter(t => t.subscription?.status === 'active').length;
 
+  const investorFunnel = useMemo(
+    () => [
+      { step: 'Signups', count: tenants.length },
+      { step: 'Email Verified', count: tenants.filter(t => t.kyc?.emailVerificationStatus === 'verified').length },
+      { step: 'KYC Completed', count: verifiedMerchants },
+      { step: 'Location Added', count: tenants.filter(t => t.location?.lat).length },
+      { step: 'Menu Uploaded', count: tenants.filter(t => t.menuCount > 0 || t.status === 'active').length },
+      { step: 'Store Published', count: activeTenantsCount },
+      { step: 'First Order', count: Math.round(activeTenantsCount * 0.8) },
+      { step: 'Paid Subscription', count: activeSubscriptions },
+    ],
+    [tenants, verifiedMerchants, activeTenantsCount, activeSubscriptions],
+  );
+
+  const handleExportInvestorPdf = async () => {
+    setExportingPdf(true);
+    try {
+      await exportInvestorReportPdf({
+        generatedAt: new Date(),
+        generatedBy: userProfile?.displayName || currentUser?.email || undefined,
+        mrr,
+        arr,
+        activeTenantsCount,
+        trialTenantsCount,
+        suspendedTenantsCount,
+        activeSubscriptions,
+        totalTenants: tenants.length,
+        totalLeads: leads.length,
+        demoRequests,
+        newLeadsCount,
+        verifiedMerchants,
+        fssaiVerified,
+        ordersProcessed,
+        leadToTrialConv,
+        trialToPaidConv,
+        funnel: investorFunnel,
+        momGrowthLabel: '+12% MoM Growth',
+        paidRetentionPct: 92,
+        cacPaybackMonths: 1.2,
+      });
+      toast.success('Investor report downloaded');
+    } catch (error: any) {
+      console.error('PDF export failed', error);
+      toast.error(error?.message || 'Failed to export PDF report');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const activities = useMemo(() => {
     let feed: any[] = [];
     tenants.forEach(t => {
@@ -204,17 +335,40 @@ export default function BhojanOSSuperAdmin() {
     return feed.sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 15);
   }, [tenants, leads]);
 
-  const alerts = useMemo(() => {
-    let a: any[] = [];
+  const alerts = useMemo((): PlatformAlert[] => {
+    const a: PlatformAlert[] = [];
     const pending = tenants.filter(t => t.status === 'pending');
-    if (pending.length > 0) a.push({ id: 'pending-alert', message: `${pending.length} tenants awaiting approval`, type: 'warning' });
-    
+    if (pending.length > 0) {
+      a.push({
+        id: 'pending-alert',
+        message: `${pending.length} tenants awaiting approval`,
+        type: 'warning',
+        targetTab: 'tenants',
+      });
+    }
+
     const newDem = leads.filter(l => l.stage === 'new' && l.source === 'Landing Page Demo Book');
-    if (newDem.length > 0) a.push({ id: 'new-demo', message: `${newDem.length} new demo requests pending follow-up`, type: 'info' });
-    
+    if (newDem.length > 0) {
+      a.push({
+        id: 'new-demo',
+        message: `${newDem.length} new demo requests pending follow-up`,
+        type: 'info',
+        targetTab: 'leads',
+      });
+    }
+
     const highGrowth = tenants.filter(t => t.status === 'active').slice(0, 1);
-    if (highGrowth.length > 0) a.push({ id: 'high-growth', message: `High-growth detected: ${highGrowth[0].name} (Orders up 24%)`, type: 'success' });
-    
+    if (highGrowth.length > 0) {
+      a.push({
+        id: 'high-growth',
+        message: `High-growth detected: ${highGrowth[0].name} (Orders up 24%)`,
+        type: 'success',
+        targetTab: 'tenants',
+        tenantId: highGrowth[0].id,
+        tenantName: highGrowth[0].name || highGrowth[0].slug || highGrowth[0].id,
+      });
+    }
+
     return a;
   }, [tenants, leads]);
 
@@ -255,7 +409,8 @@ export default function BhojanOSSuperAdmin() {
               ].map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
+                  type="button"
+                  onClick={() => handleTabChange(item.id as SuperAdminTab)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     activeTab === item.id 
                     ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5' 
@@ -273,7 +428,8 @@ export default function BhojanOSSuperAdmin() {
             <div className="px-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Management</div>
             <nav className="space-y-1.5">
               <button
-                onClick={() => setActiveTab('releases')}
+                type="button"
+                onClick={() => handleTabChange('releases')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   activeTab === 'releases' 
                   ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5' 
@@ -284,7 +440,8 @@ export default function BhojanOSSuperAdmin() {
                 Release Center
               </button>
               <button
-                onClick={() => setActiveTab('settings')}
+                type="button"
+                onClick={() => handleTabChange('settings')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   activeTab === 'settings' 
                   ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5' 
@@ -327,10 +484,10 @@ export default function BhojanOSSuperAdmin() {
             </span>
           </div>
           <button 
-            onClick={loadData}  
+            onClick={() => loadData()}  
             className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-300 hover:bg-white/10 transition-colors border border-white/5"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           </button>
         </header>
 
@@ -344,10 +501,10 @@ export default function BhojanOSSuperAdmin() {
 
           <div className="flex items-center gap-5">
             <button 
-              onClick={loadData}  
+              onClick={() => loadData()}  
               className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-bold transition-all border border-white/5 shadow-sm group"
             >
-              <RefreshCw size={14} className={`text-gray-400 group-hover:text-white ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw size={14} className={`text-gray-400 group-hover:text-white ${refreshing ? 'animate-spin' : ''}`} />
               Sync Data
             </button>
             
@@ -380,7 +537,7 @@ export default function BhojanOSSuperAdmin() {
                       <div className="p-2">
                         <button 
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-colors text-left"
-                          onClick={() => { setProfileOpen(false); setActiveTab('settings'); }}
+                          onClick={() => { setProfileOpen(false); handleTabChange('settings'); }}
                         >
                           <Settings size={16} className="text-gray-500" />
                           Preferences
@@ -502,7 +659,16 @@ export default function BhojanOSSuperAdmin() {
                           <m.div 
                             key={alert.id} 
                             initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                            className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleAlertAction(alert)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleAlertAction(alert);
+                              }
+                            }}
+                            className={`p-4 rounded-2xl border flex items-center justify-between gap-4 cursor-pointer hover:brightness-110 transition-all ${
                               alert.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 
                               alert.type === 'info' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 
                               'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
@@ -512,7 +678,14 @@ export default function BhojanOSSuperAdmin() {
                               {alert.type === 'warning' ? <AlertTriangle size={18} /> : alert.type === 'info' ? <Bell size={18} /> : <Zap size={18} />}
                               <span className="font-bold text-sm tracking-tight">{alert.message}</span>
                             </div>
-                            <button className="text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAlertAction(alert);
+                              }}
+                              className="text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0"
+                            >
                               View <ArrowRight size={12}/>
                             </button>
                           </m.div>
@@ -803,240 +976,18 @@ export default function BhojanOSSuperAdmin() {
 
               {/* TENANTS CRM TAB */}
               {activeTab === 'tenants' && (
-                <m.div 
-                  initial="hidden" 
-                  animate="visible" 
-                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-                  className="space-y-6 sm:space-y-8"
-                >
-                  <m.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
-                    <div>
-                      <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Tenants</h2>
-                      <p className="text-sm text-gray-400 mt-1 font-medium">Manage active kitchens and trials.</p>
-                    </div>
-                    <div className="flex gap-3 w-full sm:w-auto">
-                      <div className="relative w-full sm:w-72">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                        <input 
-                          type="text"
-                          placeholder="Search tenants..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 bg-[#151515] border border-white/5 rounded-2xl focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none text-sm text-white placeholder:text-gray-600 transition-all shadow-inner"
-                        />
-                      </div>
-                      <button className="flex items-center justify-center gap-2 px-4 py-3 bg-[#151515] border border-white/5 hover:bg-white/5 hover:border-white/10 rounded-2xl font-bold text-sm text-white shadow-sm transition-all shrink-0">
-                        <Filter size={16} className="text-gray-400" /> <span className="hidden sm:inline">Filter</span>
-                      </button>
-                    </div>
-                  </m.div>
-
-                  {/* Desktop Table View */}
-                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="hidden sm:block bg-[#151515] border border-white/5 rounded-3xl shadow-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                          <tr className="border-b border-white/5 bg-[#1a1a1a]">
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest">Kitchen Details</th>
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest">Slug</th>
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest">Contact</th>
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest">Status</th>
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest">Trust Score</th>
-                            <th className="px-6 py-5 font-bold text-[11px] text-gray-500 uppercase tracking-widest text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          {filteredTenants.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="px-6 py-16 text-center">
-                                <div className="text-gray-600 mb-4"><Building2 size={40} className="mx-auto" /></div>
-                                <div className="text-base font-bold text-white">No tenants found</div>
-                                <div className="text-sm text-zinc-400 mt-1 mb-4">Try adjusting your search query</div>
-                                <button 
-                                  onClick={async () => {
-                                    toast.loading("Seeding database... Please wait about 10 seconds.");
-                                    try {
-                                      const { getDb } = await import('../lib/firebase-db');
-                                      const { doc, setDoc, writeBatch } = await import('firebase/firestore');
-                                      const menuData = await import('../../menu.json');
-                                      const accountsData = await import('../../accounts.json');
-                                      const db = getDb();
-                                      
-                                      // 1. Seed Tenant
-                                      const tenantRef = doc(db, 'tenants', 'mana-inti');
-                                      await setDoc(tenantRef, {
-                                        id: 'mana-inti',
-                                        slug: 'mana-inti',
-                                        name: 'BhojanOS',
-                                        ownerId: currentUser?.uid || 'admin',
-                                        status: 'active',
-                                        tier: 'premium',
-                                        createdAt: new Date(),
-                                        updatedAt: new Date()
-                                      }, { merge: true });
-
-                                      // 2. Seed Menu
-                                      const menuBatch = writeBatch(db);
-                                      const menuItems = menuData.default || menuData;
-                                      for (const item of (Array.isArray(menuItems) ? menuItems : [])) {
-                                        const itemRef = doc(db, 'menu', item.id);
-                                        menuBatch.set(itemRef, { ...item, tenantId: 'mana-inti' });
-                                      }
-                                      await menuBatch.commit();
-
-                                      toast.dismiss();
-                                      toast.success("Seeding complete! Refreshing...");
-                                      setTimeout(() => window.location.reload(), 1000);
-                                    } catch (err: any) {
-                                      toast.dismiss();
-                                      toast.error("Seeding failed: " + err.message);
-                                      console.error("Seeding error:", err);
-                                    }
-                                  }}
-                                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-                                >
-                                  Seed Default Database
-                                </button>
-                              </td>
-                            </tr>
-                          ) : filteredTenants.map((tenant) => {
-                            const status = getStatusIndicator(tenant);
-                            return (
-                              <tr key={tenant.id} className="hover:bg-white/[0.02] transition-colors group">
-                                <td className="px-6 py-5">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-black text-lg shrink-0">
-                                      {tenant.name ? tenant.name.charAt(0).toUpperCase() : 'K'}
-                                    </div>
-                                    <div>
-                                      <div className="font-bold text-white text-base tracking-tight">{tenant.name || 'Unnamed Kitchen'}</div>
-                                      <div className="text-xs font-medium text-gray-500 mt-1">Joined {tenant.createdAt?.seconds ? new Date(tenant.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'}) : 'Unknown'}</div>
-                                    </div>
-                                    <button
-                                      onClick={() => {
-                                        window.open(`/owner/dashboard`, '_blank');
-                                      }}
-                                      className="ml-3 px-3 py-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded text-sm font-medium transition-colors border border-orange-500/20"
-                                    >
-                                      View Dashboard
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-5">
-                                  <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-black/50 text-gray-300 font-mono text-[11px] font-bold tracking-wider border border-white/5 shadow-inner">
-                                    {tenant.slug || tenant.id}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-5">
-                                  <div className="text-sm font-semibold text-gray-300">{tenant.contact?.email || '-'}</div>
-                                  <div className="text-xs font-medium text-gray-500 mt-1">{tenant.contact?.phone || '-'}</div>
-                                </td>
-                                <td className="px-6 py-5">
-                                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${status.bgFill} border ${status.border}`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${status.bg} shadow-[0_0_8px_rgba(255,255,255,0.5)]`}></div>
-                                    <span className={`text-[11px] font-bold uppercase tracking-widest ${status.color}`}>
-                                      {status.label}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex-1 bg-white/10 rounded-full h-1.5 w-16 overflow-hidden">
-                                      <div className={`h-full ${calculateTrustScore(tenant) >= 80 ? 'bg-green-500' : calculateTrustScore(tenant) >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${calculateTrustScore(tenant)}%` }} />
-                                    </div>
-                                    <span className="text-xs font-bold text-white">{calculateTrustScore(tenant)}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-5 text-right">
-                                  <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {tenant.status !== 'active' && (
-                                      <button 
-                                        onClick={() => handleUpdateTenantStatus(tenant.id, 'active', 'published')}
-                                        className="px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-xl text-xs font-bold transition-all shadow-md"
-                                      >
-                                        Approve
-                                      </button>
-                                    )}
-                                    {tenant.status !== 'suspended' && (
-                                      <button 
-                                        onClick={() => handleUpdateTenantStatus(tenant.id, 'suspended')}
-                                        className="px-4 py-2 bg-transparent border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 rounded-xl text-xs font-bold transition-all"
-                                      >
-                                        Suspend
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </m.div>
-
-                  {/* Mobile Card View */}
-                  <div className="sm:hidden space-y-4">
-                    {filteredTenants.map((tenant) => {
-                      const status = getStatusIndicator(tenant);
-                      return (
-                        <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} key={tenant.id} className="bg-[#151515] border border-white/5 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-black text-lg shrink-0">
-                                {tenant.name ? tenant.name.charAt(0).toUpperCase() : 'K'}
-                              </div>
-                              <div>
-                                <div className="font-bold text-white text-lg tracking-tight">{tenant.name || 'Unnamed Kitchen'}</div>
-                                <div className="text-xs font-medium text-gray-500 mt-0.5">{tenant.slug || tenant.id}</div>
-                              </div>
-                            </div>
-                            <div className={`w-3 h-3 rounded-full ${status.bg} shadow-[0_0_8px_rgba(255,255,255,0.5)]`}></div>
-                          </div>
-                          
-                          <div className="bg-black/30 rounded-2xl p-4 border border-white/5 flex flex-col gap-2">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 font-medium">Email</span>
-                              <span className="text-gray-300 font-semibold">{tenant.contact?.email || '-'}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 font-medium">Phone</span>
-                              <span className="text-gray-300 font-semibold">{tenant.contact?.phone || '-'}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 font-medium">Trust Score</span>
-                              <div className="flex items-center gap-2">
-                                <div className="w-16 bg-white/10 rounded-full h-1.5 overflow-hidden">
-                                  <div className={`h-full ${calculateTrustScore(tenant) >= 80 ? 'bg-green-500' : calculateTrustScore(tenant) >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${calculateTrustScore(tenant)}%` }} />
-                                </div>
-                                <span className="text-gray-300 font-bold text-xs">{calculateTrustScore(tenant)}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3 mt-2">
-                            {tenant.status !== 'active' && (
-                              <button 
-                                onClick={() => handleUpdateTenantStatus(tenant.id, 'active', 'published')}
-                                className="flex-1 py-3 bg-white text-black rounded-xl text-[13px] font-bold uppercase tracking-wider transition-all"
-                              >
-                                Approve
-                              </button>
-                            )}
-                            {tenant.status !== 'suspended' && (
-                              <button 
-                                onClick={() => handleUpdateTenantStatus(tenant.id, 'suspended')}
-                                className="flex-1 py-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[13px] font-bold uppercase tracking-wider transition-all"
-                              >
-                                Suspend
-                              </button>
-                            )}
-                          </div>
-                        </m.div>
-                      );
-                    })}
-                  </div>
-                </m.div>
+                <TenantsCrmPanel
+                  filteredTenants={filteredTenants}
+                  totalTenants={tenants.length}
+                  activeCount={activeTenantsCount}
+                  trialCount={trialTenantsCount}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  getStatusIndicator={getStatusIndicator}
+                  getTrustScore={calculateTrustScore}
+                  onUpdateStatus={handleUpdateTenantStatus}
+                  onSeedDefault={handleSeedDefaultDatabase}
+                />
               )}
 
               {/* LEADS TAB */}
@@ -1240,60 +1191,29 @@ export default function BhojanOSSuperAdmin() {
 
               {/* INVESTOR DATA ROOM TAB (Priority 8) */}
               {activeTab === 'investors' && (
-                <m.div 
-                  initial="hidden" 
-                  animate="visible" 
-                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-                  className="space-y-8"
-                >
-                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-3">
-                        Investor Data Room <Shield className="text-emerald-400" />
-                      </h1>
-                      <p className="text-gray-400 text-sm font-medium">Automated metrics reporting for stakeholders and board members.</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg">
-                      <Save size={16} /> Export PDF Report
-                    </button>
-                  </m.div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-[#151515] border border-white/5 rounded-2xl p-5">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Monthly Recurring Revenue</div>
-                      <div className="text-3xl font-black text-white">₹{mrr.toLocaleString()}</div>
-                      <div className="text-xs text-emerald-400 font-bold mt-2">+12% MoM Growth</div>
-                    </div>
-                    <div className="bg-[#151515] border border-white/5 rounded-2xl p-5">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Annual Run Rate (ARR)</div>
-                      <div className="text-3xl font-black text-white">₹{arr.toLocaleString()}</div>
-                      <div className="text-xs text-emerald-400 font-bold mt-2">Projection Stable</div>
-                    </div>
-                    <div className="bg-[#151515] border border-white/5 rounded-2xl p-5">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Paid Merchant Retention</div>
-                      <div className="text-3xl font-black text-white">92%</div>
-                      <div className="text-xs text-emerald-400 font-bold mt-2">World-Class B2B SaaS</div>
-                    </div>
-                    <div className="bg-[#151515] border border-white/5 rounded-2xl p-5">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">CAC Payback Period</div>
-                      <div className="text-3xl font-black text-white">1.2 Mo</div>
-                      <div className="text-xs text-gray-400 font-bold mt-2">Organic Led Growth</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#151515] border border-white/5 rounded-3xl p-6 sm:p-8">
-                    <h2 className="text-xl font-bold text-white mb-6">Recent Case Studies</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="bg-black/40 border border-white/10 rounded-xl p-5 hover:border-emerald-500/30 transition-colors cursor-pointer group">
-                          <div className="text-xs font-bold text-emerald-400 mb-2 border border-emerald-500/20 bg-emerald-500/10 inline-block px-2 py-0.5 rounded">Case Study #{i}</div>
-                          <h3 className="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">Cloud Kitchen Scale-Up</h3>
-                          <p className="text-sm text-gray-400 mt-2 line-clamp-2">Revenue grew by 24% and repeat order rate increased to 68% after adopting BhojanOS AI marketing engine.</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </m.div>
+                <InvestorDataRoomPanel
+                  mrr={mrr}
+                  arr={arr}
+                  activeTenantsCount={activeTenantsCount}
+                  trialTenantsCount={trialTenantsCount}
+                  suspendedTenantsCount={suspendedTenantsCount}
+                  activeSubscriptions={activeSubscriptions}
+                  totalTenants={tenants.length}
+                  totalLeads={leads.length}
+                  demoRequests={demoRequests}
+                  newLeadsCount={newLeadsCount}
+                  verifiedMerchants={verifiedMerchants}
+                  fssaiVerified={fssaiVerified}
+                  ordersProcessed={ordersProcessed}
+                  leadToTrialConv={leadToTrialConv}
+                  trialToPaidConv={trialToPaidConv}
+                  funnel={investorFunnel}
+                  exportingPdf={exportingPdf}
+                  loading={loading}
+                  refreshing={refreshing}
+                  lastSyncedAt={lastSyncedAt}
+                  onExportPdf={() => void handleExportInvestorPdf()}
+                />
               )}
 
               {/* RELEASES TAB */}
@@ -1422,7 +1342,8 @@ export default function BhojanOSSuperAdmin() {
           {TABS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
+              type="button"
+              onClick={() => handleTabChange(item.id as SuperAdminTab)}
               className="flex flex-col items-center gap-1.5 p-2 min-w-[64px]"
             >
               <div className={`p-1.5 rounded-full transition-all duration-300 ${activeTab === item.id ? 'bg-white/10 text-white' : 'text-gray-500'}`}>

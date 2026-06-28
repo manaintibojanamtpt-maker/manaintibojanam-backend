@@ -13,10 +13,12 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
+import { sortOrdersNewestFirst } from '../lib/activeOrder';
 import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent } from '../types';
 import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
 import { EnvironmentConfig } from '../config/environment';
+import { resolveOwnerTenantIds } from '../lib/ownerAccess';
 import {
   LEGACY_UNPAID_ADMIN_LABEL,
   LEGACY_UNPAID_CUSTOMER_LABEL,
@@ -172,6 +174,10 @@ export const saveUserIfNotExists = async (user: { uid: string, email: string | n
       return newUser;
     } else {
       const userData = userDoc.data() as UserProfile;
+      let ownedTenantIds = userData.ownedTenantIds;
+      if (!ownedTenantIds?.length) {
+        ownedTenantIds = await resolveOwnerTenantIds(user.uid, user.email);
+      }
       if (!userData.referralCode) {
         const referralCode = generateReferralCode(userData.name || 'USER');
         await updateDoc(doc(getDb(), 'users', user.uid), { referralCode });
@@ -188,9 +194,9 @@ export const saveUserIfNotExists = async (user: { uid: string, email: string | n
         } catch (refErr) {
           console.error("Failed to create referral doc:", refErr);
         }
-        return { id: userDoc.id, ...userData, referralCode } as unknown as UserProfile;
+        return { id: userDoc.id, ...userData, referralCode, ownedTenantIds } as unknown as UserProfile;
       }
-      return { id: userDoc.id, ...userData } as unknown as UserProfile;
+      return { id: userDoc.id, ...userData, ownedTenantIds } as unknown as UserProfile;
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -316,12 +322,17 @@ export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'u
 export const fetchOrders = async (userId?: string): Promise<Order[]> => {
   const path = 'orders';
   try {
-    let q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
+    let snapshot;
     if (userId) {
-      q = query(collection(getDb(), path), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+      const q = query(collection(getDb(), path), where('userId', '==', userId));
+      snapshot = await getDocs(q);
+    } else {
+      const q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
+      snapshot = await getDocs(q);
     }
-    const snapshot = await getDocs(q);
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    const orders = sortOrdersNewestFirst(
+      snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Order)),
+    );
     
     // Check for expired orders and update them (ONLY for online orders)
     const now = Date.now();
@@ -381,6 +392,34 @@ const notifyOrderStatusChange = async (orderId: string, status: OrderStatus) => 
   }
 };
 
+const buildOrderStatusUpdatePayload = (
+  targetStatus: OrderStatus,
+  currentStatus: OrderStatus,
+  trackingData?: Record<string, any>,
+): Record<string, unknown> => {
+  const updatePayload: Record<string, unknown> = {
+    status: targetStatus,
+    updatedAt: serverTimestamp(),
+    statusHistory: arrayUnion({
+      status: targetStatus,
+      timestamp: new Date().toISOString(),
+      description: `Order moved from ${currentStatus} to ${targetStatus}`,
+      metadata: trackingData || {},
+    }),
+  };
+
+  if (trackingData) {
+    if (trackingData.deliveryPartner) updatePayload.deliveryPartner = trackingData.deliveryPartner;
+    if (trackingData.trackingUrl) updatePayload.trackingUrl = trackingData.trackingUrl;
+    if (trackingData.trackingLink) updatePayload.trackingLink = trackingData.trackingLink;
+    if (trackingData.riderName) updatePayload.riderName = trackingData.riderName;
+    if (trackingData.riderPhone) updatePayload.riderPhone = trackingData.riderPhone;
+    if (trackingData.deliveryAssignedAt) updatePayload.deliveryAssignedAt = trackingData.deliveryAssignedAt;
+  }
+
+  return updatePayload;
+};
+
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, trackingData?: Record<string, any>): Promise<void> => {
   const path = `orders/${orderId}`;
   try {
@@ -401,15 +440,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
 
     if (currentStatus === targetStatus) {
       if (trackingData && Object.keys(trackingData).length > 0) {
-        const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: targetStatus, trackingData }),
-        });
-        const payload = await response.json().catch(() => null);
-        if (!response.ok || payload?.success !== true) {
-          throw new Error(payload?.error || 'Failed to update order metadata');
-        }
+        await updateDoc(doc(getDb(), 'orders', orderId), buildOrderStatusUpdatePayload(targetStatus, currentStatus, trackingData));
       }
       return;
     }
@@ -429,10 +460,10 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
     }
 
     const validTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
-      [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
-      [OrderStatus.PAYMENT_PENDING]: [OrderStatus.PAYMENT_VERIFICATION, OrderStatus.CANCELLED, OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
-      [OrderStatus.PAYMENT_VERIFICATION]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING, OrderStatus.ACCEPTED, OrderStatus.EXPIRED],
-      [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
+      [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.EXPIRED],
+      [OrderStatus.PAYMENT_PENDING]: [OrderStatus.PAYMENT_VERIFICATION, OrderStatus.CANCELLED, OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.EXPIRED],
+      [OrderStatus.PAYMENT_VERIFICATION]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING, OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.EXPIRED],
+      [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
       [OrderStatus.READY]: [OrderStatus.COURIER_BOOKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED],
       [OrderStatus.COURIER_BOOKED]: [OrderStatus.PICKED_UP, OrderStatus.FAILED_DELIVERY, OrderStatus.CANCELLED],
       [OrderStatus.PICKED_UP]: [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.FAILED_DELIVERY],
@@ -441,12 +472,12 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
       [OrderStatus.FAILED_DELIVERY]: [OrderStatus.COURIER_BOOKED, OrderStatus.CANCELLED],
       [OrderStatus.EXPIRED]: [],
       [OrderStatus.CANCELLED]: [],
-      [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
-      [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.SCHEDULED, OrderStatus.CANCELLED],
-      [OrderStatus.SCHEDULED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+      [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.EXPIRED, OrderStatus.ACCEPTED, OrderStatus.REJECTED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.SCHEDULED, OrderStatus.CANCELLED, OrderStatus.REJECTED],
+      [OrderStatus.SCHEDULED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.REJECTED],
       [OrderStatus.DISPATCHED]: [OrderStatus.DELIVERED, OrderStatus.FAILED_DELIVERY, OrderStatus.CANCELLED],
-      [OrderStatus.PLACED]: [OrderStatus.PAYMENT_PENDING, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
-      [OrderStatus.ACCEPTED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED]
+      [OrderStatus.PLACED]: [OrderStatus.PAYMENT_PENDING, OrderStatus.PAYMENT_VERIFICATION, OrderStatus.ACCEPTED, OrderStatus.CANCELLED, OrderStatus.REJECTED, OrderStatus.EXPIRED],
+      [OrderStatus.ACCEPTED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED, OrderStatus.REJECTED]
     };
 
     if (!validTransitions[currentStatus]?.includes(targetStatus)) {
@@ -469,15 +500,10 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
       throw new Error('Payment must be verified before this order can move to kitchen or dispatch.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: targetStatus, trackingData }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || payload?.success !== true) {
-      throw new Error(payload?.error || 'Failed to update order status');
-    }
+    await updateDoc(
+      doc(getDb(), 'orders', orderId),
+      buildOrderStatusUpdatePayload(targetStatus, currentStatus, trackingData),
+    );
 
     notifyOrderStatusChange(orderId, targetStatus).catch(() => {});
   } catch (error) {
@@ -553,13 +579,14 @@ export const subscribeToGuestOrders = (orderIds: string[], callback: (orders: Or
 
 export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: string, onError?: (error: any) => void) => {
   const path = 'orders';
-  let q = query(collection(getDb(), path), orderBy('createdAt', 'desc'));
-  if (userId) {
-    q = query(collection(getDb(), path), where('userId', '==', userId), orderBy('createdAt', 'desc'));
-  }
-  
+  const q = userId
+    ? query(collection(getDb(), path), where('userId', '==', userId))
+    : query(collection(getDb(), path), orderBy('createdAt', 'desc'));
+
   return onSnapshot(q, async (snapshot) => {
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    const orders = sortOrdersNewestFirst(
+      snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Order)),
+    );
     console.log('[API] Fetched orders for user:', userId, 'Count:', orders.length);
     console.log('[API] Raw orders:', orders.map(o => ({
       id: o.id,

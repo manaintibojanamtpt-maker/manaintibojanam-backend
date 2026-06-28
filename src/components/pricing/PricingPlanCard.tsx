@@ -63,6 +63,9 @@ export const PricingPlanCard: React.FC<PricingPlanCardProps> = ({
           {plan.price > 0 && <span className="text-sm text-white/45 mb-1.5">{plan.period}</span>}
         </div>
         {plan.price === 0 && <p className="text-xs text-emerald-400/90 mt-1">{plan.period}</p>}
+        {plan.trialNote && (
+          <p className="text-[11px] font-medium text-[#ffb347]/90 mt-2 leading-snug">{plan.trialNote}</p>
+        )}
         <p className="text-[11px] text-white/35 mt-2">Zero commission on every order</p>
       </div>
 

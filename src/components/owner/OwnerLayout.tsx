@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle } from 'lucide-react';
+import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle, Volume2, VolumeX, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { m, AnimatePresence } from 'framer-motion';
-import { useOrderAlerts } from '../../hooks/useOrderAlerts';
+import { OrderAlertProvider, useOrderAlerts } from '../../hooks/useOrderAlerts';
 import { NotificationBell } from '../../modules/notifications/NotificationBell';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { useTenant } from '../../context/TenantContext';
 import { sendEmailVerification } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { EnvironmentConfig } from '../../config/environment';
+import { buildCustomerPreviewStoreUrl } from '../../lib/storefrontPreview';
 import { ownerNavItems, ownerNavGroups, getOwnerPageTitle, OwnerNavItem } from '../../config/ownerNavigation';
+import { StoreSetupGuide } from './StoreSetupGuide';
+import { needsStoreSetup } from '../../lib/storeSetupProgress';
 
-const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
   const { tenantInfo, tenantSlug } = useTenant();
   const entitlements = useEntitlements();
-  const { pendingCount } = useOrderAlerts();
+  const { pendingCount, soundEnabled, showSoundPrompt, setSoundEnabled, enableSoundAlerts } = useOrderAlerts();
   const navigate = useNavigate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
@@ -41,11 +44,33 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
   }));
 
-  const mobileBarItems = navItems.filter((item) => item.mobileBar);
+  const showSetupNav =
+    tenantInfo &&
+    needsStoreSetup(tenantInfo) &&
+    location.pathname !== '/owner/setup';
+
+  const navItemsWithSetup: typeof navItems = showSetupNav
+    ? [
+        {
+          id: 'setup',
+          label: 'Store setup',
+          shortLabel: 'Setup',
+          path: '/owner/setup',
+          icon: ClipboardList,
+          group: 'store' as const,
+          mobileBar: false,
+          disabled: false,
+        },
+        ...navItems,
+      ]
+    : navItems;
+
+  const mobileBarItems = navItemsWithSetup.filter((item) => item.mobileBar);
 
   const tenantId = userProfile?.ownedTenantIds?.[0];
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
+  const customerPreviewUrl = storeUrl ? buildCustomerPreviewStoreUrl(storeUrl) : '';
   const currentPage = getOwnerPageTitle(location.pathname);
 
   useEffect(() => {
@@ -106,7 +131,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{ownerNavGroups[groupKey]}</span>
               </div>
               <div className="space-y-1">
-                {navItems.filter((item) => item.group === groupKey).map((item) => {
+                {navItemsWithSetup.filter((item) => item.group === groupKey).map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
                   return (
@@ -155,7 +180,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <a 
-                  href={storeUrl}
+                  href={customerPreviewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center bg-red-600/10 hover:bg-red-600/20 text-red-500 py-2 px-3 rounded-lg text-xs font-bold transition-colors"
@@ -265,7 +290,7 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         {copied ? 'Copied!' : 'Copy'}
                       </button>
                       <a
-                        href={storeUrl}
+                        href={customerPreviewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center rounded-xl bg-red-600/10 px-3 py-3 text-xs font-bold text-red-500"
@@ -314,12 +339,46 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
           
           <div className="relative flex items-center space-x-2 sm:space-x-4">
+            <button
+              type="button"
+              onClick={() => {
+                if (!soundEnabled) {
+                  void enableSoundAlerts();
+                  return;
+                }
+                setSoundEnabled(false);
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+              aria-label={soundEnabled ? 'Mute order sounds' : 'Enable order sounds'}
+              title={soundEnabled ? 'Order sounds on' : 'Order sounds off'}
+            >
+              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} className="text-red-400" />}
+            </button>
             <NotificationBell tenantId={tenantId} />
             <button onClick={logout} className="hidden sm:flex lg:hidden w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 items-center justify-center text-red-500 hover:text-red-400 transition-colors">
               <LogOut size={18} />
             </button>
           </div>
         </header>
+
+        {showSoundPrompt && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0 relative z-10">
+            <div className="flex items-start sm:items-center gap-3">
+              <Volume2 size={18} className="text-amber-400 mt-0.5 sm:mt-0 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-amber-300">Enable order sound alerts</p>
+                <p className="text-xs text-amber-300/70 mt-0.5">Tap once so your home-screen app can ring when a new order arrives.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void enableSoundAlerts()}
+              className="text-xs font-bold bg-amber-500 hover:bg-amber-600 text-black px-4 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0"
+            >
+              Enable sounds
+            </button>
+          </div>
+        )}
 
         {/* Email Verification Banner */}
         {(!currentUser?.emailVerified && tenantInfo?.kyc?.emailVerificationStatus !== 'verified') && (
@@ -343,7 +402,10 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         {/* Scrollable Content Container */}
         <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto w-full pb-4 lg:pb-8">
+          <div className="max-w-6xl mx-auto w-full pb-4 lg:pb-8 space-y-4">
+            {showSetupNav && location.pathname !== '/owner/dashboard' && (
+              <StoreSetupGuide tenantInfo={tenantInfo} menuCount={0} variant="compact" />
+            )}
             {children}
           </div>
         </div>
@@ -400,5 +462,11 @@ const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     </div>
   );
 };
+
+const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <OrderAlertProvider>
+    <OwnerLayoutShell>{children}</OwnerLayoutShell>
+  </OrderAlertProvider>
+);
 
 export default OwnerLayout;

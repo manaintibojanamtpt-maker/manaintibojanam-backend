@@ -2,14 +2,112 @@ import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { Store, Mail, Lock, Loader2, ArrowRight, User, Phone } from 'lucide-react';
+import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { EnvironmentConfig } from '../../config/environment';
+import { onboardingPlanMessaging } from '../../config/pricing';
+import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
+import SoftButton from '../../components/ui/SoftButton';
+
+const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
+
+const slugFromRestaurantName = (restaurantName: string) =>
+  restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+const provisionOwnerTenant = async (
+  uid: string,
+  params: { name: string; email: string; restaurantName: string; mobileNumber?: string }
+): Promise<string> => {
+  const slug = slugFromRestaurantName(params.restaurantName);
+  if (!slug) throw new Error('Please enter a valid restaurant name.');
+  if (RESERVED_SLUGS.some((reserved) => slug.startsWith(reserved))) {
+    throw new Error('This store name is reserved or unavailable. Please choose another.');
+  }
+
+  const db = getDb();
+  const userRef = doc(db, 'users', uid);
+  const existingUser = await getDoc(userRef);
+  if (existingUser.exists() && (existingUser.data()?.ownedTenantIds?.length ?? 0) > 0) {
+    return existingUser.data()!.ownedTenantIds[0];
+  }
+
+  const tenantRef = doc(db, 'tenants', slug);
+  const existingTenant = await getDoc(tenantRef);
+  if (existingTenant.exists() && existingTenant.data()?.ownerId !== uid) {
+    throw new Error('This store name is already taken. Please choose another.');
+  }
+
+  await setDoc(userRef, {
+    name: params.name,
+    email: params.email,
+    role: 'owner',
+    ownedTenantIds: [slug],
+    updatedAt: new Date(),
+    ...(existingUser.exists() ? {} : { createdAt: new Date() }),
+  }, { merge: true });
+
+  await setDoc(tenantRef, {
+    name: params.restaurantName,
+    slug,
+    ownerId: uid,
+    status: 'draft',
+    storeStatus: 'draft',
+    subscription: {
+      planId: 'starter',
+      status: 'active',
+      startDate: new Date().toISOString(),
+      trialUsed: false,
+    },
+    legal: { status: 'pending' },
+    fssai: {
+      verificationStatus: 'not_submitted',
+      registrationDate: new Date().toISOString(),
+    },
+    kyc: {
+      ownerName: params.name,
+      email: params.email,
+      emailVerificationStatus: 'pending',
+      mobileNumber: params.mobileNumber || '',
+      mobileVerificationStatus: 'pending',
+      verificationLevel: 0,
+    },
+    onboardingStatus: {
+      isComplete: false,
+      currentStep: 1,
+      migrated: false,
+    },
+    paymentConfig: {
+      defaultProvider: 'cod',
+      providers: {
+        cod: { enabled: true },
+        razorpay: { enabled: false },
+      },
+    },
+    pricingConfig: {
+      gstPercent: 0,
+      packingFee: 0,
+    },
+    deliveryConfig: {
+      enabled: true,
+      freeRadius: 2,
+      paidRadius: 5,
+      maxRadius: 10,
+      baseFee: 0,
+      perKmCharge: 0,
+      prepTime: 20,
+      feesConfigured: false,
+    },
+    createdAt: new Date().toISOString(),
+    settings: { theme: 'orange' },
+  }, { merge: true });
+
+  return slug;
+};
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -41,7 +139,7 @@ const OwnerRegister = () => {
 
   // If already logged in, redirect to dashboard
   if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
-    return <Navigate to="/owner/settings" />;
+    return <Navigate to="/owner/dashboard" />;
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -51,9 +149,8 @@ const OwnerRegister = () => {
     setLoading(true);
     try {
       // Pre-check slug
-      const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const reservedSlugs = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
-      if (reservedSlugs.some(reserved => slug.startsWith(reserved))) {
+      const slug = slugFromRestaurantName(restaurantName);
+      if (RESERVED_SLUGS.some(reserved => slug.startsWith(reserved))) {
         throw new Error("This store name is reserved or unavailable. Please choose another.");
       }
 
@@ -89,62 +186,15 @@ const OwnerRegister = () => {
       // Create user doc
       const db = getDb();
       
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      await provisionOwnerTenant(userCredential.user.uid, {
         name,
         email,
-        role: 'owner', // Security Patch: Force role to owner instead of admin
-        ownedTenantIds: [slug],
-        createdAt: new Date()
-      }, { merge: true });
-
-      // Create tenant doc
-      await setDoc(doc(db, 'tenants', slug), {
-        name: restaurantName,
-        slug: slug,
-        ownerId: userCredential.user.uid,
-        status: 'draft',
-        storeStatus: 'draft',
-        subscription: {
-          planId: 'starter',
-          status: 'trialing',
-          startDate: new Date().toISOString(),
-          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14-day trial
-        },
-        legal: {
-          status: 'pending'
-        },
-        fssai: {
-          verificationStatus: 'not_submitted',
-          registrationDate: new Date().toISOString()
-        },
-        kyc: {
-          ownerName: name,
-          email: email,
-          emailVerificationStatus: 'pending',
-          mobileNumber: mobileNumber,
-          mobileVerificationStatus: 'pending',
-          verificationLevel: 0
-        },
-        onboardingStatus: {
-          isComplete: false,
-          currentStep: 1,
-          migrated: false
-        },
-        createdAt: new Date().toISOString(),
-        settings: { theme: 'orange' }
-      }, { merge: true });
+        restaurantName,
+        mobileNumber,
+      });
 
       toast.success('Account created successfully!');
-      
-      try {
-        const ff = localStorage.getItem('bhojanos_ff_overrides');
-        if (ff && JSON.parse(ff).onboardingWizardV2) {
-          navigate('/owner/setup');
-          return;
-        }
-      } catch (e) {}
-      
-      navigate('/owner/settings');
+      navigate('/owner/setup');
     } catch (error: any) {
       console.error('Owner Register Error:', error);
       toast.error(error.message || 'Failed to create account.');
@@ -155,37 +205,54 @@ const OwnerRegister = () => {
 
   const handleGoogleLogin = async () => {
     if (loading) return;
+    if (!restaurantName.trim()) {
+      toast.error('Enter your restaurant name above, then continue with Google.');
+      return;
+    }
+    if (!name.trim()) {
+      toast.error('Enter your full name above, then continue with Google.');
+      return;
+    }
+
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      await provisionOwnerTenant(user.uid, {
+        name: name.trim() || user.displayName || 'Owner',
+        email: user.email || email,
+        restaurantName: restaurantName.trim(),
+        mobileNumber,
+      });
+
       toast.success('Welcome!');
-      
-      try {
-        const ff = localStorage.getItem('bhojanos_ff_overrides');
-        if (ff && JSON.parse(ff).onboardingWizardV2) {
-          navigate('/owner/setup');
-          return;
-        }
-      } catch (e) {}
-      
-      navigate('/owner/settings');
+      navigate('/owner/setup');
     } catch (error: any) {
-      setLoading(false);
-      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         toast.error(error.message || 'Google signup failed');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0a0a0a] p-4 flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center w-full py-8">
-        <m.div 
+    <div className="min-h-[100dvh] overflow-y-auto bg-[#0a0a0a] px-4 py-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col">
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center">
+        <Link
+          to={EnvironmentConfig.getMarketingHomePath()}
+          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors mb-4 self-start"
+        >
+          <ArrowLeft size={14} /> Back to BhojanOS
+        </Link>
+
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 relative overflow-hidden shrink-0"
+          className="w-full bg-[#111] border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shrink-0"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00]/5 to-transparent pointer-events-none" />
           
@@ -198,9 +265,16 @@ const OwnerRegister = () => {
             </div>
           </div>
           
-          <div className="text-center mb-8 relative z-10">
-            <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Create your Store</h1>
-            <p className="text-white/50 text-sm font-medium mb-6">Start your 14-day free trial today.</p>
+          <div className="text-center mb-6 relative z-10">
+            <h1 className="text-2xl font-black text-white mb-2 tracking-tight">{onboardingPlanMessaging.registerTitle}</h1>
+            <p className="text-white/50 text-sm font-medium">{onboardingPlanMessaging.registerSubtitle}</p>
+          </div>
+
+          <div className="relative z-10 mb-6">
+            <PlanClarityNotice variant="register" />
+          </div>
+
+          <div className="relative z-10 mb-6">
             <FounderBetaTrustBanner />
           </div>
 
@@ -305,20 +379,16 @@ const OwnerRegister = () => {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-4 bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-[#FF6B00]/90 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl shadow-lg shadow-[#FF6B00]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
-          >
+          <SoftButton type="submit" tone="primary" fullWidth disabled={loading} className="mt-4">
             {loading ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <>
-                <span>Start Free Trial</span>
+                <span>{onboardingPlanMessaging.registerButton}</span>
                 <ArrowRight size={18} />
               </>
             )}
-          </button>
+          </SoftButton>
         </form>
 
         <div className="mt-6 flex items-center justify-center space-x-4">
@@ -327,14 +397,17 @@ const OwnerRegister = () => {
           <div className="h-px bg-white/10 w-full" />
         </div>
 
-        <button
-          onClick={handleGoogleLogin}
+        <SoftButton
+          type="button"
+          tone="secondary"
+          fullWidth
           disabled={loading}
-          className="w-full mt-6 bg-white hover:bg-gray-100 text-gray-900 font-bold text-sm py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:pointer-events-none"
+          onClick={handleGoogleLogin}
+          className="mt-6"
         >
           <GoogleIcon />
           <span>Sign up with Google</span>
-        </button>
+        </SoftButton>
         
         <div className="mt-8 pt-6 border-t border-white/5 text-center">
           <p className="text-white/40 text-sm">

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   onAuthStateChanged, 
   signOut, 
@@ -18,6 +18,7 @@ interface SavedAddress {
 import { UserProfile } from '../types';
 
 import { saveUserIfNotExists } from '../services/api';
+import { resolveOwnerTenantIds } from '../lib/ownerAccess';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -25,6 +26,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   login: (user: any) => void;
   loading: boolean;
+  profileLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,75 +36,140 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const refreshProfile = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      setUserProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const { getDb } = await import('../lib/firebase-db');
+      const { doc, getDocFromServer } = await import('firebase/firestore');
+      const snap = await Promise.race([
+        getDocFromServer(doc(getDb(), 'users', user.uid)),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+        }),
+      ]);
+
+      if (snap.exists()) {
+        const data = snap.data() as UserProfile;
+        const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
+        if (ownedIds.length > 0) {
+          setUserProfile({ userId: snap.id, ...data, ownedTenantIds: ownedIds, role: data.role || 'owner' } as UserProfile);
+        } else {
+          setUserProfile({ userId: snap.id, ...data } as UserProfile);
+        }
+      }
+    } catch (err) {
+      console.error('Profile refresh failed:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
+    let resolved = false;
+    let profileTimeoutId: number | null = null;
+
+    const finishAuthLoading = () => {
+      if (resolved) return;
+      resolved = true;
+      setLoading(false);
+    };
+
+    const authTimeout = window.setTimeout(finishAuthLoading, 3000);
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      setLoading(false); // Resolve loading immediately so splash screen drops
+      finishAuthLoading();
 
-      // Run profile sync in background
-      (async () => {
+      if (profileTimeoutId !== null) {
+        window.clearTimeout(profileTimeoutId);
+        profileTimeoutId = null;
+      }
+
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
+
+      if (!user) {
+        setUserProfile(null);
+        setProfileLoading(false);
+        return;
+      }
+
+      setProfileLoading(true);
+
+      void (async () => {
         try {
-          if (unsubProfile) {
-            unsubProfile();
-            unsubProfile = null;
-          }
+          const { getDb } = await import('../lib/firebase-db');
+          const { doc, onSnapshot } = await import('firebase/firestore');
+          const userRef = doc(getDb(), 'users', user.uid);
 
-          if (user) {
-            // Auto-save user on login if not exists
-            try {
-              const profile = await Promise.race([
-                saveUserIfNotExists({
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  phone: user.phoneNumber
-                }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase connection timeout")), 2500))
-              ]) as any;
-              
-              setUserProfile({ ...profile, role: 'superadmin' });
-            } catch (err) {
-              console.error("Auth Profile Error:", err);
-              // Auto-fix: Provide a fallback superadmin profile immediately
-              setUserProfile({
-                userId: user.uid,
-                name: user.displayName || 'Super Admin',
-                email: user.email || '',
-                phone: user.phoneNumber || '',
-                role: 'superadmin',
-                ownedTenantIds: ['mana-inti']
-              } as any);
-            }
-
-            // Real-time sync for profile (Dynamically import Firestore)
-            const { getDb } = await import('../lib/firebase-db');
-            const { doc, onSnapshot } = await import('firebase/firestore');
-
-            const userRef = doc(getDb(), 'users', user.uid);
-            unsubProfile = onSnapshot(userRef, (docSnap) => {
+          unsubProfile = onSnapshot(
+            userRef,
+            (docSnap) => {
               if (docSnap.exists()) {
-                setUserProfile({ userId: docSnap.id, ...docSnap.data(), role: 'superadmin' } as unknown as UserProfile);
+                setUserProfile({ userId: docSnap.id, ...docSnap.data() } as UserProfile);
               }
-            }, (err) => {
-               console.warn("Real-time profile sync blocked by rules, but auto-fix is active.");
-            });
-          } else {
-            setUserProfile(null);
+              setProfileLoading(false);
+            },
+            (err) => {
+              console.warn('Real-time profile sync blocked or failed.', err);
+              setProfileLoading(false);
+            },
+          );
+
+          try {
+            const profile = await Promise.race([
+              saveUserIfNotExists({
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                phone: user.phoneNumber,
+              }),
+              new Promise<never>((_, reject) => {
+                window.setTimeout(() => reject(new Error('Firebase connection timeout')), 8000);
+              }),
+            ]);
+
+            const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
+            if (ownedIds.length > 0) {
+              setUserProfile({ ...profile, ownedTenantIds: ownedIds, role: profile.role || 'owner' } as UserProfile);
+            } else {
+              setUserProfile(profile as UserProfile);
+            }
+            setProfileLoading(false);
+          } catch (err) {
+            console.error('Auth Profile Error:', err);
+            await refreshProfile();
           }
         } catch (err) {
-          console.error("Auth Profile Sync Error:", err);
+          console.error('Auth Profile Sync Error:', err);
+          setProfileLoading(false);
         }
       })();
+
+      profileTimeoutId = window.setTimeout(() => {
+        setProfileLoading(false);
+      }, 12000);
     });
 
     return () => {
+      window.clearTimeout(authTimeout);
+      if (profileTimeoutId !== null) window.clearTimeout(profileTimeoutId);
       unsubscribeAuth();
       if (unsubProfile) unsubProfile();
     };
-  }, []);
+  }, [refreshProfile]);
 
   const logout = async () => {
     try {
@@ -114,7 +182,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("token");
     localStorage.removeItem("cart");
     setUserProfile(null);
-    window.location.href = EnvironmentConfig.getBaseUrl() + '/login';
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const loginPath = path.startsWith('/super-admin') ? '/super-admin/login' : path.startsWith('/admin') ? '/admin/login' : '/login';
+    window.location.href = EnvironmentConfig.getBaseUrl() + loginPath;
   };
 
   const login = (user: any) => {
@@ -123,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, logout, login, loading }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, logout, login, loading, profileLoading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

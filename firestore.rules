@@ -253,6 +253,11 @@ service cloud.firestore {
         // In a strict environment, this should only be writeable by Cloud Functions.
         allow write: if isAdmin() || isTenantOwner(tenantId) || isAuthenticated();
       }
+
+      match /kycPrivate/{slot} {
+        allow read: if isAdmin() || isTenantOwner(tenantId);
+        allow write: if isAdmin() || isTenantOwner(tenantId);
+      }
     }
 
     match /salesPipeline/{docId} {

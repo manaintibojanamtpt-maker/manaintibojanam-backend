@@ -3,10 +3,13 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 
 import { auth } from '../../firebase';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
+import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { getOwnerDashboardPath, getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { EnvironmentConfig } from '../../config/environment';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -24,12 +27,32 @@ const OwnerLogin = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
 
-  // If already logged in and owns at least one tenant, redirect to dashboard
-  if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
-    return <Navigate to="/owner/settings" />;
+  const marketingHome = EnvironmentConfig.getMarketingHomePath();
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
   }
+
+  if (currentUser && (userProfile?.ownedTenantIds?.length || 0) > 0) {
+    return <Navigate to={getOwnerDashboardPath()} />;
+  }
+
+  const completeOwnerLogin = async (uid: string, email: string | null) => {
+    const tenantIds = await waitForOwnerTenantIds(uid, refreshProfile, { email });
+    if (tenantIds.length > 0) {
+      toast.success('Welcome back!');
+      const path = await getOwnerPostAuthPath(uid, email);
+      navigate(path);
+      return;
+    }
+    toast.error('No store found for this account. Use the same sign-in method you used when registering.');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +60,8 @@ const OwnerLogin = () => {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast.success('Welcome back!');
-      navigate('/owner/settings');
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      await completeOwnerLogin(credential.user.uid, credential.user.email);
     } catch (error: any) {
       console.error('Owner Login Error:', error);
       logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
@@ -55,121 +77,127 @@ const OwnerLogin = () => {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
-      toast.success('Welcome back!');
-      navigate('/owner/settings');
+      const result = await signInWithPopup(auth, provider);
+      await completeOwnerLogin(result.user.uid, result.user.email);
     } catch (error: any) {
-      setLoading(false);
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
         toast.error(error.message || 'Google login failed');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0a0a0a] p-4 flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center w-full py-8">
-        <m.div 
-          initial={{ opacity: 0, y: 20 }}
+    <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col px-4 py-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="w-full max-w-[420px] mx-auto flex-1 flex flex-col justify-center">
+        <Link
+          to={marketingHome}
+          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors mb-4 self-start"
+        >
+          <ArrowLeft size={14} /> Back to BhojanOS
+        </Link>
+
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 relative overflow-hidden shrink-0"
+          className="w-full bg-[#111] border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden"
         >
-          <Link to="/" className="absolute top-6 left-6 text-white/40 hover:text-white flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors z-20">
-            <ArrowLeft size={14} /> Back
-          </Link>
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
-          
-          <div className="flex items-center justify-center gap-2 mb-8 mt-4 relative z-10">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
-              <Store size={20} className="text-white" />
+
+          <div className="relative z-10 flex flex-col items-center text-center mb-6 sm:mb-8">
+            <div className="flex items-center justify-center gap-2.5 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+                <Store size={20} className="text-white" />
+              </div>
+              <div className="text-xl sm:text-2xl font-black tracking-tight text-white whitespace-nowrap">
+                BhojanOS<span className="text-red-500">Owner</span>
+              </div>
             </div>
-            <div className="text-2xl font-black tracking-tight text-white">
-              BhojanOS<span className="text-red-500">Owner</span>
-            </div>
-          </div>
-          
-          <div className="text-center mb-8 relative z-10">
             <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Welcome Back</h1>
-            <p className="text-white/50 text-sm font-medium">Log in to manage your kitchen operations</p>
+            <p className="text-white/50 text-sm font-medium max-w-xs">Log in to manage your kitchen operations</p>
           </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Mail size={18} className="text-white/20" />
+          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
+            <div>
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail size={18} className="text-white/20" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="owner@example.com"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
+                />
               </div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@example.com"
-                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
-              />
             </div>
-          </div>
 
-          <div>
-            <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock size={18} className="text-white/20" />
+            <div>
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-white/20" />
+                </div>
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
+                />
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
-              />
             </div>
+
+            <SoftButton type="submit" tone="primary" fullWidth disabled={loading} className="mt-2">
+              {loading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </SoftButton>
+          </form>
+
+          <div className="mt-6 flex items-center gap-3 relative z-10">
+            <div className="h-px bg-white/10 flex-1" />
+            <span className="text-white/40 text-xs font-bold uppercase tracking-wider">or</span>
+            <div className="h-px bg-white/10 flex-1" />
           </div>
 
-          <button
-            type="submit"
+          <SoftButton
+            type="button"
+            tone="secondary"
+            fullWidth
             disabled={loading}
-            className="w-full mt-4 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white font-black uppercase tracking-widest text-sm py-4 rounded-xl shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
+            onClick={handleGoogleLogin}
+            className="mt-6 relative z-10"
           >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <>
-                <span>Sign In</span>
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
+            <GoogleIcon />
+            <span>Continue with Google</span>
+          </SoftButton>
 
-        <div className="mt-6 flex items-center justify-center space-x-4">
-          <div className="h-px bg-white/10 w-full" />
-          <span className="text-white/40 text-xs font-bold uppercase tracking-wider">or</span>
-          <div className="h-px bg-white/10 w-full" />
-        </div>
-
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full mt-6 bg-white hover:bg-gray-100 text-gray-900 font-bold text-sm py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:pointer-events-none"
-        >
-          <GoogleIcon />
-          <span>Continue with Google</span>
-        </button>
-        
-        <div className="mt-8 pt-6 border-t border-white/5 text-center">
-          <p className="text-white/40 text-sm">
-            Don't have a store yet? <Link to="/owner/register" className="text-red-500 hover:text-red-400 font-bold ml-1">Create one</Link>
-          </p>
-        </div>
-      </m.div>
+          <div className="mt-8 pt-6 border-t border-white/5 text-center relative z-10">
+            <p className="text-white/40 text-sm">
+              Don't have a store yet?{' '}
+              <Link to="/owner/register" className="text-red-500 hover:text-red-400 font-bold">
+                Create one
+              </Link>
+            </p>
+          </div>
+        </m.div>
       </div>
     </div>
   );
 };
 
 export default OwnerLogin;
-

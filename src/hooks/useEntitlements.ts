@@ -68,9 +68,9 @@ export const useEntitlements = (): Entitlements => {
   switch (planId) {
     case 'starter':
       entitlements = {
-        maxOrders: 50,
+        maxOrders: 0,
         maxUsers: 1,
-        canPublish: true, // They can publish if they pass Launch Readiness, we block publishing at the button level if compliance is overdue
+        canPublish: false,
         features: {
           ...defaultEntitlements.features,
         }

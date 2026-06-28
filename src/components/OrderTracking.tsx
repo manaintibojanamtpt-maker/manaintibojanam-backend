@@ -31,6 +31,7 @@ import { useStoreBranding } from "../hooks/useStoreBranding";
 import { formatPrice, safeParseDate } from "../lib/utils";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 import { useTenant } from '../context/TenantContext';
+import { useAuth } from '../context/AuthContext';
 
 const toPaise = (rupees: number) => Math.round(rupees * 100);
 const fromPaise = (paise: number) => paise / 100;
@@ -48,6 +49,7 @@ const STATUS_STEPS = [
 
 export default function OrderTracking() {
   const { tenantInfo } = useTenant();
+  const { currentUser } = useAuth();
   const { orderId } = useParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -221,12 +223,36 @@ export default function OrderTracking() {
   }, [canCancel, timeLeft]);
 
   const handleEnableNotifications = async () => {
-    const granted = await notificationService.requestPermission();
-    if (granted) {
+    if (!('Notification' in window)) {
+      toast.error('This browser does not support notifications.');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      setNotificationPermission('denied');
+      toast.error('Notifications are blocked. Open site settings in your browser and allow notifications for this site.');
+      return;
+    }
+
+    const userId = currentUser?.uid || order?.userId;
+    const granted = await notificationService.requestPermission(userId);
+    const permission = notificationService.getBrowserPermission();
+    setNotificationPermission(permission);
+
+    if (granted || permission === 'granted') {
       setNotificationsEnabled(true);
-      toast.success('Notifications enabled successfully!');
+      if (notificationService.getToken()) {
+        toast.success('Push notifications enabled for order updates.');
+      } else {
+        toast.success('Order updates enabled in this tab. Push alerts work on HTTPS when the app is installed.');
+      }
+      return;
+    }
+
+    if (permission === 'denied') {
+      toast.error('Notifications blocked. Allow them in your browser site settings.');
     } else {
-      toast.error('Permission denied for notifications.');
+      toast('Notification prompt dismissed.', { icon: '🔔' });
     }
   };
 

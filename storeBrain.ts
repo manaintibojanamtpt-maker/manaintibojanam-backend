@@ -43,7 +43,7 @@ export class StoreBrain {
   public async refresh() {
     logger.info("StoreBrain: Refreshing cache from Firestore...");
     try {
-      const menuSnap = await db.collection("menu").get();
+      const menuSnap = await db.collection("menu").limit(500).get();
       
       this.menu.clear();
       
@@ -71,7 +71,11 @@ export class StoreBrain {
       
       logger.info(`StoreBrain: Loaded ${this.menu.size} menu items.`);
     } catch (err: any) {
-      logger.error(`StoreBrain: Failed to refresh cache: ${err.message}`);
+      if (String(err?.message || "").toLowerCase().includes("quota exceeded") || err?.code === 8) {
+        logger.warn("StoreBrain: Skipping refresh during Firestore quota backoff");
+      } else {
+        logger.error(`StoreBrain: Failed to refresh cache: ${err.message}`);
+      }
     }
   }
 

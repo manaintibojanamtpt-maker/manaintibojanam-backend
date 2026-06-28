@@ -4,22 +4,25 @@ import { getDb } from '../../lib/firebase-db';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { app } from '../../firebase';
 import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings, Clock, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { NotificationSettingsPanel } from '../../modules/notifications/NotificationSettingsPanel';
+import OwnerPromotionsPanel from './OwnerPromotionsPanel';
 
 const OwnerSettings: React.FC = () => {
-  const { userProfile } = useAuth();
-  const { tenantId: resolvedTenantId } = useTenant();
-  const [searchParams] = useSearchParams();
+  const { userProfile, loading: authLoading } = useAuth();
+  const { loading: tenantLoading } = useTenant();
+  const tenantId = useOwnerTenantId();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'notifications'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'promotions' | 'notifications'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -49,14 +52,20 @@ const OwnerSettings: React.FC = () => {
     maxRadius: 10,
     baseFee: 30,
     perKmCharge: 15,
-    prepTime: 20
+    prepTime: 20,
+    gstPercent: 0,
+    packingFee: 0,
+    codEnabled: true,
+    razorpayEnabled: false,
   });
-
-  const tenantId = resolvedTenantId || userProfile?.ownedTenantIds?.[0];
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!tenantId) return;
+      if (tenantLoading) return;
+      if (!tenantId) {
+        setLoading(false);
+        return;
+      }
       
       try {
         const db = getDb();
@@ -80,9 +89,13 @@ const OwnerSettings: React.FC = () => {
             freeRadius: data.deliveryConfig?.freeRadius || 3,
             paidRadius: data.deliveryConfig?.paidRadius || 5,
             maxRadius: data.deliveryConfig?.maxRadius || 10,
-            baseFee: data.deliveryConfig?.baseFee || 30,
-            perKmCharge: data.deliveryConfig?.perKmCharge || 15,
-            prepTime: data.deliveryConfig?.prepTime || 20
+            baseFee: data.deliveryConfig?.baseFee || 0,
+            perKmCharge: data.deliveryConfig?.perKmCharge || 0,
+            prepTime: data.deliveryConfig?.prepTime || 20,
+            gstPercent: data.pricingConfig?.gstPercent ?? 0,
+            packingFee: data.pricingConfig?.packingFee ?? 0,
+            codEnabled: data.paymentConfig?.providers?.cod?.enabled !== false,
+            razorpayEnabled: data.paymentConfig?.providers?.razorpay?.enabled === true,
           });
         }
       } catch (error) {
@@ -94,11 +107,16 @@ const OwnerSettings: React.FC = () => {
     };
 
     fetchSettings();
-  }, [tenantId]);
+  }, [tenantId, tenantLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId) return;
+
+    if (!formData.codEnabled && !formData.razorpayEnabled) {
+      toast.error('Enable at least one payment method');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -120,13 +138,26 @@ const OwnerSettings: React.FC = () => {
           lng: Number(formData.lng) || 0
         },
         deliveryConfig: {
+          enabled: true,
           freeRadius: Number(formData.freeRadius),
           paidRadius: Number(formData.paidRadius),
           maxRadius: Number(formData.maxRadius),
           baseFee: Number(formData.baseFee),
           perKmCharge: Number(formData.perKmCharge),
-          prepTime: Number(formData.prepTime)
-        }
+          prepTime: Number(formData.prepTime),
+          feesConfigured: Number(formData.baseFee) > 0 || Number(formData.perKmCharge) > 0,
+        },
+        pricingConfig: {
+          gstPercent: Number(formData.gstPercent) || 0,
+          packingFee: Number(formData.packingFee) || 0,
+        },
+        paymentConfig: {
+          defaultProvider: formData.codEnabled ? 'cod' : 'razorpay',
+          providers: {
+            cod: { enabled: formData.codEnabled },
+            razorpay: { enabled: formData.razorpayEnabled },
+          },
+        },
       });
       
       toast.success("Settings saved successfully");
@@ -231,7 +262,7 @@ const OwnerSettings: React.FC = () => {
     );
   };
 
-  if (loading) {
+  if (loading || tenantLoading || authLoading) {
     return (
       <div className="flex justify-center py-20 text-white">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
@@ -239,33 +270,51 @@ const OwnerSettings: React.FC = () => {
     );
   }
 
+  if (!tenantId) {
+    return (
+      <div className="p-6 md:p-12 text-white max-w-lg mx-auto text-center">
+        <h2 className="text-xl font-bold mb-2">Finish store setup</h2>
+        <p className="text-white/50 mb-6 text-sm">Complete registration to manage your storefront settings.</p>
+        <a href="/owner/register" className="inline-flex px-6 py-3 bg-[#FF6B00] text-white font-bold rounded-xl">Complete registration</a>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 md:p-12 text-white">
+    <div className="p-4 sm:p-6 md:p-12 text-white pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <div className="max-w-3xl mx-auto">
-        <header className="mb-8 flex items-center space-x-4">
-          <img src={logo} alt="BhojanOS" className="h-12 w-12 rounded-xl shadow-sm border border-white/10" />
-          <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Storefront</h1>
-            <p className="text-white/50 mt-1">Your public store, hours, delivery area, and contact details</p>
+        <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center gap-4">
+          <img src={logo} alt="BhojanOS" className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl shadow-sm border border-white/10 shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Storefront</h1>
+            <p className="text-white/50 mt-1 text-sm sm:text-base leading-relaxed">Your public store, hours, delivery area, and contact details</p>
           </div>
         </header>
 
-        <div className="flex space-x-4 mb-6 border-b border-white/10 pb-0">
-          <button onClick={() => setActiveTab('general')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'general' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
-            <Settings size={18} />
-            <span className="font-bold tracking-widest text-xs uppercase">General</span>
+        <div className="flex gap-1 sm:gap-3 mb-6 border-b border-white/10 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          <button onClick={() => setActiveTab('general')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'general' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Settings size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">General</span>
           </button>
-          <button onClick={() => setActiveTab('hours')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'hours' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
-            <Clock size={18} />
-            <span className="font-bold tracking-widest text-xs uppercase">Store Hours</span>
+          <button onClick={() => setActiveTab('hours')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'hours' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Clock size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Hours</span>
           </button>
-          <button onClick={() => setActiveTab('location')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'location' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
-            <MapPin size={18} />
-            <span className="font-bold tracking-widest text-xs uppercase">Location & Delivery</span>
+          <button onClick={() => setActiveTab('location')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'location' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <MapPin size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase"><span className="sm:hidden">Delivery</span><span className="hidden sm:inline">Location & Delivery</span></span>
           </button>
-          <button onClick={() => setActiveTab('notifications')} className={`flex items-center space-x-2 pb-3 border-b-2 px-2 transition-colors ${activeTab === 'notifications' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
-            <Bell size={18} />
-            <span className="font-bold tracking-widest text-xs uppercase">Notifications</span>
+          <button onClick={() => setActiveTab('payments')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'payments' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Truck size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Payments</span>
+          </button>
+          <button onClick={() => setActiveTab('promotions')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'promotions' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Promos</span>
+          </button>
+          <button onClick={() => setActiveTab('notifications')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'notifications' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Bell size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Alerts</span>
           </button>
         </div>
 
@@ -276,6 +325,10 @@ const OwnerSettings: React.FC = () => {
             </div>
           ) : activeTab === 'notifications' && tenantId ? (
             <NotificationSettingsPanel tenantId={tenantId} />
+          ) : activeTab === 'promotions' ? (
+            <div className="p-6 md:p-8">
+              <OwnerPromotionsPanel />
+            </div>
           ) : (
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             
@@ -486,6 +539,51 @@ const OwnerSettings: React.FC = () => {
                       <input type="number" required value={formData.prepTime} onChange={(e) => setFormData({ ...formData, prepTime: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
                       <p className="text-[10px] text-white/40 mt-1">Used to calculate delivery ETA dynamically.</p>
                     </div>
+                  </div>
+                  <p className="text-xs text-white/40 mt-4">
+                    Set Base Fee and/or Per KM charge for your rates. Until then, orders beyond the free radius use default fees (₹30 base, then ₹10/km beyond base radius).
+                  </p>
+                </div>
+
+                <div className="h-px bg-white/10 w-full" />
+
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">Taxes & Packaging</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">GST (%)</label>
+                      <input type="number" min={0} step={0.5} value={formData.gstPercent} onChange={(e) => setFormData({ ...formData, gstPercent: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                      <p className="text-[10px] text-white/40 mt-1">Leave 0 to hide taxes on checkout until configured.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-widest">Packaging Fee (₹)</label>
+                      <input type="number" min={0} value={formData.packingFee} onChange={(e) => setFormData({ ...formData, packingFee: Number(e.target.value) })} className="block w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-lg text-white" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'payments' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Payment Methods</h3>
+                  <p className="text-sm text-white/50 mb-4">Only enabled methods appear on your storefront checkout.</p>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-white/10 rounded-xl cursor-pointer">
+                      <div>
+                        <p className="text-white font-medium">Cash on Delivery</p>
+                        <p className="text-xs text-white/50">Customer pays when order is delivered or picked up</p>
+                      </div>
+                      <input type="checkbox" checked={formData.codEnabled} onChange={(e) => setFormData({ ...formData, codEnabled: e.target.checked })} className="w-5 h-5 rounded" />
+                    </label>
+                    <label className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-white/10 rounded-xl cursor-pointer">
+                      <div>
+                        <p className="text-white font-medium">Online (Razorpay)</p>
+                        <p className="text-xs text-white/50">UPI, cards & wallets — complete KYC to receive settlements</p>
+                      </div>
+                      <input type="checkbox" checked={formData.razorpayEnabled} onChange={(e) => setFormData({ ...formData, razorpayEnabled: e.target.checked })} className="w-5 h-5 rounded" />
+                    </label>
                   </div>
                 </div>
               </div>

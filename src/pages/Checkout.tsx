@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ChevronRight, ShieldCheck, Plus, Minus, Check, Clock, Heart, Sparkles, Utensils, Lock, X, ArrowRight } from 'lucide-react';
 import { activeTenantId } from '../services/api';
@@ -24,6 +24,10 @@ import { MenuItem } from '../types';
 import { Skeleton } from '../components/SkeletonSystem';
 import { getUpsellRecommendations } from '../services/RecommendationEngine';
 import { ensureRazorpayLoaded, loadRazorpay } from '../utils/loadRazorpay';
+import { formatTenantPickupAddress, getEnabledPaymentMethods } from '../lib/tenantCheckoutConfig';
+import { buildDeliveryTimeSlots, isAsapSlot } from '../lib/deliveryTimeSlots';
+import { getStoreClosedMessage, type ResolvedStoreSettings } from '../lib/tenantStoreOperations';
+import SoftButton from '../components/ui/SoftButton';
 
 // Countdown removed by request
 
@@ -48,6 +52,42 @@ const Checkout: React.FC = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [hasTenantCoupons, setHasTenantCoupons] = useState(false);
+
+  const enabledPaymentMethods = useMemo(
+    () => getEnabledPaymentMethods(tenantInfo?.paymentConfig, tenantId),
+    [tenantInfo?.paymentConfig, tenantId]
+  );
+  const pickupAddress = formatTenantPickupAddress(tenantInfo?.location);
+  const codEnabled = enabledPaymentMethods.includes('cod');
+  const onlineEnabled = enabledPaymentMethods.includes('online');
+  const fssaiNumber = tenantInfo?.fssai?.licenseNumber || tenantInfo?.fssai?.number;
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const loadCoupons = async () => {
+      try {
+        if (tenantId === 'mana-inti') {
+          const snap = await getDocs(query(collection(getDb(), 'coupons'), where('isActive', '==', true), limit(1)));
+          setHasTenantCoupons(!snap.empty);
+          return;
+        }
+        const snap = await getDocs(
+          query(collection(getDb(), 'coupons'), where('tenantId', '==', tenantId), where('isActive', '==', true), limit(1))
+        );
+        setHasTenantCoupons(!snap.empty);
+      } catch {
+        setHasTenantCoupons(false);
+      }
+    };
+    loadCoupons();
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!enabledPaymentMethods.includes(state.paymentMethod)) {
+      state.setPaymentMethod(enabledPaymentMethods[0]);
+    }
+  }, [enabledPaymentMethods, state.paymentMethod]);
 
   useEffect(() => {
     if (state.paymentMethod === 'online') {
@@ -152,64 +192,28 @@ const Checkout: React.FC = () => {
   }, [state.cart]);
 
   useEffect(() => {
-    const openTime = state.fees?.storeTiming?.openTime || '10:00';
-    const closeTime = state.fees?.storeTiming?.closeTime || '22:00';
-    
-    const todaySlots: string[] = [];
-    const tomorrowSlots: string[] = [];
-    const now = new Date();
-    
-    const [openHour, openMin] = openTime.split(':').map(Number);
-    const [closeHour, closeMin] = closeTime.split(':').map(Number);
-    
-    const todayOpen = new Date(now);
-    todayOpen.setHours(openHour, openMin, 0, 0);
-    const todayClose = new Date(now);
-    todayClose.setHours(closeHour, closeMin, 0, 0);
-
-    const tomorrowOpen = new Date(todayOpen);
-    tomorrowOpen.setDate(tomorrowOpen.getDate() + 1);
-    const tomorrowClose = new Date(todayClose);
-    tomorrowClose.setDate(tomorrowClose.getDate() + 1);
-
-    const BUFFER_MS = 60 * 60 * 1000; // 60 mins buffer
-    const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-
-    const addSlot = (start: Date, targetArray: string[], prefix: string) => {
-      const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour slots for cleaner UI
-      targetArray.push(`${prefix}, ${formatTime(start)} - ${formatTime(end)}`);
+    const storeSettings: ResolvedStoreSettings = {
+      isStoreOpen: state.fees?.isStoreOpen !== false,
+      storeTiming: {
+        openTime: state.fees?.storeTiming?.openTime || '09:00',
+        closeTime: state.fees?.storeTiming?.closeTime || '22:00',
+        isManualOverride: state.fees?.storeTiming?.isManualOverride ?? true,
+        businessHoursEnabled: state.fees?.storeTiming?.businessHoursEnabled ?? false,
+      },
     };
 
-    const earliestDeliveryToday = new Date(now.getTime() + BUFFER_MS);
-    
-    if (earliestDeliveryToday <= todayClose) {
-      todaySlots.push('Standard Delivery (ASAP)');
-      
-      const currentSlot = new Date(earliestDeliveryToday);
-      const remainder = currentSlot.getMinutes() % 30;
-      if (remainder !== 0) currentSlot.setMinutes(currentSlot.getMinutes() + (30 - remainder));
-      
-      if (currentSlot < todayOpen) currentSlot.setTime(todayOpen.getTime());
-
-      while (currentSlot.getTime() + 60 * 60 * 1000 <= todayClose.getTime()) {
-        addSlot(currentSlot, todaySlots, 'Today');
-        currentSlot.setMinutes(currentSlot.getMinutes() + 60);
-      }
-    }
-    
-    const currentSlotTomorrow = new Date(tomorrowOpen);
-    while (currentSlotTomorrow.getTime() + 60 * 60 * 1000 <= tomorrowClose.getTime()) {
-      addSlot(currentSlotTomorrow, tomorrowSlots, 'Tomorrow');
-      currentSlotTomorrow.setMinutes(currentSlotTomorrow.getMinutes() + 60);
-    }
-
-    const allSlots = [...todaySlots, ...tomorrowSlots];
+    const prepMinutes = tenantInfo?.deliveryConfig?.prepTime || 20;
+    const allSlots = buildDeliveryTimeSlots({ storeSettings, prepMinutes });
     setDeliverySlots(allSlots);
-    
+
     if (!allSlots.includes(state.deliveryTimeSlot)) {
-      state.setDeliveryTimeSlot(allSlots[0] || 'Standard Delivery (ASAP)');
+      state.setDeliveryTimeSlot(allSlots[0] || '');
     }
-  }, [state.fees?.storeTiming]);
+  }, [
+    state.fees?.isStoreOpen,
+    state.fees?.storeTiming,
+    tenantInfo?.deliveryConfig?.prepTime,
+  ]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -300,7 +304,7 @@ const Checkout: React.FC = () => {
   };
 
   const getScheduledForTimestamp = (slot: string) => {
-    if (slot === 'Standard Delivery (ASAP)' || slot === 'ASAP') return null;
+    if (isAsapSlot(slot)) return null;
     
     // e.g. "Today, 1:30 PM - 2:00 PM"
     const parts = slot.split(', ');
@@ -347,7 +351,7 @@ const Checkout: React.FC = () => {
       };
     });
 
-    const isASAP = state.deliveryTimeSlot === 'Standard Delivery (ASAP)' || state.deliveryTimeSlot === 'ASAP';
+    const isASAP = isAsapSlot(state.deliveryTimeSlot);
     const scheduledFor = isASAP ? null : getScheduledForTimestamp(state.deliveryTimeSlot);
 
     return {
@@ -394,8 +398,17 @@ const Checkout: React.FC = () => {
       navigate(`${basePath}/login?redirect=${basePath}/checkout`);
       return;
     }
-    if (!state.addressText || !state.phone || !state.name) {
+    if (state.orderType === 'delivery' && (!state.addressText || !state.phone || !state.name)) {
       toast.error('Please ensure your profile details and address are complete.');
+      return;
+    }
+    if (state.orderType === 'pickup' && (!state.phone || !state.name)) {
+      toast.error('Please enter your name and phone number for pickup.');
+      return;
+    }
+
+    if (!enabledPaymentMethods.includes(state.paymentMethod)) {
+      toast.error('Selected payment method is not available for this store.');
       return;
     }
     
@@ -662,14 +675,19 @@ const Checkout: React.FC = () => {
     try {
       const q = query(collection(getDb(), 'coupons'), where('code', '==', promoInput.toUpperCase().trim()));
       const snap = await getDocs(q);
-      if (snap.empty) {
+      const match = snap.docs.find((docSnap) => {
+        const coupon = docSnap.data();
+        if (!coupon.isActive) return false;
+        if (tenantId === 'mana-inti') return !coupon.tenantId || coupon.tenantId === 'mana-inti';
+        return coupon.tenantId === tenantId;
+      });
+
+      if (!match) {
         toast.error('Invalid promo code');
         state.setAppliedCoupon(null);
       } else {
-        const coupon = snap.docs[0].data();
-        if (!coupon.isActive) {
-          toast.error('This promo code is no longer active');
-        } else if (state.total < Number(coupon.minOrder || 0)) {
+        const coupon = match.data();
+        if (state.total < Number(coupon.minOrder || 0)) {
           toast.error(`Minimum order amount for this code is ${formatPrice(coupon.minOrder)}`);
         } else {
           state.setAppliedCoupon(coupon);
@@ -904,8 +922,8 @@ const Checkout: React.FC = () => {
           </div>
           
           <div className="p-6 space-y-4">
-            {/* Promo Code Section */}
-            {!hasSubscription && (
+            {/* Promo Code Section — only when owner has active coupons */}
+            {!hasSubscription && hasTenantCoupons && (
               <div className="mb-2">
                 {state.appliedCoupon ? (
                   <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
@@ -940,22 +958,32 @@ const Checkout: React.FC = () => {
                 <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatPrice(state.total)}</span>
               </div>
               
+              {state.pricingConfigured && state.orderType === 'delivery' && (
               <div className="flex justify-between text-sm">
                 <div className="flex flex-col">
                   <span className="text-gray-500 dark:text-gray-400 font-medium">Delivery Partner Fee</span>
                 </div>
                 <span className="font-bold text-gray-900 dark:text-white tabular-nums">
-                  {state.orderType === 'pickup' || state.deliveryFee === 0 ? <span className="text-emerald-500">FREE</span> : formatPrice(state.deliveryFee)}
+                  {state.deliveryFee === 0 ? <span className="text-emerald-500">FREE</span> : formatPrice(state.deliveryFee)}
                 </span>
               </div>
+              )}
 
+              {state.taxesConfigured && (
               <div className="flex justify-between text-sm">
                 <div className="flex flex-col">
                   <span className="text-gray-500 dark:text-gray-400 font-medium">Taxes and Charges</span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">GST ({state.fees.gst}%) + Packaging</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                    {state.fees.gst > 0 && state.packingFee > 0
+                      ? `GST (${state.fees.gst}%) + Packaging`
+                      : state.fees.gst > 0
+                        ? `GST (${state.fees.gst}%)`
+                        : 'Packaging'}
+                  </span>
                 </div>
                 <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatPrice(state.gstAmount + state.packingFee)}</span>
               </div>
+              )}
 
               {state.discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-emerald-500 font-bold">
@@ -1105,7 +1133,17 @@ const Checkout: React.FC = () => {
                 <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-600 flex items-center justify-center shrink-0"><MapPin size={20} /></div>
                 <div>
                   <h3 className="font-black text-gray-900 dark:text-white text-lg">Pickup from Restaurant</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Pari residency, ManjariBk, Morewasti, Pune, 412307</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {pickupAddress || (
+                      <>
+                        {tenantInfo?.name && (
+                          <span className="font-medium text-gray-700 dark:text-gray-300">{tenantInfo.name}</span>
+                        )}
+                        {tenantInfo?.name && <span className="block mt-0.5" />}
+                        Pickup location coming soon — exact address shared on order confirmation.
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
@@ -1124,18 +1162,35 @@ const Checkout: React.FC = () => {
                 <Clock size={20} className="text-red-500" />
                 <h2 className="font-bold text-gray-900 dark:text-white">Delivery Time</h2>
               </div>
-              {state.deliveryTimeSlot.includes('ASAP') && (
+              {isAsapSlot(state.deliveryTimeSlot) && (
                 <span className="text-[10px] font-black text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg uppercase tracking-wider">Fastest Delivery</span>
               )}
             </div>
+
+            {!state.fees?.isStoreOpen && (
+              <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-2 mb-4">
+                {getStoreClosedMessage(
+                  {
+                    isStoreOpen: state.fees?.isStoreOpen !== false,
+                    storeTiming: {
+                      openTime: state.fees?.storeTiming?.openTime || '09:00',
+                      closeTime: state.fees?.storeTiming?.closeTime || '22:00',
+                      isManualOverride: state.fees?.storeTiming?.isManualOverride ?? true,
+                      businessHoursEnabled: state.fees?.storeTiming?.businessHoursEnabled ?? false,
+                    },
+                  },
+                  new Date(),
+                ) || 'Kitchen is closed — schedule your order for the next available slot.'}
+              </p>
+            )}
             
             <div className="space-y-4">
               {/* Today's Slots */}
-              {deliverySlots.filter(s => s.includes('Today') || s.includes('ASAP')).length > 0 && (
+              {deliverySlots.filter((s) => s.includes('Today') || isAsapSlot(s)).length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2 px-1">Today</p>
                   <div className="flex overflow-x-auto gap-2 pb-2 hide-scrollbar">
-                    {deliverySlots.filter(s => s.includes('Today') || s.includes('ASAP')).map(slot => (
+                    {deliverySlots.filter((s) => s.includes('Today') || isAsapSlot(s)).map((slot) => (
                       <button 
                         key={slot} 
                         type="button"
@@ -1146,7 +1201,9 @@ const Checkout: React.FC = () => {
                             : 'border-gray-50 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-red-200'
                         }`}
                       >
-                        {slot.replace('Today, ', '').replace('Standard Delivery (ASAP)', `ASAP (${calculateETA()})`)}
+                        {isAsapSlot(slot)
+                          ? `ASAP (${calculateETA()})`
+                          : slot.replace('Today, ', '')}
                       </button>
                     ))}
                   </div>
@@ -1180,73 +1237,74 @@ const Checkout: React.FC = () => {
         )}
 
         {/* 6. Payment Method Card */}
+        {enabledPaymentMethods.length > 0 && (
         <m.div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center gap-2 mb-4"><CreditCard size={20} className="text-red-500" /><h2 className="font-bold text-gray-900 dark:text-white">Payment Method</h2></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${enabledPaymentMethods.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+            {onlineEnabled && (
             <button type="button" onClick={() => state.setPaymentMethod('online')} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'online' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
-              <div className="flex justify-between items-center mb-1"><span className="font-bold">Online</span>{state.paymentMethod === 'online' && <Check size={16} className="text-red-600" />}</div>
-              <p className="text-xs text-gray-500">UPI, Cards, Wallets</p>
+              <div className="flex justify-between items-center mb-1"><span className="font-bold text-gray-900 dark:text-white">Online</span>{state.paymentMethod === 'online' && <Check size={16} className="text-red-600" />}</div>
+              <p className="text-xs text-gray-500">UPI, Cards, Wallets via Razorpay</p>
             </button>
+            )}
+            {codEnabled && (
             <button type="button" onClick={() => !hasSubscription && state.setPaymentMethod('cod')} disabled={hasSubscription} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'cod' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'} ${hasSubscription ? 'opacity-50' : ''}`}>
-              <div className="flex justify-between items-center mb-1"><span className="font-bold">COD</span>{state.paymentMethod === 'cod' && <Check size={16} className="text-red-600" />}</div>
-              <p className="text-xs text-gray-500">Cash on Delivery</p>
+              <div className="flex justify-between items-center mb-1"><span className="font-bold text-gray-900 dark:text-white">Cash on Delivery</span>{state.paymentMethod === 'cod' && <Check size={16} className="text-red-600" />}</div>
+              <p className="text-xs text-gray-500">Pay when your order arrives</p>
             </button>
+            )}
           </div>
         </m.div>
+        )}
       </div>
 
       {/* Trust Badges */}
       <div className="max-w-lg mx-auto px-6 pb-32 pt-4 space-y-4">
+        {onlineEnabled && (
         <div className="flex items-center gap-4 bg-green-50/50 dark:bg-green-900/10 p-3 rounded-2xl border border-green-100 dark:border-green-900/20">
           <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0"><Lock size={20} className="text-green-600" /></div>
           <div><p className="text-sm font-black text-green-900 dark:text-green-400">100% Safe & Secure Payments</p><p className="text-[10px] font-bold text-green-600/80 uppercase tracking-widest">PCI DSS Compliant</p></div>
         </div>
+        )}
+        {fssaiNumber && (
         <div className="flex items-center gap-4 bg-orange-50/50 dark:bg-orange-900/10 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/20">
           <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0"><Check size={18} className="text-orange-600" strokeWidth={3} /></div>
-          <div><p className="text-sm font-black text-orange-900 dark:text-orange-400">FSSAI Certified Kitchen</p><p className="text-[10px] font-bold text-orange-600/80 uppercase tracking-widest">Lic No. 21524083006390</p></div>
+          <div><p className="text-sm font-black text-orange-900 dark:text-orange-400">FSSAI Certified Kitchen</p><p className="text-[10px] font-bold text-orange-600/80 uppercase tracking-widest">Lic No. {fssaiNumber}</p></div>
         </div>
+        )}
       </div>
 
       {/* STICKY BOTTOM ACTION */}
       <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-lg mx-auto flex items-center gap-4">
            <div className="flex flex-col">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod.toUpperCase()}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod === 'cod' ? 'COD' : 'ONLINE'}</p>
               <p className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{formatPrice(state.finalTotal)}</p>
            </div>
            
            <div className="flex-1 relative">
-             <m.div
-               className="relative h-14 rounded-2xl overflow-hidden flex items-center justify-center group shadow-[0_12px_24px_-12px_rgba(255,107,53,0.5)]"
+             <SoftButton
+               type="button"
+               tone="primary"
+               fullWidth
+               disabled={isPlacingOrder}
+               onClick={() => {
+                 triggerHaptic('medium');
+                 handlePlaceOrder();
+               }}
              >
-               <AnimatePresence mode="wait">
-                 {isPlacingOrder ? (
-                   <m.div
-                     key="loading"
-                     initial={{ opacity: 0 }}
-                     animate={{ opacity: 1 }}
-                     className="flex items-center gap-3 w-full h-full bg-gradient-to-br from-orange-500 to-red-600 text-white font-black uppercase tracking-widest text-xs justify-center"
-                   >
-                     <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                     Securing Order...
-                   </m.div>
-                 ) : (
-                   <m.button
-                     key="action"
-                     initial={{ opacity: 0 }}
-                     animate={{ opacity: 1 }}
-                     onClick={() => {
-                        triggerHaptic('medium');
-                        handlePlaceOrder();
-                     }}
-                     className="w-full h-full bg-gradient-to-br from-[#ff6b35] to-[#ff9f1c] hover:from-[#ff8a65] hover:to-[#ffb366] text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-active:scale-95 transition-all"
-                   >
-                     {hasSubscription ? 'Pay & Subscribe' : 'Place Order'}
-                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                   </m.button>
-                 )}
-               </AnimatePresence>
-             </m.div>
+               {isPlacingOrder ? (
+                 <>
+                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                   Securing Order...
+                 </>
+               ) : (
+                 <>
+                   {hasSubscription ? 'Pay & Subscribe' : 'Place Order'}
+                   <ArrowRight size={18} />
+                 </>
+               )}
+             </SoftButton>
            </div>
         </div>
       </div>

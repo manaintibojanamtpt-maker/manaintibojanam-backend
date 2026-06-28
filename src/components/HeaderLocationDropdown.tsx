@@ -3,23 +3,13 @@ import { MapPin, ChevronDown, Plus, Navigation } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { useTenant } from '../context/TenantContext';
-import AutoLocationForm, { getDeliveryFee } from './AutoLocationForm';
+import { getDeliveryFee, calculateDeliveryDistanceKm } from '../lib/deliveryFee';
+import AutoLocationForm from './AutoLocationForm';
 import toast from 'react-hot-toast';
 import { getDb } from '../lib/firebase-db';
 import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371; 
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const distance = R * c; 
-  return distance * 1.2; 
-};
+const calculateDistance = calculateDeliveryDistanceKm;
 
 const HeaderLocationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -62,7 +52,7 @@ const HeaderLocationDropdown = () => {
 
     if (tenantLat && tenantLng && address.lat && address.lng) {
       distanceKm = calculateDistance(tenantLat, tenantLng, address.lat, address.lng);
-      deliveryFee = getDeliveryFee(distanceKm, tenantInfo as any);
+      deliveryFee = getDeliveryFee(distanceKm, tenantInfo);
 
       if (deliveryFee === -1) {
         toast.error('Sorry, this kitchen currently does not deliver to your location.', { duration: 4000 });

@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const root = __dirname;
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -40,18 +41,23 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: ['react', 'react-dom'],
     },
     esbuild: {
       drop: mode === 'production' ? ['console', 'debugger'] : [],
     },
     build: {
-      cssCodeSplit: false,
+      cssCodeSplit: true,
       modulePreload: true,  // Re-enabled: allows browser to prefetch lazy chunks
       target: 'es2020',
       minify: 'esbuild',
       brotliSize: false,
       chunkSizeWarningLimit: 700,
       rollupOptions: {
+        input: {
+          main: path.resolve(root, 'index.html'),
+          marketing: path.resolve(root, 'marketing.html'),
+        },
         output: {
           manualChunks(id) {
             const normalizedId = id.replace(/\\/g, '/');
@@ -75,6 +81,24 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('/src/pages/MyOrders.tsx')) {
               return 'my-orders';
             }
+            if (
+              normalizedId.includes('/src/MarketingApp.tsx') ||
+              normalizedId.includes('/src/pages/OnboardKitchen.tsx') ||
+              normalizedId.includes('/src/pages/marketing/') ||
+              (normalizedId.includes('/src/components/marketing/') &&
+                !normalizedId.includes('MarketingLandingSections')) ||
+              normalizedId.includes('/src/components/EnterpriseFooter.tsx') ||
+              normalizedId.includes('/src/components/EnterpriseSchema.tsx') ||
+              normalizedId.includes('/src/hooks/useMarketingHashScroll.ts') ||
+              normalizedId.includes('/src/utils/haptics.ts') ||
+              normalizedId.includes('/src/config/landing.ts') ||
+              normalizedId.includes('/src/config/pricing.ts')
+            ) {
+              return 'marketing-core';
+            }
+            if (normalizedId.includes('/src/components/marketing/MarketingLandingSections')) {
+              return 'marketing-sections';
+            }
           },
         },
       },
@@ -83,6 +107,17 @@ export default defineConfig(({ mode }) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      warmup: {
+        clientFiles: [
+          './marketing.html',
+          './src/marketing-main.tsx',
+          './src/marketing.css',
+          './src/MarketingApp.tsx',
+          './src/pages/OnboardKitchen.tsx',
+          './src/components/marketing/MarketingHero.tsx',
+          './src/components/marketing/EnterpriseHeader.tsx',
+        ],
+      },
     },
   };
 });

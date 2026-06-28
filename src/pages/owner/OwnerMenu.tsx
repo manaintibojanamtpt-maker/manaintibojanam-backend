@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTenant } from '../../context/TenantContext';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import { MenuItem } from '../../types';
@@ -62,8 +65,9 @@ const compressImage = async (file: File, magicEnhance: boolean = false): Promise
 };
 
 const OwnerMenu = () => {
-  const { userProfile } = useAuth();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const { loading: authLoading } = useAuth();
+  const { loading: tenantLoading } = useTenant();
+  const tenantId = useOwnerTenantId();
   
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,24 +91,38 @@ const OwnerMenu = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (authLoading || tenantLoading) return;
+
+    if (!tenantId) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(getDb(), 'menu'),
       where('tenantId', '==', tenantId)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const menuItems = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as MenuItem[];
-      setItems(menuItems);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const menuItems = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as MenuItem[];
+        setItems(menuItems);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Menu listener error:', error);
+        toast.error('Failed to load menu. Check your connection and try again.');
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
-  }, [tenantId]);
+  }, [tenantId, authLoading, tenantLoading]);
 
   const handleOpenModal = (item?: MenuItem) => {
     if (item) {
@@ -225,6 +243,23 @@ const OwnerMenu = () => {
     return (
       <div className="flex justify-center py-20 text-white">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
+  if (!tenantId) {
+    return (
+      <div className="p-6 md:p-12 text-white max-w-lg mx-auto text-center">
+        <h2 className="text-xl font-bold mb-2">Finish store setup</h2>
+        <p className="text-white/50 mb-6 text-sm leading-relaxed">
+          Your menu will unlock after registration creates your storefront tenant.
+        </p>
+        <Link
+          to="/owner/register"
+          className="inline-flex items-center justify-center px-6 py-3 bg-[#FF6B00] hover:bg-[#E56D00] text-white font-bold rounded-xl transition-colors"
+        >
+          Complete registration
+        </Link>
       </div>
     );
   }

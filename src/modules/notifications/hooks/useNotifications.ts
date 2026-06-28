@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { getDb } from '../../../lib/firebase-db';
+import { resolveOwnerTenantDocId } from '../../../lib/dashboardPriorityActions';
 import { useAuth } from '../../../context/AuthContext';
 import { notificationService } from '../NotificationService';
 import { NotificationFilter, NotificationStatus, TenantNotification } from '../NotificationTypes';
 
 const DEBOUNCE_MS = 300;
 
-export function useNotifications(tenantId: string | undefined, previewLimit = 5) {
+export function useNotifications(
+  tenantId: string | undefined,
+  previewLimit = 5,
+  tenantSlug?: string
+) {
   const { userProfile } = useAuth();
   const ownedTenantIds = userProfile?.ownedTenantIds;
+  const resolvedTenantId = resolveOwnerTenantDocId(ownedTenantIds, tenantId, tenantSlug);
   const [notifications, setNotifications] = useState<TenantNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!tenantId || !ownedTenantIds?.includes(tenantId)) {
+    if (!resolvedTenantId || !ownedTenantIds?.includes(resolvedTenantId)) {
       setNotifications([]);
       setUnreadCount(0);
       setLoading(false);
@@ -24,7 +30,7 @@ export function useNotifications(tenantId: string | undefined, previewLimit = 5)
     }
 
     const q = query(
-      collection(getDb(), 'tenants', tenantId, 'notifications'),
+      collection(getDb(), 'tenants', resolvedTenantId, 'notifications'),
       orderBy('createdAt', 'desc'),
       limit(Math.max(previewLimit, 50))
     );
@@ -34,7 +40,9 @@ export function useNotifications(tenantId: string | undefined, previewLimit = 5)
       (snapshot) => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          const items = snapshot.docs.map((d) => d.data() as TenantNotification);
+          const items = snapshot.docs
+            .map((d) => d.data() as TenantNotification)
+            .filter((n) => n.status !== NotificationStatus.ARCHIVED);
           setNotifications(items);
           setUnreadCount(items.filter((n) => n.status === NotificationStatus.UNREAD).length);
           setLoading(false);
@@ -47,27 +55,40 @@ export function useNotifications(tenantId: string | undefined, previewLimit = 5)
       if (debounceRef.current) clearTimeout(debounceRef.current);
       unsubscribe();
     };
-  }, [tenantId, ownedTenantIds, previewLimit]);
+  }, [resolvedTenantId, ownedTenantIds, previewLimit]);
 
   const markRead = useCallback(
     async (notificationId: string) => {
-      if (!tenantId) return;
-      await notificationService.markRead(tenantId, ownedTenantIds, notificationId);
+      if (!resolvedTenantId) return;
+      await notificationService.markRead(resolvedTenantId, ownedTenantIds, notificationId);
     },
-    [tenantId, ownedTenantIds]
+    [resolvedTenantId, ownedTenantIds]
   );
 
   const markAllRead = useCallback(async () => {
-    if (!tenantId) return;
-    await notificationService.markAllRead(tenantId, ownedTenantIds);
-  }, [tenantId, ownedTenantIds]);
+    if (!resolvedTenantId) return;
+    await notificationService.markAllRead(resolvedTenantId, ownedTenantIds);
+  }, [resolvedTenantId, ownedTenantIds]);
+
+  const archive = useCallback(
+    async (notificationId: string) => {
+      if (!resolvedTenantId) return;
+      await notificationService.archive(resolvedTenantId, ownedTenantIds, notificationId);
+    },
+    [resolvedTenantId, ownedTenantIds]
+  );
+
+  const dismissAll = useCallback(async () => {
+    if (!resolvedTenantId) return;
+    await notificationService.archiveAll(resolvedTenantId, ownedTenantIds);
+  }, [resolvedTenantId, ownedTenantIds]);
 
   const handleClick = useCallback(
     async (notification: TenantNotification) => {
-      if (!tenantId) return;
-      await notificationService.handleClick(tenantId, ownedTenantIds, notification);
+      if (!resolvedTenantId) return;
+      await notificationService.handleClick(resolvedTenantId, ownedTenantIds, notification);
     },
-    [tenantId, ownedTenantIds]
+    [resolvedTenantId, ownedTenantIds]
   );
 
   const preview = useMemo(() => notifications.slice(0, previewLimit), [notifications, previewLimit]);
@@ -79,31 +100,37 @@ export function useNotifications(tenantId: string | undefined, previewLimit = 5)
     loading,
     markRead,
     markAllRead,
+    archive,
+    dismissAll,
     handleClick,
   };
 }
 
-export function useNotificationCenter(tenantId: string | undefined) {
+export function useNotificationCenter(tenantId: string | undefined, tenantSlug?: string) {
   const { userProfile } = useAuth();
   const ownedTenantIds = userProfile?.ownedTenantIds;
+  const resolvedTenantId = resolveOwnerTenantDocId(ownedTenantIds, tenantId, tenantSlug);
   const [items, setItems] = useState<TenantNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<NotificationFilter>({ status: 'ALL', category: 'ALL' });
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!resolvedTenantId) return;
     setLoading(true);
     try {
-      const result = await notificationService.list(tenantId, ownedTenantIds, {
+      const result = await notificationService.list(resolvedTenantId, ownedTenantIds, {
         ...filter,
         search,
       }, 50);
       setItems(result.items);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [tenantId, ownedTenantIds, filter, search]);
+  }, [resolvedTenantId, ownedTenantIds, filter, search]);
 
   useEffect(() => {
     load();
@@ -117,9 +144,10 @@ export function useNotificationCenter(tenantId: string | undefined) {
     search,
     setSearch,
     reload: load,
-    markRead: (id: string) => tenantId && notificationService.markRead(tenantId, ownedTenantIds, id),
-    markAllRead: () => tenantId && notificationService.markAllRead(tenantId, ownedTenantIds),
-    archive: (id: string) => tenantId && notificationService.archive(tenantId, ownedTenantIds, id),
+    markRead: (id: string) => resolvedTenantId && notificationService.markRead(resolvedTenantId, ownedTenantIds, id),
+    markAllRead: () => resolvedTenantId && notificationService.markAllRead(resolvedTenantId, ownedTenantIds),
+    archive: (id: string) => resolvedTenantId && notificationService.archive(resolvedTenantId, ownedTenantIds, id),
+    dismissAll: () => resolvedTenantId && notificationService.archiveAll(resolvedTenantId, ownedTenantIds),
   };
 }
 

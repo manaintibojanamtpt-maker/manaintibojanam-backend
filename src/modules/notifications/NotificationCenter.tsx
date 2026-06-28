@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { m } from 'framer-motion';
 import {
   Bell,
   Search,
-  Filter,
   CheckCheck,
   Archive,
   Sparkles,
@@ -13,6 +12,8 @@ import {
   ChefHat,
   CreditCard,
   Loader2,
+  Target,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
@@ -24,6 +25,14 @@ import {
   NotificationStatus,
   TenantNotification,
 } from './NotificationTypes';
+import { getDb } from '../../lib/firebase-db';
+import { collection, getCountFromServer, query, where } from 'firebase/firestore';
+import {
+  DashboardPriorityAction,
+  getDashboardPriorityActions,
+  resolveOwnerTenantDocId,
+} from '../../lib/dashboardPriorityActions';
+import { EnvironmentConfig } from '../../config/environment';
 
 const CATEGORY_FILTERS: Array<{ id: NotificationCategory | 'ALL'; label: string; icon: React.ReactNode }> = [
   { id: 'ALL', label: 'All', icon: <Bell size={14} /> },
@@ -63,16 +72,76 @@ const formatTime = (iso: string) => {
 
 export const NotificationCenter: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { userProfile } = useAuth();
-  const { tenantId: ctxTenantId } = useTenant();
-  const tenantId = ctxTenantId || userProfile?.ownedTenantIds?.[0];
+  const { tenantId: ctxTenantId, tenantSlug, tenantInfo } = useTenant();
+  const tenantDocId = resolveOwnerTenantDocId(userProfile?.ownedTenantIds, ctxTenantId, tenantSlug);
+  const [menuCount, setMenuCount] = useState(0);
 
-  const { items, loading, filter, setFilter, search, setSearch, markRead, markAllRead, archive, reload } =
-    useNotificationCenter(tenantId);
+  const { items, loading, filter, setFilter, search, setSearch, markRead, markAllRead, archive, dismissAll, reload } =
+    useNotificationCenter(tenantDocId, tenantSlug);
 
   const [activeTab, setActiveTab] = useState<'ALL' | NotificationStatus | NotificationPriority>('ALL');
 
+  useEffect(() => {
+    if (!tenantDocId) return;
+    const loadMenuCount = async () => {
+      try {
+        const q = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantDocId));
+        const snap = await getCountFromServer(q);
+        setMenuCount(snap.data().count);
+      } catch {
+        setMenuCount(0);
+      }
+    };
+    loadMenuCount();
+  }, [tenantDocId]);
+
+  const isSandboxActive =
+    tenantInfo?.storeStatus === 'published' && !!tenantInfo?.sandboxMode;
+
+  const priorityActions = useMemo(
+    () =>
+      getDashboardPriorityActions({
+        storeStatus: tenantInfo?.storeStatus,
+        sandboxMode: tenantInfo?.sandboxMode,
+        isSandboxActive,
+        deliveryFreeRadius: tenantInfo?.deliveryConfig?.freeRadius,
+        menuCount,
+        totalOrders: undefined,
+      }),
+    [tenantInfo, isSandboxActive, menuCount]
+  );
+
+  const urgentActions = priorityActions.filter((a) => a.isUrgent);
+  const showActionsFirst =
+    (location.state as { showActions?: boolean } | null)?.showActions === true ||
+    (items.length === 0 && priorityActions.length > 0);
+
+  const handlePriorityAction = (action: DashboardPriorityAction) => {
+    if (action.link === 'whatsapp_direct') {
+      const storeUrl = EnvironmentConfig.getStorefrontUrl(tenantInfo?.slug || tenantDocId || '');
+      if (!storeUrl) return;
+      const text = encodeURIComponent(
+        `We are now live on BhojanOS 🎉\n\nOrder here:\n${storeUrl}`
+      );
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+      return;
+    }
+    if (action.link === 'whatsapp_status') {
+      const storeUrl = EnvironmentConfig.getStorefrontUrl(tenantInfo?.slug || tenantDocId || '');
+      if (!storeUrl) return;
+      const text = encodeURIComponent(`🍛 Fresh food now available online!\n\n${storeUrl}`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+      return;
+    }
+    if (action.link?.startsWith('/')) {
+      navigate(action.link);
+    }
+  };
+
   const filteredItems = items.filter((n) => {
+    if (n.status === NotificationStatus.ARCHIVED) return false;
     if (activeTab === NotificationStatus.UNREAD) return n.status === NotificationStatus.UNREAD;
     if (activeTab === NotificationStatus.READ) return n.status === NotificationStatus.READ;
     if (activeTab === NotificationPriority.CRITICAL) return n.priority === NotificationPriority.CRITICAL;
@@ -97,6 +166,13 @@ export const NotificationCenter: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => dismissAll().then(() => reload())}
+            className="px-4 py-2 rounded-xl border border-white/10 text-white/70 text-sm font-semibold hover:bg-white/5 flex items-center gap-2"
+          >
+            <Archive size={16} /> Clear all
+          </button>
           <button
             type="button"
             onClick={() => markAllRead()}
@@ -160,15 +236,56 @@ export const NotificationCenter: React.FC = () => {
         </div>
       </GlassCard>
 
+      {(showActionsFirst || urgentActions.length > 0) && priorityActions.length > 0 && (
+        <GlassCard hoverEffect={false} className="!p-4 sm:!p-6 border-orange-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="text-orange-400" size={18} />
+            <h2 className="text-base font-black text-white">
+              {urgentActions.length > 0 ? 'Needs your attention' : 'Suggested next steps'}
+            </h2>
+          </div>
+          <p className="text-sm text-white/50 mb-4">
+            {items.length === 0
+              ? 'No AI alerts yet — here are the top actions from your dashboard.'
+              : 'Quick actions to grow orders alongside your AI alerts.'}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {priorityActions.map((action) => (
+              <div
+                key={action.id}
+                className={`rounded-xl border p-4 flex flex-col ${
+                  action.isUrgent
+                    ? 'border-red-500/30 bg-red-500/[0.04]'
+                    : 'border-white/10 bg-white/[0.02]'
+                }`}
+              >
+                <h3 className="text-sm font-bold text-white mb-1">{action.title}</h3>
+                <p className="text-xs text-white/55 mb-3 flex-1">{action.message}</p>
+                <button
+                  type="button"
+                  onClick={() => handlePriorityAction(action)}
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold bg-[#FF7A00] hover:bg-[#E56D00] text-white transition-colors"
+                >
+                  {action.action}
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20 text-white/50">
           <Loader2 className="animate-spin mr-2" size={20} /> Loading notifications...
         </div>
       ) : filteredItems.length === 0 ? (
         <GlassCard hoverEffect={false} className="text-center py-16">
-          <Filter className="mx-auto text-white/20 mb-4" size={40} />
-          <p className="text-white/60 font-medium">No notifications match your filters.</p>
-          <p className="text-white/40 text-sm mt-1">BhojanOS will generate insights as your kitchen operates.</p>
+          <Bell className="mx-auto text-white/20 mb-4" size={40} />
+          <p className="text-white/60 font-medium">No AI alerts yet.</p>
+          <p className="text-white/40 text-sm mt-1">
+            BhojanOS will generate insights as your kitchen operates. Use the suggested actions above in the meantime.
+          </p>
         </GlassCard>
       ) : (
         <div className="relative">

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>BhojanOS - Direct Ordering OS for Food Businesses</title>
+    <meta name="description" content="BhojanOS helps independent food businesses launch direct ordering, repeat customer memory, subscriptions, and owner delivery operations." />
+    <meta name="theme-color" content="#030303" />
+    <link rel="icon" href="/bhojan-os-icon.png?v=3" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>
+      #boot-fallback {
+        min-height: 100dvh;
+        background: #030303;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        color: #737373;
+        font: 600 14px/1.4 system-ui, sans-serif;
+      }
+      #boot-fallback .spinner {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 9999px;
+        border: 2px solid rgba(255, 122, 0, 0.25);
+        border-top-color: #ff7a00;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="boot-fallback" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Loading BhojanOS…</span>
+      </div>
+    </div>
+    <script type="module" src="/src/marketing-main.tsx"></script>
+  </body>
+</html>

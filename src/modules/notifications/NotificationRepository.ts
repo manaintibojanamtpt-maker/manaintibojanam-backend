@@ -115,6 +115,8 @@ export class NotificationRepository {
 
     if (filter.status && filter.status !== 'ALL') {
       items = items.filter((n) => n.status === filter.status);
+    } else {
+      items = items.filter((n) => n.status !== NotificationStatus.ARCHIVED);
     }
 
     if (filter.category && filter.category !== 'ALL') {
@@ -182,6 +184,26 @@ export class NotificationRepository {
   async archive(tenantId: string, notificationId: string): Promise<void> {
     const ref = doc(getDb(), 'tenants', tenantId, 'notifications', notificationId);
     await updateDoc(ref, { status: NotificationStatus.ARCHIVED });
+  }
+
+  async archiveAll(tenantId: string): Promise<number> {
+    const q = query(
+      notificationsRef(tenantId),
+      orderBy('createdAt', 'desc'),
+      limit(100)
+    );
+    const snapshot = await getDocs(q);
+    const toArchive = snapshot.docs.filter(
+      (d) => (d.data() as TenantNotification).status !== NotificationStatus.ARCHIVED
+    );
+    if (toArchive.length === 0) return 0;
+
+    const batch = writeBatch(getDb());
+    toArchive.forEach((d) => {
+      batch.update(d.ref, { status: NotificationStatus.ARCHIVED });
+    });
+    await batch.commit();
+    return toArchive.length;
   }
 
   async getRecent(tenantId: string, count = 5): Promise<TenantNotification[]> {

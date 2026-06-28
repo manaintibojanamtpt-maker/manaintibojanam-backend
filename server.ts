@@ -19,8 +19,19 @@ import {
 import base64url from "base64url";
 import winston from "winston";
 import cron from "node-cron";
-import { assertFulfillmentTransition } from "./server/paymentGate";
-import { writePaymentVerification } from "./server/paymentAudit";
+import { assertFulfillmentTransition } from "./backend-lib/paymentGate";
+import { writePaymentVerification } from "./backend-lib/paymentAudit";
+import {
+  assertNotDuplicateUpload,
+  validateKycDocument,
+  type KycDocumentSlot,
+} from "./backend-lib/kycDocumentValidation";
+import { validateKycStorageUrl } from "./backend-lib/kycUrlValidation";
+import {
+  buildInlineKycDocumentUrl,
+  MAX_INLINE_KYC_BYTES,
+  parseInlineKycDocumentUrl,
+} from "./backend-lib/kycInlineDocument";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -34,8 +45,34 @@ const logger = winston.createLogger({
   ]
 });
 
+// Firestore quota circuit breaker (must be early — used by incident logging + middleware)
+const isFirestoreQuotaError = (err: any) => {
+  const msg = String(err?.message || err?.code || "").toLowerCase();
+  return err?.code === 8 || msg.includes("quota exceeded") || msg.includes("resource_exhausted");
+};
+
+let firestoreQuotaBackoffUntil = 0;
+let lastQuotaWarnAt = 0;
+
+const noteFirestoreQuotaExceeded = (source: string) => {
+  const backoffMs = Number(process.env.FIRESTORE_QUOTA_BACKOFF_MS || 15 * 60 * 1000);
+  firestoreQuotaBackoffUntil = Date.now() + backoffMs;
+  const now = Date.now();
+  if (now - lastQuotaWarnAt > 60_000) {
+    lastQuotaWarnAt = now;
+    logger.warn({
+      message: "Firestore quota exceeded — pausing non-critical Firestore traffic",
+      source,
+      backoffMinutes: Math.round(backoffMs / 60_000),
+    });
+  }
+};
+
+const isFirestoreBackedOff = () => Date.now() < firestoreQuotaBackoffUntil;
+
 // Write to system_incidents safely
 const writeSystemIncident = async (type: string, status: string, payload: any, correlationId?: string) => {
+  if (isFirestoreBackedOff()) return;
   try {
     if (!_db) return;
     const { randomUUID } = await import('crypto');
@@ -50,7 +87,8 @@ const writeSystemIncident = async (type: string, status: string, payload: any, c
     });
     logger.info({ message: "System incident logged", type, status, correlationId });
   } catch (err: any) {
-    logger.error({ message: "Failed to write system incident", err: err.message, correlationId });
+    if (isFirestoreQuotaError(err)) noteFirestoreQuotaExceeded("writeSystemIncident");
+    else logger.error({ message: "Failed to write system incident", err: err.message, correlationId });
   }
 };
 
@@ -232,7 +270,20 @@ const validateSecrets = () => {
   
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     logger.warn("EMAIL_USER or EMAIL_PASS missing. Reports and email notifications disabled.");
+  } else if (
+    process.env.EMAIL_USER === "your_email@gmail.com" ||
+    process.env.EMAIL_PASS === "your_app_password"
+  ) {
+    logger.warn("EMAIL_USER/EMAIL_PASS still use placeholder values. Founder alerts will not send.");
   }
+
+  const founderEmail = process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com";
+  logger.info({
+    message: "Platform boot",
+    founderEmail,
+    platformTier: process.env.PLATFORM_TIER || (process.env.NODE_ENV === "production" ? "free" : "standard"),
+    firebaseProject: process.env.FIREBASE_PROJECT_ID || "from firebase-applet-config.json",
+  });
   
   if (!process.env.CRON_SECRET && process.env.NODE_ENV === 'production') {
     logger.warn("CRON_SECRET missing. Secure cron processing vulnerable or disabled.");
@@ -257,10 +308,17 @@ try {
   console.error("Failed to read firebase-applet-config.json:", err);
 }
 
-const ambientProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
+const isFreeTierPlatform = (): boolean => {
+  if (process.env.PLATFORM_TIER === "standard") return false;
+  if (process.env.PLATFORM_TIER === "free") return true;
+  return process.env.NODE_ENV === "production";
+};
+
+const ambientProjectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
 const configProjectId = firebaseConfig.projectId;
-// Prioritize config project ID as it's the one explicitly provisioned for the app
-const projectId = configProjectId || ambientProjectId || 'bhojanos2'; 
+const configStorageBucket =
+  process.env.FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket || "bhojanos2.firebasestorage.app";
+const projectId = ambientProjectId || configProjectId || "bhojanos2"; 
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 
@@ -270,6 +328,7 @@ console.log(`Config Project ID: ${configProjectId || 'not set'}`);
 console.log(`Using Project ID: ${projectId || 'unknown'}`);
 console.log(`Using Database ID: ${databaseId}`);
 console.log(`Environment: ${process.env.NODE_ENV}`);
+console.log(`Platform tier: ${isFreeTierPlatform() ? "free (Spark-safe)" : "standard"}`);
 console.log("-------------------------------------");
 
 let appAdmin: any;
@@ -282,17 +341,24 @@ try {
         const serviceAccount = JSON.parse(serviceAccountVar);
         appAdmin = initializeApp({
           credential: cert(serviceAccount),
-          projectId: projectId
+          projectId: projectId,
+          storageBucket: configStorageBucket,
         });
         console.log(`✅ [Firebase Admin] Initialized with Service Account (Project: ${projectId})`);
       } catch (parseErr) {
         console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:", parseErr);
         // Fallback
-        appAdmin = initializeApp(projectId ? { projectId } : {});
+        appAdmin = initializeApp({
+          projectId,
+          storageBucket: configStorageBucket,
+        });
       }
     } else {
       // Standard initialization for GCP/Firebase environments
-      appAdmin = initializeApp(projectId ? { projectId } : {});
+      appAdmin = initializeApp({
+        projectId,
+        storageBucket: configStorageBucket,
+      });
       console.log(`✅ [Firebase Admin] Initialized [DEFAULT] app (Project: ${appAdmin.options.projectId || 'ambient'}).`);
     }
   } else {
@@ -302,7 +368,7 @@ try {
   console.error(`❌ [Firebase Admin] Primary initialization failed: ${err.message}`);
   // 2. Fallback to explicit named app initialization
   try {
-    const appOptions = { projectId: projectId || configProjectId };
+    const appOptions = { projectId: projectId || configProjectId, storageBucket: configStorageBucket };
     const appName = `app-fallback-${Date.now()}`;
     appAdmin = initializeApp(appOptions, appName);
     console.log(`✅ [Firebase Admin] Initialized fallback app '${appName}' (Project: ${appAdmin.options.projectId}).`);
@@ -401,6 +467,29 @@ const isFirestorePermissionError = (err: any) =>
 
 const isFirestoreNotFoundError = (err: any) =>
   err?.code === 5 || String(err?.message || '').includes("NOT_FOUND");
+
+const firestoreCountSince = async (collectionName: string, field: string, sinceIso: string): Promise<number> => {
+  if (!_db) return 0;
+  try {
+    const snapshot = await _db
+      .collection(collectionName)
+      .where(field, ">=", sinceIso)
+      .count()
+      .get();
+    return snapshot.data().count;
+  } catch (err: any) {
+    if (isFirestoreQuotaError(err)) {
+      noteFirestoreQuotaExceeded(`count:${collectionName}`);
+      throw err;
+    }
+    const fallback = await _db
+      .collection(collectionName)
+      .where(field, ">=", sinceIso)
+      .limit(200)
+      .get();
+    return fallback.size;
+  }
+};
 
 // Test connection and handle fallback
 const verifyConnection = async () => {
@@ -749,6 +838,110 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
   }
 });
 
+// KYC inline upload — small JSON body; bypasses Firebase Storage (avoids storage-rules hangs)
+app.post(
+  "/api/owner/kyc/upload-inline",
+  strictLimiter,
+  verifyFirebaseToken,
+  bodyParser.json({ limit: "2mb" }),
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.uid;
+      const { tenantId, slot, fileName, contentType, fileBase64, fileHash, fileSize } = req.body || {};
+
+      if (!tenantId || !slot || !fileName || !fileBase64 || !fileHash) {
+        return res.status(400).json({ error: "Missing required upload fields." });
+      }
+      if (slot !== "identity" && slot !== "business") {
+        return res.status(400).json({ error: "Invalid document slot." });
+      }
+
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(String(fileBase64), "base64");
+      } catch {
+        return res.status(400).json({ error: "Invalid file encoding." });
+      }
+
+      const decodedSize = buffer.length;
+      const declaredSize = Number(fileSize) || decodedSize;
+      if (decodedSize <= 0 || decodedSize > MAX_INLINE_KYC_BYTES) {
+        return res.status(400).json({ error: "File must be between 1 byte and 750KB." });
+      }
+      if (Math.abs(decodedSize - declaredSize) > 1024) {
+        return res.status(400).json({ error: "File size mismatch. Please retry the upload." });
+      }
+
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (!userDoc.exists) {
+        return res.status(403).json({ error: "User not found." });
+      }
+
+      const ownedTenantIds: string[] = userDoc.data()?.ownedTenantIds || [];
+      if (!ownedTenantIds.includes(tenantId)) {
+        return res.status(403).json({ error: "You do not own this kitchen." });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return res.status(404).json({ error: "Kitchen not found." });
+      }
+
+      const kyc = tenantDoc.data()?.kyc as Record<string, unknown> | undefined;
+      const fileDescriptor = {
+        name: String(fileName),
+        size: decodedSize,
+        type: String(contentType || "application/octet-stream"),
+      };
+
+      const validationError = validateKycDocument(fileDescriptor, slot as KycDocumentSlot);
+      if (validationError) {
+        return res.status(400).json({ error: validationError });
+      }
+
+      try {
+        assertNotDuplicateUpload(String(fileHash), slot as KycDocumentSlot, kyc);
+      } catch (dupErr: any) {
+        return res.status(409).json({ error: dupErr.message });
+      }
+
+      const documentUrl = buildInlineKycDocumentUrl(String(tenantId), slot);
+      const prefix = slot === "identity" ? "identity" : "business";
+
+      await db.collection("tenants").doc(tenantId).collection("kycPrivate").doc(slot).set({
+        dataBase64: buffer.toString("base64"),
+        contentType: fileDescriptor.type,
+        fileName: fileDescriptor.name,
+        fileHash: String(fileHash),
+        fileSize: decodedSize,
+        uploadedBy: userId,
+        uploadedAt: FieldValue.serverTimestamp(),
+      });
+
+      await db.collection("tenants").doc(tenantId).update({
+        [`kyc.${prefix}DocumentUrl`]: documentUrl,
+        [`kyc.${prefix}DocumentHash`]: String(fileHash),
+        [`kyc.${prefix}DocumentFileName`]: fileDescriptor.name,
+        [`kyc.${prefix}DocumentStorage`]: "inline",
+        "kyc.verificationLevel": 1,
+        "kyc.status": "pending_verification",
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      logger.info({ message: "KYC inline document uploaded", tenantId, slot, userId, bytes: decodedSize });
+      res.json({ success: true, url: documentUrl, fileName: fileDescriptor.name });
+    } catch (err: any) {
+      logger.error({
+        message: "KYC inline upload failed",
+        err: err.message,
+        stack: err.stack,
+        uid: req.user?.uid,
+      });
+      res.status(500).json({ error: err.message || "Upload failed." });
+    }
+  },
+);
+
 app.use(bodyParser.json());
 
 // Correlation ID Middleware
@@ -763,38 +956,95 @@ app.use(async (req: any, res, next) => {
   next();
 });
 
-// In-memory cache for tenant validation (5 mins)
-const tenantCache: Record<string, { exists: boolean, status?: string, expiresAt: number }> = {};
+// In-memory cache for tenant validation (10 mins; stale-while-revalidate during quota)
+const tenantCache: Record<string, { exists: boolean; status?: string; expiresAt: number }> = {};
+const tenantLookupInflight = new Map<string, Promise<{ exists: boolean; status?: string }>>();
+let lastTenantValidationErrorLogAt = 0;
+const TENANT_CACHE_MS = Number(process.env.TENANT_CACHE_MS || 10 * 60 * 1000);
 
-// Tenant Context Middleware
-app.use(async (req: any, res, next) => {
-  // Extract tenantId from custom header or query param
-  let tenantId = req.headers["x-tenant-id"] || req.query.tenantId;
-  
-  if (!tenantId) {
-    tenantId = "mana-inti";
+const shouldBypassTenantValidation = (path: string) =>
+  path.startsWith("/api/health") ||
+  path.startsWith("/api/server-time") ||
+  path.startsWith("/api/env-debug") ||
+  path.startsWith("/api/firestore-") ||
+  path.startsWith("/api/cron/") ||
+  path.startsWith("/api/admin/") ||
+  path.startsWith("/api/webhooks/") ||
+  path.startsWith("/api/monitoring/") ||
+  path.startsWith("/api/client-errors") ||
+  path.startsWith("/api/notifications/") ||
+  path.startsWith("/api/owner/") ||
+  path.startsWith("/api/auth/");
+
+const loadTenantRecord = async (tenantId: string) => {
+  if (tenantLookupInflight.has(tenantId)) {
+    return tenantLookupInflight.get(tenantId)!;
   }
-  
-  if (req.path.startsWith('/api/health') || req.path.startsWith('/api/server-time')) {
+
+  const lookup = (async () => {
+    const docSnap = await _db!.collection("tenants").doc(tenantId).get();
+    return docSnap.exists
+      ? { exists: true, status: docSnap.data()?.status as string | undefined }
+      : { exists: false };
+  })();
+
+  tenantLookupInflight.set(tenantId, lookup);
+  try {
+    return await lookup;
+  } finally {
+    tenantLookupInflight.delete(tenantId);
+  }
+};
+
+// Tenant Context Middleware — API routes only (never block marketing/static page loads)
+app.use(async (req: any, res, next) => {
+  const defaultTenantId = req.headers["x-tenant-id"] || req.query.tenantId || "mana-inti";
+
+  if (!req.path.startsWith("/api/")) {
+    req.tenantId = defaultTenantId;
+    return next();
+  }
+
+  const tenantId = String(defaultTenantId);
+
+  if (shouldBypassTenantValidation(req.path)) {
     req.tenantId = tenantId;
     return next();
   }
 
   try {
     const now = Date.now();
-    let cached = tenantCache[tenantId as string];
-    
+    let cached = tenantCache[tenantId];
+
+    if (isFirestoreBackedOff()) {
+      if (cached) {
+        req.tenantId = tenantId;
+        return next();
+      }
+      req.tenantId = tenantId;
+      return next();
+    }
+
     if (!cached || cached.expiresAt < now) {
       if (_db) {
-        const docSnap = await _db.collection('tenants').doc(tenantId as string).get();
-        if (docSnap.exists) {
-          cached = { exists: true, status: docSnap.data()?.status, expiresAt: now + 300000 };
-        } else {
-          cached = { exists: false, expiresAt: now + 300000 };
+        try {
+          const record = await loadTenantRecord(tenantId);
+          cached = { ...record, expiresAt: now + TENANT_CACHE_MS };
+          tenantCache[tenantId] = cached;
+        } catch (err: any) {
+          if (isFirestoreQuotaError(err)) {
+            noteFirestoreQuotaExceeded("tenantValidation");
+            if (cached) {
+              req.tenantId = tenantId;
+              return next();
+            }
+            tenantCache[tenantId] = { exists: true, expiresAt: now + TENANT_CACHE_MS };
+            req.tenantId = tenantId;
+            return next();
+          }
+          throw err;
         }
-        tenantCache[tenantId as string] = cached;
       } else {
-        // DB not initialized yet, allow pass-through
         req.tenantId = tenantId;
         return next();
       }
@@ -804,15 +1054,20 @@ app.use(async (req: any, res, next) => {
       return res.status(400).json({ success: false, error: "Invalid Tenant ID" });
     }
 
-    if (cached.status === 'suspended') {
+    if (cached.status === "suspended") {
       return res.status(403).json({ success: false, error: "Tenant account is suspended" });
     }
 
     req.tenantId = tenantId;
     next();
-  } catch (err) {
-    console.error("Tenant validation error:", err);
-    req.tenantId = "mana-inti";
+  } catch (err: any) {
+    const now = Date.now();
+    if (now - lastTenantValidationErrorLogAt > 60_000) {
+      lastTenantValidationErrorLogAt = now;
+      console.error("Tenant validation error:", err?.message || err);
+    }
+    if (isFirestoreQuotaError(err)) noteFirestoreQuotaExceeded("tenantValidation");
+    req.tenantId = tenantId;
     next();
   }
 });
@@ -837,10 +1092,30 @@ app.get("/api/env-debug", (_, res) => {
 
 // HEALTH CHECK
 app.get("/api/health", async (req, res) => {
+  const emailConfigured = Boolean(
+    (process.env.EMAIL_USER || process.env.SMTP_USER) &&
+      (process.env.EMAIL_PASS || process.env.SMTP_PASS) &&
+      process.env.EMAIL_USER !== "your_email@gmail.com" &&
+      process.env.EMAIL_PASS !== "your_app_password"
+  );
   const status: any = {
     status: "ok",
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV,
+    email: {
+      configured: emailConfigured,
+      founderRecipient: (process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com").trim().toLowerCase(),
+    },
+    firestore: {
+      backedOff: isFirestoreBackedOff(),
+      backoffUntil: firestoreQuotaBackoffUntil > Date.now()
+        ? new Date(firestoreQuotaBackoffUntil).toISOString()
+        : null,
+      projectId,
+    },
+    platform: {
+      tier: isFreeTierPlatform() ? "free" : "standard",
+    },
     firebase: {
       projectId: projectId || "unknown",
       databaseId: databaseId || "(default)",
@@ -945,9 +1220,19 @@ app.post("/api/client-errors", (req: any, res) => {
 // Monitoring / incident response intake
 app.post("/api/monitoring/log", async (req: any, res) => {
   try {
+    if (isFirestoreBackedOff()) {
+      return res.status(202).json({ success: true, skipped: "firestore_quota_backoff" });
+    }
+
     const { type, payload } = req.body || {};
     if (!type || typeof type !== "string") {
       return res.status(400).json({ success: false, error: "Missing incident type" });
+    }
+
+    // Drop noisy telemetry while quota is tight (client-side errors about quota itself)
+    const payloadText = JSON.stringify(payload || {}).toLowerCase();
+    if (payloadText.includes("quota exceeded") || payloadText.includes("resource-exhausted")) {
+      return res.status(202).json({ success: true, skipped: "quota_noise" });
     }
 
     const correlationId = req.correlationId || `mon-${Date.now()}`;
@@ -1044,7 +1329,14 @@ const seedCategories = async () => {
   }
 };
 
+let settingsCache: { data: any; expiresAt: number } | null = null;
+const SETTINGS_CACHE_MS = Number(process.env.SETTINGS_CACHE_MS || 5 * 60 * 1000);
+
 const getSettings = async () => {
+  if (settingsCache && Date.now() < settingsCache.expiresAt) {
+    return settingsCache.data;
+  }
+
   try {
     if (!_db) {
       console.warn("⚠️ [Firestore Admin] _db not initialized in getSettings, using defaults.");
@@ -1091,10 +1383,18 @@ const getSettings = async () => {
       } catch (e: any) {
         console.warn("⚠️ Failed to save default settings (might be read-only):", e.message);
       }
+      settingsCache = { data: defaultSettings, expiresAt: Date.now() + SETTINGS_CACHE_MS };
       return defaultSettings;
     }
-    return doc.data();
+    const data = doc.data();
+    settingsCache = { data, expiresAt: Date.now() + SETTINGS_CACHE_MS };
+    return data;
   } catch (err: any) {
+    if (isFirestoreQuotaError(err)) {
+      noteFirestoreQuotaExceeded("getSettings");
+      if (settingsCache) return settingsCache.data;
+    }
+
     // If it's code 5 (NOT_FOUND), it just means the document doesn't exist yet
     if (isFirestoreNotFoundError(err)) {
       const defaultSettings = {
@@ -1158,13 +1458,56 @@ const getSettings = async () => {
 import nodemailer from "nodemailer";
 
 // --- NOTIFICATION HELPERS ---
+type EmailSendResult = { sent: boolean; skipped?: boolean; reason?: string; messageId?: string };
+
+const getFounderEmail = (): string =>
+  (process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com").trim().toLowerCase();
+
+const getEmailFromAddress = (): string | null => {
+  const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+  return process.env.EMAIL_FROM || user || null;
+};
+
+const isEmailConfigured = (): boolean => {
+  const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  return Boolean(
+    user &&
+      pass &&
+      user !== "your_email@gmail.com" &&
+      pass !== "your_app_password"
+  );
+};
+
+const getEmailConfigStatus = () => {
+  const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const maskedUser = user
+    ? `${user.slice(0, 3)}***@${user.split("@")[1] || "?"}`
+    : null;
+  return {
+    configured: isEmailConfigured(),
+    smtpHost: process.env.EMAIL_HOST || "smtp.gmail.com",
+    smtpPort: Number(process.env.EMAIL_PORT) || 587,
+    senderUser: maskedUser,
+    founderEmail: getFounderEmail(),
+    emailFrom: getEmailFromAddress(),
+  };
+};
+
+const formatEmailFromHeader = (brandLabel = "Mana Inti Bojanam"): string => {
+  const emailFrom = getEmailFromAddress();
+  if (!emailFrom) return "";
+  if (emailFrom.includes("<")) return emailFrom;
+  return `"${brandLabel}" <${emailFrom}>`;
+};
+
 const getTransporter = () => {
   const user = process.env.EMAIL_USER || process.env.SMTP_USER;
   const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
   const host = process.env.EMAIL_HOST || "smtp.gmail.com";
   const port = Number(process.env.EMAIL_PORT) || 587;
 
-  if (!user || !pass || user === "your_email@gmail.com" || pass === "your_app_password") {
+  if (!isEmailConfigured()) {
     return null;
   }
 
@@ -1181,7 +1524,14 @@ const getTransporter = () => {
 const classifyError = (channel: string, err: any): 'RETRYABLE' | 'NON_RETRYABLE' => {
   const code = err.code || err.message || '';
   if (channel === 'EMAIL') {
-    if (code.includes('EAUTH') || code.includes('invalid email') || err.status === 400) return 'NON_RETRYABLE';
+    if (
+      code.includes('EAUTH') ||
+      code.includes('EMAIL_NOT_CONFIGURED') ||
+      code.includes('invalid email') ||
+      err.status === 400
+    ) {
+      return 'NON_RETRYABLE';
+    }
     return 'RETRYABLE';
   }
   if (channel === 'WHATSAPP') {
@@ -1217,42 +1567,50 @@ const enqueueNotification = async (payload: any) => {
   }
 };
 
-async function sendEmailNotification(to: string, subject: string, body: string) {
+async function sendEmailNotification(
+  to: string,
+  subject: string,
+  body: string,
+  options?: { fromLabel?: string }
+): Promise<EmailSendResult> {
+  const transporter = getTransporter();
+  const emailFrom = getEmailFromAddress();
+
+  if (!transporter || !emailFrom) {
+    const reason = "Email credentials missing or using placeholders";
+    console.warn(`⚠️ ${reason}. Skipping email to ${to}.`);
+    console.log("💡 Set EMAIL_USER and EMAIL_PASS (Gmail App Password) on the backend host (e.g. Render).");
+    return { sent: false, skipped: true, reason };
+  }
+
   try {
-    const transporter = getTransporter();
-    const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.SMTP_USER;
-
-    if (!transporter || !emailFrom) {
-      console.warn("⚠️ Email credentials missing or using placeholders. Skipping email notification.");
-      console.log("💡 To enable emails, set EMAIL_USER and EMAIL_PASS in the Secrets panel.");
-      return;
-    }
-
     console.log(`📧 Attempting to send email to: ${to} (Subject: ${subject})`);
 
     const info = await transporter.sendMail({
-      from: emailFrom.includes('<') ? emailFrom : `"Mana Inti Bojanam" <${emailFrom}>`,
+      from: formatEmailFromHeader(options?.fromLabel),
       to,
       subject,
       html: body,
     });
     console.log(`✅ Email sent successfully! Message ID: ${info.messageId}`);
+    return { sent: true, messageId: info.messageId };
   } catch (err: any) {
     console.error(`❌ Failed to send email to ${to}:`, err.message);
-    if (err.code === 'EAUTH') {
-      console.error("🔑 Authentication failed. Please check your EMAIL_USER and EMAIL_PASS (App Password).");
+    if (err.code === "EAUTH") {
+      console.error("🔑 Authentication failed. Use a Gmail App Password for EMAIL_PASS.");
     }
-    
+
     await enqueueNotification({
-      channel: 'EMAIL',
+      channel: "EMAIL",
       recipient: to,
       messagePayload: { subject, body },
       correlationId: `email-${Date.now()}`,
       relatedEntities: {},
-      failureType: classifyError('EMAIL', err),
+      failureType: classifyError("EMAIL", err),
       lastError: err.message || String(err),
-      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }]
+      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }],
     });
+    throw err;
   }
 }
 
@@ -1445,7 +1803,7 @@ async function sendPushNotificationToUser(userId: string, title: string, body: s
 
 // ================= PREP ALERTS WORKER =================
 const processPrepAlertsBatch = async () => {
-  if (!_db) return;
+  if (!_db || isFirestoreBackedOff()) return;
   try {
     const now = Date.now();
     
@@ -1510,13 +1868,17 @@ const processPrepAlertsBatch = async () => {
       }
     }
   } catch (err: any) {
-    logger.error({ message: "processPrepAlertsBatch error", err: err.message });
+    if (isFirestoreQuotaError(err)) {
+      noteFirestoreQuotaExceeded("processPrepAlertsBatch");
+    } else {
+      logger.error({ message: "processPrepAlertsBatch error", err: err.message });
+    }
   }
 };
 
 // ================= NOTIFICATION OUTBOX WORKER =================
 const processOutboxBatch = async () => {
-  if (!_db) return;
+  if (!_db || isFirestoreBackedOff()) return;
   try {
     const now = new Date();
     
@@ -1550,7 +1912,16 @@ const processOutboxBatch = async () => {
 
       try {
         if (data.channel === 'EMAIL') {
-          await sendEmailNotification(data.recipient, data.messagePayload.subject, data.messagePayload.body);
+          const emailResult = await sendEmailNotification(
+            data.recipient,
+            data.messagePayload.subject,
+            data.messagePayload.body
+          );
+          if (!emailResult.sent) {
+            const configErr = new Error(emailResult.reason || "Email not sent");
+            (configErr as any).code = emailResult.skipped ? "EMAIL_NOT_CONFIGURED" : "EMAIL_SEND_FAILED";
+            throw configErr;
+          }
         } else if (data.channel === 'WHATSAPP') {
           await sendWhatsAppNotification(data.recipient, data.messagePayload.body);
         } else if (data.channel === 'FCM') {
@@ -1617,7 +1988,11 @@ const processOutboxBatch = async () => {
       }
     }
   } catch (err: any) {
-    console.error("Outbox Processing Error:", err.message);
+    if (isFirestoreQuotaError(err)) {
+      noteFirestoreQuotaExceeded("processOutboxBatch");
+    } else {
+      console.error("Outbox Processing Error:", err.message);
+    }
   }
 };
 
@@ -2967,6 +3342,114 @@ app.post("/api/auth/biometric/verify", strictLimiter, async (req, res) => {
 
 // ================= OWNER PORTAL =================
 
+app.post("/api/owner/kyc/register", strictLimiter, verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const { tenantId, slot, fileName, contentType, fileHash, documentUrl, fileSize } = req.body || {};
+
+    if (!tenantId || !slot || !fileName || !fileHash || !documentUrl) {
+      return res.status(400).json({ error: "Missing required document fields." });
+    }
+    if (slot !== "identity" && slot !== "business") {
+      return res.status(400).json({ error: "Invalid document slot." });
+    }
+
+    if (!validateKycStorageUrl(String(documentUrl), String(tenantId), configStorageBucket)
+      && !parseInlineKycDocumentUrl(String(documentUrl))) {
+      return res.status(400).json({ error: "Invalid document URL for this kitchen." });
+    }
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(403).json({ error: "User not found." });
+    }
+
+    const ownedTenantIds: string[] = userDoc.data()?.ownedTenantIds || [];
+    if (!ownedTenantIds.includes(tenantId)) {
+      return res.status(403).json({ error: "You do not own this kitchen." });
+    }
+
+    const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return res.status(404).json({ error: "Kitchen not found." });
+    }
+
+    const kyc = tenantDoc.data()?.kyc as Record<string, unknown> | undefined;
+    const fileDescriptor = {
+      name: String(fileName),
+      size: Number(fileSize) || 0,
+      type: String(contentType || "application/octet-stream"),
+    };
+
+    if (fileDescriptor.size <= 0 || fileDescriptor.size > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: "File must be between 1 byte and 10MB." });
+    }
+
+    const validationError = validateKycDocument(fileDescriptor, slot as KycDocumentSlot);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
+    try {
+      assertNotDuplicateUpload(String(fileHash), slot as KycDocumentSlot, kyc);
+    } catch (dupErr: any) {
+      return res.status(409).json({ error: dupErr.message });
+    }
+
+    const prefix = slot === "identity" ? "identity" : "business";
+    await db.collection("tenants").doc(tenantId).update({
+      [`kyc.${prefix}DocumentUrl`]: String(documentUrl),
+      [`kyc.${prefix}DocumentHash`]: String(fileHash),
+      [`kyc.${prefix}DocumentFileName`]: fileDescriptor.name,
+      "kyc.verificationLevel": 1,
+      "kyc.status": "pending_verification",
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    logger.info({ message: "KYC document registered", tenantId, slot, userId });
+    res.json({ success: true, url: documentUrl, fileName: fileDescriptor.name });
+  } catch (err: any) {
+    logger.error({ message: "KYC register failed", err: err.message, uid: req.user?.uid });
+    res.status(500).json({ error: err.message || "Failed to save document." });
+  }
+});
+
+app.get("/api/owner/kyc/document/:tenantId/:slot", verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const { tenantId, slot } = req.params;
+
+    if (slot !== "identity" && slot !== "business") {
+      return res.status(400).json({ error: "Invalid document slot." });
+    }
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(403).json({ error: "User not found." });
+    }
+
+    const ownedTenantIds: string[] = userDoc.data()?.ownedTenantIds || [];
+    const isAdmin = req.user?.admin === true;
+    if (!isAdmin && !ownedTenantIds.includes(tenantId)) {
+      return res.status(403).json({ error: "You do not have access to this document." });
+    }
+
+    const privateDoc = await db.collection("tenants").doc(tenantId).collection("kycPrivate").doc(slot).get();
+    if (!privateDoc.exists) {
+      return res.status(404).json({ error: "Document not found." });
+    }
+
+    const data = privateDoc.data()!;
+    const buffer = Buffer.from(String(data.dataBase64 || ""), "base64");
+    res.setHeader("Content-Type", data.contentType || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${data.fileName || slot}.pdf"}`);
+    res.send(buffer);
+  } catch (err: any) {
+    logger.error({ message: "KYC document download failed", err: err.message, uid: req.user?.uid });
+    res.status(500).json({ error: err.message || "Failed to load document." });
+  }
+});
+
 app.get("/api/owner/orders", verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const userId = req.user.uid;
@@ -3013,7 +3496,7 @@ app.post("/api/owner/feedback", verifyFirebaseToken, async (req: any, res: any) 
     const tenantDoc = await db.collection("tenants").doc(tenantId).get();
     const tenantName = tenantDoc.exists ? (tenantDoc.data()?.name || tenantId) : tenantId;
 
-    const founderEmail = process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com";
+    const founderEmail = getFounderEmail();
     const subject = `[BhojanOS Merchant Feedback] ${type || "general"} — ${tenantName}`;
     const body = [
       "Merchant feedback received",
@@ -3189,6 +3672,26 @@ app.post("/api/notifications/analyze", async (req, res) => {
   }
 });
 
+app.post("/api/cron/founder-alerts", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const jobType = req.body?.jobType || "hourly";
+    if (jobType === "daily") {
+      await runDailyFounderDigest();
+    } else {
+      await runHourlyAutoPilotAggregator();
+    }
+    res.json({ success: true, jobType, founderEmail: getFounderEmail() });
+  } catch (err: any) {
+    logger.error({ message: "Founder alerts cron failed", error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/cron/tenant-notifications", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -3240,34 +3743,102 @@ app.post("/api/notifications/email", async (req, res) => {
     if (!to || !subject || !htmlBody) {
       return res.status(400).json({ success: false, error: "to, subject, and htmlBody required" });
     }
-    await sendEmailNotification(to, subject, htmlBody);
-    res.json({ success: true });
+    const result = await sendEmailNotification(to, subject, htmlBody);
+    if (!result.sent) {
+      return res.status(503).json({ success: false, error: result.reason || "Email not sent", skipped: result.skipped });
+    }
+    res.json({ success: true, messageId: result.messageId });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
+app.get("/api/admin/email/status", requireAdmin, async (_req: any, res: any) => {
+  res.json({ success: true, ...getEmailConfigStatus() });
+});
+
+app.post("/api/admin/email/test-founder", requireAdmin, async (_req: any, res: any) => {
+  const status = getEmailConfigStatus();
+  if (!status.configured) {
+    return res.status(503).json({
+      success: false,
+      error: "Email SMTP is not configured on this server. Set EMAIL_USER and EMAIL_PASS on Render.",
+      ...status,
+    });
+  }
+
+  const founderEmail = getFounderEmail();
+  try {
+    const result = await sendEmailNotification(
+      founderEmail,
+      "[BhojanOS] Founder Test Alert",
+      `<h2>Founder email test</h2><p>Sent at ${new Date().toISOString()}.</p><p>If you received this, AutoPilot and digest alerts are wired correctly.</p>`,
+      { fromLabel: "BhojanOS AutoPilot" }
+    );
+    if (!result.sent) {
+      return res.status(503).json({ success: false, founderEmail, ...result });
+    }
+    res.json({ success: true, founderEmail, messageId: result.messageId });
+  } catch (err: any) {
+    res.status(500).json({ success: false, founderEmail, error: err.message });
+  }
+});
+
 let outboxInterval: NodeJS.Timeout | null = null;
+const defaultWorkerIntervalMs = isFreeTierPlatform()
+  ? 10 * 60 * 1000
+  : process.env.NODE_ENV === "production"
+    ? 5 * 60 * 1000
+    : 60 * 1000;
+const WORKER_INTERVAL_MS = Number(process.env.WORKER_INTERVAL_MS || defaultWorkerIntervalMs);
+
 const startOutboxWorker = () => {
   if (outboxInterval) return;
-  // Run every 60 seconds
   outboxInterval = setInterval(async () => {
+    if (isFirestoreBackedOff()) return;
     try {
-      // Optional feature flag check if needed
       const settings = await getSettings();
       if (settings.workflow?.autoRetryWorker !== false) {
         await processOutboxBatch();
         await processPrepAlertsBatch();
       }
-    } catch (err) {
-      console.error("Outbox worker interval error:", err);
+    } catch (err: any) {
+      if (isFirestoreQuotaError(err)) {
+        noteFirestoreQuotaExceeded("outboxWorker");
+      } else {
+        console.error("Outbox worker interval error:", err);
+      }
     }
-  }, 60000);
+  }, WORKER_INTERVAL_MS);
+  console.log(`✅ Background workers scheduled every ${Math.round(WORKER_INTERVAL_MS / 1000)}s`);
 };
 
 async function startServer() {
+  const isBhojanMarketingRequest = (req: express.Request) => {
+    const host = (req.hostname || req.headers.host?.toString().split(":")[0] || "").toLowerCase();
+    const isBhojanHost =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.includes("bhojanos") ||
+      host.includes("firebaseapp.com");
+    if (!isBhojanHost) return false;
+    const pathname = req.path.split("?")[0].replace(/\/$/, "") || "/";
+    return ["/", "/onboard", "/pricing", "/about", "/platform", "/security", "/contact", "/blog"].includes(pathname);
+  };
+
+  const marketingShellMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.method !== "GET") return next();
+    if (req.path.startsWith("/api") || req.path.startsWith("/src") || req.path.startsWith("/@") || req.path.includes(".")) {
+      return next();
+    }
+    if (!isBhojanMarketingRequest(req)) return next();
+    req.url = "/marketing.html";
+    return next();
+  };
+
   // ================= FRONTEND =================
   if (process.env.NODE_ENV !== "production") {
+    app.use(marketingShellMiddleware);
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -3280,6 +3851,12 @@ async function startServer() {
       app.use(express.static(DIST_PATH));
       app.get("*", (req, res) => {
         if (req.path.startsWith("/api")) return;
+        if (isBhojanMarketingRequest(req)) {
+          const marketingPath = path.join(DIST_PATH, "marketing.html");
+          if (fs.existsSync(marketingPath)) {
+            return res.sendFile(marketingPath);
+          }
+        }
         const indexPath = path.join(DIST_PATH, "index.html");
         if (fs.existsSync(indexPath)) {
           res.sendFile(indexPath);
@@ -3311,10 +3888,19 @@ async function startServer() {
       console.log("✅ Auto Workflow worker bypassed");
       startOutboxWorker();
       console.log("✅ Outbox worker initialized");
+
+      const emailStatus = getEmailConfigStatus();
+      if (emailStatus.configured) {
+        console.log(`✅ Email configured → founder alerts to ${emailStatus.founderEmail}`);
+      } else {
+        console.warn("⚠️ Email NOT configured — founder alerts and briefings will not send until EMAIL_USER/EMAIL_PASS are set on the backend.");
+      }
       
-      // Initialize StoreBrain locally
-      brain.refresh();
-      console.log("✅ StoreBrain initialized");
+      // Initialize StoreBrain lazily (avoid full menu scan on every deploy boot)
+      if (process.env.STOREBRAIN_REFRESH_ON_STARTUP === "true") {
+        brain.refresh().catch(() => undefined);
+      }
+      console.log("✅ StoreBrain ready (lazy refresh on AI chat)");
     } catch (err) {
       console.error("❌ Seeding/Brain failed:", err);
     }
@@ -3322,150 +3908,158 @@ async function startServer() {
 }
 
 // ================= AUTOPILOT MONITORING SYSTEM =================
-const getAutoPilotTransporter = () => {
-  const nodemailer = require("nodemailer");
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER || "bhojanos26@gmail.com",
-      pass: process.env.EMAIL_PASS || "fallback_pass"
-    }
-  });
-};
-
 let consecutiveEmailFailures = 0;
 
 const sendFounderAlert = async (subject: string, html: string) => {
+  const founderEmail = getFounderEmail();
   const sentAt = new Date().toISOString();
-  let status = 'SUCCESS';
-  let providerResponse = 'OK';
+  let status = "SUCCESS";
+  let providerResponse = "OK";
+
   try {
-    const transporter = getAutoPilotTransporter();
-    const info = await transporter.sendMail({
-      from: '"BhojanOS AutoPilot" <bhojanos26@gmail.com>',
-      to: "bhojanos26@gmail.com",
-      subject: `[AutoPilot] ${subject}`,
-      html
-    });
-    providerResponse = info?.response || 'OK';
-    consecutiveEmailFailures = 0;
-    logger.info({ message: "Founder Alert Sent", subject });
+    const result = await sendEmailNotification(
+      founderEmail,
+      `[AutoPilot] ${subject}`,
+      html,
+      { fromLabel: "BhojanOS AutoPilot" }
+    );
+
+    if (!result.sent) {
+      status = result.skipped ? "SKIPPED" : "FAILED";
+      providerResponse = result.reason || "Not sent";
+      consecutiveEmailFailures++;
+      logger.warn({
+        message: "Founder alert not delivered",
+        subject,
+        founderEmail,
+        reason: providerResponse,
+      });
+    } else {
+      consecutiveEmailFailures = 0;
+      providerResponse = result.messageId || "OK";
+      logger.info({ message: "Founder Alert Sent", subject, founderEmail });
+    }
   } catch (err: any) {
-    status = 'FAILED';
+    status = "FAILED";
     providerResponse = err.message;
     consecutiveEmailFailures++;
-    logger.error({ message: "Failed to send founder alert", err });
-    
+    logger.error({ message: "Failed to send founder alert", err, founderEmail });
+
     if (consecutiveEmailFailures >= 3 && _db) {
-      logger.error({ message: "CRITICAL: 3 Consecutive Email Failures", severity: "critical", type: "EMAIL_DELIVERY_FAILURE" });
-      await _db.collection('critical_alert_failures').add({
+      logger.error({
+        message: "CRITICAL: 3 Consecutive Email Failures",
         severity: "critical",
         type: "EMAIL_DELIVERY_FAILURE",
-        timestamp: new Date().toISOString(),
-        failureCount: consecutiveEmailFailures
-      }).catch(console.error);
+      });
+      await _db
+        .collection("critical_alert_failures")
+        .add({
+          severity: "critical",
+          type: "EMAIL_DELIVERY_FAILURE",
+          timestamp: new Date().toISOString(),
+          failureCount: consecutiveEmailFailures,
+          founderEmail,
+        })
+        .catch(console.error);
     }
   } finally {
     if (_db) {
-      await _db.collection('alert_delivery_logs').add({ recipient: 'bhojanos26@gmail.com', subject, sentAt, status, providerResponse }).catch(console.error);
+      await _db
+        .collection("alert_delivery_logs")
+        .add({ recipient: founderEmail, subject, sentAt, status, providerResponse })
+        .catch(console.error);
     }
   }
 };
 
 const withCronHealth = (jobName: string, fn: Function) => {
   return async () => {
+    if (isFirestoreBackedOff()) {
+      logger.warn({ message: "Skipping cron job during Firestore quota backoff", jobName });
+      return;
+    }
     const startedAt = new Date().toISOString();
     const startMs = Date.now();
-    let status = 'SUCCESS';
+    let status = "SUCCESS";
     try {
       await fn();
-    } catch (err) {
-      status = 'FAILED';
+    } catch (err: any) {
+      status = "FAILED";
+      if (isFirestoreQuotaError(err)) {
+        noteFirestoreQuotaExceeded(`cron:${jobName}`);
+      }
       throw err;
     } finally {
       const completedAt = new Date().toISOString();
       const duration = Date.now() - startMs;
-      if (_db) {
-        await _db.collection('cron_health').add({ jobName, startedAt, completedAt, duration, status }).catch(console.error);
+      if (_db && !isFirestoreBackedOff() && !isFreeTierPlatform()) {
+        await _db
+          .collection("cron_health")
+          .add({ jobName, startedAt, completedAt, duration, status })
+          .catch((err: any) => {
+            if (isFirestoreQuotaError(err)) noteFirestoreQuotaExceeded("cron_health");
+          });
       }
     }
   };
 };
 
-const initializeMonitoringJobs = () => {
+const runHourlyAutoPilotAggregator = async () => {
   if (!_db) return;
+  logger.info({ message: "Running Hourly AutoPilot Aggregator" });
+  const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
 
-  // Phase 12: Platform Heartbeat System
-  cron.schedule("*/5 * * * *", async () => {
-    try {
-      await _db.collection('system_heartbeats').add({
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        serverUptime: process.uptime(),
-        memoryUsage: process.memoryUsage().heapUsed,
-        cpuUsage: process.cpuUsage().user,
-        nodeVersion: process.version,
-        buildVersion: 'FounderBeta'
-      });
-    } catch (e) {
-      logger.error({ message: 'Heartbeat failure', error: e });
-    }
+  const fifteenMinsAgo = Date.now() - 900_000;
+  const heartbeatDoc = await _db.collection("system_meta").doc("heartbeat").get();
+  const heartbeatTs = heartbeatDoc.exists
+    ? new Date(String(heartbeatDoc.data()?.timestamp || 0)).getTime()
+    : 0;
+  const isHeartbeatHealthy = heartbeatTs >= fifteenMinsAgo;
+  if (!isHeartbeatHealthy) {
+    await sendFounderAlert(
+      `CRITICAL: Missing Heartbeat`,
+      `<p>No heartbeat received for 15 minutes. Potential server or deployment failure.</p>`
+    );
+  }
+
+  const crashes = await firestoreCountSince("system_errors", "serverTimestamp", oneHourAgo);
+  const payments = await firestoreCountSince("payment_incidents", "serverTimestamp", oneHourAgo);
+  const security = await firestoreCountSince("security_events", "serverTimestamp", oneHourAgo);
+  const firestore = await firestoreCountSince("firestore_errors", "serverTimestamp", oneHourAgo);
+  const apiErrs = await firestoreCountSince("api_errors", "serverTimestamp", oneHourAgo);
+  const blockers = await firestoreCountSince("merchant_blockers", "serverTimestamp", oneHourAgo);
+  let emailFails = 0;
+  try {
+    const failedAlerts = await _db!
+      .collection("alert_delivery_logs")
+      .where("sentAt", ">=", oneHourAgo)
+      .where("status", "==", "FAILED")
+      .count()
+      .get();
+    emailFails = failedAlerts.data().count;
+  } catch (err: any) {
+    if (isFirestoreQuotaError(err)) noteFirestoreQuotaExceeded("alert_delivery_logs");
+  }
+
+  let score = 100 - crashes * 5 - payments * 10 - security * 5 - firestore * 2 - apiErrs * 2 - blockers * 15 - emailFails * 5;
+  if (!isHeartbeatHealthy) score -= 50;
+  score = Math.max(0, score);
+
+  let statusLabel = "🟢 Healthy";
+  if (score < 50) statusLabel = "🔴 Critical";
+  else if (score < 80) statusLabel = "🟡 Degraded";
+
+  await _db.collection("platform_health_reports").add({
+    timestamp: new Date().toISOString(),
+    score,
+    statusLabel,
+    metrics: { crashes, payments, security, firestore, apiErrs, blockers, emailFails, isHeartbeatHealthy },
   });
 
-  // Phase 1: Expire unpaid Razorpay drafts and legacy pending orders
-  cron.schedule("*/5 * * * *", withCronHealth("Expire Unpaid Payments", async () => {
-    const result = await expireUnpaidPayments();
-    if (result.draftsExpired > 0 || result.ordersExpired > 0) {
-      logger.info({ message: "Expired unpaid payment sessions", ...result });
-    }
-  }));
-
-  // Phase 16: Hourly AutoPilot Aggregator (Extended)
-  cron.schedule("0 * * * *", withCronHealth("Hourly AutoPilot Aggregator", async () => {
-    logger.info({ message: "Running Hourly AutoPilot Aggregator" });
-    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-    
-    // Check Heartbeat Freshness (15 min rule)
-    const fifteenMinsAgo = new Date(Date.now() - 900000).toISOString();
-    const recentHeartbeats = await _db.collection('system_heartbeats').where("timestamp", ">=", fifteenMinsAgo).limit(1).get();
-    const isHeartbeatHealthy = !recentHeartbeats.empty;
-    if (!isHeartbeatHealthy) {
-       await sendFounderAlert(`CRITICAL: Missing Heartbeat`, `<p>No heartbeat received for 15 minutes. Potential server or deployment failure.</p>`);
-    }
-
-    // Check Cron Execution (Did we miss a cycle?)
-    const fetchCount = async (coll: string) => {
-      const snap = await _db.collection(coll).where("serverTimestamp", ">=", oneHourAgo).get();
-      return snap.size;
-    };
-    
-    const crashes = await fetchCount("system_errors");
-    const payments = await fetchCount("payment_incidents");
-    const security = await fetchCount("security_events");
-    const firestore = await fetchCount("firestore_errors");
-    const apiErrs = await fetchCount("api_errors");
-    const blockers = await fetchCount("merchant_blockers");
-    const emailFails = await _db.collection('alert_delivery_logs').where("sentAt", ">=", oneHourAgo).where("status", "==", "FAILED").get().then((s: any) => s.size);
-    
-    let score = 100 - (crashes * 5) - (payments * 10) - (security * 5) - (firestore * 2) - (apiErrs * 2) - (blockers * 15) - (emailFails * 5);
-    if (!isHeartbeatHealthy) score -= 50;
-    score = Math.max(0, score);
-
-    let statusLabel = '🟢 Healthy';
-    if (score < 50) statusLabel = '🔴 Critical';
-    else if (score < 80) statusLabel = '🟡 Degraded';
-    
-    await _db.collection("platform_health_reports").add({
-      timestamp: new Date().toISOString(),
-      score,
-      statusLabel,
-      metrics: { crashes, payments, security, firestore, apiErrs, blockers, emailFails, isHeartbeatHealthy }
-    });
-    
-    if (score < 80 || crashes > 5 || payments > 2 || security > 5 || blockers > 0) {
-      await sendFounderAlert(`Health Drop: ${statusLabel} (Score ${score})`, `
+  if (score < 80 || crashes > 5 || payments > 2 || security > 5 || blockers > 0) {
+    await sendFounderAlert(
+      `Health Drop: ${statusLabel} (Score ${score})`,
+      `
         <h2>Platform Health Alert: ${statusLabel}</h2>
         <p>The AutoPilot system detected anomalies in the last hour:</p>
         <ul>
@@ -3476,17 +4070,91 @@ const initializeMonitoringJobs = () => {
           <li>Security Incidents: ${security}</li>
           <li>Firestore Errors: ${firestore}</li>
           <li>API Errors: ${apiErrs}</li>
-          <li>Heartbeat Freshness: ${isHeartbeatHealthy ? 'Healthy' : 'Failing'}</li>
+          <li>Heartbeat Freshness: ${isHeartbeatHealthy ? "Healthy" : "Failing"}</li>
         </ul>
-      `);
+      `
+    );
+  }
+};
+
+const runDailyFounderDigest = async () => {
+  logger.info({ message: "Running Daily Founder Digest" });
+  const istTime = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  let digestHtml = `<h2>BhojanOS Daily Digest</h2><p>Report generated at ${istTime} IST.</p>`;
+
+  if (_db) {
+    try {
+      const healthSnap = await _db
+        .collection("platform_health_reports")
+        .orderBy("timestamp", "desc")
+        .limit(1)
+        .get();
+      const latestHealth = healthSnap.docs[0]?.data();
+      const tenantCountSnap = await _db.collection("tenants").count().get();
+      const tenantCount = tenantCountSnap.data().count;
+
+      digestHtml += `<ul>
+        <li>Active tenants: <b>${tenantCount}</b></li>
+        ${
+          latestHealth
+            ? `<li>Latest platform health: <b>${latestHealth.score}</b> (${latestHealth.statusLabel || "unknown"})</li>`
+            : "<li>Platform health: no recent report</li>"
+        }
+      </ul>
+      <p>Open the Super Admin dashboard for full investor metrics.</p>`;
+    } catch (err: any) {
+      digestHtml += `<p>Metrics snapshot unavailable (${err.message}). Check Super Admin dashboard.</p>`;
+    }
+  }
+
+  await sendFounderAlert("Daily Digest", digestHtml);
+};
+
+const initializeMonitoringJobs = () => {
+  if (!_db) return;
+
+  const registerJobs = () => {
+    const freeTier = isFreeTierPlatform();
+    logger.info({ message: "Registering background cron jobs", platformTier: freeTier ? "free" : "standard" });
+
+    const heartbeatCron = freeTier ? "*/30 * * * *" : "*/15 * * * *";
+    cron.schedule(heartbeatCron, async () => {
+      if (isFirestoreBackedOff()) return;
+      try {
+        await _db!.collection("system_meta").doc("heartbeat").set(
+          {
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || "development",
+            serverUptime: process.uptime(),
+            memoryUsage: process.memoryUsage().heapUsed,
+            nodeVersion: process.version,
+            buildVersion: "FounderBeta",
+          },
+          { merge: true }
+        );
+      } catch (e: any) {
+        if (isFirestoreQuotaError(e)) {
+          noteFirestoreQuotaExceeded("heartbeat");
+        } else {
+          logger.error({ message: "Heartbeat failure", error: e });
+        }
+      }
+    });
+
+    const expireCron = freeTier ? "*/15 * * * *" : "*/10 * * * *";
+    cron.schedule(expireCron, withCronHealth("Expire Unpaid Payments", async () => {
+    const result = await expireUnpaidPayments();
+    if (result.draftsExpired > 0 || result.ordersExpired > 0) {
+      logger.info({ message: "Expired unpaid payment sessions", ...result });
     }
   }));
 
+  if (!freeTier) {
+  // Phase 16: Hourly AutoPilot Aggregator (Extended)
+  cron.schedule("0 * * * *", withCronHealth("Hourly AutoPilot Aggregator", runHourlyAutoPilotAggregator));
+
   // Daily Founder Digest
-  cron.schedule("0 8 * * *", withCronHealth("Daily Founder Digest", async () => {
-    logger.info({ message: "Running Daily Founder Digest" });
-    await sendFounderAlert("Daily Digest", "<h2>BhojanOS Daily Digest</h2><p>Report generated at 08:00 AM.</p><p>Check Dashboard for full metrics.</p>");
-  }));
+  cron.schedule("0 8 * * *", withCronHealth("Daily Founder Digest", runDailyFounderDigest));
 
   // Tenant AI Notification Center — Morning Brief (8 AM)
   cron.schedule("0 8 * * *", withCronHealth("Tenant Morning Brief", async () => {
@@ -3527,6 +4195,14 @@ const initializeMonitoringJobs = () => {
     const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
     await processAllTenants(_db, "critical_scan", sendWhatsAppNotification, baseUrl);
   }));
+  } else {
+    logger.info({ message: "Free tier: AutoPilot + tenant report crons disabled to protect Firestore quota" });
+  }
+  };
+
+  const startupDelayMs = Number(process.env.CRON_STARTUP_DELAY_MS || 120_000);
+  setTimeout(registerJobs, startupDelayMs);
+  logger.info({ message: "Cron jobs deferred after deploy", startupDelayMs });
 };
 
 initializeMonitoringJobs();
@@ -3541,6 +4217,10 @@ import { brain } from "./storeBrain";
 
 app.post("/api/ai/chat", strictLimiter, async (req, res) => {
   try {
+    if (brain.menu.size === 0 && !isFirestoreBackedOff()) {
+      await brain.refresh();
+    }
+
     const { contents, systemInstruction } = req.body;
     
     if (!contents || !Array.isArray(contents)) {

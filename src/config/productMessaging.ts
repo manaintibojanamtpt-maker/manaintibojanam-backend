@@ -4,24 +4,24 @@
  */
 
 export const homepageHero = {
-  eyebrow: 'Zero commission · No onboarding fee · Your own storefront',
+  eyebrow: '0% commission · No onboarding fee · Your own storefront',
   headline: 'Your restaurant. Your customers. Your orders.',
-  headlineAccent: 'Zero commission.',
+  headlineAccent: '0% commission.',
   subheadline:
     'BhojanOS gives every kitchen a branded online store and one place to run orders, delivery, payments, kitchen ops, and customer growth — without aggregator fees.',
   primaryCta: 'Start your free storefront',
   secondaryCta: 'Owner login',
-  trustLine: 'Free to start · No credit card · Keep 100% of direct order value',
+  trustLine: 'Free storefront setup · 14-day Growth trial for live orders · No credit card',
 };
 
 export const homepageFeatureBullets = [
   {
-    title: 'Zero commission on direct orders',
+    title: '0% commission on direct orders',
     description: 'Customers order from your branded link. You keep the full order value — no marketplace cut.',
   },
   {
     title: 'No onboarding fee',
-    description: 'Launch your storefront in minutes. Add your menu, set delivery, and start taking orders.',
+    description: 'Launch your storefront in minutes. Add your menu and settings free — go live with a Growth trial when ready.',
   },
   {
     title: 'Your own branded storefront',
@@ -47,26 +47,25 @@ export const homepageSections = [
 ];
 
 export const pricingMessaging = {
-  headline: 'Start free. Upgrade when you need more.',
+  headline: 'Free to build. Growth to go live.',
   subheadline:
-    'Your zero-commission storefront is included at no cost. Paid plans add analytics, automation, and advanced growth tools — only if you want them.',
+    'Your storefront is free forever to create and customize. Live customer orders need Growth — 14-day trial when you publish. Try Pro or Growth upgrades later with a 3-day trial.',
   freeTier: {
     name: 'Direct Storefront',
     price: '₹0',
-    period: 'forever on direct orders',
-    badge: 'Default — always free',
+    period: 'forever · build & preview',
+    badge: 'Free — no credit card',
     highlights: [
-      'Branded storefront & menu',
-      'Unlimited direct orders',
-      'Zero commission',
-      'Order & kitchen management',
-      'Cash & online payments',
+      'Branded storefront & menu editor',
+      'Store preview & configuration',
+      '0% commission on direct orders',
+      'No onboarding fee',
       'WhatsApp share tools',
     ],
-    cta: 'You are on this plan',
+    cta: 'Start free storefront',
   },
-  upgradeIntro: 'Optional upgrades for growing kitchens',
-  trialNote: 'Try advanced tools for 3 days — no charge if you stay on the free plan.',
+  upgradeIntro: 'Growth required for live orders · Pro for advanced tools',
+  trialNote: '14-day Growth trial at publish · 3-day trial when upgrading to Pro or Growth',
 };
 
 export const aiInsightLabels = {

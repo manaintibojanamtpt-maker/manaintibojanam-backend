@@ -58,7 +58,7 @@ export const DashboardStatusBar: React.FC<DashboardStatusBarProps> = ({
         {urgentCount > 0 && (
           <button
             type="button"
-            onClick={() => navigate('/owner/notifications')}
+            onClick={() => navigate('/owner/notifications', { state: { showActions: true } })}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-bold"
           >
             <AlertTriangle size={14} />

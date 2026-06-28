@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
@@ -13,12 +13,17 @@ import { m, AnimatePresence } from 'framer-motion';
 import { Loader2, ArrowLeft, Shield, Fingerprint, Crown } from 'lucide-react';
 import { EnvironmentConfig } from '../config/environment';
 import toast from 'react-hot-toast';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.webp';
 import { useBiometrics } from '../hooks/useBiometrics';
 import BiometricModal from '../components/BiometricModal';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
+import { resolvePostLoginRedirect } from '../hooks/useStorefrontPath';
+import { exitCustomerPreviewMode, isCustomerPreviewMode } from '../lib/storefrontPreview';
+import SoftButton from '../components/ui/SoftButton';
+
+const BIOMETRIC_ONBOARDING_DISMISSED_KEY = 'biometricOnboardingDismissed';
 
 const AppleIcon = () => (
   <svg viewBox="0 0 384 512" width="20" height="20" fill="currentColor">
@@ -34,10 +39,16 @@ const Login: React.FC = () => {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/';
   const { currentUser } = useAuth();
-  const { tenantInfo } = useTenant();
+  const { tenantInfo, tenantSlug } = useTenant();
+  const biometricDismissedRef = useRef(false);
+
+  const redirectUrl = useMemo(
+    () => resolvePostLoginRedirect(location.pathname, searchParams.get('redirect'), tenantSlug),
+    [location.pathname, searchParams, tenantSlug],
+  );
 
   const { 
     isSupported: biometricsSupported, 
@@ -51,6 +62,20 @@ const Login: React.FC = () => {
 
   const [showBiometricOnboarding, setShowBiometricOnboarding] = useState(false);
 
+  const shouldOfferBiometricOnboarding = () => {
+    if (!biometricsSupported || hasLocalBiometrics) return false;
+    if (biometricDismissedRef.current) return false;
+    if (sessionStorage.getItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY) === '1') return false;
+    return true;
+  };
+
+  const finishLogin = () => {
+    exitCustomerPreviewMode();
+    sessionStorage.setItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY, '1');
+    biometricDismissedRef.current = true;
+    navigate(redirectUrl, { replace: true });
+  };
+
   // Handle redirect result for PWA standalone mode
   React.useEffect(() => {
     // Wake up backend to avoid cold-start delays on Render
@@ -62,10 +87,11 @@ const Login: React.FC = () => {
         
         if (result?.user) {
           toast.success('Sign-in successful!');
-          if (biometricsSupported && !hasLocalBiometrics) {
+          exitCustomerPreviewMode();
+          if (shouldOfferBiometricOnboarding()) {
             setShowBiometricOnboarding(true);
           } else {
-            navigate(redirectUrl);
+            finishLogin();
           }
         }
       } catch (error: any) {
@@ -82,24 +108,26 @@ const Login: React.FC = () => {
       }
     };
     handleRedirectResult();
-  }, [navigate, redirectUrl]);
+  }, [navigate, redirectUrl, biometricsSupported, hasLocalBiometrics]);
 
-  // Auto-redirect if user is already logged in
+  // Auto-redirect if user is already logged in (skip in customer preview — owner browsing as guest)
   React.useEffect(() => {
-    if (currentUser && !bioLoading) {
-      if (biometricsSupported && !hasLocalBiometrics) {
-        setShowBiometricOnboarding(true);
-      } else {
-        navigate(redirectUrl);
-      }
+    if (!currentUser || bioLoading) return;
+    if (isCustomerPreviewMode()) return;
+
+    if (shouldOfferBiometricOnboarding()) {
+      setShowBiometricOnboarding(true);
+      return;
     }
-  }, [currentUser, bioLoading, biometricsSupported, hasLocalBiometrics, navigate, redirectUrl]);
+
+    navigate(redirectUrl, { replace: true });
+  }, [currentUser, bioLoading, navigate, redirectUrl, biometricsSupported, hasLocalBiometrics]);
 
 
   const handleBiometricLogin = async () => {
     const success = await bioLogin();
     if (success) {
-      navigate(redirectUrl);
+      finishLogin();
     }
   };
 
@@ -131,7 +159,8 @@ const Login: React.FC = () => {
         const result = await signInWithPopup(auth, provider);
         if (result.user) {
           toast.success('Sign-in successful!');
-          
+          exitCustomerPreviewMode();
+
           let currentSupported = biometricsSupported;
           let currentEnabled = hasLocalBiometrics;
           
@@ -141,10 +170,11 @@ const Login: React.FC = () => {
             currentEnabled = status.enabled;
           }
 
-          if (currentSupported && !currentEnabled) {
+          if (currentSupported && !currentEnabled && !sessionStorage.getItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY)) {
             setShowBiometricOnboarding(true);
+            setLoading(false);
           } else {
-            setTimeout(() => navigate(redirectUrl), 500);
+            finishLogin();
           }
         }
       }
@@ -185,8 +215,8 @@ const Login: React.FC = () => {
     try {
       await confirmationResult?.confirm(otp);
       toast.success('Logged in successfully!');
-      // On native platforms, check if we should show biometric onboarding
-      // We check biometricsSupported but also hasLocalBiometrics
+      exitCustomerPreviewMode();
+
       let currentSupported = biometricsSupported;
       let currentEnabled = hasLocalBiometrics;
       
@@ -196,10 +226,10 @@ const Login: React.FC = () => {
         currentEnabled = status.enabled;
       }
 
-      if (currentSupported && !currentEnabled) {
+      if (currentSupported && !currentEnabled && !sessionStorage.getItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY)) {
         setShowBiometricOnboarding(true);
       } else {
-        navigate(redirectUrl);
+        finishLogin();
       }
     } catch (error: any) {
       toast.error('Invalid OTP');
@@ -224,7 +254,7 @@ const Login: React.FC = () => {
             <ArrowLeft size={24} />
           </button>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(redirectUrl, { replace: true })}
             className="text-xs font-bold uppercase tracking-widest bg-gray-200 dark:bg-gray-800 px-5 py-2.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
           >
             Skip
@@ -263,20 +293,23 @@ const Login: React.FC = () => {
 
           {hasLocalBiometrics && (
             <div className="mb-8">
-              <button
-                onClick={handleBiometricLogin}
+              <SoftButton
+                type="button"
+                tone="primary"
+                fullWidth
                 disabled={bioLoading}
-                className="w-full bg-gradient-to-r from-[#D35400] to-[#E67E22] hover:opacity-90 text-white rounded-2xl py-4 flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(211,84,0,0.3)] transition-all active:scale-[0.98] disabled:opacity-50"
+                onClick={handleBiometricLogin}
+                className="mb-0"
               >
                 {bioLoading ? (
                   <Loader2 className="animate-spin w-6 h-6" />
                 ) : (
                   <>
                     <Fingerprint className="w-6 h-6" />
-                    <span className="font-bold text-base tracking-wider uppercase">Use {biometryType || 'Biometrics'}</span>
+                    <span>Use {biometryType || 'Biometrics'}</span>
                   </>
                 )}
-              </button>
+              </SoftButton>
               
               <div className="flex items-center gap-4 my-8">
                 <div className="flex-1 h-px bg-gray-200 dark:bg-white/10"></div>
@@ -309,13 +342,14 @@ const Login: React.FC = () => {
                   />
                 </div>
 
-                <button
+                <SoftButton
                   type="submit"
+                  tone="primary"
+                  fullWidth
                   disabled={loading || phoneNumber.length !== 10}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black rounded-2xl py-5 font-black text-[13px] uppercase tracking-[0.2em] press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl"
                 >
-                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Continue securely'}
-                </button>
+                  {loading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Continue securely'}
+                </SoftButton>
               </m.form>
             ) : (
               <m.form
@@ -341,13 +375,14 @@ const Login: React.FC = () => {
                   inputMode="numeric"
                   autoFocus
                 />
-                <button
+                <SoftButton
                   type="submit"
+                  tone="primary"
+                  fullWidth
                   disabled={loading || otp.length !== 6}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black rounded-2xl py-5 font-black text-[13px] uppercase tracking-[0.2em] press-feedback disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl"
                 >
-                  {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Verify Access Code'}
-                </button>
+                  {loading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Verify Access Code'}
+                </SoftButton>
                 <button
                   type="button"
                   onClick={() => setStep('phone')}
@@ -366,13 +401,10 @@ const Login: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full bg-white dark:bg-[#222222] border border-gray-200 dark:border-white/10 rounded-[20px] py-3.5 flex items-center justify-center gap-3 shadow-sm hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-              <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">Continue with Google</span>
-            </button>
+            <SoftButton type="button" tone="secondary" fullWidth onClick={handleGoogleLogin}>
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5" />
+              <span>Continue with Google</span>
+            </SoftButton>
             
             <div className="flex gap-3">
               <button
@@ -410,13 +442,13 @@ const Login: React.FC = () => {
         isOpen={showBiometricOnboarding} 
         onClose={() => {
           setShowBiometricOnboarding(false);
-          navigate(redirectUrl);
+          finishLogin();
         }} 
         onConfirm={async () => {
           const success = await bioEnroll();
           if (success) {
             setShowBiometricOnboarding(false);
-            navigate(redirectUrl);
+            finishLogin();
           }
         }}
         type="onboarding"

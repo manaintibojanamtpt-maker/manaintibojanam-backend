@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { notificationService } from '../services/NotificationService';
-import toast from 'react-hot-toast';
 
 /**
  * Hook to set up push notifications for admin users.
@@ -23,18 +22,13 @@ export function useAdminNotifications() {
           return;
         }
 
-        const granted = await notificationService.requestPermission();
-        if (!granted) {
-          console.log('User declined notification permission');
+        // Never auto-prompt — browsers block/deny requests without a user gesture.
+        if (Notification.permission !== 'granted') {
           return;
         }
 
         const registered = await notificationService.registerDeviceToken(currentUser.uid);
         if (registered) {
-          toast.success('Push notifications enabled', {
-            duration: 2000,
-            icon: '🔔'
-          });
           console.log('Admin notifications enabled for:', currentUser.uid);
         } else {
           console.warn('Failed to register device token');
@@ -71,13 +65,11 @@ export function useCustomerNotifications() {
           return;
         }
 
-        const granted = await notificationService.requestPermission();
-        if (!granted) return;
-
-        const registered = await notificationService.registerDeviceToken(currentUser.uid);
-        if (registered) {
-          console.log('Customer notifications enabled for:', currentUser.uid);
+        if (Notification.permission !== 'granted') {
+          return;
         }
+
+        await notificationService.registerDeviceToken(currentUser.uid);
       } catch (error) {
         console.error('Error setting up customer notifications:', error);
       }

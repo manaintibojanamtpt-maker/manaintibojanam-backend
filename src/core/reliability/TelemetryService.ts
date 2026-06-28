@@ -1,6 +1,7 @@
 import { sanitizeLogString } from './sanitizers';
 import { getDb } from '../../lib/firebase-db';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { PlatformTierConfig } from '../../config/platformTier';
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
 
@@ -91,6 +92,18 @@ class TelemetryServiceImpl {
     const msg = error instanceof Error ? `${error.message}\n${error.stack}` : error;
     this.pushToBuffer('CRITICAL', msg, meta);
     console.error(`[CRITICAL]`, error, meta);
+
+    if (
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('requires an index') ||
+      msg.includes('failed-precondition')
+    ) {
+      return;
+    }
+
+    if (PlatformTierConfig.isFreeTier()) {
+      return;
+    }
     
     const now = Date.now();
     // Rate limit: Max 1 write per 1 minute to prevent Firestore quota exhaustion

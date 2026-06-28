@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight } from 'lucide-react';
+import { Bell, ChevronRight, X } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
@@ -24,7 +24,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ tenantId }) 
   const { userProfile } = useAuth();
   const resolvedTenantId = tenantId || userProfile?.ownedTenantIds?.[0];
   const { pendingCount } = useOrderAlerts();
-  const { preview, unreadCount, handleClick } = useNotifications(resolvedTenantId, 5);
+  const { preview, unreadCount, handleClick, archive, dismissAll } = useNotifications(resolvedTenantId, 5);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +45,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ tenantId }) 
       notificationService.recordDrawerOpened(resolvedTenantId, userProfile?.ownedTenantIds);
     }
   }, [open, resolvedTenantId, userProfile?.ownedTenantIds]);
+
+  const onDismiss = async (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation();
+    await archive(notificationId);
+  };
 
   const onNotificationClick = async (notification: TenantNotification) => {
     await handleClick(notification);
@@ -77,16 +82,27 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ tenantId }) 
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/10 bg-[#111111] shadow-2xl z-50 overflow-hidden"
           >
-            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-              <div>
+            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-white">Notification Center</p>
                 <p className="text-xs text-white/50 mt-0.5">AI-powered business intelligence</p>
               </div>
-              {pendingCount > 0 && (
-                <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
-                  {pendingCount} pending order{pendingCount === 1 ? '' : 's'}
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {preview.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => dismissAll()}
+                    className="text-[10px] font-semibold text-white/50 hover:text-white transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+                {pendingCount > 0 && (
+                  <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
+                    {pendingCount} pending order{pendingCount === 1 ? '' : 's'}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="max-h-72 overflow-y-auto">
@@ -94,20 +110,33 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ tenantId }) 
                 <p className="p-4 text-sm text-white/50">No notifications yet. BhojanOS will alert you about sales, inventory, and kitchen insights.</p>
               ) : (
                 preview.map((n) => (
-                  <button
+                  <div
                     key={n.id}
-                    type="button"
-                    onClick={() => onNotificationClick(n)}
-                    className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                    className={`flex items-stretch border-b border-white/5 ${
                       n.status === NotificationStatus.UNREAD ? 'bg-white/[0.03]' : ''
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-white line-clamp-1">{n.title}</p>
-                      <span className={`text-[10px] font-bold uppercase ${priorityColor[n.priority]}`}>{n.priority}</span>
-                    </div>
-                    <p className="text-xs text-white/50 mt-1 line-clamp-2">{n.message}</p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onNotificationClick(n)}
+                      className="flex-1 text-left px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-white line-clamp-1">{n.title}</p>
+                        <span className={`text-[10px] font-bold uppercase shrink-0 ${priorityColor[n.priority]}`}>{n.priority}</span>
+                      </div>
+                      <p className="text-xs text-white/50 mt-1 line-clamp-2">{n.message}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => onDismiss(e, n.id)}
+                      className="px-3 text-white/30 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+                      aria-label="Dismiss notification"
+                      title="Ignore"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 ))
               )}
             </div>

@@ -17,16 +17,27 @@ export interface TenantInfo {
     subscriptionEnabled?: boolean;
   };
   location?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
     lat: number;
     lng: number;
   };
   deliveryConfig?: {
+    enabled?: boolean;
     freeRadius: number;
     paidRadius: number;
     maxRadius: number;
     perKmCharge: number;
     baseFee: number;
     prepTime: number;
+    feesConfigured?: boolean;
+    freeDeliveryMinOrder?: number;
+  };
+  pricingConfig?: {
+    gstPercent?: number;
+    packingFee?: number;
   };
   onboardingStatus?: {
     isComplete: boolean;
@@ -82,13 +93,19 @@ const TenantContext = createContext<TenantContextType>({
 export const useTenant = () => useContext(TenantContext);
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const ownerTenantId = userProfile?.ownedTenantIds?.[0];
 
   const [tenantId, setTenantId] = useState<string>('mana-inti');
   const [tenantSlug, setTenantSlug] = useState<string>('');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const path = window.location.pathname;
+    const isOwnerPanel = path.startsWith('/owner');
+    const isStorefront = /^\/k\/[^/]+/.test(path);
+    return isOwnerPanel || isStorefront;
+  });
   const [tenantNotFound, setTenantNotFound] = useState(false);
 
   const resolveTenant = useCallback(async () => {
@@ -111,7 +128,18 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (match) {
       slug = match[1];
     } else if (isOwnerPanel) {
-      slug = ownerTenantId || 'mana-inti';
+      if (authLoading) {
+        setLoading(true);
+        return;
+      }
+      if (!ownerTenantId) {
+        setTenantId('');
+        setTenantSlug('');
+        setTenantInfo(null);
+        setLoading(false);
+        return;
+      }
+      slug = ownerTenantId;
     }
 
     if (!slug) {
@@ -152,7 +180,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setLoading(false);
     }
-  }, [ownerTenantId]);
+  }, [ownerTenantId, authLoading]);
 
   useEffect(() => {
     resolveTenant();

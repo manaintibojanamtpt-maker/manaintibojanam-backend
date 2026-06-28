@@ -9,6 +9,10 @@
       ],
       "rewrites": [
         {
+          "source": "/assets/**",
+          "destination": "/404.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -105,6 +109,10 @@
       ],
       "rewrites": [
         {
+          "source": "/assets/**",
+          "destination": "/404.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -195,7 +203,8 @@
   ],
   "firestore": {
     "database": "ai-studio-3efd2980-c2f3-4286-8dff-afeca044d855",
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "functions": {
     "source": "functions",

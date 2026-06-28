@@ -16,7 +16,7 @@ export const PricingSection: React.FC = () => {
 
   return (
     <Section id="pricing" background="subtle" className="scroll-mt-24">
-      <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+      <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
         <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#FF6B00] mb-4">
           {copy.eyebrow}
         </p>
@@ -24,10 +24,11 @@ export const PricingSection: React.FC = () => {
           {copy.title}
         </h2>
         <p className="text-base sm:text-lg text-white/50 leading-relaxed">{copy.subtitle}</p>
+        <p className="mt-3 text-sm font-medium text-[#ffb347]/90">{copy.trialBanner}</p>
         <p className="mt-4 text-sm font-semibold text-emerald-400/90">{PRICING_ZERO_COMMISSION_NOTE}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-5 items-stretch mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-4 items-stretch mb-10">
         {ALL_PLANS.map((plan, i) => (
           <m.div
             key={plan.id}
