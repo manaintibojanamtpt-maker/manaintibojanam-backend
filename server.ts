@@ -4937,6 +4937,122 @@ app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, re
   }
 });
 
+const DEFAULT_MIGRATION_COLLECTIONS = ['tenants', 'salesPipeline', 'release_notes', 'users'] as const;
+
+function getBhojanos2SourceDb() {
+  const sourceJson = process.env.SOURCE_FIREBASE_SERVICE_ACCOUNT;
+  if (!sourceJson) {
+    throw new Error(
+      'SOURCE_FIREBASE_SERVICE_ACCOUNT is not set. Add the bhojanos2 service account JSON on Render, run migration, then remove it.',
+    );
+  }
+  const serviceAccount = JSON.parse(sourceJson);
+  const sourceProjectId = process.env.SOURCE_FIREBASE_PROJECT_ID || 'bhojanos2';
+  const appName = 'migration-source-bhojanos2';
+  let sourceApp = getApps().find((a) => a.name === appName);
+  if (!sourceApp) {
+    sourceApp = initializeApp(
+      { credential: cert(serviceAccount), projectId: sourceProjectId },
+      appName,
+    );
+  }
+  return getFirestore(sourceApp);
+}
+
+async function migrateFirestoreCollection(
+  sourceDb: FirebaseFirestore.Firestore,
+  targetDb: FirebaseFirestore.Firestore,
+  collectionName: string,
+  options?: { merge?: boolean; dryRun?: boolean },
+) {
+  const snap = await sourceDb.collection(collectionName).get();
+  if (options?.dryRun) {
+    return { collection: collectionName, count: snap.size, dryRun: true as const };
+  }
+
+  let written = 0;
+  let batch = targetDb.batch();
+  let batchSize = 0;
+  for (const docSnap of snap.docs) {
+    batch.set(
+      targetDb.collection(collectionName).doc(docSnap.id),
+      docSnap.data(),
+      { merge: options?.merge !== false },
+    );
+    batchSize += 1;
+    written += 1;
+    if (batchSize >= 400) {
+      await batch.commit();
+      batch = targetDb.batch();
+      batchSize = 0;
+    }
+  }
+  if (batchSize > 0) {
+    await batch.commit();
+  }
+  return { collection: collectionName, count: written, dryRun: false as const };
+}
+
+/** Copy superadmin dashboard collections from bhojanos2 → bhojanos-prod (Path A data backfill). */
+app.post('/api/platform/migrate-from-bhojanos2', async (req, res) => {
+  const { secret, dryRun, collections } = req.body || {};
+  if (!process.env.CRON_SECRET) {
+    return res.status(500).json({ success: false, error: 'No bootstrap secret configured' });
+  }
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({ success: false, error: 'Invalid bootstrap secret' });
+  }
+
+  const targetProjectId = process.env.FIREBASE_PROJECT_ID || appAdmin.options?.projectId || 'bhojanos-prod';
+  const sourceProjectId = process.env.SOURCE_FIREBASE_PROJECT_ID || 'bhojanos2';
+  const selectedCollections: string[] = Array.isArray(collections) && collections.length > 0
+    ? collections.filter((c: unknown) => typeof c === 'string')
+    : [...DEFAULT_MIGRATION_COLLECTIONS];
+
+  try {
+    const sourceDb = getBhojanos2SourceDb();
+    const targetDb = db;
+    const results = [];
+
+    for (const collectionName of selectedCollections) {
+      results.push(
+        await migrateFirestoreCollection(sourceDb, targetDb, collectionName, {
+          merge: true,
+          dryRun: dryRun === true,
+        }),
+      );
+    }
+
+    let founderLink: string[] = [];
+    if (dryRun !== true) {
+      const founderEmail = getFounderEmail();
+      try {
+        const authAdmin = getAdminAuth(appAdmin);
+        const founderUser = await authAdmin.getUserByEmail(founderEmail);
+        founderLink = await linkFounderTenantIfNeeded(founderUser.uid, founderEmail);
+      } catch (linkErr: any) {
+        logger.warn({ message: 'Founder re-link after migration skipped', error: linkErr.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      dryRun: dryRun === true,
+      sourceProjectId,
+      targetProjectId,
+      collections: results,
+      founderTenantIds: founderLink.length > 0 ? founderLink : undefined,
+      message:
+        dryRun === true
+          ? `Dry run complete. ${results.reduce((n, r) => n + r.count, 0)} documents would be copied.`
+          : `Migrated ${results.reduce((n, r) => n + r.count, 0)} documents into ${targetProjectId}. Owner Auth UIDs on prod may differ from bhojanos2 — owners re-register or use repair-user-by-email.`,
+    });
+  } catch (err: any) {
+    logger.error({ message: 'bhojanos2 migration failed', error: err.message });
+    res.status(500).json({ success: false, error: err.message || 'Migration failed' });
+  }
+});
+
 /** Diagnose + merge duplicate users/{docId} profiles for one email onto Firebase Auth UID. */
 app.post("/api/platform/repair-user-by-email", async (req, res) => {
   const { secret, email, deleteOrphans } = req.body || {};
