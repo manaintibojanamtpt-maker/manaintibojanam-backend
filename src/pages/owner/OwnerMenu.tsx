@@ -221,7 +221,8 @@ const OwnerMenu = () => {
       handleCloseModal();
     } catch (error) {
       console.error('Save failed:', error);
-      toast.error('Failed to save menu item');
+      const message = error instanceof Error ? error.message : 'Failed to save menu item';
+      toast.error(message);
     } finally {
       setSaving(false);
     }

@@ -2619,6 +2619,132 @@ app.post('/api/owner/sync-tenants', verifyFirebaseToken, async (req: any, res: a
   }
 });
 
+const MAX_MENU_IMAGE_CHARS = 900_000;
+
+async function assertOwnerTenantAccess(userId: string, tenantId: string, email?: string | null): Promise<void> {
+  if (!tenantId) {
+    const err: any = new Error('tenantId is required');
+    err.statusCode = 400;
+    throw err;
+  }
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (!userDoc.exists) {
+    const err: any = new Error('User not found');
+    err.statusCode = 403;
+    throw err;
+  }
+  const data = userDoc.data() || {};
+  const owned: string[] = data.ownedTenantIds || [];
+  const role = data.role;
+  const normalizedEmail = (email || data.email || '').toLowerCase();
+  if (
+    owned.includes(tenantId) ||
+    role === 'superadmin' ||
+    role === 'admin' ||
+    (isFounderOwnerEmail(normalizedEmail) && tenantId === FOUNDER_TENANT_ID)
+  ) {
+    return;
+  }
+  const err: any = new Error('Unauthorized for this tenant');
+  err.statusCode = 403;
+  throw err;
+}
+
+function normalizeMenuItemPayload(body: Record<string, unknown>, tenantId: string) {
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const category = typeof body.category === 'string' ? body.category.trim() : '';
+  const price = Number(body.price);
+  const type = body.type === 'non-veg' ? 'non-veg' : 'veg';
+  const description = typeof body.description === 'string' ? body.description.trim() : '';
+  const image = typeof body.image === 'string' ? body.image : '';
+  const isAvailable = body.isAvailable !== false;
+
+  if (!name || !category || !Number.isFinite(price) || price < 0) {
+    const err: any = new Error('Name, category, and a valid price are required');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (image.length > MAX_MENU_IMAGE_CHARS) {
+    const err: any = new Error('Image is too large. Use a smaller photo (under 200KB).');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    tenantId,
+    name,
+    category,
+    price,
+    type,
+    description,
+    image,
+    isAvailable,
+  };
+}
+
+app.post('/api/owner/menu/items', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
+    await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const item = normalizeMenuItemPayload(req.body || {}, tenantId);
+    const ref = await db.collection('menu').add({
+      ...item,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    res.json({ success: true, id: ref.id });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner menu create failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to save menu item' });
+  }
+});
+
+app.put('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const itemId = req.params.id;
+    const existing = await db.collection('menu').doc(itemId).get();
+    if (!existing.exists) {
+      return res.status(404).json({ success: false, error: 'Menu item not found' });
+    }
+    const tenantId =
+      (typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '') ||
+      existing.data()?.tenantId;
+    await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const item = normalizeMenuItemPayload({ ...existing.data(), ...req.body }, tenantId);
+    await db.collection('menu').doc(itemId).set(
+      { ...item, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+    res.json({ success: true, id: itemId });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner menu update failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to update menu item' });
+  }
+});
+
+app.delete('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const itemId = req.params.id;
+    const existing = await db.collection('menu').doc(itemId).get();
+    if (!existing.exists) {
+      return res.status(404).json({ success: false, error: 'Menu item not found' });
+    }
+    const tenantId = existing.data()?.tenantId;
+    await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    await db.collection('menu').doc(itemId).delete();
+    res.json({ success: true, id: itemId });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner menu delete failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to delete menu item' });
+  }
+});
+
 app.post('/api/owner/provision', strictLimiter, verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const userId = req.user.uid;

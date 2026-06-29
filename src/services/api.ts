@@ -19,6 +19,7 @@ import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
 import { EnvironmentConfig } from '../config/environment';
 import { resolveOwnerTenantIds } from '../lib/ownerAccess';
+import { ownerApiRequest } from '../lib/ownerProvisioning';
 import {
   LEGACY_UNPAID_ADMIN_LABEL,
   LEGACY_UNPAID_CUSTOMER_LABEL,
@@ -776,15 +777,45 @@ import { deleteDoc, addDoc } from 'firebase/firestore';
 
 export const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
   const finalTenantId = (item as any).tenantId || activeTenantId;
-  return addDoc(collection(getDb(), 'menu'), { ...item, tenantId: finalTenantId, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  if (!finalTenantId) {
+    throw new Error('No tenant selected for this menu item');
+  }
+
+  try {
+    const payload = await ownerApiRequest<{ id: string }>('POST', '/api/owner/menu/items', {
+      ...item,
+      tenantId: finalTenantId,
+    });
+    return { id: payload.id };
+  } catch (apiError) {
+    console.warn('addMenuItem API failed, falling back to Firestore client', apiError);
+    return addDoc(collection(getDb(), 'menu'), {
+      ...item,
+      tenantId: finalTenantId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
 };
 
 export const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
-  return updateDoc(doc(getDb(), 'menu', id), { ...updates, updatedAt: serverTimestamp() });
+  try {
+    await ownerApiRequest('PUT', `/api/owner/menu/items/${id}`, updates as Record<string, unknown>);
+    return;
+  } catch (apiError) {
+    console.warn('updateMenuItem API failed, falling back to Firestore client', apiError);
+    return updateDoc(doc(getDb(), 'menu', id), { ...updates, updatedAt: serverTimestamp() });
+  }
 };
 
 export const deleteMenuItem = async (id: string) => {
-  return deleteDoc(doc(getDb(), 'menu', id));
+  try {
+    await ownerApiRequest('DELETE', `/api/owner/menu/items/${id}`);
+    return;
+  } catch (apiError) {
+    console.warn('deleteMenuItem API failed, falling back to Firestore client', apiError);
+    return deleteDoc(doc(getDb(), 'menu', id));
+  }
 };
 
 export const fetchAllTenants = async () => {

@@ -9,6 +9,14 @@ export type ProvisionOwnerParams = {
 };
 
 async function ownerApiPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+  return ownerApiRequest<T>('POST', path, body);
+}
+
+export async function ownerApiRequest<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('You must be signed in to continue.');
@@ -16,22 +24,28 @@ async function ownerApiPost<T>(path: string, body?: Record<string, unknown>): Pr
 
   const token = await user.getIdToken();
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 8_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 12_000);
+
+  const apiBase =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
+      ? window.location.origin
+      : EnvironmentConfig.getApiUrl();
 
   try {
-    const res = await fetch(`${EnvironmentConfig.getApiUrl()}${path}`, {
-      method: 'POST',
+    const res = await fetch(`${apiBase}${path}`, {
+      method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(body ?? {}),
+      body: method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify(body ?? {}),
       signal: controller.signal,
     });
 
     const payload = await res.json().catch(() => ({}));
     if (!res.ok || payload.success === false) {
-      throw new Error(payload.error || 'Store setup failed. Please try again.');
+      throw new Error(payload.error || payload.message || 'Request failed. Please try again.');
     }
     return payload as T;
   } catch (error) {
