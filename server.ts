@@ -346,7 +346,9 @@ function getFirebaseWebClientConfig() {
       apiKey: webApiKey,
       authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${pid}.firebaseapp.com`,
       projectId: pid,
-      storageBucket: configStorageBucket || `${pid}.firebasestorage.app`,
+      storageBucket:
+        process.env.FIREBASE_STORAGE_BUCKET ||
+        `${pid}.firebasestorage.app`,
       messagingSenderId,
       appId: webAppId,
     },
