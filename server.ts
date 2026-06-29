@@ -182,7 +182,7 @@ const promoteDraftTransaction = async (
       const orderStatus = draftData.subscriptionPayload ? 'ACTIVE' : 'PLACED';
       const verifiedAt = FieldValue.serverTimestamp();
       const orderRef = _db!.collection('orders').doc(draftId);
-      transaction.set(orderRef, {
+      transaction.set(orderRef, sanitizeData({
         ...draftData.orderPayload,
         tenantId: resolvedTenantId,
         status: orderStatus,
@@ -207,7 +207,7 @@ const promoteDraftTransaction = async (
           },
           timestamp: new Date().toISOString(),
         }],
-      });
+      }));
 
       if (draftData.subscriptionPayload) {
         const subRef = _db!.collection('subscriptions').doc();

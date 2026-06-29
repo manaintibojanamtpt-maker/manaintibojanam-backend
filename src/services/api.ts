@@ -20,6 +20,7 @@ import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDispla
 import { EnvironmentConfig } from '../config/environment';
 import { resolveOwnerTenantIds } from '../lib/ownerAccess';
 import { ownerApiRequest } from '../lib/ownerProvisioning';
+import { sanitizeFirestoreData } from '../lib/sanitizeFirestoreData';
 import {
   LEGACY_UNPAID_ADMIN_LABEL,
   LEGACY_UNPAID_CUSTOMER_LABEL,
@@ -128,11 +129,11 @@ const buildTimelineEvent = (
   id: `${orderId}-${eventType}-${Date.now()}`,
   eventType,
   description,
-  previousStatus: previousStatus || undefined,
-  newStatus,
+  previousStatus: previousStatus ?? null,
+  newStatus: newStatus ?? null,
   triggeredBy,
-  metadata,
-  timestamp: new Date()
+  metadata: metadata ?? {},
+  timestamp: new Date(),
 });
 
 const generateReferralCode = (name: string) => {
@@ -288,14 +289,14 @@ export const stageOrderDraft = async (
     const expiresAtDate = new Date();
     expiresAtDate.setMinutes(expiresAtDate.getMinutes() + 30);
 
-    await setDoc(draftRef, {
+    await setDoc(draftRef, sanitizeFirestoreData({
       id: draftRef.id,
       orderPayload,
       subscriptionPayload: subscriptionData || null,
       status: 'pending_payment',
       createdAt: serverTimestamp(),
       expiresAt: expiresAtDate
-    });
+    }));
     
     return draftRef.id;
   } catch (error: any) {
@@ -308,7 +309,7 @@ export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'u
   const path = 'orders';
   try {
     const orderRef = doc(collection(getDb(), path));
-    const newOrder = {
+    const newOrder = sanitizeFirestoreData({
       ...prepareOrderBlueprint(orderData),
       id: orderRef.id,
       createdAt: serverTimestamp(),
@@ -323,7 +324,7 @@ export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'u
           'customer'
         )
       ]
-    };
+    });
     await setDoc(orderRef, newOrder);
     
     // Trigger notification when order is placed
@@ -559,7 +560,7 @@ export const updatePaymentStatus = async (
       ? 'Payment session expired'
       : `Payment status updated to ${normalizedPayment}`;
 
-    await updateDoc(doc(getDb(), 'orders', orderId), {
+    await updateDoc(doc(getDb(), 'orders', orderId), sanitizeFirestoreData({
       paymentStatus: normalizedPayment,
       updatedAt: serverTimestamp(),
       ...extras,
@@ -568,13 +569,13 @@ export const updatePaymentStatus = async (
           orderId,
           eventType,
           description,
-          undefined,
-          undefined,
+          null,
+          null,
           triggeredBy,
           { paymentStatus: normalizedPayment, ...extras }
         )
       )
-    });
+    }));
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

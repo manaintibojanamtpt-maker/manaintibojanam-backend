@@ -361,7 +361,7 @@ const Checkout: React.FC = () => {
       customerName: state.name || null,
       userEmail: state.email || null,
       phone: state.phone || null,
-      address: state.addressText,
+      address: state.addressText || null,
       items: orderItems,
       subtotal: state.total,
       gst: state.gstAmount,
