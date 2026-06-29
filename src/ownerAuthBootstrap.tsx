@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ErrorBoundary } from './components/system/ErrorBoundary';
 import { dismissSplash } from './lib/splashScreen';
 import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
+import './index.css';
 
 const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));

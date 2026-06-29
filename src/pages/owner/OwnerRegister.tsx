@@ -4,7 +4,6 @@ import { auth } from '../../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { EnvironmentConfig } from '../../config/environment';
@@ -196,11 +195,7 @@ const OwnerRegister = () => {
           <ArrowLeft size={14} /> Back to BhojanOS
         </Link>
 
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full bg-[#111] border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shrink-0"
-        >
+        <div className="w-full bg-[#111] border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00]/5 to-transparent pointer-events-none" />
           
           <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
@@ -361,7 +356,7 @@ const OwnerRegister = () => {
             Already have an account? <Link to="/owner/login" className="text-[#FF6B00] hover:text-[#FF6B00]/80 font-bold ml-1">Log in</Link>
           </p>
         </div>
-      </m.div>
+        </div>
       </div>
     </div>
   );

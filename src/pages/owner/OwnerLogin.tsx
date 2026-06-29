@@ -6,7 +6,6 @@ import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
-import { m } from 'framer-motion';
 import { redirectToOwnerDashboard } from '../../lib/ownerRedirect';
 import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
@@ -27,7 +26,6 @@ const OwnerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionChecking, setSessionChecking] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const redirectHandled = useRef(false);
@@ -40,7 +38,6 @@ const OwnerLogin = () => {
       setConfigError(
         'Firebase is not configured for production. Add VITE_FIREBASE_* on Vercel or FIREBASE_WEB_* on Render, then redeploy.',
       );
-      setSessionChecking(false);
       return;
     }
 
@@ -53,7 +50,6 @@ const OwnerLogin = () => {
         redirectToOwnerDashboard();
         return;
       }
-      setSessionChecking(false);
     });
 
     const sub = onAuthStateChanged(auth, (user) => {
@@ -63,14 +59,9 @@ const OwnerLogin = () => {
       redirectToOwnerDashboard();
     });
 
-    const timeout = window.setTimeout(() => {
-      if (!cancelled) setSessionChecking(false);
-    }, 8000);
-
     return () => {
       cancelled = true;
       sub();
-      window.clearTimeout(timeout);
     };
   }, []);
 
@@ -89,11 +80,11 @@ const OwnerLogin = () => {
     );
   }
 
-  if (sessionChecking || redirecting) {
+  if (redirecting) {
     return (
       <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        <p className="text-sm text-white/60">{redirecting ? 'Taking you to your dashboard…' : 'Checking your session…'}</p>
+        <p className="text-sm text-white/60">Taking you to your dashboard…</p>
         <button type="button" className="text-xs text-orange-400 underline" onClick={redirectToOwnerDashboard}>
           Open dashboard directly
         </button>
@@ -144,11 +135,7 @@ const OwnerLogin = () => {
           <ArrowLeft size={14} /> Back to BhojanOS
         </Link>
 
-        <m.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full bg-[#111] border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden"
-        >
+        <div className="w-full bg-[#111] border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center text-center mb-6 sm:mb-8">
@@ -239,7 +226,7 @@ const OwnerLogin = () => {
               </Link>
             </p>
           </div>
-        </m.div>
+        </div>
       </div>
     </div>
   );
