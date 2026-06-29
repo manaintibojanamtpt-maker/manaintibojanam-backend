@@ -2621,30 +2621,72 @@ app.post('/api/owner/sync-tenants', verifyFirebaseToken, async (req: any, res: a
 
 const MAX_MENU_IMAGE_CHARS = 900_000;
 
-async function assertOwnerTenantAccess(userId: string, tenantId: string, email?: string | null): Promise<void> {
+async function assertOwnerTenantAccess(
+  userId: string,
+  tenantId: string,
+  email?: string | null,
+): Promise<string> {
   if (!tenantId) {
     const err: any = new Error('tenantId is required');
     err.statusCode = 400;
     throw err;
   }
-  const userDoc = await db.collection('users').doc(userId).get();
-  if (!userDoc.exists) {
-    const err: any = new Error('User not found');
-    err.statusCode = 403;
+
+  let resolvedTenantId = tenantId.trim();
+  let tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+  if (!tenantDoc.exists) {
+    const bySlug = await db.collection('tenants').where('slug', '==', resolvedTenantId).limit(1).get();
+    if (!bySlug.empty) {
+      resolvedTenantId = bySlug.docs[0].id;
+      tenantDoc = bySlug.docs[0];
+    }
+  }
+
+  if (!tenantDoc.exists) {
+    const err: any = new Error('Tenant not found');
+    err.statusCode = 404;
     throw err;
   }
-  const data = userDoc.data() || {};
+
+  const tenantData = tenantDoc.data() || {};
+  const tenantOwnerId = tenantData.ownerId;
+  const tenantSlug = typeof tenantData.slug === 'string' ? tenantData.slug.trim() : '';
+  if (tenantOwnerId && tenantOwnerId === userId) {
+    return resolvedTenantId;
+  }
+
+  await syncOwnerTenantsForUser(userId, email);
+
+  const userDoc = await db.collection('users').doc(userId).get();
+  const data = userDoc.exists ? userDoc.data() || {} : {};
   const owned: string[] = data.ownedTenantIds || [];
   const role = data.role;
   const normalizedEmail = (email || data.email || '').toLowerCase();
+
+  const ownsTenant =
+    owned.includes(resolvedTenantId) ||
+    (tenantSlug && owned.includes(tenantSlug));
+
   if (
-    owned.includes(tenantId) ||
+    ownsTenant ||
     role === 'superadmin' ||
     role === 'admin' ||
-    (isFounderOwnerEmail(normalizedEmail) && tenantId === FOUNDER_TENANT_ID)
+    isFounderOwnerEmail(normalizedEmail)
   ) {
-    return;
+    return resolvedTenantId;
   }
+
+  if (normalizedEmail) {
+    const byEmail = await db.collection('users').where('email', '==', normalizedEmail).limit(3).get();
+    for (const docSnap of byEmail.docs) {
+      const docOwned: string[] = docSnap.data()?.ownedTenantIds || [];
+      const docRole = docSnap.data()?.role;
+      if (docOwned.includes(resolvedTenantId) || docRole === 'superadmin' || docRole === 'admin') {
+        return resolvedTenantId;
+      }
+    }
+  }
+
   const err: any = new Error('Unauthorized for this tenant');
   err.statusCode = 403;
   throw err;
@@ -2686,8 +2728,8 @@ app.post('/api/owner/menu/items', verifyFirebaseToken, async (req: any, res: any
   try {
     const userId = req.user.uid;
     const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
-    await assertOwnerTenantAccess(userId, tenantId, req.user.email);
-    const item = normalizeMenuItemPayload(req.body || {}, tenantId);
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const item = normalizeMenuItemPayload(req.body || {}, resolvedTenantId);
     const ref = await db.collection('menu').add({
       ...item,
       createdAt: FieldValue.serverTimestamp(),
@@ -2712,8 +2754,8 @@ app.put('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, res: 
     const tenantId =
       (typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '') ||
       existing.data()?.tenantId;
-    await assertOwnerTenantAccess(userId, tenantId, req.user.email);
-    const item = normalizeMenuItemPayload({ ...existing.data(), ...req.body }, tenantId);
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const item = normalizeMenuItemPayload({ ...existing.data(), ...req.body }, resolvedTenantId);
     await db.collection('menu').doc(itemId).set(
       { ...item, updatedAt: FieldValue.serverTimestamp() },
       { merge: true },
@@ -2742,6 +2784,95 @@ app.delete('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, re
     const status = err.statusCode || 500;
     logger.error({ message: 'Owner menu delete failed', err: err.message, uid: req.user?.uid });
     res.status(status).json({ success: false, error: err.message || 'Failed to delete menu item' });
+  }
+});
+
+const CLOUD_KITCHEN_TEMPLATE_ITEMS = [
+  { name: 'Idli (3)', price: 70, category: 'Breakfast', type: 'veg', isVeg: true, description: 'Soft steamed idlis with sambar and coconut chutney.' },
+  { name: 'Plain Dosa', price: 50, category: 'Breakfast', type: 'veg', isVeg: true, description: 'Crispy golden dosa with chutney and sambar.' },
+  { name: 'Masala Dosa', price: 80, category: 'Breakfast', type: 'veg', isVeg: true, description: 'Crispy dosa with spiced potato masala filling.' },
+  { name: 'Sambar Rice', price: 119, category: 'Meals', type: 'veg', isVeg: true, description: 'Hot sambar rice with lentil stew and tempering.' },
+  { name: 'Curd Rice', price: 129, category: 'Meals', type: 'veg', isVeg: true, description: 'Creamy curd rice with mild seasoning.' },
+  { name: 'Veg Fried Rice', price: 99, category: 'Rice', type: 'veg', isVeg: true, description: 'Classic veg fried rice with crunchy vegetables.' },
+  { name: 'Chicken Fried Rice', price: 189, category: 'Rice', type: 'non-veg', isVeg: false, description: 'Chicken fried rice with tender meat and crisp veggies.' },
+  { name: 'Andhra Veg Thali (Mini)', price: 149, category: 'Thali', type: 'veg', isVeg: true, description: 'Compact Andhra veg thali for a lighter meal.' },
+];
+
+app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+
+    const existing = await db.collection('menu').where('tenantId', '==', resolvedTenantId).get();
+    if (existing.size >= 3) {
+      return res.status(400).json({ success: false, error: 'Menu already has items. Edit in Menu Builder or delete items first.' });
+    }
+
+    const existingNames = new Set(
+      existing.docs.map((d) => (d.data().name || '').toString().trim().toLowerCase()),
+    );
+
+    let added = 0;
+    const batch = db.batch();
+    for (const item of CLOUD_KITCHEN_TEMPLATE_ITEMS) {
+      if (existingNames.has(item.name.trim().toLowerCase())) continue;
+      const ref = db.collection('menu').doc();
+      batch.set(ref, {
+        tenantId: resolvedTenantId,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.category,
+        type: item.type,
+        isVeg: item.isVeg,
+        isAvailable: true,
+        image: '',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      added += 1;
+    }
+
+    if (added === 0) {
+      return res.status(400).json({ success: false, error: 'All template items already exist in your menu.' });
+    }
+
+    await batch.commit();
+
+    res.json({ success: true, added, tenantId: resolvedTenantId });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner menu seed failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to import template menu' });
+  }
+});
+
+app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const { tenantId, step, payload, nextStep, isComplete } = req.body || {};
+    if (!tenantId || typeof tenantId !== 'string') {
+      return res.status(400).json({ success: false, error: 'tenantId is required' });
+    }
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const updates: Record<string, unknown> = { ...(payload || {}), updatedAt: FieldValue.serverTimestamp() };
+
+    if (typeof nextStep === 'number') {
+      updates['onboardingStatus.currentStep'] = nextStep;
+    }
+    if (isComplete === true) {
+      updates['onboardingStatus.isComplete'] = true;
+      updates['onboardingStatus.completedAt'] = FieldValue.serverTimestamp();
+      updates['onboardingStatus.migrated'] = false;
+    }
+
+    await db.collection('tenants').doc(resolvedTenantId).set(updates, { merge: true });
+    res.json({ success: true, tenantId: resolvedTenantId, step, nextStep });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner onboarding step save failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to save onboarding step' });
   }
 });
 

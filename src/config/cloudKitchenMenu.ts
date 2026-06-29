@@ -14,6 +14,14 @@ export const CLOUD_KITCHEN_TEMPLATE_ITEMS = [
 ];
 
 export async function seedCloudKitchenTemplate(tenantId: string): Promise<number> {
+  const { ownerApiRequest } = await import('../lib/ownerProvisioning');
+  try {
+    const payload = await ownerApiRequest<{ added: number }>('POST', '/api/owner/menu/seed-template', { tenantId });
+    return payload.added ?? 0;
+  } catch (apiError) {
+    console.warn('seedCloudKitchenTemplate API failed, falling back to client Firestore', apiError);
+  }
+
   const db = getDb();
   const existing = await getDocs(query(collection(db, 'menu'), where('tenantId', '==', tenantId)));
   if (existing.size >= 3) {

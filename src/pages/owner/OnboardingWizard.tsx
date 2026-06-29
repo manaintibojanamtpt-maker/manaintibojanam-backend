@@ -13,9 +13,10 @@ import { activateGrowthOnboardingTrial } from '../../lib/planStatus';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import { STORE_SETUP_STEPS, getSetupStepByWizardStep } from '../../config/storeSetupSteps';
 import SetupStepInstructions from '../../components/owner/SetupStepInstructions';
-import { computeStoreSetupProgress } from '../../lib/storeSetupProgress';
+import { computeStoreSetupProgress, needsStoreSetup } from '../../lib/storeSetupProgress';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
+import { ownerApiRequest } from '../../lib/ownerProvisioning';
 
 const WIZARD_STEPS = STORE_SETUP_STEPS.filter((s) => s.wizardStep != null).map((s) => ({
   id: s.wizardStep!,
@@ -46,6 +47,16 @@ const OnboardingWizard: React.FC = () => {
   const [razorpayEnabled, setRazorpayEnabled] = useState(false);
 
   useEffect(() => {
+    if (!tenantInfo?.id || !tenantInfo.onboardingStatus?.migrated) return;
+    if (!needsStoreSetup(tenantInfo, menuCount)) return;
+
+    void updateDoc(doc(db, 'tenants', tenantInfo.id), {
+      'onboardingStatus.migrated': false,
+      'onboardingStatus.isComplete': false,
+    }).catch((err) => console.warn('Failed to reset stale migrated onboarding flag', err));
+  }, [tenantInfo, menuCount]);
+
+  useEffect(() => {
     if (!tenantInfo?.id) return;
     const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantInfo.id));
     const unsub = onSnapshot(menuQuery, (snap) => {
@@ -70,17 +81,16 @@ const OnboardingWizard: React.FC = () => {
 
     const stepParam = Number(searchParams.get('step'));
     const validParam = stepParam >= 1 && stepParam <= WIZARD_STEPS.length ? stepParam : null;
+    const progress = computeStoreSetupProgress(tenantInfo, menuCount);
+    const resumeStep = progress.wizardStep;
 
-    if (tenantInfo.onboardingStatus) {
-      if (tenantInfo.onboardingStatus.isComplete || tenantInfo.onboardingStatus.migrated) {
-        navigate('/owner/dashboard');
-        return;
-      }
-      setCurrentStep(validParam ?? tenantInfo.onboardingStatus.currentStep ?? 1);
-    } else if (validParam) {
-      setCurrentStep(validParam);
+    if (tenantInfo.onboardingStatus?.isComplete && !needsStoreSetup(tenantInfo, menuCount)) {
+      navigate('/owner/dashboard');
+      return;
     }
-  }, [tenantInfo, navigate, searchParams]);
+
+    setCurrentStep(validParam ?? resumeStep);
+  }, [tenantInfo, navigate, searchParams, menuCount]);
 
   if (loading || !tenantInfo) {
     return (
@@ -93,9 +103,16 @@ const OnboardingWizard: React.FC = () => {
   const stepMeta = getSetupStepByWizardStep(currentStep);
   const setupProgress = computeStoreSetupProgress(tenantInfo, menuCount);
 
-  const saveStepData = async (step: number): Promise<void> => {
-    const tenantRef = doc(db, 'tenants', tenantInfo.slug);
+  const saveStepData = async (step: number): Promise<Record<string, unknown>> => {
     const payload: Record<string, unknown> = {};
+
+    if (step === 1) {
+      payload.kyc = {
+        ...(tenantInfo.kyc || {}),
+        email: tenantInfo.kyc?.email || tenantInfo.contactEmail || '',
+        ownerName: tenantInfo.kyc?.ownerName || kitchenName || tenantInfo.name || '',
+      };
+    }
 
     if (step === 2) {
       if (!kitchenName.trim()) throw new Error('Kitchen name is required');
@@ -140,26 +157,39 @@ const OnboardingWizard: React.FC = () => {
       };
     }
 
-    if (Object.keys(payload).length > 0) {
-      await updateDoc(tenantRef, payload);
+    return payload;
+  };
+
+  const persistStep = async (targetStep: number, isComplete: boolean = false) => {
+    const payload = await saveStepData(currentStep);
+    const nextStep = isComplete ? currentStep : targetStep;
+
+    try {
+      await ownerApiRequest('POST', '/api/owner/onboarding/step', {
+        tenantId: tenantInfo.id,
+        step: currentStep,
+        payload,
+        nextStep,
+        isComplete,
+      });
+    } catch (apiError) {
+      console.warn('Onboarding API save failed, falling back to client Firestore', apiError);
+      const tenantRef = doc(db, 'tenants', tenantInfo.id);
+      if (Object.keys(payload).length > 0) {
+        await updateDoc(tenantRef, payload);
+      }
+      await updateDoc(tenantRef, {
+        'onboardingStatus.currentStep': nextStep,
+        'onboardingStatus.isComplete': isComplete,
+        ...(isComplete && { 'onboardingStatus.completedAt': serverTimestamp(), 'onboardingStatus.migrated': false }),
+      });
     }
   };
 
   const saveProgress = async (step: number, isComplete: boolean = false) => {
     setSaving(true);
     try {
-      if (!isComplete && step > currentStep) {
-        await saveStepData(currentStep);
-      }
-      if (isComplete) {
-        await saveStepData(currentStep);
-      }
-
-      await updateDoc(doc(db, 'tenants', tenantInfo.slug), {
-        'onboardingStatus.currentStep': step,
-        'onboardingStatus.isComplete': isComplete,
-        ...(isComplete && { 'onboardingStatus.completedAt': serverTimestamp() }),
-      });
+      await persistStep(step, isComplete);
 
       logIncident('onboarding_events', {
         action: isComplete ? 'wizard_completed' : 'step_saved',
@@ -168,7 +198,7 @@ const OnboardingWizard: React.FC = () => {
         timestamp: new Date().toISOString(),
       });
 
-      setCurrentStep(step);
+      setCurrentStep(isComplete ? currentStep : step);
     } catch (error: any) {
       console.error('Failed to save progress:', error);
       toast.error(error.message || 'Failed to save progress');
@@ -206,11 +236,15 @@ const OnboardingWizard: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (currentStep > 1) {
       const prev = currentStep - 1;
-      saveProgress(prev);
-      navigate(`/owner/setup?step=${prev}`, { replace: true });
+      try {
+        await saveProgress(prev);
+        navigate(`/owner/setup?step=${prev}`, { replace: true });
+      } catch {
+        // toast already shown
+      }
     }
   };
 
@@ -227,9 +261,12 @@ const OnboardingWizard: React.FC = () => {
   const handleSeedTemplate = async () => {
     setSeedingMenu(true);
     try {
-      const count = await seedCloudKitchenTemplate(tenantInfo.slug);
+      const count = await seedCloudKitchenTemplate(tenantInfo.id);
       setMenuSeeded(true);
       toast.success(`Added ${count} items from Cloud Kitchen template`);
+      if (menuCount + count >= 3 && currentStep === 6) {
+        toast.success('Menu ready — tap Save & continue to go to the final step.');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to import template menu');
     } finally {

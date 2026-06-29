@@ -8,7 +8,7 @@ import {
   X, Rocket
 } from 'lucide-react';
 import { m } from 'framer-motion';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc, limit } from 'firebase/firestore';
 import { logIncident } from '../../lib/monitoring';
 import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
@@ -141,22 +141,36 @@ const OwnerDashboard = () => {
   React.useEffect(() => {
     const migrateTenant = async () => {
       if (!tenantInfo || !tenantInfo.id || !flags.onboardingWizardV2) return;
-      
-      // If the tenant doesn't have an onboardingStatus object at all, they are a legacy merchant.
-      // We seamlessly migrate them so they aren't forced into the wizard.
-      if (tenantInfo.onboardingStatus === undefined) {
-        try {
+      if (tenantInfo.onboardingStatus !== undefined) return;
+
+      try {
+        const menuSnap = await getDocs(
+          query(collection(getDb(), 'menu'), where('tenantId', '==', tenantInfo.id), limit(3)),
+        );
+        const hasMenu = menuSnap.size >= 3;
+        const hasLocation = !!(tenantInfo.location?.address?.trim() && tenantInfo.location?.city?.trim());
+        const hasName = !!(tenantInfo.name && tenantInfo.name.trim().length > 1);
+
+        if (hasMenu && hasLocation && hasName) {
           await updateDoc(doc(getDb(), 'tenants', tenantInfo.id), {
             onboardingStatus: {
               isComplete: true,
               currentStep: 7,
               completedAt: serverTimestamp(),
-              migrated: true
-            }
+              migrated: true,
+            },
           });
-        } catch (e) {
-          console.error('Failed to migrate legacy tenant onboarding status:', e);
+        } else {
+          await updateDoc(doc(getDb(), 'tenants', tenantInfo.id), {
+            onboardingStatus: {
+              isComplete: false,
+              currentStep: 1,
+              migrated: false,
+            },
+          });
         }
+      } catch (e) {
+        console.error('Failed to initialize tenant onboarding status:', e);
       }
     };
     migrateTenant();

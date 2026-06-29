@@ -7,8 +7,9 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import { MenuItem } from '../../types';
 import { addMenuItem, updateMenuItem, deleteMenuItem } from '../../services/api';
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, Loader2, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, Loader2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { needsStoreSetup } from '../../lib/storeSetupProgress';
 
 // Client-side AI Image Enhancer & Compressor
 const compressImage = async (file: File, magicEnhance: boolean = false): Promise<string> => {
@@ -66,7 +67,7 @@ const compressImage = async (file: File, magicEnhance: boolean = false): Promise
 
 const OwnerMenu = () => {
   const { loading: authLoading } = useAuth();
-  const { loading: tenantLoading } = useTenant();
+  const { tenantInfo, loading: tenantLoading } = useTenant();
   const tenantId = useOwnerTenantId();
   
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -281,6 +282,24 @@ const OwnerMenu = () => {
             Add Item
           </button>
         </header>
+
+        {tenantInfo && needsStoreSetup(tenantInfo, items.length) && (
+          <div className="mb-6 p-4 rounded-2xl border border-orange-500/30 bg-orange-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-orange-300">Store setup in progress</p>
+              <p className="text-xs text-orange-200/70 mt-1">
+                Step 6 needs at least 3 menu items. Import the ready-made template or add dishes here.
+              </p>
+            </div>
+            <Link
+              to="/owner/setup?step=6"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-400 text-black text-sm font-bold transition-colors"
+            >
+              <ClipboardList size={16} />
+              Continue setup
+            </Link>
+          </div>
+        )}
 
         <div className="bg-[#0f0f11] rounded-2xl border border-white/10 overflow-hidden">
           {items.length === 0 ? (

@@ -54,11 +54,7 @@ function isStepComplete(id: StoreSetupStepId, tenant: TenantSnapshot, menuCount:
     case 'mobile':
       return !!(tenant.kyc?.mobileNumber && String(tenant.kyc.mobileNumber).replace(/\D/g, '').length >= 10);
     case 'go-live':
-      return (
-        tenant.onboardingStatus?.isComplete === true ||
-        tenant.onboardingStatus?.migrated === true ||
-        isStoreLiveForOrders(tenant)
-      );
+      return tenant.onboardingStatus?.isComplete === true || isStoreLiveForOrders(tenant);
     default:
       return false;
   }
@@ -91,10 +87,7 @@ export function computeStoreSetupProgress(
   const allRequiredDone = requiredCompletedCount >= STORE_SETUP_TOTAL_REQUIRED;
   const isComplete = allRequiredDone && completionMap.get('go-live') === true;
 
-  const needsSetup =
-    !tenant?.onboardingStatus?.migrated &&
-    !isComplete &&
-    (tenant?.storeStatus === 'draft' || !isStoreLiveForOrders(tenant));
+  const needsSetup = !isComplete;
 
   const nextStep = firstIncomplete
     ? { ...firstIncomplete, complete: false, isCurrent: true }
