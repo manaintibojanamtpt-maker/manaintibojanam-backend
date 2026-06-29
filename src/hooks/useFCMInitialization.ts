@@ -58,6 +58,24 @@ export function useFCMInitialization() {
     }
   }, [currentUser, authLoading, hasAttemptedInit, initializing, fcmInitialized]);
 
+  // Re-register FCM token when user returns to app (tokens go stale after SW/Firebase project changes)
+  useEffect(() => {
+    if (!currentUser || authLoading) return;
+
+    const refreshToken = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      void notificationService.registerDeviceToken(currentUser.uid);
+    };
+
+    document.addEventListener('visibilitychange', refreshToken);
+    window.addEventListener('focus', refreshToken);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshToken);
+      window.removeEventListener('focus', refreshToken);
+    };
+  }, [currentUser, authLoading]);
+
   return {
     fcmInitialized,
     initializing,

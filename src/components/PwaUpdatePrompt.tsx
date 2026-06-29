@@ -1,13 +1,15 @@
 import { AnimatePresence, m } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 // @ts-ignore - provided by vite-plugin-pwa
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { checkServiceWorkerForUpdate, shouldAutoApplyPwaUpdate } from '../lib/pwaUpdateUtils';
 
 export const PwaUpdatePrompt: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const autoUpdateStarted = useRef(false);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -21,17 +23,29 @@ export const PwaUpdatePrompt: React.FC = () => {
         r.update().catch((err) => console.warn('[PWA] update check failed:', err));
       };
 
-      // Poll while app is open
-      window.setInterval(checkForUpdate, 60 * 1000);
+      r.addEventListener('updatefound', () => {
+        const worker = r.installing;
+        if (!worker) return;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('[PWA] New service worker waiting — update available');
+          }
+        });
+      });
 
-      // Check when user returns to tab / installed PWA
+      // Poll while app is open (mobile PWAs only check on open otherwise)
+      window.setInterval(checkForUpdate, 30 * 1000);
+
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') checkForUpdate();
       });
       window.addEventListener('focus', checkForUpdate);
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) checkForUpdate();
+      });
 
-      // Initial check shortly after registration
-      window.setTimeout(checkForUpdate, 3_000);
+      window.setTimeout(checkForUpdate, 2_000);
+      window.setTimeout(checkForUpdate, 15_000);
     },
     onRegisterError(error: unknown) {
       console.error('[PWA] Service worker registration error', error);
@@ -40,6 +54,7 @@ export const PwaUpdatePrompt: React.FC = () => {
 
   useEffect(() => {
     setMounted(true);
+    void checkServiceWorkerForUpdate();
   }, []);
 
   const close = useCallback(() => {
@@ -74,7 +89,23 @@ export const PwaUpdatePrompt: React.FC = () => {
     }
   }, [updateServiceWorker, updating]);
 
-  if (!mounted || !needRefresh) {
+  // Installed mobile PWAs: apply updates automatically (users rarely tap "Update Now")
+  useEffect(() => {
+    if (!needRefresh || updating || autoUpdateStarted.current) return;
+    if (!shouldAutoApplyPwaUpdate()) return;
+
+    autoUpdateStarted.current = true;
+    console.log('[PWA] Auto-applying update on mobile/installed PWA');
+    const timer = window.setTimeout(() => {
+      void handleUpdateNow();
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [needRefresh, updating, handleUpdateNow]);
+
+  const showBanner = mounted && needRefresh && !shouldAutoApplyPwaUpdate();
+
+  if (!showBanner) {
     return null;
   }
 
