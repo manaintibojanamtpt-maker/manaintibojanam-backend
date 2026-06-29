@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { 
   fetchAllTenants, updateTenantStatus, 
-  fetchOnboardingLeads, updateLeadStage 
+  fetchOnboardingLeads, updateLeadStage,
+  fetchSuperadminPlatformData,
 } from '../services/api';
 
 import { logIncident } from '../lib/monitoring';
@@ -53,6 +54,8 @@ export default function BhojanOSSuperAdmin() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [dataSource, setDataSource] = useState<'server' | 'client' | null>(null);
+  const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     if (userProfile?.displayName) {
@@ -74,13 +77,32 @@ export default function BhojanOSSuperAdmin() {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error("Firestore query timed out! Please check Firebase Security Rules.")), 5000);
+        timeoutId = setTimeout(() => reject(new Error('Platform data load timed out. Retrying via server API…')), 15_000);
       });
 
-      const [tenantsData, leadsData] = await Promise.all([
-        Promise.race([fetchAllTenants(), timeoutPromise]),
-        Promise.race([fetchOnboardingLeads(), timeoutPromise])
-      ]);
+      let tenantsData: any[] = [];
+      let leadsData: any[] = [];
+
+      try {
+        const serverPayload = await Promise.race([
+          fetchSuperadminPlatformData(),
+          timeoutPromise,
+        ]);
+        tenantsData = serverPayload.tenants;
+        leadsData = serverPayload.leads;
+        setDataSource('server');
+        setFirebaseProjectId(serverPayload.projectId ?? null);
+      } catch (serverError) {
+        console.warn('Superadmin server fetch failed, falling back to Firestore client', serverError);
+        const [t, l] = await Promise.all([
+          Promise.race([fetchAllTenants(), timeoutPromise]),
+          Promise.race([fetchOnboardingLeads(), timeoutPromise]),
+        ]);
+        tenantsData = t;
+        leadsData = l;
+        setDataSource('client');
+      }
+
       if (timeoutId) clearTimeout(timeoutId);
       setTenants(tenantsData);
       setLeads(leadsData);
@@ -374,9 +396,13 @@ export default function BhojanOSSuperAdmin() {
 
   const TABS = [
     { id: 'overview', icon: Activity, label: 'Overview' },
+    { id: 'beta', icon: Rocket, label: 'Beta' },
+    { id: 'pmf', icon: BrainCircuit, label: 'PMF' },
     { id: 'tenants', icon: Building2, label: 'Tenants' },
     { id: 'leads', icon: Users, label: 'Leads' },
-    { id: 'settings', icon: Settings, label: 'Settings' }
+    { id: 'investors', icon: TrendingUp, label: 'Investors' },
+    { id: 'releases', icon: Zap, label: 'Releases' },
+    { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
@@ -592,6 +618,18 @@ export default function BhojanOSSuperAdmin() {
                       Command Center
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base font-medium">Platform performance and growth intelligence.</p>
+                    {firebaseProjectId && (
+                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                        Firebase project: {firebaseProjectId}
+                        {dataSource ? ` · via ${dataSource}` : ''}
+                      </p>
+                    )}
+                    {!loading && tenants.length === 0 && (
+                      <div className="mt-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-200 text-sm">
+                        No tenants in this Firebase project yet. bhojanos-prod is a fresh cutover — historical bhojanos2 data was not migrated automatically.
+                        Use <strong>Tenants → Seed default</strong> for mana-inti, or onboard kitchens from the owner portal.
+                      </div>
+                    )}
                   </m.div>
 
                   {/* 1. EXECUTIVE OVERVIEW */}
@@ -1338,22 +1376,24 @@ export default function BhojanOSSuperAdmin() {
 
       {/* Mobile Premium Bottom Navigation Tab Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
-        <div className="bg-[#0c0c0c]/85 backdrop-blur-2xl border-t border-white/10 px-2 pt-2 pb-1 flex justify-around items-center shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="bg-[#0c0c0c]/85 backdrop-blur-2xl border-t border-white/10 px-1 pt-2 pb-1 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] overflow-x-auto">
+          <div className="flex items-center gap-0.5 min-w-max px-1">
           {TABS.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => handleTabChange(item.id as SuperAdminTab)}
-              className="flex flex-col items-center gap-1.5 p-2 min-w-[64px]"
+              className="flex flex-col items-center gap-1 p-2 min-w-[56px]"
             >
               <div className={`p-1.5 rounded-full transition-all duration-300 ${activeTab === item.id ? 'bg-white/10 text-white' : 'text-gray-500'}`}>
-                <item.icon size={20} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                <item.icon size={18} strokeWidth={activeTab === item.id ? 2.5 : 2} />
               </div>
-              <span className={`text-[10px] font-bold tracking-wider uppercase transition-colors duration-300 ${activeTab === item.id ? 'text-white' : 'text-gray-500'}`}>
+              <span className={`text-[9px] font-bold tracking-wider uppercase transition-colors duration-300 whitespace-nowrap ${activeTab === item.id ? 'text-white' : 'text-gray-500'}`}>
                 {item.label}
               </span>
             </button>
           ))}
+          </div>
         </div>
       </div>
 

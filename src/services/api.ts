@@ -788,19 +788,64 @@ export const deleteMenuItem = async (id: string) => {
 };
 
 export const fetchAllTenants = async () => {
-  const q = query(collection(getDb(), 'tenants'), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  try {
+    const q = query(collection(getDb(), 'tenants'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.warn('fetchAllTenants: orderBy fallback', error);
+    const snapshot = await getDocs(collection(getDb(), 'tenants'));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+        const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+        return bSec - aSec;
+      });
+  }
+};
+
+export const fetchOnboardingLeads = async () => {
+  try {
+    const q = query(collection(getDb(), 'salesPipeline'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.warn('fetchOnboardingLeads: orderBy fallback', error);
+    const snapshot = await getDocs(collection(getDb(), 'salesPipeline'));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+        const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+        return bSec - aSec;
+      });
+  }
+};
+
+/** Load tenants + leads via Render API (Admin SDK) — reliable on bhojanos-prod cutover. */
+export const fetchSuperadminPlatformData = async (): Promise<{ tenants: any[]; leads: any[]; projectId?: string | null }> => {
+  const { auth } = await import('../firebase');
+  const user = auth.currentUser;
+  if (!user) throw new Error('You must be signed in to load platform data.');
+
+  const token = await user.getIdToken(true);
+  const res = await fetch(`${API_BASE_URL}/api/platform/superadmin-data`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) {
+    throw new Error(payload.error || 'Failed to load platform data from server');
+  }
+  return {
+    tenants: Array.isArray(payload.tenants) ? payload.tenants : [],
+    leads: Array.isArray(payload.leads) ? payload.leads : [],
+    projectId: payload.projectId ?? null,
+  };
 };
 
 export const updateTenantStatus = async (tenantId: string, status: string) => {
   return updateDoc(doc(getDb(), 'tenants', tenantId), { status, updatedAt: serverTimestamp() });
-};
-
-export const fetchOnboardingLeads = async () => {
-  const q = query(collection(getDb(), 'salesPipeline'), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
 export const updateLeadStage = async (leadId: string, stage: string) => {

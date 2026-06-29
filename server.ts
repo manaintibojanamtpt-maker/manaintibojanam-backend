@@ -702,6 +702,50 @@ const requireAdmin = async (req: any, res: any, next: any) => {
   });
 };
 
+const requireSuperadmin = async (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: No token provided' });
+  }
+  try {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await getAdminAuth(appAdmin).verifyIdToken(token);
+    req.user = decodedToken;
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    const role = userDoc.data()?.role;
+    const email = (decodedToken.email || userDoc.data()?.email || '').toLowerCase();
+    const isFounder =
+      email === 'manaintibojanamtpt@gmail.com' ||
+      email === 'bhojanos26@gmail.com' ||
+      email === (process.env.FOUNDER_EMAIL || 'manaintibojanamtpt@gmail.com').trim().toLowerCase();
+    if (role === 'superadmin' || isFounder) {
+      return next();
+    }
+    logger.warn({ message: 'Superadmin access denied', uid: decodedToken.uid, role, email });
+    return res.status(403).json({ success: false, error: 'Forbidden: Superadmin access required' });
+  } catch (error: any) {
+    logger.error({ message: 'Superadmin auth failed', error: error.message });
+    return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+  }
+};
+
+const serializeFirestoreValue = (value: unknown): unknown => {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    const date = (value as { toDate: () => Date }).toDate();
+    return { seconds: Math.floor(date.getTime() / 1000), _type: 'timestamp' };
+  }
+  if (Array.isArray(value)) return value.map(serializeFirestoreValue);
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = serializeFirestoreValue(v);
+    }
+    return out;
+  }
+  return value;
+};
+
 const assertOrderStatusAccess = async (req: any, orderData: Record<string, any>): Promise<boolean> => {
   if (req.user?.admin === true) return true;
   const userDoc = await db.collection('users').doc(req.user.uid).get();
@@ -4853,6 +4897,43 @@ app.post("/api/platform/grant-superadmin", async (req, res) => {
     logger.error({ message: "Failed to grant superadmin", error: err.message });
     const status = err.code === "auth/user-not-found" ? 404 : 500;
     res.status(status).json({ success: false, error: err.message || "Failed to grant superadmin" });
+  }
+});
+
+/** Platform data for superadmin dashboard — Admin SDK bypasses client Firestore rule edge cases. */
+app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, res: any) => {
+  try {
+    const [tenantsSnap, leadsSnap] = await Promise.all([
+      db.collection('tenants').get(),
+      db.collection('salesPipeline').get(),
+    ]);
+
+    const tenants = tenantsSnap.docs
+      .map((d) => ({ id: d.id, ...(serializeFirestoreValue(d.data()) as Record<string, unknown>) }))
+      .sort((a, b) => {
+        const aSec = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+        const bSec = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+        return bSec - aSec;
+      });
+
+    const leads = leadsSnap.docs
+      .map((d) => ({ id: d.id, ...(serializeFirestoreValue(d.data()) as Record<string, unknown>) }))
+      .sort((a, b) => {
+        const aSec = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+        const bSec = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+        return bSec - aSec;
+      });
+
+    res.json({
+      success: true,
+      tenants,
+      leads,
+      projectId: process.env.FIREBASE_PROJECT_ID || appAdmin.options?.projectId || null,
+      syncedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    logger.error({ message: 'Superadmin data fetch failed', error: err.message });
+    res.status(500).json({ success: false, error: err.message || 'Failed to load platform data' });
   }
 });
 

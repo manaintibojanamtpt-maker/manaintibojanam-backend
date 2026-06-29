@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle, Volume2, VolumeX, ClipboardList } from 'lucide-react';
+import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle, Volume2, VolumeX, ClipboardList, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { m, AnimatePresence } from 'framer-motion';
 import { OrderAlertProvider, useOrderAlerts } from '../../hooks/useOrderAlerts';
@@ -164,6 +164,21 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
               </div>
             </div>
           ))}
+          {userProfile?.role === 'superadmin' && (
+            <div>
+              <div className="px-3 mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Platform</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/super-admin')}
+                className="w-full flex items-center min-w-0 px-4 py-3 rounded-xl transition-all text-white/60 hover:text-white hover:bg-white/5"
+              >
+                <Shield size={18} className="mr-3 shrink-0 text-white/40" />
+                <span className="font-semibold text-sm tracking-wide truncate flex-1 text-left">Command Center</span>
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Bottom Actions */}

@@ -39,6 +39,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
     setErrorDetails(null);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
+      await auth.currentUser?.getIdToken(true);
       await refreshProfile();
       toast.success('Signed in — verifying super admin access…');
     } catch (error: any) {
