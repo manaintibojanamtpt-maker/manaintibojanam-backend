@@ -275,7 +275,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       );
     }
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' && !isFounderOwnerEmail(currentUser.email)) {
       return <Navigate to="/admin" replace />;
     }
     if (userProfile.role === 'owner' && !repairAttempted) {

@@ -2468,7 +2468,7 @@ const isFounderOwnerEmail = (email?: string | null): boolean => {
   );
 };
 
-/** Founder standalone kitchen — always link mana-inti tenant + keep superadmin role if set. */
+/** Founder standalone kitchen — mana-inti owner + superadmin role + admin API claims. */
 async function linkFounderTenantIfNeeded(userId: string, email?: string | null): Promise<string[]> {
   if (!isFounderOwnerEmail(email)) return [];
 
@@ -2480,12 +2480,11 @@ async function linkFounderTenantIfNeeded(userId: string, email?: string | null):
 
   await db.collection("tenants").doc(FOUNDER_TENANT_ID).set({ ownerId: userId }, { merge: true });
 
-  const role = userDoc.data()?.role === "superadmin" ? "superadmin" : "owner";
   await userRef.set(
     {
       userId,
       ownedTenantIds: tenantIds,
-      role,
+      role: "superadmin",
       email: normalizedEmail,
       updatedAt: FieldValue.serverTimestamp(),
     },
@@ -4834,6 +4833,10 @@ app.post("/api/platform/grant-superadmin", async (req, res) => {
 
     await authAdmin.setCustomUserClaims(targetUid, { admin: true });
 
+    if (isFounderOwnerEmail(targetEmail)) {
+      await linkFounderTenantIfNeeded(targetUid, targetEmail);
+    }
+
     logger.info({ message: "Superadmin granted", uid: targetUid, email: targetEmail, reconciled });
     res.json({
       success: true,
@@ -4867,7 +4870,10 @@ app.post("/api/platform/repair-user-by-email", async (req, res) => {
   }
 
   try {
-    const result = await reconcileUserDocsForEmail(email, { deleteOrphans: deleteOrphans === true });
+    const result = await reconcileUserDocsForEmail(email, {
+      deleteOrphans: deleteOrphans === true,
+      preferredRole: isFounderOwnerEmail(email) ? "superadmin" : undefined,
+    });
     const founderTenants = await linkFounderTenantIfNeeded(result.canonicalUid, email);
     res.json({
       success: true,
