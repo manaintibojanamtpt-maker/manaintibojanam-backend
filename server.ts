@@ -1,4 +1,5 @@
 import express from "express";
+import dns from "dns";
 import rateLimit from "express-rate-limit";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -1506,8 +1507,19 @@ const getSettings = async () => {
 
 import nodemailer from "nodemailer";
 
+/** Render/cloud hosts often fail SMTP over IPv6 (ENETUNREACH to smtp.gmail.com). */
+dns.setDefaultResultOrder("ipv4first");
+
+const smtpIpv4Lookup: typeof dns.lookup = (hostname, options, callback) => {
+  if (typeof options === "function") {
+    return dns.lookup(hostname, { family: 4, all: false }, options);
+  }
+  const opts = typeof options === "number" ? { family: options } : { ...(options || {}) };
+  return dns.lookup(hostname, { ...opts, family: 4, all: false }, callback as any);
+};
+
 // --- NOTIFICATION HELPERS ---
-type EmailSendResult = { sent: boolean; skipped?: boolean; reason?: string; messageId?: string };
+type EmailSendResult = { sent: boolean; skipped?: boolean; queued?: boolean; reason?: string; messageId?: string };
 
 const getFounderEmail = (): string =>
   (process.env.FOUNDER_EMAIL || "manaintibojanamtpt@gmail.com").trim().toLowerCase();
@@ -1540,6 +1552,7 @@ const getEmailConfigStatus = () => {
     senderUser: maskedUser,
     founderEmail: getFounderEmail(),
     emailFrom: getEmailFromAddress(),
+    resendConfigured: Boolean(process.env.RESEND_API_KEY?.trim()),
   };
 };
 
@@ -1564,11 +1577,61 @@ const getTransporter = () => {
     host,
     port,
     secure: port === 465,
+    requireTLS: port === 587,
     auth: { user, pass },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000, // 5 seconds
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 30000,
+    lookup: smtpIpv4Lookup,
+    tls: {
+      minVersion: "TLSv1.2",
+      servername: host,
+    },
   });
 };
+
+async function sendViaResendApi(
+  to: string,
+  subject: string,
+  html: string,
+  options?: { fromLabel?: string; replyTo?: string },
+): Promise<EmailSendResult | null> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const fromEmail = getEmailFromAddress();
+  if (!fromEmail) return null;
+
+  const fromLabel = options?.fromLabel || "BhojanOS";
+  const from = process.env.RESEND_FROM || `"${fromLabel}" <${fromEmail}>`;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        html,
+        reply_to: options?.replyTo || undefined,
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const reason = payload?.message || payload?.error || `Resend HTTP ${response.status}`;
+      return { sent: false, reason };
+    }
+
+    return { sent: true, messageId: payload?.id };
+  } catch (err: any) {
+    return { sent: false, reason: err.message || String(err) };
+  }
+}
 
 const classifyError = (channel: string, err: any): 'RETRYABLE' | 'NON_RETRYABLE' => {
   const code = err.code || err.message || '';
@@ -1698,20 +1761,33 @@ async function sendEmailNotification(
   to: string,
   subject: string,
   body: string,
-  options?: { fromLabel?: string; replyTo?: string }
+  options?: { fromLabel?: string; replyTo?: string; fromOutbox?: boolean }
 ): Promise<EmailSendResult> {
-  const transporter = getTransporter();
   const emailFrom = getEmailFromAddress();
 
-  if (!transporter || !emailFrom) {
+  if (!emailFrom && !process.env.RESEND_API_KEY?.trim()) {
     const reason = "Email credentials missing or using placeholders";
     console.warn(`⚠️ ${reason}. Skipping email to ${to}.`);
-    console.log("💡 Set EMAIL_USER and EMAIL_PASS (Gmail App Password) on the backend host (e.g. Render).");
+    console.log("💡 Set RESEND_API_KEY or EMAIL_USER + EMAIL_PASS on Render.");
     return { sent: false, skipped: true, reason };
   }
 
   try {
     console.log(`📧 Attempting to send email to: ${to} (Subject: ${subject})`);
+
+    const resendResult = await sendViaResendApi(to, subject, body, options);
+    if (resendResult?.sent) {
+      console.log(`✅ Email sent via Resend! Message ID: ${resendResult.messageId}`);
+      return resendResult;
+    }
+    if (resendResult && !resendResult.sent && process.env.RESEND_API_KEY?.trim()) {
+      console.warn(`⚠️ Resend failed (${resendResult.reason}), falling back to SMTP…`);
+    }
+
+    const transporter = getTransporter();
+    if (!transporter) {
+      throw new Error(resendResult?.reason || "SMTP not configured");
+    }
 
     const info = await transporter.sendMail({
       from: formatEmailFromHeader(options?.fromLabel),
@@ -1727,18 +1803,28 @@ async function sendEmailNotification(
     if (err.code === "EAUTH") {
       console.error("🔑 Authentication failed. Use a Gmail App Password for EMAIL_PASS.");
     }
+    if (err.code === "ENETUNREACH" || err.code === "ESOCKET" || err.code === "ETIMEDOUT") {
+      console.error("🌐 SMTP network error — queued for retry. On Render, prefer RESEND_API_KEY over Gmail SMTP.");
+    }
 
-    await enqueueNotification({
-      channel: "EMAIL",
-      recipient: to,
-      messagePayload: { subject, body },
-      correlationId: `email-${Date.now()}`,
-      relatedEntities: {},
-      failureType: classifyError("EMAIL", err),
-      lastError: err.message || String(err),
-      attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }],
-    });
-    throw err;
+    if (!options?.fromOutbox) {
+      await enqueueNotification({
+        channel: "EMAIL",
+        recipient: to,
+        messagePayload: { subject, body },
+        correlationId: `email-${Date.now()}`,
+        relatedEntities: {},
+        failureType: classifyError("EMAIL", err),
+        lastError: err.message || String(err),
+        attempts: [{ timestamp: new Date().toISOString(), errorReason: err.message }],
+      });
+    }
+
+    return {
+      sent: false,
+      queued: !options?.fromOutbox,
+      reason: err.message || String(err),
+    };
   }
 }
 
@@ -2043,7 +2129,8 @@ const processOutboxBatch = async () => {
           const emailResult = await sendEmailNotification(
             data.recipient,
             data.messagePayload.subject,
-            data.messagePayload.body
+            data.messagePayload.body,
+            { fromOutbox: true },
           );
           if (!emailResult.sent) {
             const configErr = new Error(emailResult.reason || "Email not sent");
@@ -2174,7 +2261,9 @@ async function notifyCustomer(order: any, status: string) {
         <p style="font-size: 12px; color: #666;">This is an automated notification. Please do not reply to this email.</p>
       </div>
     `;
-    await sendEmailNotification(userEmail, `Order Status Update - #${order.orderNumber}`, emailBody);
+    await sendEmailNotification(userEmail, `Order Status Update - #${order.orderNumber}`, emailBody).catch(
+      (emailErr) => console.warn("Order email skipped:", emailErr?.message || emailErr),
+    );
   }
   
   if (order.phone) {
@@ -2281,15 +2370,10 @@ app.post("/api/admin/send-report", requireAdmin, async (req: any, res: any) => {
     XLSX.utils.book_append_sheet(wb, ws, "Orders");
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 5000, // 5 seconds
-    });
+    const transporter = getTransporter();
+    if (!transporter) {
+      return res.status(503).json({ success: false, error: "Email is not configured on this server" });
+    }
 
     const mailOptions = {
       from: `"Mana Inti Bojanam Admin" <${process.env.EMAIL_USER}>`,
@@ -3121,6 +3205,13 @@ app.post("/api/owner/welcome-email", strictLimiter, verifyFirebaseToken, async (
     });
 
     if (!emailResult.sent) {
+      if (emailResult.queued) {
+        return res.status(202).json({
+          success: true,
+          queued: true,
+          message: "Welcome email queued — SMTP will retry shortly",
+        });
+      }
       return res.status(503).json({
         success: false,
         error: emailResult.reason || "Welcome email could not be sent",
@@ -3828,7 +3919,7 @@ app.post("/api/orders/:id/notify-status", async (req: any, res: any) => {
     const notificationStatus = status || orderData.status;
 
     await notifyCustomer(orderData, notificationStatus);
-    res.json({ success: true, message: "Order notification sent" });
+    res.json({ success: true, message: "Order notification dispatch initiated" });
   } catch (err: any) {
     console.error("Order Notification Error:", err);
     res.status(500).json({ success: false, error: err.message || "Failed to send order notification" });
@@ -4696,10 +4787,12 @@ async function startServer() {
       console.log("✅ Outbox worker initialized");
 
       const emailStatus = getEmailConfigStatus();
-      if (emailStatus.configured) {
-        console.log(`✅ Email configured → founder alerts to ${emailStatus.founderEmail}`);
+      if (emailStatus.resendConfigured) {
+        console.log(`✅ Email configured via Resend → founder alerts to ${emailStatus.founderEmail}`);
+      } else if (emailStatus.configured) {
+        console.log(`✅ Email configured via SMTP (IPv4) → founder alerts to ${emailStatus.founderEmail}`);
       } else {
-        console.warn("⚠️ Email NOT configured — founder alerts and briefings will not send until EMAIL_USER/EMAIL_PASS are set on the backend.");
+        console.warn("⚠️ Email NOT configured — set RESEND_API_KEY (recommended on Render) or EMAIL_USER/EMAIL_PASS.");
       }
       
       // Initialize StoreBrain lazily (avoid full menu scan on every deploy boot)
