@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bhojanos-prod-api
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/server.cjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096

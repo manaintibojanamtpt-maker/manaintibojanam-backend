@@ -196,7 +196,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     setRepairAttempted(true);
     setRepairing(true);
-    void waitForOwnerTenantIds(currentUser.uid, refreshProfile, { email: currentUser.email, maxAttempts: 12 })
+    void waitForOwnerTenantIds(currentUser.uid, refreshProfile, { email: currentUser.email, maxAttempts: 6 })
       .then((ids) => {
         if (ids.length > 0) setRepairedTenantIds(ids);
       })

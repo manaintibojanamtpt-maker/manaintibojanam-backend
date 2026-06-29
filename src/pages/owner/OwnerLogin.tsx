@@ -8,7 +8,8 @@ import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { resolveOwnerDestination } from '../../lib/ownerRouting';
 import { EnvironmentConfig } from '../../config/environment';
 
 const GoogleIcon = () => (
@@ -32,47 +33,54 @@ const OwnerLogin = () => {
   const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
+  const ownedIds = userProfile?.ownedTenantIds?.filter(Boolean) ?? [];
+  const hasOwnedStore = ownedIds.length > 0;
 
-  // Already signed-in owners: one stable redirect (setup or dashboard), no render-time bounce.
   useEffect(() => {
-    if (authLoading || profileLoading || loading || redirecting || redirectChecked.current) return;
-    if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) === 0) return;
+    if (authLoading || loading || redirectChecked.current) return;
+    if (!currentUser || !hasOwnedStore) return;
+    if (profileLoading && !hasOwnedStore) return;
 
     redirectChecked.current = true;
     setRedirecting(true);
-    void getOwnerPostAuthPath(currentUser.uid, currentUser.email).then((path) => {
-      navigate(path, { replace: true });
-    });
-  }, [
-    authLoading,
-    profileLoading,
-    loading,
-    redirecting,
-    currentUser,
-    userProfile?.ownedTenantIds,
-    navigate,
-  ]);
+    void resolveOwnerDestination(currentUser.uid, currentUser.email, ownedIds)
+      .then((path) => {
+        window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
+      })
+      .catch(() => {
+        window.location.href = `${EnvironmentConfig.getBaseUrl()}/owner/dashboard`;
+      });
+  }, [authLoading, profileLoading, loading, currentUser, hasOwnedStore, ownedIds, navigate]);
 
-  if (authLoading || profileLoading || redirecting) {
+  if (authLoading || redirecting || (profileLoading && !hasOwnedStore)) {
     return (
       <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        {redirecting && <p className="text-sm text-white/60">Taking you to your store…</p>}
+        {redirecting && <p className="text-sm text-white/60">Taking you to your dashboard…</p>}
       </div>
     );
   }
 
-  const completeOwnerLogin = async (uid: string, email: string | null) => {
+  const completeOwnerLogin = async (uid: string, ownerEmail: string | null) => {
     setRedirecting(true);
-    const tenantIds = await waitForOwnerTenantIds(uid, refreshProfile, { email });
-    if (tenantIds.length > 0) {
+    try {
+      let ids = userProfile?.ownedTenantIds?.filter(Boolean) ?? [];
+      if (ids.length === 0) {
+        ids = await waitForOwnerTenantIds(uid, refreshProfile, { email: ownerEmail, maxAttempts: 6 });
+      }
+      if (ids.length === 0) {
+        toast.error('No store found for this account. Use the same sign-in method you used when registering.');
+        setRedirecting(false);
+        return;
+      }
       toast.success('Welcome back!');
-      const path = await getOwnerPostAuthPath(uid, email);
-      navigate(path, { replace: true });
-      return;
+      const path = await resolveOwnerDestination(uid, ownerEmail, ids);
+      window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
+    } catch (error) {
+      console.error('Owner login redirect failed:', error);
+      setRedirecting(false);
+      toast.error('Signed in, but redirect failed. Tap Sign In again or open your dashboard.');
     }
-    setRedirecting(false);
-    toast.error('No store found for this account. Use the same sign-in method you used when registering.');
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -101,7 +109,7 @@ const OwnerLogin = () => {
       const result = await signInWithPopup(auth, provider);
       await completeOwnerLogin(result.user.uid, result.user.email);
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-query-confirmation') {
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
         toast.error(error.message || 'Google login failed');
       }
@@ -177,8 +185,8 @@ const OwnerLogin = () => {
               </div>
             </div>
 
-            <SoftButton type="submit" tone="primary" fullWidth disabled={loading} className="mt-2">
-              {loading ? (
+            <SoftButton type="submit" tone="primary" fullWidth disabled={loading || redirecting} className="mt-2">
+              {loading || redirecting ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <>
@@ -199,7 +207,7 @@ const OwnerLogin = () => {
             type="button"
             tone="secondary"
             fullWidth
-            disabled={loading}
+            disabled={loading || redirecting}
             onClick={handleGoogleLogin}
             className="mt-6 relative z-10"
           >

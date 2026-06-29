@@ -173,11 +173,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 phone: user.phoneNumber,
               }),
               new Promise<never>((_, reject) => {
-                window.setTimeout(() => reject(new Error('Firebase connection timeout')), 8000);
+                window.setTimeout(() => reject(new Error('Firebase connection timeout')), 5000);
               }),
             ]);
 
-            const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
+            const profileOwned = Array.isArray(profile.ownedTenantIds)
+              ? profile.ownedTenantIds.filter(Boolean)
+              : [];
+            const ownedIds =
+              profileOwned.length > 0
+                ? profileOwned
+                : await Promise.race([
+                    resolveOwnerTenantIds(user.uid, user.email),
+                    new Promise<string[]>((resolve) => {
+                      window.setTimeout(() => resolve([]), 4000);
+                    }),
+                  ]);
             const elevatedRole =
               ownedIds.length > 0 && (!profile.role || profile.role === 'user')
                 ? 'owner'
@@ -207,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       profileTimeoutId = window.setTimeout(() => {
         setProfileLoading(false);
-      }, 12000);
+      }, 6000);
     });
 
     return () => {

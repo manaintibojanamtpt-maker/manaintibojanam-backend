@@ -14,6 +14,14 @@
   ],
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/marketing.html"
+    },
+    {
+      "source": "/(onboard|pricing|about|platform|security|contact|blog)",
+      "destination": "/marketing.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -2,6 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './lib/splashScreen';
 
+function isOwnerAuthPath(pathname?: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const path = pathname ?? window.location.pathname;
+  return path === '/owner/login' || path === '/owner/register';
+}
+
 dismissSplash();
 scheduleSplashSafetyTimeout();
 
@@ -38,6 +44,12 @@ async function bootstrap() {
         </ErrorBoundary>
       </React.StrictMode>
     );
+    return;
+  }
+
+  if (isOwnerAuthPath()) {
+    clearBootFallback();
+    await import('./ownerAuthBootstrap');
     return;
   }
 

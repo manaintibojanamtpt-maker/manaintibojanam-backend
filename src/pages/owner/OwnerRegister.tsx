@@ -12,7 +12,8 @@ import { onboardingPlanMessaging } from '../../config/pricing';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
-import { getOwnerPostAuthPath, waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { resolveOwnerDestination } from '../../lib/ownerRouting';
 import { provisionOwnerStore } from '../../lib/ownerProvisioning';
 
 const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
@@ -56,8 +57,9 @@ const OwnerRegister = () => {
     if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) === 0) return;
 
     redirectChecked.current = true;
-    void getOwnerPostAuthPath(currentUser.uid, currentUser.email).then((path) => {
-      navigate(path, { replace: true });
+    const ids = userProfile?.ownedTenantIds?.filter(Boolean) ?? [];
+    void resolveOwnerDestination(currentUser.uid, currentUser.email, ids).then((path) => {
+      window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
     });
   }, [
     authLoading,
@@ -71,10 +73,10 @@ const OwnerRegister = () => {
 
   const finishOwnerRegistration = async (uid: string, ownerEmail: string | null, tenantSlug: string) => {
     void requestOwnerWelcomeEmail(tenantSlug);
-    await waitForOwnerTenantIds(uid, refreshProfile, { email: ownerEmail });
-    const path = await getOwnerPostAuthPath(uid, ownerEmail);
+    const ids = await waitForOwnerTenantIds(uid, refreshProfile, { email: ownerEmail, maxAttempts: 8 });
+    const path = await resolveOwnerDestination(uid, ownerEmail, ids.length > 0 ? ids : [tenantSlug]);
     toast.success('Welcome!');
-    navigate(path, { replace: true });
+    window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
   };
 
   if (authLoading || profileLoading || provisioning) {
