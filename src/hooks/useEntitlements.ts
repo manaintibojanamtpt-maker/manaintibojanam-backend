@@ -1,5 +1,6 @@
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
+import { isFounderOwnerEmail } from '../config/founder';
 
 export interface Entitlements {
   maxOrders: number;
@@ -142,7 +143,7 @@ export const useEntitlements = (): Entitlements => {
   }
 
   // 4. Founder Bypass (Master Store)
-  if (currentUser?.email === 'manaintibojanamtpt@gmail.com') {
+  if (isFounderOwnerEmail(currentUser?.email)) {
     return {
       maxOrders: Infinity,
       maxUsers: Infinity,

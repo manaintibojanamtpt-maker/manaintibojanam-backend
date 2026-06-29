@@ -2,6 +2,7 @@ import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
+import { isFounderOwnerEmail } from './config/founder';
 import { waitForOwnerTenantIds } from './lib/ownerAccess';
 import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
 
@@ -263,8 +264,16 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Owner portal is only for users who own a kitchen — never for platform admin impersonation.
   if (effectiveOwnedTenants.length === 0) {
-    if (userProfile.role === 'superadmin') {
+    if (userProfile.role === 'superadmin' && !isFounderOwnerEmail(currentUser.email)) {
       return <Navigate to="/super-admin" replace />;
+    }
+    if (isFounderOwnerEmail(currentUser.email) && !repairAttempted) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+          <p className="text-sm text-white/60">Linking founder kitchen…</p>
+        </div>
+      );
     }
     if (userProfile.role === 'admin') {
       return <Navigate to="/admin" replace />;

@@ -277,7 +277,7 @@ const validateSecrets = () => {
     logger.warn("EMAIL_USER/EMAIL_PASS still use placeholder values. Founder alerts will not send.");
   }
 
-  const founderEmail = process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com";
+  const founderEmail = process.env.FOUNDER_EMAIL || "manaintibojanamtpt@gmail.com";
   logger.info({
     message: "Platform boot",
     founderEmail,
@@ -1140,7 +1140,7 @@ app.get("/api/health", async (req, res) => {
     env: process.env.NODE_ENV,
     email: {
       configured: emailConfigured,
-      founderRecipient: (process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com").trim().toLowerCase(),
+      founderRecipient: (process.env.FOUNDER_EMAIL || "manaintibojanamtpt@gmail.com").trim().toLowerCase(),
     },
     firestore: {
       backedOff: isFirestoreBackedOff(),
@@ -1457,7 +1457,7 @@ import nodemailer from "nodemailer";
 type EmailSendResult = { sent: boolean; skipped?: boolean; reason?: string; messageId?: string };
 
 const getFounderEmail = (): string =>
-  (process.env.FOUNDER_EMAIL || "bhojanos26@gmail.com").trim().toLowerCase();
+  (process.env.FOUNDER_EMAIL || "manaintibojanamtpt@gmail.com").trim().toLowerCase();
 
 const getEmailFromAddress = (): string | null => {
   const user = process.env.EMAIL_USER || process.env.SMTP_USER;
@@ -2455,6 +2455,48 @@ const slugFromRestaurantName = (restaurantName: string): string =>
 const isReservedOwnerSlug = (slug: string): boolean =>
   OWNER_RESERVED_SLUGS.some((reserved) => slug.startsWith(reserved));
 
+const FOUNDER_TENANT_ID = (process.env.FOUNDER_TENANT_ID || "mana-inti").trim();
+
+const isFounderOwnerEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  const founderEnv = (process.env.FOUNDER_EMAIL || "manaintibojanamtpt@gmail.com").trim().toLowerCase();
+  return (
+    normalized === "manaintibojanamtpt@gmail.com" ||
+    normalized === founderEnv ||
+    normalized === "bhojanos26@gmail.com"
+  );
+};
+
+/** Founder standalone kitchen — always link mana-inti tenant + keep superadmin role if set. */
+async function linkFounderTenantIfNeeded(userId: string, email?: string | null): Promise<string[]> {
+  if (!isFounderOwnerEmail(email)) return [];
+
+  const normalizedEmail = email!.trim().toLowerCase();
+  const userRef = db.collection("users").doc(userId);
+  const userDoc = await userRef.get();
+  const existingOwned: string[] = userDoc.exists ? userDoc.data()?.ownedTenantIds || [] : [];
+  const tenantIds = Array.from(new Set([...existingOwned.filter(Boolean), FOUNDER_TENANT_ID]));
+
+  await db.collection("tenants").doc(FOUNDER_TENANT_ID).set({ ownerId: userId }, { merge: true });
+
+  const role = userDoc.data()?.role === "superadmin" ? "superadmin" : "owner";
+  await userRef.set(
+    {
+      userId,
+      ownedTenantIds: tenantIds,
+      role,
+      email: normalizedEmail,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  await getAdminAuth(appAdmin).setCustomUserClaims(userId, { admin: true });
+
+  return tenantIds;
+}
+
 /** Link tenant docs to user via Admin SDK (client cannot write ownedTenantIds/role). */
 async function syncOwnerTenantsForUser(
   userId: string,
@@ -2463,6 +2505,11 @@ async function syncOwnerTenantsForUser(
   const userRef = db.collection('users').doc(userId);
   const userDoc = await userRef.get();
   const existingOwned: string[] = userDoc.exists ? userDoc.data()?.ownedTenantIds || [] : [];
+
+  if (isFounderOwnerEmail(email || userDoc.data()?.email)) {
+    return linkFounderTenantIfNeeded(userId, email || userDoc.data()?.email);
+  }
+
   if (existingOwned.length > 0) {
     return existingOwned.filter(Boolean);
   }
@@ -4821,13 +4868,17 @@ app.post("/api/platform/repair-user-by-email", async (req, res) => {
 
   try {
     const result = await reconcileUserDocsForEmail(email, { deleteOrphans: deleteOrphans === true });
+    const founderTenants = await linkFounderTenantIfNeeded(result.canonicalUid, email);
     res.json({
       success: true,
       ...result,
+      ownedTenantIds: founderTenants.length > 0 ? founderTenants : undefined,
       message:
-        result.duplicateDocIds.length > 0
-          ? `Merged profile onto users/${result.canonicalUid}. Duplicate doc IDs: ${result.duplicateDocIds.join(", ")}`
-          : `Profile OK at users/${result.canonicalUid} (no duplicates found).`,
+        founderTenants.length > 0
+          ? `Founder profile linked to ${FOUNDER_TENANT_ID} at users/${result.canonicalUid}.`
+          : result.duplicateDocIds.length > 0
+            ? `Merged profile onto users/${result.canonicalUid}. Duplicate doc IDs: ${result.duplicateDocIds.join(", ")}`
+            : `Profile OK at users/${result.canonicalUid} (no duplicates found).`,
     });
   } catch (err: any) {
     logger.error({ message: "Failed to repair user by email", error: err.message });
