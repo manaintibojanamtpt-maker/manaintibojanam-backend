@@ -2862,9 +2862,25 @@ app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res
       updates['onboardingStatus.currentStep'] = nextStep;
     }
     if (isComplete === true) {
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 14);
+      const trialExpiresIso = trialExpiresAt.toISOString();
+
       updates['onboardingStatus.isComplete'] = true;
       updates['onboardingStatus.completedAt'] = FieldValue.serverTimestamp();
       updates['onboardingStatus.migrated'] = false;
+      updates['onboardingStatus.currentStep'] = 7;
+      updates.storeStatus = 'active';
+      updates.status = 'trialing';
+      updates.trialEndsAt = trialExpiresIso;
+      updates.subscription = {
+        planId: 'growth',
+        status: 'trialing',
+        trialActivatedAt: new Date().toISOString(),
+        trialExpiresAt: trialExpiresIso,
+        trialType: 'growth',
+        onboardingTrial: true,
+      };
     }
 
     await db.collection('tenants').doc(resolvedTenantId).set(updates, { merge: true });
@@ -2873,6 +2889,53 @@ app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res
     const status = err.statusCode || 500;
     logger.error({ message: 'Owner onboarding step save failed', err: err.message, uid: req.user?.uid });
     res.status(status).json({ success: false, error: err.message || 'Failed to save onboarding step' });
+  }
+});
+
+app.post('/api/owner/activate-growth-trial', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'tenantId is required' });
+    }
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+    const existing = tenantDoc.exists ? tenantDoc.data()?.subscription : null;
+    if (existing?.planId === 'growth' && existing?.status === 'trialing' && existing?.trialExpiresAt) {
+      const stillActive = new Date(existing.trialExpiresAt).getTime() > Date.now();
+      if (stillActive) {
+        return res.json({ success: true, tenantId: resolvedTenantId, alreadyActive: true, trialExpiresAt: existing.trialExpiresAt });
+      }
+    }
+
+    const trialExpiresAt = new Date();
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + 14);
+    const trialExpiresIso = trialExpiresAt.toISOString();
+
+    await db.collection('tenants').doc(resolvedTenantId).set(
+      {
+        storeStatus: 'active',
+        status: 'trialing',
+        trialEndsAt: trialExpiresIso,
+        subscription: {
+          planId: 'growth',
+          status: 'trialing',
+          trialActivatedAt: new Date().toISOString(),
+          trialExpiresAt: trialExpiresIso,
+          trialType: 'growth',
+          onboardingTrial: true,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    res.json({ success: true, tenantId: resolvedTenantId, trialExpiresAt: trialExpiresIso });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner growth trial activation failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to activate Growth trial' });
   }
 });
 

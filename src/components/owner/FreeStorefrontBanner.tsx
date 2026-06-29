@@ -80,10 +80,10 @@ export const FreeStorefrontBanner: React.FC<FreeStorefrontBannerProps> = ({
 
   const handlePrimary = async () => {
     if (onboardingIncomplete) {
-      navigate('/owner/setup');
+      navigate('/owner/setup?step=7');
       return;
     }
-    if (onboardingComplete || storeAlreadyLive) {
+    if (storeAlreadyLive || onboardingComplete) {
       await startGrowthTrial();
       return;
     }

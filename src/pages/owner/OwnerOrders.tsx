@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
@@ -179,8 +180,13 @@ const OwnerOrders: React.FC = () => {
     if (!dispatchOrder) return;
     
     const updated = await updateOrderStatus(dispatchOrder, 'OUT_FOR_DELIVERY', {
-      ...dispatchData,
-      deliveryAssignedAt: new Date().toISOString()
+      deliveryPartner: dispatchData.deliveryPartner,
+      trackingUrl: dispatchData.trackingUrl.trim() || null,
+      trackingLink: dispatchData.trackingUrl.trim() || null,
+      riderName: dispatchData.riderName.trim() || null,
+      riderPhone: dispatchData.riderPhone.trim() || null,
+      notifyCustomer: dispatchData.notifyCustomer,
+      deliveryAssignedAt: new Date().toISOString(),
     });
 
     if (!updated) return;
@@ -507,98 +513,106 @@ const OwnerOrders: React.FC = () => {
         )}
       </div>
 
-      {/* Dispatch Modal */}
-      {dispatchModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center p-3 sm:p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-              <Truck className="w-5 h-5 mr-2 text-blue-500" /> Dispatch Delivery
-            </h2>
-            <form onSubmit={handleDispatch} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Delivery Partner</label>
-                <select 
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
-                  value={dispatchData.deliveryPartner}
-                  onChange={e => setDispatchData({...dispatchData, deliveryPartner: e.target.value})}
-                >
-                  {DELIVERY_PARTNER_OPTIONS.map((partner) => (
-                    <option key={partner} value={partner}>{partner}</option>
-                  ))}
-                </select>
-              </div>
+      {/* Dispatch Modal — portaled so it sits above owner bottom nav */}
+      {dispatchModalOpen && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+          <div className="flex w-full max-w-md max-h-[min(92dvh,720px)] flex-col rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl dark:bg-[#141416] sm:max-h-[90dvh]">
+            <div className="flex-shrink-0 border-b border-gray-200 px-5 py-4 dark:border-white/10">
+              <h2 className="flex items-center text-xl font-bold text-gray-900 dark:text-white">
+                <Truck className="mr-2 h-5 w-5 text-blue-500" /> Dispatch Delivery
+              </h2>
+            </div>
 
-              {isThirdPartyDeliveryPartner(dispatchData.deliveryPartner) && (
-                <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-3 py-2">
-                  Paste the partner tracking link if available. BhojanOS cannot auto-detect delivery completion from {dispatchData.deliveryPartner} yet — you will confirm delivery manually when the partner marks it done.
-                </p>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tracking URL (recommended for partner apps)</label>
-                <input 
-                  type="url"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
-                  placeholder="https://porter.in/track/..."
-                  value={dispatchData.trackingUrl}
-                  onChange={e => setDispatchData({...dispatchData, trackingUrl: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleDispatch} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rider Name</label>
-                  <input 
-                    type="text"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
-                    placeholder="Raju"
-                    value={dispatchData.riderName}
-                    onChange={e => setDispatchData({...dispatchData, riderName: e.target.value})}
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Delivery Partner</label>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    value={dispatchData.deliveryPartner}
+                    onChange={(e) => setDispatchData({ ...dispatchData, deliveryPartner: e.target.value })}
+                  >
+                    {DELIVERY_PARTNER_OPTIONS.map((partner) => (
+                      <option key={partner} value={partner}>{partner}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {isThirdPartyDeliveryPartner(dispatchData.deliveryPartner) && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                    Paste the partner tracking link if available. BhojanOS cannot auto-detect delivery completion from {dispatchData.deliveryPartner} yet — you will confirm delivery manually when the partner marks it done.
+                  </p>
+                )}
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Tracking URL (recommended for partner apps)</label>
+                  <input
+                    type="url"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    placeholder="https://porter.in/track/..."
+                    value={dispatchData.trackingUrl}
+                    onChange={(e) => setDispatchData({ ...dispatchData, trackingUrl: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rider Phone</label>
-                  <input 
-                    type="tel"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
-                    placeholder="9876543210"
-                    value={dispatchData.riderPhone}
-                    onChange={e => setDispatchData({...dispatchData, riderPhone: e.target.value})}
-                  />
-                </div>
-              </div>
 
-              <div className="flex items-center mt-2">
-                <input 
-                  type="checkbox" 
-                  id="notifyCustomer" 
-                  checked={dispatchData.notifyCustomer}
-                  onChange={e => setDispatchData({...dispatchData, notifyCustomer: e.target.checked})}
-                  className="rounded text-brand-primary focus:ring-brand-primary"
-                />
-                <label htmlFor="notifyCustomer" className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                  Notify customer via WhatsApp/Push
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Rider Name</label>
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      placeholder="Raju"
+                      value={dispatchData.riderName}
+                      onChange={(e) => setDispatchData({ ...dispatchData, riderName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Rider Phone</label>
+                    <input
+                      type="tel"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      placeholder="9876543210"
+                      value={dispatchData.riderPhone}
+                      onChange={(e) => setDispatchData({ ...dispatchData, riderPhone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="notifyCustomer"
+                    checked={dispatchData.notifyCustomer}
+                    onChange={(e) => setDispatchData({ ...dispatchData, notifyCustomer: e.target.checked })}
+                    className="rounded text-brand-primary focus:ring-brand-primary"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Notify customer via WhatsApp/Push</span>
                 </label>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-4">
-                <button 
+              <div className="grid flex-shrink-0 grid-cols-2 gap-3 border-t border-gray-200 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/10">
+                <button
                   type="button"
-                  onClick={() => setDispatchModalOpen(false)}
-                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+                  onClick={() => {
+                    setDispatchModalOpen(false);
+                    setDispatchOrder(null);
+                  }}
+                  className="min-h-[48px] rounded-xl bg-gray-100 px-4 py-2.5 font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  disabled={!!updatingOrderId}
+                  className="min-h-[48px] rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
                 >
-                  Confirm Dispatch
+                  {updatingOrderId ? 'Saving…' : 'Confirm Dispatch'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Quick Stock Modal */}

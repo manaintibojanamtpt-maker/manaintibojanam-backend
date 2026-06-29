@@ -17,6 +17,7 @@ import { computeStoreSetupProgress, needsStoreSetup } from '../../lib/storeSetup
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
+import { EnvironmentConfig } from '../../config/environment';
 
 const WIZARD_STEPS = STORE_SETUP_STEPS.filter((s) => s.wizardStep != null).map((s) => ({
   id: s.wizardStep!,
@@ -84,7 +85,7 @@ const OnboardingWizard: React.FC = () => {
     const progress = computeStoreSetupProgress(tenantInfo, menuCount);
     const resumeStep = progress.wizardStep;
 
-    if (tenantInfo.onboardingStatus?.isComplete && !needsStoreSetup(tenantInfo, menuCount)) {
+    if (tenantInfo.onboardingStatus?.isComplete) {
       navigate('/owner/dashboard');
       return;
     }
@@ -226,10 +227,14 @@ const OnboardingWizard: React.FC = () => {
         navigate(`/owner/setup?step=${currentStep + 1}`, { replace: true });
       } else {
         await saveProgress(currentStep, true);
-        await activateGrowthOnboardingTrial(tenantInfo.slug);
+        try {
+          await activateGrowthOnboardingTrial(tenantInfo.id);
+        } catch (trialError) {
+          console.warn('Growth trial activation fallback skipped:', trialError);
+        }
         void requestOwnerWelcomeEmail(tenantInfo.slug);
         toast.success(`Store is live! Your ${PLAN_TRIALS.growthOnboardingDays}-day Growth trial has started.`);
-        navigate('/owner/dashboard');
+        navigate('/owner/dashboard', { replace: true });
       }
     } catch {
       // toast already shown
@@ -453,7 +458,10 @@ const OnboardingWizard: React.FC = () => {
             </div>
             <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
               <h3 className="text-lg font-medium text-orange-400 mb-2">Your store URL</h3>
-              <p className="text-gray-300">Customers will order at <strong>{tenantInfo.slug}.bhojanos.com</strong></p>
+              <p className="text-gray-300 break-all">
+                Customers will order at{' '}
+                <strong>{EnvironmentConfig.getStorefrontUrl(tenantInfo.slug || tenantInfo.id)}</strong>
+              </p>
             </div>
           </div>
         );

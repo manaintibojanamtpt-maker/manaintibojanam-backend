@@ -524,7 +524,7 @@ const AppContent: React.FC = () => {
           <InstallPrompt />
           <NotchNotification />
           <FlyToCartAnimation />
-          <Toaster position="bottom-center" containerStyle={{ zIndex: 9000 }} />
+          <AppToaster />
 
           <BiometricModal
             isOpen={isAppLocked}
@@ -537,6 +537,34 @@ const AppContent: React.FC = () => {
         </div>
       </Router>
     </LazyMotion>
+  );
+};
+
+const AppToaster: React.FC = () => {
+  const location = useLocation();
+  const isOwnerPortal = location.pathname.startsWith('/owner');
+
+  return (
+    <Toaster
+      position={isOwnerPortal ? 'top-center' : 'bottom-center'}
+      containerStyle={{
+        zIndex: 99999,
+        top: isOwnerPortal ? 'calc(env(safe-area-inset-top, 0px) + 3.75rem)' : undefined,
+        bottom: isOwnerPortal ? undefined : 'max(1rem, env(safe-area-inset-bottom))',
+      }}
+      toastOptions={{
+        style: {
+          maxWidth: 'min(92vw, 24rem)',
+          ...(isOwnerPortal
+            ? {
+                background: '#1a1410',
+                color: '#fff',
+                border: '1px solid rgba(255,122,0,0.25)',
+              }
+            : {}),
+        },
+      }}
+    />
   );
 };
 

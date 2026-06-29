@@ -1,6 +1,4 @@
 import { PLAN_TRIALS, growthOnboardingTrialExpiresAt } from '../config/pricing';
-import { getDb } from './firebase-db';
-import { doc, updateDoc } from 'firebase/firestore';
 
 type TenantPlanSnapshot = {
   subscription?: {
@@ -170,19 +168,8 @@ export function buildGrowthOnboardingTrialPatch() {
 }
 
 export async function activateGrowthOnboardingTrial(tenantDocId: string): Promise<void> {
-  const trialExpiresAt = growthOnboardingTrialExpiresAt();
-  const db = getDb();
-  await updateDoc(doc(db, 'tenants', tenantDocId), {
-    storeStatus: 'active',
-    status: 'trialing',
-    trialEndsAt: trialExpiresAt,
-    'subscription.planId': 'growth',
-    'subscription.status': 'trialing',
-    'subscription.trialActivatedAt': new Date().toISOString(),
-    'subscription.trialExpiresAt': trialExpiresAt,
-    'subscription.trialType': 'growth',
-    'subscription.onboardingTrial': true,
-  });
+  const { ownerApiRequest } = await import('../lib/ownerProvisioning');
+  await ownerApiRequest('POST', '/api/owner/activate-growth-trial', { tenantId: tenantDocId });
 }
 
 export { PLAN_TRIALS };

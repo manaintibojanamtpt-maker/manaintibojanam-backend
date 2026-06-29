@@ -164,8 +164,8 @@ export interface OrderTimelineEvent {
   id: string;
   eventType: 'status_change' | 'payment_verified' | 'payment_failed' | 'courier_assigned' | 'admin_note' | 'feedback_submitted' | 'cancellation';
   description: string;
-  previousStatus?: OrderStatus;
-  newStatus?: OrderStatus;
+  previousStatus?: OrderStatus | null;
+  newStatus?: OrderStatus | null;
   triggeredBy: 'system' | 'admin' | 'customer' | 'courier';
   triggeredByUser?: string;    // User ID who triggered
   metadata?: Record<string, any>;

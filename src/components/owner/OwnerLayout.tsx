@@ -418,7 +418,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
 
         {/* Scrollable Content Container */}
         <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto w-full pb-4 lg:pb-8 space-y-4">
+          <div className="max-w-6xl mx-auto w-full pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-8 space-y-4">
             {showSetupNav && location.pathname !== '/owner/dashboard' && (
               <StoreSetupGuide tenantInfo={tenantInfo} menuCount={0} variant="compact" />
             )}
