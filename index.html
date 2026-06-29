@@ -69,7 +69,8 @@
         var host = window.location.hostname.toLowerCase();
         var isBhojanHost = host === 'localhost' || host === '127.0.0.1' || host.indexOf('bhojanos') !== -1;
         var isMarketing = path === '/onboard' || path === '/pricing' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && isBhojanHost);
-        if (isMarketing) return;
+        var isNonStorefront = isMarketing || path.indexOf('/owner') === 0 || path.indexOf('/super-admin') === 0 || path.indexOf('/admin') === 0;
+        if (isNonStorefront) return;
         document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
         document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
         document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
