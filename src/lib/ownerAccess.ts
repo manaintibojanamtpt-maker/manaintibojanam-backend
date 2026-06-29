@@ -1,16 +1,36 @@
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { getDb } from './firebase-db';
 import { syncOwnerTenantsViaApi } from './ownerProvisioning';
+import { readCachedOwnerTenantIds, cacheOwnerTenantIds } from './ownerRedirect';
 
-/** Read ownedTenantIds — prefer cache for speed after login. */
+const FIRESTORE_READ_TIMEOUT_MS = 4_000;
+const API_SYNC_TIMEOUT_MS = 5_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => window.setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+/** Read ownedTenantIds — cache-first for speed after login. */
 async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
+  const cached = readCachedOwnerTenantIds();
+  if (cached.length > 0) return cached;
+
   const db = getDb();
   try {
-    const userSnap = await getDoc(doc(db, 'users', uid));
-    if (userSnap.exists()) {
+    const userSnap = await withTimeout(
+      getDoc(doc(db, 'users', uid)),
+      FIRESTORE_READ_TIMEOUT_MS,
+      null as any,
+    );
+    if (userSnap?.exists()) {
       const owned = userSnap.data()?.ownedTenantIds;
       if (Array.isArray(owned) && owned.length > 0) {
-        return owned.filter(Boolean);
+        const ids = owned.filter(Boolean);
+        cacheOwnerTenantIds(ids);
+        return ids;
       }
     }
   } catch (error) {
@@ -18,9 +38,16 @@ async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
   }
 
   try {
-    const tenantSnap = await getDocs(query(collection(db, 'tenants'), where('ownerId', '==', uid)));
-    const tenantIds = tenantSnap.docs.map((d) => d.id);
-    if (tenantIds.length > 0) return tenantIds;
+    const tenantSnap = await withTimeout(
+      getDocs(query(collection(db, 'tenants'), where('ownerId', '==', uid))),
+      FIRESTORE_READ_TIMEOUT_MS,
+      null as any,
+    );
+    if (tenantSnap?.docs?.length) {
+      const tenantIds = tenantSnap.docs.map((d) => d.id);
+      cacheOwnerTenantIds(tenantIds);
+      return tenantIds;
+    }
   } catch (error) {
     console.warn('resolveOwnerTenantIds: ownerId lookup failed', error);
   }
@@ -34,8 +61,11 @@ export async function resolveOwnerTenantIds(uid: string, email?: string | null):
   if (fromUserDoc.length > 0) return fromUserDoc;
 
   try {
-    const synced = await syncOwnerTenantsViaApi();
-    if (synced.length > 0) return synced;
+    const synced = await withTimeout(syncOwnerTenantsViaApi(), API_SYNC_TIMEOUT_MS, [] as string[]);
+    if (synced.length > 0) {
+      cacheOwnerTenantIds(synced);
+      return synced;
+    }
   } catch (error) {
     console.warn('resolveOwnerTenantIds: server sync failed', error);
   }
@@ -43,17 +73,15 @@ export async function resolveOwnerTenantIds(uid: string, email?: string | null):
   if (email) {
     try {
       const db = getDb();
-      const emailSnap = await getDocs(
-        query(collection(db, 'tenants'), where('kyc.email', '==', email.trim().toLowerCase())),
+      const emailSnap = await withTimeout(
+        getDocs(query(collection(db, 'tenants'), where('kyc.email', '==', email.trim().toLowerCase()))),
+        FIRESTORE_READ_TIMEOUT_MS,
+        null as any,
       );
-      if (emailSnap.docs.length > 0) {
-        try {
-          const synced = await syncOwnerTenantsViaApi();
-          if (synced.length > 0) return synced;
-        } catch (retryErr) {
-          console.warn('resolveOwnerTenantIds: retry sync failed', retryErr);
-        }
-        return emailSnap.docs.map((d) => d.id);
+      if (emailSnap?.docs?.length) {
+        const ids = emailSnap.docs.map((d) => d.id);
+        cacheOwnerTenantIds(ids);
+        return ids;
       }
     } catch (error) {
       console.warn('resolveOwnerTenantIds: email lookup failed', error);
@@ -78,6 +106,7 @@ export async function waitForOwnerTenantIds(
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const ids = await resolveOwnerTenantIds(uid, options?.email);
     if (ids.length > 0) {
+      cacheOwnerTenantIds(ids);
       await refreshProfile();
       return ids;
     }

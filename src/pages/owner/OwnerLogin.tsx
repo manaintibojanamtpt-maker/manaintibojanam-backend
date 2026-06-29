@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { waitForOwnerTenantIds } from '../../lib/ownerAccess';
-import { resolveOwnerDestination } from '../../lib/ownerRouting';
+import { redirectToOwnerDashboard } from '../../lib/ownerRedirect';
 import { EnvironmentConfig } from '../../config/environment';
+
+const REDIRECT_GUARD_MS = 8_000;
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -29,58 +30,54 @@ const OwnerLogin = () => {
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const redirectChecked = useRef(false);
-  const navigate = useNavigate();
-  const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
+  const redirectGuardRef = useRef<number | null>(null);
+  const { currentUser, loading: authLoading } = useAuth();
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
-  const ownedIds = userProfile?.ownedTenantIds?.filter(Boolean) ?? [];
-  const hasOwnedStore = ownedIds.length > 0;
+
+  const beginDashboardRedirect = () => {
+    setRedirecting(true);
+    if (redirectGuardRef.current !== null) {
+      window.clearTimeout(redirectGuardRef.current);
+    }
+    redirectGuardRef.current = window.setTimeout(() => {
+      redirectToOwnerDashboard();
+    }, REDIRECT_GUARD_MS);
+    redirectToOwnerDashboard();
+  };
 
   useEffect(() => {
-    if (authLoading || loading || redirectChecked.current) return;
-    if (!currentUser || !hasOwnedStore) return;
-    if (profileLoading && !hasOwnedStore) return;
+    return () => {
+      if (redirectGuardRef.current !== null) {
+        window.clearTimeout(redirectGuardRef.current);
+      }
+    };
+  }, []);
 
+  // Already signed in → go straight to dashboard (OwnerRoute repairs tenant link).
+  useEffect(() => {
+    if (authLoading || loading || redirectChecked.current || !currentUser) return;
     redirectChecked.current = true;
-    setRedirecting(true);
-    void resolveOwnerDestination(currentUser.uid, currentUser.email, ownedIds)
-      .then((path) => {
-        window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
-      })
-      .catch(() => {
-        window.location.href = `${EnvironmentConfig.getBaseUrl()}/owner/dashboard`;
-      });
-  }, [authLoading, profileLoading, loading, currentUser, hasOwnedStore, ownedIds, navigate]);
+    beginDashboardRedirect();
+  }, [authLoading, loading, currentUser]);
 
-  if (authLoading || redirecting || (profileLoading && !hasOwnedStore)) {
+  if (authLoading || redirecting) {
     return (
-      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3">
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        {redirecting && <p className="text-sm text-white/60">Taking you to your dashboard…</p>}
+        <p className="text-sm text-white/60">Taking you to your dashboard…</p>
+        <p className="text-xs text-white/40 max-w-xs">
+          If this takes more than a few seconds,{' '}
+          <button type="button" className="text-orange-400 underline" onClick={redirectToOwnerDashboard}>
+            tap here
+          </button>
+        </p>
       </div>
     );
   }
 
-  const completeOwnerLogin = async (uid: string, ownerEmail: string | null) => {
-    setRedirecting(true);
-    try {
-      let ids = userProfile?.ownedTenantIds?.filter(Boolean) ?? [];
-      if (ids.length === 0) {
-        ids = await waitForOwnerTenantIds(uid, refreshProfile, { email: ownerEmail, maxAttempts: 6 });
-      }
-      if (ids.length === 0) {
-        toast.error('No store found for this account. Use the same sign-in method you used when registering.');
-        setRedirecting(false);
-        return;
-      }
-      toast.success('Welcome back!');
-      const path = await resolveOwnerDestination(uid, ownerEmail, ids);
-      window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
-    } catch (error) {
-      console.error('Owner login redirect failed:', error);
-      setRedirecting(false);
-      toast.error('Signed in, but redirect failed. Tap Sign In again or open your dashboard.');
-    }
+  const completeOwnerLogin = () => {
+    beginDashboardRedirect();
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -89,13 +86,13 @@ const OwnerLogin = () => {
 
     setLoading(true);
     try {
-      const credential = await signInWithEmailAndPassword(auth, email, password);
-      await completeOwnerLogin(credential.user.uid, credential.user.email);
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success('Welcome back!');
+      completeOwnerLogin();
     } catch (error: any) {
       console.error('Owner Login Error:', error);
       logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
       toast.error('Invalid email or password. Did you sign up with Google?');
-    } finally {
       setLoading(false);
     }
   };
@@ -106,14 +103,14 @@ const OwnerLogin = () => {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider);
-      await completeOwnerLogin(result.user.uid, result.user.email);
+      await signInWithPopup(auth, provider);
+      toast.success('Welcome back!');
+      completeOwnerLogin();
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
         toast.error(error.message || 'Google login failed');
       }
-    } finally {
       setLoading(false);
     }
   };

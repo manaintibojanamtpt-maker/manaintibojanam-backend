@@ -15,20 +15,33 @@ async function ownerApiPost<T>(path: string, body?: Record<string, unknown>): Pr
   }
 
   const token = await user.getIdToken();
-  const res = await fetch(`${EnvironmentConfig.getApiUrl()}${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body ?? {}),
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8_000);
 
-  const payload = await res.json().catch(() => ({}));
-  if (!res.ok || payload.success === false) {
-    throw new Error(payload.error || 'Store setup failed. Please try again.');
+  try {
+    const res = await fetch(`${EnvironmentConfig.getApiUrl()}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body ?? {}),
+      signal: controller.signal,
+    });
+
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || payload.success === false) {
+      throw new Error(payload.error || 'Store setup failed. Please try again.');
+    }
+    return payload as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Server is waking up — please try again in a few seconds.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-  return payload as T;
 }
 
 /** Create kitchen + link owner profile via backend (Admin SDK). */

@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ErrorBoundary } from './components/system/ErrorBoundary';
 import { dismissSplash } from './lib/splashScreen';
+import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
 
 const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
@@ -17,6 +18,7 @@ const OwnerAuthFallback = () => (
 );
 
 dismissSplash({ force: true });
+void mountPwaUpdatePrompt();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

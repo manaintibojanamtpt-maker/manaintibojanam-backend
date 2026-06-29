@@ -19,6 +19,7 @@ import { UserProfile } from '../types';
 
 import { saveUserIfNotExists } from '../services/api';
 import { resolveOwnerTenantIds } from '../lib/ownerAccess';
+import { cacheOwnerTenantIds } from '../lib/ownerRedirect';
 
 /** Keep owner tenant ids stable when Firestore snapshots arrive without them. */
 function mergeProfileFromSnapshot(
@@ -72,11 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfileLoading(true);
     try {
       const { getDb } = await import('../lib/firebase-db');
-      const { doc, getDocFromServer } = await import('firebase/firestore');
+      const { doc, getDoc } = await import('firebase/firestore');
       const snap = await Promise.race([
-        getDocFromServer(doc(getDb(), 'users', user.uid)),
+        getDoc(doc(getDb(), 'users', user.uid)),
         new Promise<never>((_, reject) => {
-          window.setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+          window.setTimeout(() => reject(new Error('Profile fetch timeout')), 6_000);
         }),
       ]);
 
@@ -87,12 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             `[Auth] users/${user.uid} has mismatched userId field (${data.userId}). App uses document ID; run repair-user-by-email if login fails.`,
           );
         }
-        const ownedIds = await resolveOwnerTenantIds(user.uid, user.email);
-        if (ownedIds.length > 0) {
-          setUserProfile({ userId: snap.id, ...data, ownedTenantIds: ownedIds, role: data.role || 'owner' } as UserProfile);
-        } else {
-          setUserProfile({ userId: snap.id, ...data } as UserProfile);
-        }
+        setUserProfile((prev) => mergeProfileFromSnapshot(user.uid, { ...data }, prev));
       }
     } catch (err) {
       console.error('Profile refresh failed:', err);
@@ -186,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 : await Promise.race([
                     resolveOwnerTenantIds(user.uid, user.email),
                     new Promise<string[]>((resolve) => {
-                      window.setTimeout(() => resolve([]), 4000);
+                      window.setTimeout(() => resolve([]), 2_500);
                     }),
                   ]);
             const elevatedRole =
@@ -194,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ? 'owner'
                 : profile.role;
             if (ownedIds.length > 0) {
+              cacheOwnerTenantIds(ownedIds);
               setUserProfile({
                 ...profile,
                 ownedTenantIds: ownedIds,
@@ -218,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       profileTimeoutId = window.setTimeout(() => {
         setProfileLoading(false);
-      }, 6000);
+      }, 4_000);
     });
 
     return () => {

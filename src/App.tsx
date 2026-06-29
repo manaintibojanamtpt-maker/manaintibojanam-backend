@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
 import { waitForOwnerTenantIds } from './lib/ownerAccess';
+import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
 
 import { useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
@@ -185,24 +186,36 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, loading, profileLoading, refreshProfile } = useAuth();
   const [repairing, setRepairing] = React.useState(false);
   const [repairAttempted, setRepairAttempted] = React.useState(false);
-  const [repairedTenantIds, setRepairedTenantIds] = React.useState<string[]>([]);
+  const [repairedTenantIds, setRepairedTenantIds] = React.useState<string[]>(() => readCachedOwnerTenantIds());
+  const [gateTimedOut, setGateTimedOut] = React.useState(false);
 
   const ownedTenants = userProfile?.ownedTenantIds ?? [];
   const effectiveOwnedTenants = ownedTenants.length > 0 ? ownedTenants : repairedTenantIds;
 
   React.useEffect(() => {
-    if (!currentUser || loading || profileLoading || ownedTenants.length > 0 || repairAttempted) return;
+    const t = window.setTimeout(() => setGateTimedOut(true), 6_000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  React.useEffect(() => {
+    if (!currentUser || loading || ownedTenants.length > 0 || repairAttempted) return;
 
     setRepairAttempted(true);
     setRepairing(true);
-    void waitForOwnerTenantIds(currentUser.uid, refreshProfile, { email: currentUser.email, maxAttempts: 6 })
+    void waitForOwnerTenantIds(currentUser.uid, refreshProfile, {
+      email: currentUser.email,
+      maxAttempts: 4,
+      knownIds: readCachedOwnerTenantIds(),
+    })
       .then((ids) => {
         if (ids.length > 0) setRepairedTenantIds(ids);
       })
       .finally(() => setRepairing(false));
-  }, [currentUser, loading, profileLoading, ownedTenants.length, repairAttempted, refreshProfile]);
+  }, [currentUser, loading, ownedTenants.length, repairAttempted, refreshProfile]);
 
-  if (loading || profileLoading || repairing) {
+  const waitingOnGate = (loading || profileLoading || repairing) && !gateTimedOut;
+
+  if (waitingOnGate) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />

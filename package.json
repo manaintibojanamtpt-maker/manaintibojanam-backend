@@ -8,7 +8,7 @@
     "audit:prod:read": "node read_prod_audit.mjs",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin --external:vite --external:node-cron",
-    "build:web": "vite build",
+    "build:web": "node scripts/write-version-json.mjs && vite build",
     "build:server": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin --external:vite --external:node-cron",
     "start": "node dist/server.cjs",
     "preview": "vite preview",

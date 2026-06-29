@@ -4,39 +4,61 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { getAppVersionBootstrapScript } from './scripts/app-version-bootstrap-snippet.mjs';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = __dirname;
 
+function resolveBuildId() {
+  try {
+    return (
+      process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+      process.env.RENDER_GIT_COMMIT?.slice(0, 12) ||
+      execSync('git rev-parse --short HEAD', { cwd: root, encoding: 'utf8' }).trim()
+    );
+  } catch {
+    return `dev-${Date.now()}`;
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const appBuildId = resolveBuildId();
+  const versionBootstrap = getAppVersionBootstrapScript(appBuildId);
+
   return {
+    define: {
+      'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(appBuildId),
+      // GEMINI_API_KEY is intentionally excluded from the frontend bundle for security
+    },
     plugins: [
-      tailwindcss(), 
+      {
+        name: 'inject-app-version-bootstrap',
+        transformIndexHtml(html) {
+          return html.replace('<!--APP_VERSION_BOOTSTRAP-->', `<script>${versionBootstrap}</script>`);
+        },
+      },
+      tailwindcss(),
       react(),
       VitePWA({
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.ts',
-        registerType: 'prompt', // Wait for the user to explicitly accept the update
-        injectRegister: false, // Register only via PwaUpdatePrompt to avoid duplicate SW controllers
+        registerType: 'prompt',
+        injectRegister: false,
         devOptions: {
-          enabled: false // Disable in dev to prevent caching issues while coding
+          enabled: false,
         },
-        manifest: false, // We already have a public/manifest.json, no need to auto-generate
+        manifest: false,
         injectManifest: {
-          // Increase limit to 5MB to avoid warnings for large chunks if any
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          // We only want to inject hashed assets. Avoid double-caching static assets handled differently if needed, 
-          // but usually workbox handles all static assets in the build folder perfectly.
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,json}']
-        }
-      })
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,json}'],
+          globIgnores: ['**/version.json'],
+        },
+      }),
     ],
-    define: {
-      // GEMINI_API_KEY is intentionally excluded from the frontend bundle for security
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
