@@ -1009,6 +1009,7 @@ const shouldBypassTenantValidation = (path: string) =>
   path.startsWith("/api/client-config") ||
   path.startsWith("/api/notifications/") ||
   path.startsWith("/api/owner/") ||
+  path.startsWith("/api/platform/") ||
   path.startsWith("/api/auth/");
 
 const loadTenantRecord = async (tenantId: string) => {
