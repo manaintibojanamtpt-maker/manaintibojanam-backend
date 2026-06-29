@@ -94,12 +94,18 @@ export default function BhojanOSSuperAdmin() {
         setFirebaseProjectId(serverPayload.projectId ?? null);
       } catch (serverError) {
         console.warn('Superadmin server fetch failed, falling back to Firestore client', serverError);
-        const [t, l] = await Promise.all([
-          Promise.race([fetchAllTenants(), timeoutPromise]),
-          Promise.race([fetchOnboardingLeads(), timeoutPromise]),
+        const [tenantResult, leadResult] = await Promise.allSettled([
+          fetchAllTenants(),
+          fetchOnboardingLeads(),
         ]);
-        tenantsData = t;
-        leadsData = l;
+        tenantsData = tenantResult.status === 'fulfilled' ? tenantResult.value : [];
+        leadsData = leadResult.status === 'fulfilled' ? leadResult.value : [];
+        if (tenantResult.status === 'rejected') {
+          console.warn('fetchAllTenants failed', tenantResult.reason);
+        }
+        if (leadResult.status === 'rejected') {
+          console.warn('fetchOnboardingLeads failed', leadResult.reason);
+        }
         setDataSource('client');
       }
 

@@ -712,13 +712,22 @@ const requireSuperadmin = async (req: any, res: any, next: any) => {
     const decodedToken = await getAdminAuth(appAdmin).verifyIdToken(token);
     req.user = decodedToken;
     const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-    const role = userDoc.data()?.role;
+    let role = userDoc.data()?.role;
     const email = (decodedToken.email || userDoc.data()?.email || '').toLowerCase();
+    if (role !== 'superadmin' && email) {
+      const byEmail = await db.collection('users').where('email', '==', email).limit(5).get();
+      for (const doc of byEmail.docs) {
+        if (doc.data()?.role === 'superadmin') {
+          role = 'superadmin';
+          break;
+        }
+      }
+    }
     const isFounder =
       email === 'manaintibojanamtpt@gmail.com' ||
       email === 'bhojanos26@gmail.com' ||
       email === (process.env.FOUNDER_EMAIL || 'manaintibojanamtpt@gmail.com').trim().toLowerCase();
-    if (role === 'superadmin' || isFounder) {
+    if (role === 'superadmin' || decodedToken.admin === true || isFounder) {
       return next();
     }
     logger.warn({ message: 'Superadmin access denied', uid: decodedToken.uid, role, email });

@@ -6,7 +6,7 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v38-superadmin-platform-api';
+const SW_VERSION = 'v39-superadmin-tenant-query-fix';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates

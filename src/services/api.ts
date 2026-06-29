@@ -788,39 +788,47 @@ export const deleteMenuItem = async (id: string) => {
 };
 
 export const fetchAllTenants = async () => {
+  const col = collection(getDb(), 'tenants');
   try {
-    const q = query(collection(getDb(), 'tenants'), orderBy('createdAt', 'desc'));
+    const q = query(col, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (snapshot.docs.length > 0) {
+      return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    }
   } catch (error) {
-    console.warn('fetchAllTenants: orderBy fallback', error);
-    const snapshot = await getDocs(collection(getDb(), 'tenants'));
-    return snapshot.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
-        const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
-        return bSec - aSec;
-      });
+    console.warn('fetchAllTenants: orderBy failed', error);
   }
+
+  const snapshot = await getDocs(col);
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+      const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+      return bSec - aSec;
+    });
 };
 
 export const fetchOnboardingLeads = async () => {
+  const col = collection(getDb(), 'salesPipeline');
   try {
-    const q = query(collection(getDb(), 'salesPipeline'), orderBy('createdAt', 'desc'));
+    const q = query(col, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (snapshot.docs.length > 0) {
+      return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    }
   } catch (error) {
-    console.warn('fetchOnboardingLeads: orderBy fallback', error);
-    const snapshot = await getDocs(collection(getDb(), 'salesPipeline'));
-    return snapshot.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
-        const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
-        return bSec - aSec;
-      });
+    console.warn('fetchOnboardingLeads: orderBy failed', error);
   }
+
+  const snapshot = await getDocs(col);
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const aSec = (a as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+      const bSec = (b as { createdAt?: { seconds?: number } }).createdAt?.seconds ?? 0;
+      return bSec - aSec;
+    });
 };
 
 /** Load tenants + leads via Render API (Admin SDK) — reliable on bhojanos-prod cutover. */
@@ -830,7 +838,13 @@ export const fetchSuperadminPlatformData = async (): Promise<{ tenants: any[]; l
   if (!user) throw new Error('You must be signed in to load platform data.');
 
   const token = await user.getIdToken(true);
-  const res = await fetch(`${API_BASE_URL}/api/platform/superadmin-data`, {
+  const apiBase =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
+      ? window.location.origin
+      : API_BASE_URL;
+
+  const res = await fetch(`${apiBase}/api/platform/superadmin-data`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const payload = await res.json().catch(() => ({}));
