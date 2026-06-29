@@ -164,10 +164,14 @@ class NotificationService {
 
     try {
       const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-      
-      let tokenOptions = {};
+      const registration = await navigator.serviceWorker.getRegistration('/');
+
+      let tokenOptions: { vapidKey?: string; serviceWorkerRegistration?: ServiceWorkerRegistration } = {};
+      if (registration) {
+        tokenOptions.serviceWorkerRegistration = registration;
+      }
       if (VAPID_KEY && !VAPID_KEY.includes('YOUR_FIREBASE')) {
-        tokenOptions = { vapidKey: VAPID_KEY };
+        tokenOptions.vapidKey = VAPID_KEY;
       }
 
       const token = await getToken(this.messaging, tokenOptions);

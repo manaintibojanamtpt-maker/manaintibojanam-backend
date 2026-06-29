@@ -1,4 +1,5 @@
 import { getAuth } from 'firebase/auth';
+import { EnvironmentConfig } from '../config/environment';
 import { 
   getDoc as sdkGetDoc, 
   getDocs as sdkGetDocs, 
@@ -18,13 +19,19 @@ export type IncidentType = 'system_errors' | 'api_errors' | 'firestore_errors' |
 let lastIncidentSentAt = 0;
 const INCIDENT_MIN_INTERVAL_MS = 10_000;
 
-const isQuotaNoise = (payload: any) => {
+const isNoiseError = (payload: unknown) => {
   const text = JSON.stringify(payload || {}).toLowerCase();
-  return text.includes("quota exceeded") || text.includes("resource-exhausted") || text.includes("resource_exhausted");
+  return (
+    text.includes('quota exceeded') ||
+    text.includes('resource-exhausted') ||
+    text.includes('resource_exhausted') ||
+    text.includes('internal assertion failed') ||
+    text.includes('/api/monitoring/log')
+  );
 };
 
 export const logIncident = async (type: IncidentType, payload: any) => {
-  if (isQuotaNoise(payload)) return;
+  if (isNoiseError(payload)) return;
   const now = Date.now();
   if (type !== "payment_incidents" && type !== "merchant_blockers" && now - lastIncidentSentAt < INCIDENT_MIN_INTERVAL_MS) {
     return;
@@ -35,7 +42,8 @@ export const logIncident = async (type: IncidentType, payload: any) => {
     const auth = getAuth();
     const token = await auth.currentUser?.getIdToken();
     
-    fetch('/api/monitoring/log', {
+    const apiBase = EnvironmentConfig.getApiUrl();
+    fetch(`${apiBase}/api/monitoring/log`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,7 +91,7 @@ const flushMonitoringQueue = async () => {
     localStorage.setItem('monitoringQueue', JSON.stringify(queue));
 
     for (const event of batch) {
-      await fetch('/api/monitoring/log', {
+      await fetch(`${EnvironmentConfig.getApiUrl()}/api/monitoring/log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

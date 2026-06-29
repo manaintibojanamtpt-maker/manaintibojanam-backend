@@ -23,6 +23,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://manaintibojanam-backend.onrender.com/api/:path*"
+    },
+    {
       "source": "/",
       "destination": "/marketing.html"
     },

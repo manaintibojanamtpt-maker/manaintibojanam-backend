@@ -6,7 +6,7 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v32-owner-preload-fix';
+const SW_VERSION = 'v33-firestore-cache-fix';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates
@@ -42,6 +42,10 @@ registerRoute(
     }
   })
 );
+
+self.addEventListener('pushsubscriptionchange', () => {
+  // Token refresh is handled when the app next requests FCM permission.
+});
 
 // Firebase Cloud Messaging background message handler
 self.addEventListener('push', (event) => {
