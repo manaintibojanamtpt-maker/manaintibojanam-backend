@@ -15,11 +15,23 @@ export const PwaUpdatePrompt: React.FC = () => {
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log('[PWA] Service Worker registered:', r);
-      if (r) {
-        setInterval(() => {
-          r.update().catch(console.error);
-        }, 60 * 1000);
-      }
+      if (!r) return;
+
+      const checkForUpdate = () => {
+        r.update().catch((err) => console.warn('[PWA] update check failed:', err));
+      };
+
+      // Poll while app is open
+      window.setInterval(checkForUpdate, 60 * 1000);
+
+      // Check when user returns to tab / installed PWA
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      });
+      window.addEventListener('focus', checkForUpdate);
+
+      // Initial check shortly after registration
+      window.setTimeout(checkForUpdate, 3_000);
     },
     onRegisterError(error: unknown) {
       console.error('[PWA] Service worker registration error', error);

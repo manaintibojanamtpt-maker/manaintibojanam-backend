@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './lib/splashScreen';
+import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
 
 function isOwnerAuthPath(pathname?: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -29,6 +30,8 @@ function showBootError() {
 async function bootstrap() {
   const rootEl = document.getElementById('root');
   if (!rootEl) return;
+
+  void mountPwaUpdatePrompt();
 
   if (isMarketingPath()) {
     const [{ default: MarketingApp }, { ErrorBoundary }] = await Promise.all([

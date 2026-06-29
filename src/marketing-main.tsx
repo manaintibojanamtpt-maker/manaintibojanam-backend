@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
 
 async function start() {
+  void mountPwaUpdatePrompt();
+
   const { default: MarketingApp } = await import('./MarketingApp');
   const rootEl = document.getElementById('root');
   if (!rootEl) return;

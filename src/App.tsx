@@ -18,7 +18,6 @@ import StorefrontDesktopHeader from './components/StorefrontDesktopHeader';
 import DesktopFloatingCart from './components/DesktopFloatingCart';
 import NotchNotification from './components/NotchNotification';
 import FlyToCartAnimation from './components/FlyToCartAnimation';
-import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { useFCMInitialization } from './hooks/useFCMInitialization';
 import NetworkAwareness from './components/NetworkAwareness';
 import { useBiometrics } from './hooks/useBiometrics';
@@ -495,7 +494,6 @@ const AppContent: React.FC = () => {
           <InstallPrompt />
           <NotchNotification />
           <FlyToCartAnimation />
-          <PwaUpdatePrompt />
           <Toaster position="bottom-center" containerStyle={{ zIndex: 9000 }} />
 
           <BiometricModal
