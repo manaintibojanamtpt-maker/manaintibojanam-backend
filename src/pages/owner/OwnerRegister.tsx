@@ -11,7 +11,8 @@ import { onboardingPlanMessaging } from '../../config/pricing';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
-import { waitForOwnerTenantIds } from '../../lib/ownerAccess';
+import { waitForOwnerTenantIds, resolveOwnerTenantIds } from '../../lib/ownerAccess';
+import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
 import { resolveOwnerDestination } from '../../lib/ownerRouting';
 import { provisionOwnerStore } from '../../lib/ownerProvisioning';
 
@@ -41,6 +42,7 @@ const OwnerRegister = () => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [linkingStore, setLinkingStore] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = React.useRef<ReCAPTCHA>(null);
@@ -50,9 +52,40 @@ const OwnerRegister = () => {
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
   const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
-  // Already registered owners: route once to setup or dashboard (never bounce mid-provision).
+  // Returning owners: sync store link before showing "create store" form.
   useEffect(() => {
     if (authLoading || profileLoading || provisioning || loading || redirectChecked.current) return;
+    if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) > 0) return;
+
+    let cancelled = false;
+    setLinkingStore(true);
+    void (async () => {
+      try {
+        const ids = await resolveOwnerTenantIds(currentUser.uid, currentUser.email);
+        if (cancelled) return;
+        if (ids.length > 0) {
+          cacheOwnerTenantIds(ids);
+          redirectChecked.current = true;
+          await refreshProfile();
+          const path = await resolveOwnerDestination(currentUser.uid, currentUser.email, ids);
+          window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
+          return;
+        }
+      } catch (err) {
+        console.warn('Owner store link sync failed:', err);
+      } finally {
+        if (!cancelled) setLinkingStore(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, profileLoading, provisioning, loading, currentUser, userProfile?.ownedTenantIds, refreshProfile]);
+
+  // Already registered owners: route once to setup or dashboard (never bounce mid-provision).
+  useEffect(() => {
+    if (authLoading || profileLoading || provisioning || loading || linkingStore || redirectChecked.current) return;
     if (!currentUser || (userProfile?.ownedTenantIds?.length || 0) === 0) return;
 
     redirectChecked.current = true;
@@ -78,12 +111,12 @@ const OwnerRegister = () => {
     window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
   };
 
-  if (authLoading || profileLoading || provisioning) {
+  if (authLoading || profileLoading || provisioning || linkingStore) {
     return (
       <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6">
         <Loader2 className="w-10 h-10 animate-spin text-[#FF6B00]" />
         <p className="text-sm text-white/60 text-center">
-          {provisioning ? 'Setting up your kitchen…' : 'Loading…'}
+          {provisioning ? 'Setting up your kitchen…' : linkingStore ? 'Linking your existing store…' : 'Loading…'}
         </p>
       </div>
     );

@@ -6,7 +6,8 @@ import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
-import { redirectToOwnerDashboard } from '../../lib/ownerRedirect';
+import { redirectToOwnerDashboard, cacheOwnerTenantIds } from '../../lib/ownerRedirect';
+import { resolveOwnerTenantIds } from '../../lib/ownerAccess';
 import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig } from '../../config/firebaseClientConfig';
@@ -65,9 +66,19 @@ const OwnerLogin = () => {
     };
   }, []);
 
-  const afterSignIn = () => {
+  const afterSignIn = async () => {
     sessionStorage.setItem('bhojanos_owner_signed_in', '1');
     setRedirecting(true);
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const ids = await resolveOwnerTenantIds(user.uid, user.email);
+        if (ids.length > 0) cacheOwnerTenantIds(ids);
+      }
+    } catch (err) {
+      console.warn('Owner tenant sync before redirect failed:', err);
+    }
     redirectToOwnerDashboard();
   };
 
@@ -99,7 +110,7 @@ const OwnerLogin = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
-      afterSignIn();
+      await afterSignIn();
     } catch (error: any) {
       logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
       toast.error('Invalid email or password. Did you sign up with Google?');
@@ -115,7 +126,7 @@ const OwnerLogin = () => {
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
       toast.success('Welcome back!');
-      afterSignIn();
+      await afterSignIn();
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });

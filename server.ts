@@ -2471,8 +2471,21 @@ async function syncOwnerTenantsForUser(
 
   const normalizedEmail = (email || userDoc.data()?.email || '').trim().toLowerCase();
   if (tenantIds.length === 0 && normalizedEmail) {
-    const byEmailSnap = await db.collection('tenants').where('kyc.email', '==', normalizedEmail).get();
-    tenantIds = byEmailSnap.docs.map((d) => d.id);
+    const emailQueries = [
+      db.collection('tenants').where('kyc.email', '==', normalizedEmail),
+      db.collection('tenants').where('email', '==', normalizedEmail),
+      db.collection('tenants').where('ownerEmail', '==', normalizedEmail),
+    ];
+    const found = new Set<string>();
+    for (const q of emailQueries) {
+      try {
+        const snap = await q.get();
+        snap.docs.forEach((d) => found.add(d.id));
+      } catch {
+        /* index may not exist for optional fields */
+      }
+    }
+    tenantIds = Array.from(found);
     await Promise.all(
       tenantIds.map((tenantId) =>
         db.collection('tenants').doc(tenantId).set({ ownerId: userId }, { merge: true }),

@@ -193,7 +193,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const effectiveOwnedTenants = ownedTenants.length > 0 ? ownedTenants : repairedTenantIds;
 
   React.useEffect(() => {
-    const t = window.setTimeout(() => setGateTimedOut(true), 6_000);
+    const t = window.setTimeout(() => setGateTimedOut(true), 12_000);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -204,7 +204,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setRepairing(true);
     void waitForOwnerTenantIds(currentUser.uid, refreshProfile, {
       email: currentUser.email,
-      maxAttempts: 4,
+      maxAttempts: 8,
       knownIds: readCachedOwnerTenantIds(),
     })
       .then((ids) => {

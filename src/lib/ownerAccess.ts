@@ -4,7 +4,7 @@ import { syncOwnerTenantsViaApi } from './ownerProvisioning';
 import { readCachedOwnerTenantIds, cacheOwnerTenantIds } from './ownerRedirect';
 
 const FIRESTORE_READ_TIMEOUT_MS = 4_000;
-const API_SYNC_TIMEOUT_MS = 5_000;
+const API_SYNC_TIMEOUT_MS = 12_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -111,7 +111,7 @@ export async function waitForOwnerTenantIds(
       return ids;
     }
     if (attempt < maxAttempts - 1) {
-      await new Promise((resolve) => window.setTimeout(resolve, 200));
+      await new Promise((resolve) => window.setTimeout(resolve, attempt < 2 ? 400 : 800));
     }
   }
 
