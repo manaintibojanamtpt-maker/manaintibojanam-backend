@@ -1,6 +1,7 @@
 import { EnvironmentConfig } from './environment';
+import { isProductionBhojanHost, readRuntimeFirebaseConfig } from '../lib/runtimeFirebaseConfig';
 
-/** Local / staging Firebase project (bhojanos2). */
+/** Local / staging Firebase project (bhojanos2). Never use on bhojanos.com. */
 const DEV_FIREBASE = {
   apiKey: 'AIzaSyBBKia1hM4ZU0hYS52dTy63KTkwzZFYzgI',
   authDomain: 'bhojanos2.firebaseapp.com',
@@ -28,6 +29,19 @@ function pickEnv(key: string): string | undefined {
 
 /** Single source of truth for browser Firebase SDK config. */
 export function getFirebaseClientConfig(): FirebaseClientConfig {
+  const runtime = readRuntimeFirebaseConfig();
+  if (runtime) {
+    return {
+      apiKey: runtime.apiKey,
+      authDomain: runtime.authDomain || `${runtime.projectId}.firebaseapp.com`,
+      projectId: runtime.projectId,
+      storageBucket: runtime.storageBucket || `${runtime.projectId}.firebasestorage.app`,
+      messagingSenderId: runtime.messagingSenderId || DEV_FIREBASE.messagingSenderId,
+      appId: runtime.appId || DEV_FIREBASE.appId,
+      measurementId: runtime.measurementId,
+    };
+  }
+
   const fromEnv: Partial<FirebaseClientConfig> = {
     apiKey: pickEnv('VITE_FIREBASE_API_KEY'),
     authDomain: pickEnv('VITE_FIREBASE_AUTH_DOMAIN'),
@@ -47,6 +61,22 @@ export function getFirebaseClientConfig(): FirebaseClientConfig {
       messagingSenderId: fromEnv.messagingSenderId || DEV_FIREBASE.messagingSenderId,
       appId: fromEnv.appId || DEV_FIREBASE.appId,
       measurementId: fromEnv.measurementId,
+    };
+  }
+
+  if (isProductionBhojanHost()) {
+    console.error(
+      '[Firebase] CRITICAL: bhojanos.com is not configured for bhojanos-prod. ' +
+        'Set VITE_FIREBASE_* on Vercel OR FIREBASE_WEB_* on Render (/api/client-config). ' +
+        'Auth and owner login will fail until fixed.',
+    );
+    return {
+      apiKey: '',
+      authDomain: 'bhojanos-prod.firebaseapp.com',
+      projectId: 'bhojanos-prod',
+      storageBucket: 'bhojanos-prod.firebasestorage.app',
+      messagingSenderId: pickEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || '',
+      appId: pickEnv('VITE_FIREBASE_APP_ID') || '',
     };
   }
 

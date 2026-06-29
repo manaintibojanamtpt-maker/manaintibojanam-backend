@@ -324,6 +324,36 @@ const projectId = ambientProjectId || configProjectId ||
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 
+/** Browser Firebase SDK config — shared by /api/client-config and /api/health?webClient=1 */
+function getFirebaseWebClientConfig() {
+  const pid = projectId || "bhojanos-prod";
+  const webApiKey =
+    process.env.FIREBASE_WEB_API_KEY ||
+    process.env.VITE_FIREBASE_API_KEY ||
+    process.env.FIREBASE_API_KEY ||
+    "";
+  const webAppId =
+    process.env.FIREBASE_WEB_APP_ID ||
+    process.env.VITE_FIREBASE_APP_ID ||
+    "";
+  const messagingSenderId =
+    process.env.FIREBASE_WEB_MESSAGING_SENDER_ID ||
+    process.env.VITE_FIREBASE_MESSAGING_SENDER_ID ||
+    "";
+
+  return {
+    firebase: {
+      apiKey: webApiKey,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${pid}.firebaseapp.com`,
+      projectId: pid,
+      storageBucket: configStorageBucket || `${pid}.firebasestorage.app`,
+      messagingSenderId,
+      appId: webAppId,
+    },
+    configured: Boolean(webApiKey && webAppId),
+  };
+}
+
 console.log("--- Firebase Admin Initialization ---");
 console.log(`Ambient Project ID: ${ambientProjectId || 'not set'}`);
 console.log(`Config Project ID: ${configProjectId || 'not set'}`);
@@ -974,6 +1004,7 @@ const shouldBypassTenantValidation = (path: string) =>
   path.startsWith("/api/webhooks/") ||
   path.startsWith("/api/monitoring/") ||
   path.startsWith("/api/client-errors") ||
+  path.startsWith("/api/client-config") ||
   path.startsWith("/api/notifications/") ||
   path.startsWith("/api/owner/") ||
   path.startsWith("/api/auth/");
@@ -1128,7 +1159,16 @@ app.get("/api/health", async (req, res) => {
       apps: getApps().length
     }
   };
+  if (req.query.webClient === "1") {
+    status.webClient = getFirebaseWebClientConfig();
+  }
   res.json(status);
+});
+
+/** Public Firebase web SDK config — fixes Vercel builds missing VITE_FIREBASE_* (frontend/backend project split). */
+app.get("/api/client-config", (req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(getFirebaseWebClientConfig());
 });
 
 app.get("/api/admin/verify-connection", async (req, res) => {

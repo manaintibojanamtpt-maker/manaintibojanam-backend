@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -7,11 +7,10 @@ import SoftButton from '../../components/ui/SoftButton';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
 import { redirectToOwnerDashboard } from '../../lib/ownerRedirect';
 import { EnvironmentConfig } from '../../config/environment';
-
-const REDIRECT_GUARD_MS = 8_000;
+import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
+import { getFirebaseClientConfig } from '../../config/firebaseClientConfig';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -28,69 +27,89 @@ const OwnerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
-  const redirectChecked = useRef(false);
-  const redirectGuardRef = useRef<number | null>(null);
-  const { currentUser, loading: authLoading } = useAuth();
+  const [configError, setConfigError] = useState<string | null>(null);
+  const redirectHandled = useRef(false);
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
 
-  const beginDashboardRedirect = () => {
-    setRedirecting(true);
-    if (redirectGuardRef.current !== null) {
-      window.clearTimeout(redirectGuardRef.current);
-    }
-    redirectGuardRef.current = window.setTimeout(() => {
-      redirectToOwnerDashboard();
-    }, REDIRECT_GUARD_MS);
-    redirectToOwnerDashboard();
-  };
-
   useEffect(() => {
-    return () => {
-      if (redirectGuardRef.current !== null) {
-        window.clearTimeout(redirectGuardRef.current);
+    const cfg = getFirebaseClientConfig();
+    if (isProductionBhojanHost() && !cfg.apiKey) {
+      setConfigError(
+        'Firebase is not configured for production. Add VITE_FIREBASE_* on Vercel or FIREBASE_WEB_* on Render, then redeploy.',
+      );
+      setSessionChecking(false);
+      return;
+    }
+
+    let cancelled = false;
+    void auth.authStateReady().then(() => {
+      if (cancelled || redirectHandled.current) return;
+      if (auth.currentUser) {
+        redirectHandled.current = true;
+        setRedirecting(true);
+        redirectToOwnerDashboard();
+        return;
       }
+      setSessionChecking(false);
+    });
+
+    const sub = onAuthStateChanged(auth, (user) => {
+      if (cancelled || redirectHandled.current || !user) return;
+      redirectHandled.current = true;
+      setRedirecting(true);
+      redirectToOwnerDashboard();
+    });
+
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) setSessionChecking(false);
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      sub();
+      window.clearTimeout(timeout);
     };
   }, []);
 
-  // Already signed in → go straight to dashboard (OwnerRoute repairs tenant link).
-  useEffect(() => {
-    if (authLoading || loading || redirectChecked.current || !currentUser) return;
-    redirectChecked.current = true;
-    beginDashboardRedirect();
-  }, [authLoading, loading, currentUser]);
+  const afterSignIn = () => {
+    sessionStorage.setItem('bhojanos_owner_signed_in', '1');
+    setRedirecting(true);
+    redirectToOwnerDashboard();
+  };
 
-  if (authLoading || redirecting) {
+  if (configError) {
     return (
-      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        <p className="text-sm text-white/60">Taking you to your dashboard…</p>
-        <p className="text-xs text-white/40 max-w-xs">
-          If this takes more than a few seconds,{' '}
-          <button type="button" className="text-orange-400 underline" onClick={redirectToOwnerDashboard}>
-            tap here
-          </button>
-        </p>
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-red-400 font-bold">Configuration error</p>
+        <p className="text-sm text-white/60 max-w-md">{configError}</p>
       </div>
     );
   }
 
-  const completeOwnerLogin = () => {
-    beginDashboardRedirect();
-  };
+  if (sessionChecking || redirecting) {
+    return (
+      <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <p className="text-sm text-white/60">{redirecting ? 'Taking you to your dashboard…' : 'Checking your session…'}</p>
+        <button type="button" className="text-xs text-orange-400 underline" onClick={redirectToOwnerDashboard}>
+          Open dashboard directly
+        </button>
+      </div>
+    );
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
-      completeOwnerLogin();
+      afterSignIn();
     } catch (error: any) {
-      console.error('Owner Login Error:', error);
       logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
       toast.error('Invalid email or password. Did you sign up with Google?');
       setLoading(false);
@@ -105,7 +124,7 @@ const OwnerLogin = () => {
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
       toast.success('Welcome back!');
-      completeOwnerLogin();
+      afterSignIn();
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });

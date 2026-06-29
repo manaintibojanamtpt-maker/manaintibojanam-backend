@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { getAppVersionBootstrapScript } from './scripts/app-version-bootstrap-snippet.mjs';
+import { getFirebaseConfigBootstrapScript } from './scripts/firebase-config-bootstrap-snippet.mjs';
 import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +28,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const appBuildId = resolveBuildId();
   const versionBootstrap = getAppVersionBootstrapScript(appBuildId);
+  const apiUrl = env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com';
+  const firebaseBootstrap = getFirebaseConfigBootstrapScript(apiUrl.replace(/\/$/, ''));
 
   return {
     define: {
@@ -37,7 +40,9 @@ export default defineConfig(({ mode }) => {
       {
         name: 'inject-app-version-bootstrap',
         transformIndexHtml(html) {
-          return html.replace('<!--APP_VERSION_BOOTSTRAP-->', `<script>${versionBootstrap}</script>`);
+          return html
+            .replace('<!--FIREBASE_CONFIG_BOOTSTRAP-->', `<script>${firebaseBootstrap}</script>`)
+            .replace('<!--APP_VERSION_BOOTSTRAP-->', `<script>${versionBootstrap}</script>`);
         },
       },
       tailwindcss(),

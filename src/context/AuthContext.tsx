@@ -17,9 +17,8 @@ interface SavedAddress {
 
 import { UserProfile } from '../types';
 
-import { saveUserIfNotExists } from '../services/api';
-import { resolveOwnerTenantIds } from '../lib/ownerAccess';
-import { cacheOwnerTenantIds } from '../lib/ownerRedirect';
+import { saveUserIfNotExists as bootstrapSaveUserIfNotExists } from '../lib/userProfileBootstrap';
+import { cacheOwnerTenantIds, readCachedOwnerTenantIds } from '../lib/ownerRedirect';
 
 /** Keep owner tenant ids stable when Firestore snapshots arrive without them. */
 function mergeProfileFromSnapshot(
@@ -99,20 +98,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
-    let resolved = false;
     let profileTimeoutId: number | null = null;
+    let cancelled = false;
 
-    const finishAuthLoading = () => {
-      if (resolved) return;
-      resolved = true;
+    void auth.authStateReady().then(() => {
+      if (cancelled) return;
+      setCurrentUser(auth.currentUser);
       setLoading(false);
-    };
+    });
 
-    const authTimeout = window.setTimeout(finishAuthLoading, 3000);
+    const authFallback = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 10_000);
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      finishAuthLoading();
 
       if (profileTimeoutId !== null) {
         window.clearTimeout(profileTimeoutId);
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           try {
             const profile = await Promise.race([
-              saveUserIfNotExists({
+              bootstrapSaveUserIfNotExists({
                 uid: user.uid,
                 email: user.email,
                 displayName: user.displayName,
@@ -176,15 +176,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const profileOwned = Array.isArray(profile.ownedTenantIds)
               ? profile.ownedTenantIds.filter(Boolean)
               : [];
-            const ownedIds =
-              profileOwned.length > 0
-                ? profileOwned
-                : await Promise.race([
-                    resolveOwnerTenantIds(user.uid, user.email),
-                    new Promise<string[]>((resolve) => {
-                      window.setTimeout(() => resolve([]), 2_500);
-                    }),
-                  ]);
+            const cachedOwned = readCachedOwnerTenantIds();
+            const ownedIds = profileOwned.length > 0 ? profileOwned : cachedOwned;
             const elevatedRole =
               ownedIds.length > 0 && (!profile.role || profile.role === 'user')
                 ? 'owner'
@@ -219,7 +212,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      window.clearTimeout(authTimeout);
+      cancelled = true;
+      window.clearTimeout(authFallback);
       if (profileTimeoutId !== null) window.clearTimeout(profileTimeoutId);
       unsubscribeAuth();
       if (unsubProfile) unsubProfile();

@@ -225,6 +225,14 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!currentUser) {
+    if (loading) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+          <p className="text-sm text-white/60">Restoring your session…</p>
+        </div>
+      );
+    }
     return <Navigate to="/owner/login" replace />;
   }
 
