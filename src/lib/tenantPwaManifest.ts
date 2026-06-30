@@ -1,5 +1,15 @@
 import { parseStorefrontSlug } from './tenantPath';
 
+const PWA_START_KEY = 'bhojanos_pwa_start';
+
+function rememberPwaStartUrl(startUrl: string) {
+  try {
+    localStorage.setItem(PWA_START_KEY, startUrl);
+  } catch {
+    // ignore
+  }
+}
+
 const MANIFEST_LINK_ID = 'bhojanos-tenant-manifest';
 
 export type TenantPwaBranding = {
@@ -74,6 +84,7 @@ export function applyTenantPwaManifest(branding: TenantPwaBranding | null) {
   upsertManifestLink(blobUrl);
   upsertMeta('apple-mobile-web-app-title', branding.name);
   document.title = `${branding.name} | Order Online`;
+  rememberPwaStartUrl(startPath);
 
   return () => URL.revokeObjectURL(blobUrl);
 }

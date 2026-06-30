@@ -3,7 +3,7 @@
   "short_name": "BhojanOS",
   "description": "Direct ordering OS for Food Businesses",
   "id": "com.bhojanos.pwa",
-  "start_url": "/",
+  "start_url": "/owner/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#1A0505",

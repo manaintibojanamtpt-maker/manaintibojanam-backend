@@ -15,6 +15,7 @@
     <!--FIREBASE_CONFIG_BOOTSTRAP-->
     <!--APP_VERSION_BOOTSTRAP-->
 
+    <script src="/pwa-bootstrap.js"></script>
     <script>
       (function() {
         var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
@@ -31,20 +32,22 @@
           sessionStorage.setItem('splash_shown', 'true');
         }
 
+        if (window.__PWA_MANIFEST_INJECTED__) return;
+
         var isBhojanOS = window.location.hostname.includes('bhojanos');
         var storeSlugMatch = path.match(/^\/k\/([^/]+)/);
         if (isBhojanOS && !storeSlugMatch) {
-          document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=3" />');
-          document.write('<link rel="icon" href="/bhojan-os-icon.png?v=3" />');
+          document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=4" />');
+          document.write('<link rel="icon" href="/bhojan-os-icon.png?v=4" />');
           document.write('<link rel="apple-touch-icon" href="/bhojan-os-icon.png">');
           document.write('<link rel="apple-touch-icon" sizes="152x152" href="/bhojan-os-icon.png">');
           document.write('<link rel="apple-touch-icon" sizes="180x180" href="/bhojan-os-icon.png">');
           document.write('<link rel="apple-touch-icon" sizes="167x167" href="/bhojan-os-icon.png">');
           document.write('<meta name="apple-mobile-web-app-title" content="BhojanOS">');
           document.title = "BhojanOS - Direct Ordering OS for Food Businesses";
-        } else {
-          document.write('<link rel="manifest" href="/manifest.json?v=3" />');
-          document.write('<link rel="icon" href="/favicon.ico?v=3" />');
+        } else if (!storeSlugMatch) {
+          document.write('<link rel="manifest" href="/manifest.json?v=4" />');
+          document.write('<link rel="icon" href="/favicon.ico?v=4" />');
           document.write('<link rel="apple-touch-icon" href="/icon-v20-192.png">');
           document.write('<link rel="apple-touch-icon" sizes="152x152" href="/icon-v20-192.png">');
           document.write('<link rel="apple-touch-icon" sizes="180x180" href="/icon-v20-512.png">');
