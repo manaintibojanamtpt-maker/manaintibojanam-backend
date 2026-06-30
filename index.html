@@ -32,7 +32,8 @@
         }
 
         var isBhojanOS = window.location.hostname.includes('bhojanos');
-        if (isBhojanOS) {
+        var storeSlugMatch = path.match(/^\/k\/([^/]+)/);
+        if (isBhojanOS && !storeSlugMatch) {
           document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=3" />');
           document.write('<link rel="icon" href="/bhojan-os-icon.png?v=3" />');
           document.write('<link rel="apple-touch-icon" href="/bhojan-os-icon.png">');

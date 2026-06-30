@@ -14,6 +14,7 @@ import { buildCustomerPreviewStoreUrl } from '../../lib/storefrontPreview';
 import { ownerNavItems, ownerNavGroups, getOwnerPageTitle, OwnerNavItem } from '../../config/ownerNavigation';
 import { StoreSetupGuide } from './StoreSetupGuide';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
+import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
@@ -44,9 +45,11 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
     disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
   }));
 
+  const ownerMenuCount = useOwnerMenuCount();
+
   const showSetupNav =
     tenantInfo &&
-    needsStoreSetup(tenantInfo) &&
+    needsStoreSetup(tenantInfo, ownerMenuCount) &&
     location.pathname !== '/owner/setup';
 
   const navItemsWithSetup: typeof navItems = showSetupNav
@@ -420,7 +423,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar p-3 sm:p-4 md:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto w-full pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-8 space-y-4">
             {showSetupNav && location.pathname !== '/owner/dashboard' && (
-              <StoreSetupGuide tenantInfo={tenantInfo} menuCount={0} variant="compact" />
+              <StoreSetupGuide tenantInfo={tenantInfo} menuCount={ownerMenuCount} variant="compact" />
             )}
             {children}
           </div>

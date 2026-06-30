@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { m } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { Section } from '../ui/Section';
 import { PricingPlanCard, PricingComparisonTable } from './PricingPlanCard';
@@ -15,7 +14,7 @@ export const PricingSection: React.FC = () => {
   const copy = pricingPageCopy.landing;
 
   return (
-    <Section id="pricing" background="subtle" className="scroll-mt-24">
+    <Section id="pricing" background="subtle" density="hero" className="scroll-mt-24">
       <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
         <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#FF6B00] mb-4">
           {copy.eyebrow}
@@ -28,18 +27,18 @@ export const PricingSection: React.FC = () => {
         <p className="mt-4 text-sm font-semibold text-emerald-400/90">{PRICING_ZERO_COMMISSION_NOTE}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-4 items-stretch mb-10">
-        {ALL_PLANS.map((plan, i) => (
-          <m.div
+      {/* Eager render — no scroll-triggered opacity; min-height prevents layout collapse */}
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-4 items-stretch mb-10 min-h-[28rem] sm:min-h-[30rem] xl:min-h-[26rem]"
+        aria-label="Pricing plans"
+      >
+        {ALL_PLANS.map((plan) => (
+          <div
             key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.06 }}
-            className={plan.highlighted ? 'md:col-span-2 xl:col-span-1 xl:row-span-1' : ''}
+            className={`opacity-100 translate-y-0 ${plan.highlighted ? 'md:col-span-2 xl:col-span-1' : ''}`}
           >
             <PricingPlanCard plan={plan} variant="landing" />
-          </m.div>
+          </div>
         ))}
       </div>
 

@@ -1,5 +1,4 @@
 import React, { memo } from 'react';
-import { m } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Section } from '../ui/Section';
 import { SectionHeader } from '../ui/SectionHeader';
@@ -29,17 +28,14 @@ export const LandingPricing = memo(function LandingPricing() {
       <p className="text-center text-sm font-semibold text-[#ffb347]/90 mb-2">{pricingPageCopy.landing.trialBanner}</p>
       <p className="text-center text-sm font-semibold text-emerald-400/90 mb-6 sm:mb-8">{PRICING_ZERO_COMMISSION_NOTE}</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-4 items-stretch mb-6">
-        {landingPlans.map((plan, i) => (
-          <m.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.06 }}
-          >
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-4 items-stretch mb-6 min-h-[28rem] sm:min-h-[24rem] xl:min-h-[22rem]"
+        aria-label="Pricing plans"
+      >
+        {landingPlans.map((plan) => (
+          <div key={plan.id} className="opacity-100">
             <PricingPlanCard plan={plan} variant="landing" />
-          </m.div>
+          </div>
         ))}
       </div>
 

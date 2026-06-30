@@ -6,6 +6,8 @@ import {
 import { triggerHaptic } from '../../utils/haptics';
 import { MarketingSoftPill } from './MarketingSoftPill';
 
+import { marketingDemoData } from '../../config/demoData';
+
 export const CommandCenterPreview = memo(function CommandCenterPreview() {
   const [activeTab, setActiveTab] = useState('demand');
 
@@ -27,7 +29,7 @@ export const CommandCenterPreview = memo(function CommandCenterPreview() {
           </div>
           <div className="flex-1 max-w-md mx-auto h-7 rounded-md bg-[#030303] border border-white/[0.06] flex items-center justify-center text-[10px] sm:text-[11px] font-mono text-neutral-500 gap-1.5 px-3 truncate">
             <LockKeyhole size={10} className="shrink-0" />
-            <span className="truncate">bhojanos.com/your-kitchen</span>
+            <span className="truncate">{marketingDemoData.storefrontUrl}</span>
           </div>
         </div>
 
@@ -76,15 +78,17 @@ export const CommandCenterPreview = memo(function CommandCenterPreview() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div className="bg-[#0A0A0A] border border-white/[0.06] rounded-xl p-4">
                     <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Predicted Orders</div>
-                    <div className="text-2xl font-bold text-white tabular-nums">450 – 480</div>
+                    <div className="text-2xl font-bold text-white tabular-nums">
+                      {marketingDemoData.demandForecast.predictedOrdersMin} – {marketingDemoData.demandForecast.predictedOrdersMax}
+                    </div>
                   </div>
                   <div className="bg-[#0A0A0A] border border-white/[0.06] rounded-xl p-4">
                     <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Peak Hour</div>
-                    <div className="text-2xl font-bold text-white tabular-nums">7:30 PM</div>
+                    <div className="text-2xl font-bold text-white tabular-nums">{marketingDemoData.demandForecast.peakHour}</div>
                   </div>
                   <div className="bg-[#0A0A0A] border border-[#FF7A00]/20 rounded-xl p-4">
                     <div className="text-[10px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-1">Recommendation</div>
-                    <div className="text-sm font-medium text-neutral-200">Increase Biryani prep by 20%.</div>
+                    <div className="text-sm font-medium text-neutral-200">{marketingDemoData.demandForecast.recommendation}</div>
                   </div>
                 </div>
                 <div className="h-32 flex items-end gap-1.5">

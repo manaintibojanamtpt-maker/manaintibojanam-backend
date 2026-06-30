@@ -8,6 +8,7 @@ import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import { slugToDisplayName } from '../lib/tenantPath';
 import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import HeaderLocationDropdown from './HeaderLocationDropdown';
+import StorefrontInstallButton from './StorefrontInstallButton';
 
 const StorefrontDesktopHeader = () => {
   const navigate = useNavigate();
@@ -86,6 +87,8 @@ const StorefrontDesktopHeader = () => {
         </nav>
 
         <div className="w-px h-8 bg-gray-200 dark:bg-white/10"></div>
+
+        <StorefrontInstallButton variant="pill" />
 
         <Link
           to={currentUser ? to('/account') : loginPath()}

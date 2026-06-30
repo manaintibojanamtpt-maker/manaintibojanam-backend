@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Section } from '../ui/Section';
 import { SectionHeader } from '../ui/SectionHeader';
 import { RevealOnScroll } from './RevealOnScroll';
+import { StorefrontPreviewMockup } from './StorefrontPreviewMockup';
 import { platformFeatures } from '../../config/landing';
 
 export const PlatformFeatures = memo(function PlatformFeatures() {
@@ -13,7 +14,14 @@ export const PlatformFeatures = memo(function PlatformFeatures() {
         description="One AI-powered operating system — not another ordering app. Own your storefront, kitchen, inventory, and customers."
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <RevealOnScroll>
+        <p className="text-center text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+          Customer-facing storefront
+        </p>
+        <StorefrontPreviewMockup />
+      </RevealOnScroll>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-10 sm:mt-12">
         {platformFeatures.map(({ icon: Icon, title, description }, i) => (
           <RevealOnScroll key={title} delay={i * 0.05}>
             <div className="group relative h-full marketing-card p-5 sm:p-6 transition-all duration-300 hover:border-[#FF7A00]/25 hover:-translate-y-0.5">

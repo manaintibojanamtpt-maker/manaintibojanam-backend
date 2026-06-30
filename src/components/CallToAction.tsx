@@ -1,6 +1,7 @@
 import React from 'react';
 import { Section } from './ui/Section';
 import { MarketingSoftCTA } from './marketing/MarketingSoftCTA';
+import { SocialProofStrip } from './marketing/SocialProofStrip';
 
 export const CallToAction: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ export const CallToAction: React.FC = () => {
             Talk to us
           </MarketingSoftCTA>
         </div>
+        <SocialProofStrip />
       </div>
     </Section>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Mail, ShieldCheck } from 'lucide-react';
+import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_WHATSAPP_URL } from '../config/support';
 
 const FounderBetaTrustBanner: React.FC<{ className?: string }> = ({ className = '' }) => {
   return (
@@ -15,23 +16,23 @@ const FounderBetaTrustBanner: React.FC<{ className?: string }> = ({ className = 
         </div>
         
         <div className="flex flex-col gap-3 min-w-[250px]">
-          <a href="https://wa.me/917666258454" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-colors rounded-xl px-4 py-3 group">
+          <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-colors rounded-xl px-4 py-3 group">
             <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 group-hover:scale-110 transition-transform">
               <Phone size={16} />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[10px] font-bold text-green-400/70 uppercase tracking-widest">Call or WhatsApp</span>
-              <span className="text-sm font-bold text-white">+91 76662 58454</span>
+              <span className="text-sm font-bold text-white">{SUPPORT_PHONE_DISPLAY}</span>
             </div>
           </a>
           
-          <a href="mailto:bhojanos26@gmail.com" className="flex items-center justify-center md:justify-start gap-3 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors rounded-xl px-4 py-3 group">
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center justify-center md:justify-start gap-3 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors rounded-xl px-4 py-3 group">
             <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-300 group-hover:scale-110 transition-transform">
               <Mail size={16} />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Support</span>
-              <span className="text-sm font-bold text-white">bhojanos26@gmail.com</span>
+              <span className="text-sm font-bold text-white">{SUPPORT_EMAIL}</span>
             </div>
           </a>
         </div>

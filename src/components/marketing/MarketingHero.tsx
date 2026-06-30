@@ -111,7 +111,7 @@ export const MarketingHero = memo(function MarketingHero() {
               }
             >
               <LazyMotion features={domAnimation}>
-                <LiveDashboardPreview compact />
+                <LiveDashboardPreview compact animateStats={false} />
               </LazyMotion>
             </Suspense>
           </div>

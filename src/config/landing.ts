@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import { marketingDemoData } from './demoData';
+
 export const landingHero = {
   category: 'A kitchen operating system',
   badges: ['0% Commission', 'No Onboarding Fee', 'AI Powered', 'Own Your Customers'],
@@ -98,9 +100,9 @@ export const aiManagerInsights = [
   { type: 'info', title: 'Recommended menu today', body: 'Highlight Biryani combo — high conversion.' },
   { type: 'success', title: 'Customers likely to reorder', body: '14 high-value customers due this week.' },
   { type: 'info', title: 'WhatsApp campaign ready', body: 'Win-back message drafted for 23 customers.' },
-  { type: 'success', title: 'Weekly profit', body: '₹1,24,800 net after costs — up 12%.' },
+  { type: 'success', title: 'Weekly profit', body: `₹${marketingDemoData.weeklyProfit.netAmount.toLocaleString('en-IN')} net after costs — up ${marketingDemoData.weeklyProfit.changePercent}%.` },
   { type: 'warning', title: 'Delivery delay warning', body: 'Zone B averaging +8 min — add rider.' },
-  { type: 'info', title: 'Sales forecast', body: '420–460 orders projected this weekend.' },
+  { type: 'info', title: 'Sales forecast', body: `${marketingDemoData.demandForecast.predictedOrdersMin}–${marketingDemoData.demandForecast.predictedOrdersMax} orders projected this weekend.` },
 ];
 
 export const howItWorksSteps = [

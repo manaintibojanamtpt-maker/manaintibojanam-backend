@@ -29,7 +29,8 @@ import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { DashboardStatusBar } from '../../components/owner/DashboardStatusBar';
 import { FreeStorefrontBanner } from '../../components/owner/FreeStorefrontBanner';
 import { StoreSetupGuide } from '../../components/owner/StoreSetupGuide';
-import { needsStoreSetup } from '../../lib/storeSetupProgress';
+import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
+import { getMenuTenantQueryKeys } from '../../lib/menuTenantKeys';
 import { needsGrowthTrialActivation, isStoreLiveForOrders } from '../../lib/planStatus';
 import { AIInsightCard } from '../../components/owner/AIInsightCard';
 import { useTenantStoreStatus } from '../../hooks/useTenantStoreStatus';
@@ -62,7 +63,7 @@ const OwnerDashboard = () => {
   const [inventoryAlerts, setInventoryAlerts] = React.useState<{name: string, stock: number, isCritical: boolean}[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [growthSnapshot, setGrowthSnapshot] = React.useState<AIGrowthSnapshot | null>(null);
-  const [menuCount, setMenuCount] = React.useState(0);
+  const ownerMenuCount = useOwnerMenuCount();
   const [latestRelease, setLatestRelease] = React.useState<ReleaseNote | null>(null);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
@@ -221,28 +222,40 @@ const OwnerDashboard = () => {
       console.error('Owner dashboard segments failed:', error);
     });
 
-    const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantId));
-    const unsubscribeMenu = onSnapshot(
-      menuQuery,
-      (snapshot) => {
-        const alerts: any[] = [];
-        snapshot.forEach((menuDoc) => {
-          const data = menuDoc.data();
-          if (
-            data.stockCount !== undefined &&
-            data.lowStockThreshold !== undefined &&
-            data.stockCount <= data.lowStockThreshold
-          ) {
-            alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
-          }
-        });
-        setMenuCount(snapshot.size);
-        setInventoryAlerts(alerts);
-      },
-      (error) => {
-        console.error('Owner dashboard menu listener failed:', error);
-      },
-    );
+    const menuKeys = getMenuTenantQueryKeys(tenantInfo, tenantId);
+    const menuDocMap = new Map<string, Record<string, any>>();
+
+    const applyMenuSnapshot = () => {
+      const alerts: { name: string; stock: number; isCritical: boolean }[] = [];
+      menuDocMap.forEach((data) => {
+        if (
+          data.stockCount !== undefined &&
+          data.lowStockThreshold !== undefined &&
+          data.stockCount <= data.lowStockThreshold
+        ) {
+          alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
+        }
+      });
+      setInventoryAlerts(alerts);
+    };
+
+    const menuUnsubs = menuKeys.map((key) => {
+      const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', key));
+      return onSnapshot(
+        menuQuery,
+        (snapshot) => {
+          snapshot.docs.forEach((menuDoc) => menuDocMap.set(menuDoc.id, menuDoc.data()));
+          // Drop stale ids if this key's snapshot shrinks
+          const liveIds = new Set(snapshot.docs.map((d) => d.id));
+          [...menuDocMap.keys()].forEach((id) => {
+            const row = menuDocMap.get(id);
+            if (row?.tenantId === key && !liveIds.has(id)) menuDocMap.delete(id);
+          });
+          applyMenuSnapshot();
+        },
+        (error) => console.error('Owner dashboard menu listener failed:', key, error),
+      );
+    });
 
     const fetchLatestRelease = async () => {
       try {
@@ -261,9 +274,9 @@ const OwnerDashboard = () => {
     return () => {
       window.clearTimeout(loadTimeout);
       unsubscribeOrders();
-      unsubscribeMenu();
+      menuUnsubs.forEach((u) => u());
     };
-  }, [tenantId, profileLoading, tenantContextLoading]);
+  }, [tenantId, tenantInfo, profileLoading, tenantContextLoading]);
 
   React.useEffect(() => {
     if (tenantInfo) {
@@ -406,7 +419,7 @@ const OwnerDashboard = () => {
 
   const storeLive = tenantInfo?.storeStatus === 'published' || !!tenantInfo?.sandboxMode || storeAcceptingOrders;
   const storeAlreadyLive = isStoreLiveForOrders(tenantInfo, storeAcceptingOrders);
-  const showStoreSetupGuide = needsStoreSetup(tenantInfo, menuCount);
+  const showStoreSetupGuide = needsStoreSetup(tenantInfo, ownerMenuCount);
   const showGrowthTrialBanner = needsGrowthTrialActivation(tenantInfo);
   const tenantDocId = tenantInfo?.id || contextTenant?.id || tenantId || '';
 
@@ -461,7 +474,7 @@ const OwnerDashboard = () => {
       <StoreLiveControl variant="compact" />
 
       {showStoreSetupGuide && (
-        <StoreSetupGuide tenantInfo={tenantInfo} menuCount={menuCount} variant="full" />
+        <StoreSetupGuide tenantInfo={tenantInfo} menuCount={ownerMenuCount} variant="full" />
       )}
 
       {showGrowthTrialBanner && (

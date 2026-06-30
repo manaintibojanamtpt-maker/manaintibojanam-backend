@@ -111,6 +111,8 @@ export function computeStoreSetupProgress(
 
 export function needsStoreSetup(tenant: TenantSnapshot, menuCount = 0): boolean {
   if (tenant?.onboardingStatus?.isComplete === true) return false;
+  if (isStoreLiveForOrders(tenant)) return false;
+  if (tenant?.subscription?.status === 'trialing' && tenant?.storeStatus === 'active') return false;
   return computeStoreSetupProgress(tenant, menuCount).needsSetup;
 }
 

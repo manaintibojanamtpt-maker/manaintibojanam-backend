@@ -3,6 +3,7 @@
  * The absolute SINGLE source of truth for all URLs, domain logic, and environment states.
  * No component may generate URLs manually. No window.location parsing.
  */
+import { SUPPORT_EMAIL } from './support';
 export const EnvironmentConfig = {
   // --- Environment State ---
   
@@ -103,7 +104,7 @@ export const EnvironmentConfig = {
   },
 
   getSupportEmail(): string {
-    return 'bhojanos26@gmail.com';
+    return SUPPORT_EMAIL;
   },
 
   // --- Legacy / Existing Builders ---

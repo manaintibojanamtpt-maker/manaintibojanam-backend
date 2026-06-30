@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useTenant } from '../context/TenantContext';
 import { useStorefrontPath } from '../hooks/useStorefrontPath';
+import StorefrontInstallButton from './StorefrontInstallButton';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -35,7 +36,8 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <StorefrontInstallButton variant="icon" />
           <button
             type="button"
             onClick={() => navigate(currentUser ? to('/account') : loginPath())}

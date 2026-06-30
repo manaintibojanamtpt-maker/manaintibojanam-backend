@@ -8,6 +8,7 @@ import {
   readCachedTenant,
   writeCachedTenant,
 } from '../lib/tenantPath';
+import { applyTenantPwaManifest } from '../lib/tenantPwaManifest';
 
 export interface TenantInfo {
   id: string;
@@ -139,6 +140,20 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
   }, [tenantInfo?.name]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !tenantInfo) return;
+    const path = window.location.pathname;
+    if (!/^\/k\/[^/]+/.test(path)) return;
+
+    const slug = tenantSlug || tenantInfo.slug || tenantInfo.id;
+    return applyTenantPwaManifest({
+      name: tenantInfo.name || slug,
+      slug,
+      themeColor: tenantInfo.branding?.primaryColor || '#1A0505',
+      iconUrl: tenantInfo.branding?.logoUrl || tenantInfo.logo,
+    });
+  }, [tenantInfo, tenantSlug]);
 
   useEffect(() => {
     if (tenantId) setActiveTenantId(tenantId);

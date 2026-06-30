@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Linkedin, Twitter, Mail } from 'lucide-react';
 import SoftButton from './ui/SoftButton';
+import { SUPPORT_EMAIL, SOCIAL_LINKS } from '../config/support';
 
 export const EnterpriseFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -49,7 +50,7 @@ export const EnterpriseFooter: React.FC = () => {
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim()) {
-      window.location.href = `mailto:hello@bhojanos.com?subject=Newsletter&body=Subscribe: ${encodeURIComponent(email)}`;
+      window.location.href = `mailto:${SUPPORT_EMAIL}?subject=Newsletter&body=Subscribe: ${encodeURIComponent(email)}`;
     }
   };
 
@@ -65,26 +66,30 @@ export const EnterpriseFooter: React.FC = () => {
               The AI operating system for restaurants. Own your customers, brand, and revenue — zero commission.
             </p>
             <div className="flex items-center gap-3">
+              {SOCIAL_LINKS.linkedin ? (
+                <a
+                  href={SOCIAL_LINKS.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="BhojanOS on LinkedIn"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
+                >
+                  <Linkedin size={18} />
+                </a>
+              ) : null}
+              {SOCIAL_LINKS.twitter ? (
+                <a
+                  href={SOCIAL_LINKS.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="BhojanOS on Twitter"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
+                >
+                  <Twitter size={18} />
+                </a>
+              ) : null}
               <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="BhojanOS on LinkedIn"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
-              >
-                <Linkedin size={18} />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="BhojanOS on Twitter"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
-              >
-                <Twitter size={18} />
-              </a>
-              <a
-                href="mailto:hello@bhojanos.com"
+                href={`mailto:${SUPPORT_EMAIL}`}
                 aria-label="Email BhojanOS"
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
               >

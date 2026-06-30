@@ -1,40 +1,78 @@
 import React, { memo } from 'react';
 import { m } from 'framer-motion';
-import { Check, X, Minus } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Section } from '../ui/Section';
 import { SectionHeader } from '../ui/SectionHeader';
 import { commissionComparison } from '../../config/landing';
 
 type CellVal = boolean | string;
 
-function CellValue({ value, highlight }: { value: CellVal; highlight?: boolean }) {
-  if (value === true) {
+function CompareIcon({ included, label }: { included: boolean; label: string }) {
+  if (included) {
     return (
-      <span className={`marketing-compare-value ${highlight ? 'text-emerald-400' : 'text-emerald-400/85'}`}>
-        <Check size={17} strokeWidth={2.5} aria-label="Yes" />
+      <span
+        className="marketing-compare-value inline-flex items-center justify-center text-emerald-400"
+        role="img"
+        aria-label={`${label}: included`}
+      >
+        <Check size={17} strokeWidth={2.5} aria-hidden />
       </span>
     );
   }
-  if (value === false) {
-    return (
-      <span className="marketing-compare-value text-neutral-600">
-        <X size={15} aria-label="No" />
-      </span>
-    );
+
+  return (
+    <span
+      className="marketing-compare-value inline-flex items-center justify-center text-red-400/85"
+      role="img"
+      aria-label={`${label}: not included`}
+    >
+      <X size={16} strokeWidth={2.5} aria-hidden />
+    </span>
+  );
+}
+
+function CellValue({
+  value,
+  highlight,
+  platformLabel,
+}: {
+  value: CellVal;
+  highlight?: boolean;
+  platformLabel: string;
+}) {
+  if (typeof value === 'boolean') {
+    return <CompareIcon included={value} label={platformLabel} />;
   }
-  if (value === 'Limited' || value === 'Basic' || value === 'Platform') {
+
+  if (value === '0%') {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500">
-        <Minus size={12} className="opacity-60" aria-hidden />
+      <span
+        className={`text-xs sm:text-sm font-bold tabular-nums ${highlight ? 'text-[#FF7A00]' : 'text-neutral-400'}`}
+        aria-label={`${platformLabel}: ${value}`}
+      >
         {value}
       </span>
     );
   }
+
+  if (value === 'Limited' || value === 'Basic' || value === 'Platform') {
+    const isNegative = !highlight;
+    return (
+      <span className="inline-flex flex-col items-center gap-1" aria-label={`${platformLabel}: ${value}`}>
+        {isNegative ? (
+          <CompareIcon included={false} label={platformLabel} />
+        ) : (
+          <CompareIcon included={true} label={platformLabel} />
+        )}
+        <span className="text-[10px] font-medium text-neutral-500 leading-tight">{value}</span>
+      </span>
+    );
+  }
+
   return (
     <span
-      className={`text-xs sm:text-sm font-bold tabular-nums ${
-        highlight && value === '0%' ? 'text-[#FF7A00]' : highlight ? 'text-white' : 'text-neutral-400'
-      }`}
+      className={`text-xs sm:text-sm font-bold tabular-nums ${highlight ? 'text-white' : 'text-neutral-400'}`}
+      aria-label={`${platformLabel}: ${value}`}
     >
       {value}
     </span>
@@ -54,15 +92,11 @@ export const CommissionComparison = memo(function CommissionComparison() {
     <Section id="compare" background="default" className="scroll-mt-24">
       <SectionHeader label="Compare" title={title} description={subtitle} />
 
-      {/* Mobile: stacked feature cards */}
       <div className="md:hidden space-y-3">
         {rows.map((row, i) => (
           <m.article
             key={row.label}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-24px' }}
-            transition={{ delay: i * 0.03, duration: 0.35 }}
+            initial={{ opacity: 1, y: 0 }}
             className="marketing-compare-card p-4"
           >
             <h3 className="text-sm font-semibold text-white mb-3">{row.label}</h3>
@@ -81,7 +115,7 @@ export const CommissionComparison = memo(function CommissionComparison() {
                   >
                     {label}
                   </p>
-                  <CellValue value={row[key]} highlight={highlight} />
+                  <CellValue value={row[key]} highlight={highlight} platformLabel={label} />
                 </div>
               ))}
             </div>
@@ -89,7 +123,6 @@ export const CommissionComparison = memo(function CommissionComparison() {
         ))}
       </div>
 
-      {/* Desktop: table */}
       <div className="hidden md:block overflow-hidden rounded-[var(--radius-marketing-card)] border border-white/[0.08] bg-[#0A0A0A]/60 backdrop-blur-sm">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -112,26 +145,22 @@ export const CommissionComparison = memo(function CommissionComparison() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <m.tr
+            {rows.map((row) => (
+              <tr
                 key={row.label}
-                initial={{ opacity: 0, x: -8 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ delay: i * 0.03, duration: 0.35 }}
                 className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors"
               >
                 <td className="p-4 lg:p-5 text-sm font-medium text-neutral-300">{row.label}</td>
                 <td className="p-4 lg:p-5 text-center">
-                  <CellValue value={row.swiggy} />
+                  <CellValue value={row.swiggy} platformLabel="Swiggy" />
                 </td>
                 <td className="p-4 lg:p-5 text-center">
-                  <CellValue value={row.zomato} />
+                  <CellValue value={row.zomato} platformLabel="Zomato" />
                 </td>
                 <td className="p-4 lg:p-5 text-center bg-[#FF7A00]/[0.04] border-x border-[#FF7A00]/10">
-                  <CellValue value={row.bhojanos} highlight />
+                  <CellValue value={row.bhojanos} highlight platformLabel="BhojanOS" />
                 </td>
-              </m.tr>
+              </tr>
             ))}
           </tbody>
         </table>

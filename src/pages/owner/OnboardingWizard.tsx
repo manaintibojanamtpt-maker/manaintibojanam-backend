@@ -14,6 +14,7 @@ import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import { STORE_SETUP_STEPS, getSetupStepByWizardStep } from '../../config/storeSetupSteps';
 import SetupStepInstructions from '../../components/owner/SetupStepInstructions';
 import { computeStoreSetupProgress, needsStoreSetup } from '../../lib/storeSetupProgress';
+import { getMenuTenantQueryKeys } from '../../lib/menuTenantKeys';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
@@ -26,7 +27,7 @@ const WIZARD_STEPS = STORE_SETUP_STEPS.filter((s) => s.wizardStep != null).map((
 }));
 
 const OnboardingWizard: React.FC = () => {
-  const { tenantInfo, loading } = useTenant();
+  const { tenantInfo, loading, refreshTenant } = useTenant();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const db = getDb();
@@ -59,13 +60,28 @@ const OnboardingWizard: React.FC = () => {
 
   useEffect(() => {
     if (!tenantInfo?.id) return;
-    const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantInfo.id));
-    const unsub = onSnapshot(menuQuery, (snap) => {
-      setMenuCount(snap.size);
-      if (snap.size >= 3) setMenuSeeded(true);
+    const keys = getMenuTenantQueryKeys(tenantInfo);
+    if (keys.length === 0) return;
+
+    const docIds = new Set<string>();
+    const byKey = new Map<string, Set<string>>();
+    const recompute = () => {
+      docIds.clear();
+      byKey.forEach((ids) => ids.forEach((id) => docIds.add(id)));
+      const size = docIds.size;
+      setMenuCount(size);
+      if (size >= 3) setMenuSeeded(true);
+    };
+
+    const unsubs = keys.map((key) => {
+      const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', key));
+      return onSnapshot(menuQuery, (snap) => {
+        byKey.set(key, new Set(snap.docs.map((d) => d.id)));
+        recompute();
+      });
     });
-    return () => unsub();
-  }, [tenantInfo?.id]);
+    return () => unsubs.forEach((u) => u());
+  }, [tenantInfo?.id, tenantInfo?.slug]);
 
   useEffect(() => {
     if (!tenantInfo) return;
@@ -174,16 +190,10 @@ const OnboardingWizard: React.FC = () => {
         isComplete,
       });
     } catch (apiError) {
-      console.warn('Onboarding API save failed, falling back to client Firestore', apiError);
-      const tenantRef = doc(db, 'tenants', tenantInfo.id);
-      if (Object.keys(payload).length > 0) {
-        await updateDoc(tenantRef, payload);
-      }
-      await updateDoc(tenantRef, {
-        'onboardingStatus.currentStep': nextStep,
-        'onboardingStatus.isComplete': isComplete,
-        ...(isComplete && { 'onboardingStatus.completedAt': serverTimestamp(), 'onboardingStatus.migrated': false }),
-      });
+      console.warn('Onboarding API save failed', apiError);
+      throw apiError instanceof Error
+        ? apiError
+        : new Error('Could not save setup progress. Check your connection and try again.');
     }
   };
 
@@ -232,6 +242,7 @@ const OnboardingWizard: React.FC = () => {
         } catch (trialError) {
           console.warn('Growth trial activation fallback skipped:', trialError);
         }
+        await refreshTenant();
         void requestOwnerWelcomeEmail(tenantInfo.slug);
         toast.success(`Store is live! Your ${PLAN_TRIALS.growthOnboardingDays}-day Growth trial has started.`);
         navigate('/owner/dashboard', { replace: true });

@@ -10,9 +10,36 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
-import { useCountUp } from '../../hooks/useCountUp';
+import { marketingDemoData } from '../../config/demoData';
 
-const REVENUE_BARS = [32, 45, 38, 52, 48, 68, 72, 65, 78, 84, 76, 92];
+const { dashboard, revenueBarHeights } = marketingDemoData;
+
+function useAnimatedStat(target: number, enabled: boolean): number {
+  const [value, setValue] = useState(enabled ? 0 : target);
+
+  useEffect(() => {
+    if (!enabled) {
+      setValue(target);
+      return;
+    }
+
+    let frame = 0;
+    const start = performance.now();
+    const duration = 2000;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, enabled]);
+
+  return value;
+}
 
 const StatTile = memo(function StatTile({
   icon: Icon,
@@ -38,18 +65,18 @@ const StatTile = memo(function StatTile({
       className={`marketing-stat-tile-soft ${accent ? 'marketing-stat-tile-soft--accent' : ''}`}
     >
       <div className="marketing-stat-tile-soft-inner h-full">
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-            accent ? 'bg-[#FF7A00]/15 text-[#FF7A00]' : 'bg-white/[0.05] text-neutral-400'
-          }`}
-        >
-          <Icon size={14} strokeWidth={2.25} />
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+              accent ? 'bg-[#FF7A00]/15 text-[#FF7A00]' : 'bg-white/[0.05] text-neutral-400'
+            }`}
+          >
+            <Icon size={14} strokeWidth={2.25} />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
-      </div>
-      <div className="text-lg sm:text-xl font-black text-white tabular-nums">{value}</div>
-      {sub && <p className="text-[10px] text-neutral-500 mt-0.5">{sub}</p>}
+        <div className="text-lg sm:text-xl font-black text-white tabular-nums">{value}</div>
+        {sub && <p className="text-[10px] text-neutral-500 mt-0.5">{sub}</p>}
       </div>
     </m.div>
   );
@@ -57,22 +84,27 @@ const StatTile = memo(function StatTile({
 
 export const LiveDashboardPreview = memo(function LiveDashboardPreview({
   compact = false,
+  animateStats = true,
 }: {
   compact?: boolean;
+  /** When false, show final demo figures immediately (no count-up drift). */
+  animateStats?: boolean;
 }) {
-  const [active, setActive] = useState(false);
+  const [motionReady, setMotionReady] = useState(!animateStats);
 
   useEffect(() => {
-    const t = requestAnimationFrame(() => setActive(true));
+    if (!animateStats) return;
+    const t = requestAnimationFrame(() => setMotionReady(true));
     return () => cancelAnimationFrame(t);
-  }, []);
+  }, [animateStats]);
 
-  const revenue = useCountUp(18420, 2000, active);
-  const orders = useCountUp(67, 1600, active);
-  const preparing = useCountUp(8, 1200, active);
-  const alerts = useCountUp(2, 1000, active);
-  const deliveries = useCountUp(12, 1400, active);
-  const suggestions = useCountUp(8, 1500, active);
+  const statEnabled = animateStats && motionReady;
+  const revenue = useAnimatedStat(dashboard.todaysRevenue, statEnabled);
+  const orders = useAnimatedStat(dashboard.ordersToday, statEnabled);
+  const preparing = useAnimatedStat(dashboard.preparing, statEnabled);
+  const alerts = useAnimatedStat(dashboard.inventoryAlerts, statEnabled);
+  const deliveries = useAnimatedStat(dashboard.activeDeliveries, statEnabled);
+  const suggestions = useAnimatedStat(dashboard.aiSuggestions, statEnabled);
 
   return (
     <div className="relative w-full marketing-hero-enter" aria-label="Live restaurant dashboard preview">
@@ -94,7 +126,7 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview({
             </span>
             <span className="text-[11px] font-semibold text-neutral-400">Live Dashboard</span>
           </div>
-          <span className="text-[10px] font-mono text-neutral-600">bhojanos.com/your-kitchen</span>
+          <span className="text-[10px] font-mono text-neutral-600">{marketingDemoData.storefrontUrl}</span>
         </div>
 
         <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-4 bg-[#0A0A0A]/95">
@@ -131,43 +163,41 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview({
           </div>
 
           {!compact && (
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <div className="sm:col-span-3 rounded-[1.25rem] border border-white/[0.08] bg-white/[0.02] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Revenue</span>
-                <span className="text-[10px] text-emerald-400 font-semibold">+18%</span>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <div className="sm:col-span-3 rounded-[1.25rem] border border-white/[0.08] bg-white/[0.02] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Revenue</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold">+{dashboard.revenueChangePercent}%</span>
+                </div>
+                <div className="flex items-end gap-1 h-20">
+                  {revenueBarHeights.map((h, i) => (
+                    <m.div
+                      key={i}
+                      className="flex-1 flex items-end h-full"
+                      initial={{ scaleY: 0 }}
+                      animate={{ scaleY: 1 }}
+                      transition={{ delay: 0.8 + i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ originY: 1 }}
+                    >
+                      <div
+                        className="w-full rounded-t-sm bg-gradient-to-t from-[#FF7A00]/20 to-[#FF7A00]"
+                        style={{ height: `${h}%` }}
+                      />
+                    </m.div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-end gap-1 h-20">
-                {REVENUE_BARS.map((h, i) => (
-                  <m.div
-                    key={i}
-                    className="flex-1 flex items-end h-full"
-                    initial={{ scaleY: 0 }}
-                    animate={{ scaleY: 1 }}
-                    transition={{ delay: 0.8 + i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ originY: 1 }}
-                  >
-                    <div
-                      className="w-full rounded-t-sm bg-gradient-to-t from-[#FF7A00]/20 to-[#FF7A00]"
-                      style={{ height: `${h}%` }}
-                    />
-                  </m.div>
-                ))}
-              </div>
-            </div>
 
-            <div className="sm:col-span-2 rounded-[1.25rem] border border-amber-500/20 bg-amber-500/[0.04] p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-white mb-1">Inventory alert</p>
-                  <p className="text-[11px] text-neutral-400 leading-relaxed">
-                    Paneer below threshold. Reorder before Friday lunch.
-                  </p>
+              <div className="sm:col-span-2 rounded-[1.25rem] border border-amber-500/20 bg-amber-500/[0.04] p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-white mb-1">Inventory alert</p>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">{dashboard.inventoryAlertMessage}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           )}
         </div>
       </m.div>

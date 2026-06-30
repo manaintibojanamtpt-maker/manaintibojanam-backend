@@ -1,6 +1,8 @@
+import { SUPPORT_EMAIL, SUPPORT_PHONE } from './config/support';
+
 export const CONTACT_INFO = {
-  phone: '+91 7666258454',
-  email: 'bhojanos26@gmail.com',
+  phone: SUPPORT_PHONE,
+  email: SUPPORT_EMAIL,
   address: 'Tirupati, Andhra Pradesh',
 };
 
