@@ -211,5 +211,16 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs24"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8185
+    },
+    "hub": {
+      "port": 4400
+    },
+    "ui": {
+      "enabled": false
+    }
   }
 }

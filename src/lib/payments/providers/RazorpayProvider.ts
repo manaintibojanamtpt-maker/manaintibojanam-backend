@@ -18,9 +18,8 @@ export class RazorpayProvider implements IPaymentProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: Math.round(amount * 100), // convert to paise
+          draftId: orderId,
           tenantId: customerData.tenantId,
-          orderId
         })
       });
 
@@ -75,8 +74,7 @@ export class RazorpayProvider implements IPaymentProvider {
           razorpay_order_id: paymentResponse.razorpay_order_id,
           razorpay_payment_id: paymentResponse.razorpay_payment_id,
           razorpay_signature: paymentResponse.razorpay_signature,
-          tenantId: config?.tenantId,
-          orderId
+          draftId: orderId,
         })
       });
 

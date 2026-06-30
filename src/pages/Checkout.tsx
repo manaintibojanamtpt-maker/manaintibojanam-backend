@@ -7,7 +7,7 @@ import { EnvironmentConfig } from '../config/environment';
 import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
-import { saveGuestOrder } from '../lib/guestOrders';
+import { saveGuestOrder, rememberGuestCheckoutPhone } from '../lib/guestOrders';
 const AutoLocationForm = React.lazy(() => import('../components/AutoLocationForm'));
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
@@ -450,6 +450,9 @@ const Checkout: React.FC = () => {
         }
 
         // BATCH 2: Stage Draft Order
+        if (!state.currentUser) {
+          rememberGuestCheckoutPhone(state.phone || orderData.phone || '');
+        }
         const draftId = await stageOrderDraft(orderData, subscriptionData);
         
         try {
@@ -488,11 +491,16 @@ const Checkout: React.FC = () => {
                   if (providerId === 'cod') {
                     const orderId = await createOrder(orderData);
                     if (!orderId) throw new Error('Order creation failed');
-                    if (!state.currentUser) saveGuestOrder(orderId);
+                    if (!state.currentUser) {
+                      saveGuestOrder(orderId);
+                      rememberGuestCheckoutPhone(state.phone || orderData.phone || '');
+                    }
                     
                     state.clearCart();
                     if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'cod' });
-                    navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { orderId } });
+                    navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, {
+                      state: { orderId, guestPhone: state.phone || orderData.phone || '' },
+                    });
                     return;
                   }
 
@@ -648,7 +656,10 @@ const Checkout: React.FC = () => {
         // COD Flow
         const orderId = await createOrder(orderData);
         if (!orderId) throw new Error('Order creation failed');
-        if (!state.currentUser) saveGuestOrder(orderId);
+        if (!state.currentUser) {
+          saveGuestOrder(orderId);
+          rememberGuestCheckoutPhone(state.phone || orderData.phone || '');
+        }
 
         if (state.currentUser) {
           await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
@@ -658,7 +669,9 @@ const Checkout: React.FC = () => {
 
         state.clearCart();
         if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'cod' });
-        navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { orderId } });
+        navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, {
+          state: { orderId, guestPhone: state.phone || orderData.phone || '' },
+        });
         setIsPlacingOrder(false);
       }
     } catch (err: any) {

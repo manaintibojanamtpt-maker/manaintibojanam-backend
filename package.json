@@ -16,7 +16,11 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test:smoke": "tsx scripts/preprod-smoke-test.ts",
-    "test:preprod": "npm run lint && npm run build && npm run test:smoke",
+    "test:unit": "node --import tsx --test backend-lib/__tests__/guestOrderToken.test.ts backend-lib/__tests__/orderAccess.test.ts",
+    "test:rules": "node scripts/security/run-rules-tests.mjs",
+    "test:api-security": "node --import tsx --test scripts/security/api-security.test.ts",
+    "test:security": "npm run test:unit && npm run test:api-security && npm run test:rules",
+    "test:preprod": "npm run lint && npm run build && npm run test:smoke && npm run test:security",
     "docs:owner-guide": "node scripts/generate-owner-guide-pdf.mjs",
     "docs:owner-guide-full": "node scripts/generate-owner-guide-full.mjs",
     "docs:owner-guide-capture": "node scripts/capture-guide-screenshots.mjs"
@@ -76,6 +80,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/body-parser": "^1.19.6",
     "@types/cors": "^2.8.19",

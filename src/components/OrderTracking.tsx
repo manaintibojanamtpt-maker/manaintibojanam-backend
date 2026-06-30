@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
   CheckCircle2, 
@@ -32,6 +32,12 @@ import { formatPrice, safeParseDate } from "../lib/utils";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
+import { fetchOrderByIdApi, requestGuestViewToken } from '../services/api';
+import {
+  clearGuestViewToken,
+  getGuestViewToken,
+  saveGuestViewToken,
+} from '../lib/guestOrders';
 
 const toPaise = (rupees: number) => Math.round(rupees * 100);
 const fromPaise = (paise: number) => paise / 100;
@@ -64,26 +70,177 @@ export default function OrderTracking() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  const [prevStatus, setPrevStatus] = useState<string | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
   const [etaRemaining, setEtaRemaining] = useState<number | null>(null);
   const etaIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [needsPhoneVerify, setNeedsPhoneVerify] = useState(false);
+  const [verifyPhone, setVerifyPhone] = useState('');
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const { brandName } = useStoreBranding();
   const { scrollYProgress } = useScroll();
   const scrollProgress = useSpring(scrollYProgress, { stiffness: 320, damping: 42, mass: 0.7 });
+
+  const syncOrderFromSnapshot = useCallback((orderSnapshot: Record<string, any>) => {
+    const data = orderSnapshot;
+    const displayState = getOrderDisplayState(orderSnapshot as any, new Date());
+    setOrder(orderSnapshot);
+
+    const terminalStatuses = [
+      OrderStatus.CANCELLED,
+      OrderStatus.READY,
+      OrderStatus.DELIVERED,
+      OrderStatus.EXPIRED,
+      OrderStatus.FAILED_DELIVERY,
+    ];
+    const isPaymentFailed = data.paymentStatus === 'failed';
+    if (terminalStatuses.includes(data.status) || isPaymentFailed || displayState.orderStage === 'future_scheduled') {
+      if (etaIntervalRef.current) {
+        clearInterval(etaIntervalRef.current);
+        etaIntervalRef.current = null;
+      }
+      setEtaRemaining(null);
+    } else {
+      const createdAt = safeParseDate(data.createdAt);
+      const prepTime = data.prepTime || 20;
+      const deliveryTime = data.deliveryTime || 20;
+      const eta = new Date(createdAt.getTime() + (prepTime + deliveryTime) * 60000);
+
+      if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
+
+      const updateEta = () => {
+        const now = new Date();
+        const diffInMs = eta.getTime() - now.getTime();
+        setEtaRemaining(Math.max(0, Math.floor(diffInMs / 60000)));
+      };
+      updateEta();
+      etaIntervalRef.current = setInterval(updateEta, 1000);
+    }
+
+    const previousStatus = prevStatusRef.current;
+    if (previousStatus && previousStatus !== data.status) {
+      notificationService.simulatePushNotification(orderId!, data.status);
+
+      const statusLabels: Record<string, string> = {
+        [OrderStatus.PREPARING]: 'Our chef is now preparing your meal! 👨‍🍳',
+        [OrderStatus.OUT_FOR_DELIVERY]: 'Your food is out for delivery! 🛵',
+        [OrderStatus.DELIVERED]: 'Your delicious meal has been delivered! Enjoy! 🍛',
+        [OrderStatus.CANCELLED]: 'Your order has been cancelled.',
+      };
+
+      if (statusLabels[data.status]) {
+        toast.success(statusLabels[data.status], {
+          duration: 5000,
+          icon: '🔔',
+        });
+      }
+    }
+    prevStatusRef.current = data.status;
+
+    if (data.status === OrderStatus.DELIVERED && !data.reviewed) {
+      setShowRating(true);
+    }
+
+    if (data.status === OrderStatus.PLACED || data.status === OrderStatus.PENDING) {
+      const orderTime = safeParseDate(data.createdAt).getTime();
+      const now = Date.now();
+      const diffInSeconds = Math.floor((now - orderTime) / 1000);
+      const remaining = 60 - diffInSeconds;
+
+      if (remaining > 0) {
+        setTimeLeft(remaining);
+        setCanCancel(true);
+      } else {
+        setTimeLeft(0);
+        setCanCancel(false);
+      }
+    } else {
+      setCanCancel(false);
+    }
+  }, [orderId]);
+
+  const loadGuestOrder = useCallback(async (options?: { promptVerify?: boolean }) => {
+    if (!orderId) return false;
+
+    const token = getGuestViewToken(orderId);
+    if (!token) {
+      if (options?.promptVerify) {
+        setNeedsPhoneVerify(true);
+        setLoading(false);
+      }
+      return false;
+    }
+
+    setNeedsPhoneVerify(false);
+    const orderData = await fetchOrderByIdApi(orderId);
+    if (!orderData) {
+      clearGuestViewToken(orderId);
+      if (options?.promptVerify) {
+        setNeedsPhoneVerify(true);
+        setLoading(false);
+      }
+      return false;
+    }
+
+    syncOrderFromSnapshot(orderData as Record<string, any>);
+    setLoading(false);
+    return true;
+  }, [orderId, syncOrderFromSnapshot]);
+
+  const handleGuestPhoneVerify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!orderId || !verifyPhone.trim()) {
+      setVerifyError('Enter the phone number used for this order.');
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerifyError(null);
+    try {
+      const input = verifyPhone.trim();
+      const tokenInput = input.replace(/\D/g, '').length === 4
+        ? { phoneLast4: input }
+        : { phone: input };
+      const result = await requestGuestViewToken(orderId, tokenInput);
+      if (!result.success || !result.token) {
+        setVerifyError(result.error || 'Could not verify access to this order.');
+        return;
+      }
+      saveGuestViewToken(orderId, result.token, result.expiresAt);
+      setNeedsPhoneVerify(false);
+      const loaded = await loadGuestOrder();
+      if (!loaded) {
+        setVerifyError('Verified, but order could not be loaded. Please try again.');
+      }
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const refreshOrder = async () => {
     if (!orderId) return;
     setIsRefreshing(true);
     try {
+      if (!currentUser) {
+        const orderData = await fetchOrderByIdApi(orderId);
+        if (orderData) {
+          syncOrderFromSnapshot(orderData as Record<string, any>);
+          toast.success("Order updated");
+        } else {
+          toast.error("Failed to refresh order");
+        }
+        return;
+      }
+
       const docRef = doc(getDb(), "orders", orderId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setOrder({ id: docSnap.id, ...docSnap.data() });
+        syncOrderFromSnapshot({ id: docSnap.id, ...docSnap.data() });
         toast.success("Order updated");
       }
-    } catch (err) {
-      console.error("Refresh error:", err);
+    } catch {
+      toast.error("Failed to refresh order");
     } finally {
       setIsRefreshing(false);
     }
@@ -92,7 +249,6 @@ export default function OrderTracking() {
   useEffect(() => {
     if (!orderId) return;
 
-    // Check if notifications are already granted
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
       if (Notification.permission === 'granted') {
@@ -100,97 +256,35 @@ export default function OrderTracking() {
       }
     }
 
-    const unsub = onSnapshot(doc(getDb(), "orders", orderId), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const orderSnapshot = { id: doc.id, ...data } as any;
-        const displayState = getOrderDisplayState(orderSnapshot, new Date());
-        setOrder(orderSnapshot);
+    if (!currentUser) {
+      let cancelled = false;
+      let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-        
-        // Calculate ETA
-        const terminalStatuses = [
-          OrderStatus.CANCELLED,
-          OrderStatus.READY,
-          OrderStatus.DELIVERED,
-          OrderStatus.EXPIRED,
-          OrderStatus.FAILED_DELIVERY
-        ];
-        const isPaymentFailed = data.paymentStatus === 'failed';
-        if (terminalStatuses.includes(data.status) || isPaymentFailed || displayState.orderStage === 'future_scheduled') {
-          if (etaIntervalRef.current) {
-            clearInterval(etaIntervalRef.current);
-            etaIntervalRef.current = null;
-          }
-          setEtaRemaining(null);
-        } else {
-          const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-          const prepTime = data.prepTime || 20;
-          const deliveryTime = data.deliveryTime || 20;
-          const eta = new Date(createdAt.getTime() + (prepTime + deliveryTime) * 60000);
-          
-          if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
-          
-          const updateEta = () => {
-            const now = new Date();
-            const diffInMs = eta.getTime() - now.getTime();
-            setEtaRemaining(Math.max(0, Math.floor(diffInMs / 60000)));
-          };
-          updateEta();
-          etaIntervalRef.current = setInterval(updateEta, 1000);
-        }
-        
-        if (prevStatus && prevStatus !== data.status) {
-          notificationService.simulatePushNotification(orderId!, data.status);
-          
-          const statusLabels: Record<string, string> = {
-            [OrderStatus.PREPARING]: 'Our chef is now preparing your meal! 👨‍🍳',
-            [OrderStatus.OUT_FOR_DELIVERY]: 'Your food is out for delivery! 🛵',
-            [OrderStatus.DELIVERED]: 'Your delicious meal has been delivered! Enjoy! 🍛',
-            [OrderStatus.CANCELLED]: 'Your order has been cancelled.'
-          };
-          
-          if (statusLabels[data.status]) {
-            toast.success(statusLabels[data.status], {
-              duration: 5000,
-              icon: '🔔'
-            });
-            
-            // Play a sound for status updates
-            try {
-              // Avoid loading external audio assets that may be blocked.
-            } catch (e) {}
-          }
-        }
-        setPrevStatus(data.status);
-        
-        if (data.status === OrderStatus.DELIVERED && !data.reviewed) {
-          setShowRating(true);
-        }
+      const startGuestTracking = async () => {
+        const loaded = await loadGuestOrder({ promptVerify: true });
+        if (cancelled || !loaded) return;
+        pollTimer = setInterval(() => {
+          void loadGuestOrder();
+        }, 30000);
+      };
 
-        // Calculate time left for cancellation
-        if (data.status === OrderStatus.PLACED || data.status === OrderStatus.PENDING) {
-          const orderTime = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt).getTime();
-          const now = new Date().getTime();
-          const diffInSeconds = Math.floor((now - orderTime) / 1000);
-          const remaining = 60 - diffInSeconds;
-          
-          if (remaining > 0) {
-            setTimeLeft(remaining);
-            setCanCancel(true);
-          } else {
-            setTimeLeft(0);
-            setCanCancel(false);
-          }
-        } else {
-          setCanCancel(false);
-        }
+      void startGuestTracking();
+
+      return () => {
+        cancelled = true;
+        if (pollTimer) clearInterval(pollTimer);
+        if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
+      };
+    }
+
+    const unsub = onSnapshot(doc(getDb(), "orders", orderId), (snapshot) => {
+      if (snapshot.exists()) {
+        syncOrderFromSnapshot({ id: snapshot.id, ...snapshot.data() });
       } else {
         toast.error("Order not found");
       }
       setLoading(false);
     }, (err) => {
-      console.error("Order Tracking Error:", err);
       if (err.code === 'permission-denied') {
         handleFirestoreError(err, OperationType.GET, `orders/${orderId}`);
       }
@@ -205,7 +299,7 @@ export default function OrderTracking() {
       }
       if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
     };
-  }, [orderId]);
+  }, [orderId, currentUser, loadGuestOrder, syncOrderFromSnapshot]);
 
   useEffect(() => {
     if (canCancel && timeLeft > 0) {
@@ -315,6 +409,40 @@ export default function OrderTracking() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (needsPhoneVerify && !order) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-lg">
+          <h2 className="text-2xl font-black text-gray-900 mb-2">Verify to track order</h2>
+          <p className="text-gray-500 mb-6">
+            Enter the phone number used when you placed this order.
+          </p>
+          <form onSubmit={handleGuestPhoneVerify} className="space-y-4">
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={verifyPhone}
+              onChange={(event) => setVerifyPhone(event.target.value)}
+              placeholder="Phone number or last 4 digits"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 font-medium text-gray-900"
+            />
+            {verifyError ? (
+              <p className="text-sm font-medium text-red-600">{verifyError}</p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={isVerifying}
+              className="w-full rounded-2xl bg-red-600 py-3 font-black text-white disabled:opacity-60"
+            >
+              {isVerifying ? 'Verifying...' : 'Continue'}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }

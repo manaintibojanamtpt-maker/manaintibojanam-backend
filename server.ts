@@ -33,6 +33,22 @@ import {
   MAX_INLINE_KYC_BYTES,
   parseInlineKycDocumentUrl,
 } from "./backend-lib/kycInlineDocument";
+import {
+  assertOrderPatchAccess,
+  assertOrderReadAccess,
+  assertOrderNotifyAccess,
+  assertOrderUserListAccess,
+  assertRazorpayDraftBindAccess,
+  extractDraftUserId,
+  isOrderAuthEnforced,
+  isRazorpayDraftBindEnforced,
+  phoneMatchesOrder,
+  type FirebaseAuthUser,
+} from "./backend-lib/orderAccess";
+import {
+  GuestOrderTokenError,
+  signGuestOrderToken,
+} from "./backend-lib/guestOrderToken";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -675,6 +691,14 @@ const strictLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const guestViewTokenLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many verification attempts. Please try again later.' },
+});
+
 // Authentication Middlewares
 const verifyFirebaseToken = async (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
@@ -761,6 +785,121 @@ const assertOrderStatusAccess = async (req: any, orderData: Record<string, any>)
   const userDoc = await db.collection('users').doc(req.user.uid).get();
   const ownedTenantIds: string[] = userDoc.data()?.ownedTenantIds || [];
   return ownedTenantIds.includes(orderData.tenantId);
+};
+
+const verifyFirebaseAuthUser = async (token: string): Promise<FirebaseAuthUser> => {
+  const decodedToken = await getAdminAuth(appAdmin).verifyIdToken(token);
+  return {
+    uid: decodedToken.uid,
+    admin: decodedToken.admin === true,
+  };
+};
+
+const getOwnedTenantIdsForUser = async (uid: string): Promise<string[]> => {
+  const userDoc = await db.collection('users').doc(uid).get();
+  return userDoc.data()?.ownedTenantIds || [];
+};
+
+const logOrderAccessWouldBlock = (
+  decision: { reason: string; statusCode?: number },
+  context: { orderId: string; method: string }
+) => {
+  logger.warn({
+    message: 'order_access_would_block',
+    orderId: context.orderId,
+    method: context.method,
+    reason: decision.reason,
+    statusCode: decision.statusCode,
+    enforce: isOrderAuthEnforced(),
+  });
+};
+
+const logRazorpayDraftBindWouldBlock = (
+  decision: { reason: string; statusCode?: number },
+  context: { draftId: string; draftUserId: string | null }
+) => {
+  logger.warn({
+    message: 'razorpay_draft_bind_would_block',
+    draftId: context.draftId,
+    draftUserId: context.draftUserId,
+    reason: decision.reason,
+    statusCode: decision.statusCode,
+    enforce: isRazorpayDraftBindEnforced(),
+  });
+};
+
+const enforceOrderReadAccess = async (
+  req: any,
+  res: any,
+  orderId: string,
+  orderData: Record<string, unknown>
+): Promise<boolean> => {
+  const guestToken = typeof req.query?.guestToken === 'string' ? req.query.guestToken : undefined;
+  const decision = await assertOrderReadAccess({
+    requestedOrderId: orderId,
+    order: {
+      userId: (orderData.userId as string | null | undefined) ?? null,
+      tenantId: orderData.tenantId as string | undefined,
+    },
+    authHeader: req.headers.authorization as string | undefined,
+    guestToken,
+    verifyFirebaseToken: verifyFirebaseAuthUser,
+    getOwnedTenantIds: getOwnedTenantIdsForUser,
+  });
+
+  if (decision.allowed) {
+    return true;
+  }
+
+  if (!isOrderAuthEnforced()) {
+    logOrderAccessWouldBlock(decision, { orderId, method: req.method });
+    return true;
+  }
+
+  res.status(decision.statusCode || 403).json({
+    success: false,
+    error: decision.error || 'Forbidden',
+    code: decision.reason,
+  });
+  return false;
+};
+
+const enforceOrderPatchAccess = async (
+  req: any,
+  res: any,
+  orderId: string,
+  orderData: Record<string, unknown>
+): Promise<boolean> => {
+  res.setHeader('Deprecation', 'true');
+  res.setHeader('Sunset', 'PATCH /api/orders/:id/status');
+  res.setHeader('Link', '</api/orders/:id/status>; rel="successor-version"');
+
+  const decision = await assertOrderPatchAccess({
+    requestedOrderId: orderId,
+    order: {
+      userId: (orderData.userId as string | null | undefined) ?? null,
+      tenantId: orderData.tenantId as string | undefined,
+    },
+    authHeader: req.headers.authorization as string | undefined,
+    verifyFirebaseToken: verifyFirebaseAuthUser,
+    getOwnedTenantIds: getOwnedTenantIdsForUser,
+  });
+
+  if (decision.allowed) {
+    return true;
+  }
+
+  if (!isOrderAuthEnforced()) {
+    logOrderAccessWouldBlock(decision, { orderId, method: req.method });
+    return true;
+  }
+
+  res.status(decision.statusCode || 403).json({
+    success: false,
+    error: decision.error || 'Forbidden',
+    code: decision.reason,
+  });
+  return false;
 };
 
 const applyOrderStatusUpdate = async (
@@ -3284,6 +3423,25 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
         return res.status(410).json({ success: false, error: 'Payment session expired. Please place the order again.' });
       }
 
+      const draftUserId = extractDraftUserId(draftDocData as Record<string, unknown>);
+      const bindDecision = await assertRazorpayDraftBindAccess({
+        draftUserId,
+        authHeader: req.headers.authorization as string | undefined,
+        verifyFirebaseToken: verifyFirebaseAuthUser,
+      });
+
+      if (!bindDecision.allowed) {
+        if (!isRazorpayDraftBindEnforced()) {
+          logRazorpayDraftBindWouldBlock(bindDecision, { draftId, draftUserId });
+        } else {
+          return res.status(bindDecision.statusCode || 403).json({
+            success: false,
+            error: bindDecision.error || 'Forbidden',
+            code: bindDecision.reason,
+          });
+        }
+      }
+
       const draft = draftDocData.orderPayload || draftDocData;
 
       let calculatedSubtotal = 0;
@@ -3798,6 +3956,70 @@ app.post("/api/orders", verifyFirebaseToken, async (req: any, res: any) => {
   }
 });
 
+// GUEST VIEW TOKEN (ADR-012, M0 PR-3)
+app.post(
+  "/api/orders/:id/guest-view-token",
+  guestViewTokenLimiter,
+  strictLimiter,
+  async (req, res) => {
+    const denyGuestAccess = () =>
+      res.status(404).json({ success: false, error: "Order not found" });
+
+    try {
+      const { id } = req.params;
+      const { phone, phoneLast4 } = req.body || {};
+
+      if (!phone && !phoneLast4) {
+        return res.status(400).json({
+          success: false,
+          error: "phone or phoneLast4 is required",
+        });
+      }
+
+      const orderDoc = await db.collection("orders").doc(id).get();
+      if (!orderDoc.exists) {
+        return denyGuestAccess();
+      }
+
+      const orderData = orderDoc.data() || {};
+      const orderPhone = String(orderData.phone || orderData.customerPhone || "");
+      if (
+        !orderPhone ||
+        !phoneMatchesOrder(orderPhone, {
+          phone: typeof phone === "string" ? phone : undefined,
+          phoneLast4: typeof phoneLast4 === "string" ? phoneLast4 : undefined,
+        })
+      ) {
+        return denyGuestAccess();
+      }
+
+      const { token, expiresAt } = signGuestOrderToken(id);
+      return res.json({
+        success: true,
+        token,
+        expiresAt: expiresAt.toISOString(),
+      });
+    } catch (err) {
+      if (err instanceof GuestOrderTokenError && err.code === "MISSING_SECRET") {
+        logger.error({ message: "Guest view token secret missing" });
+        return res.status(503).json({
+          success: false,
+          error: "Guest order access is not configured",
+        });
+      }
+      logger.error({
+        message: "Guest view token issuance failed",
+        orderId: req.params.id,
+        error: (err as Error).message,
+      });
+      return res.status(500).json({
+        success: false,
+        error: "Failed to issue guest view token",
+      });
+    }
+  }
+);
+
 // GET ORDER BY ID
 app.get("/api/orders/:id", async (req, res) => {
   try {
@@ -3806,9 +4028,16 @@ app.get("/api/orders/:id", async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
-    res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+
+    const orderData = doc.data() || {};
+    const allowed = await enforceOrderReadAccess(req, res, id, orderData);
+    if (!allowed) {
+      return;
+    }
+
+    res.json({ success: true, data: { id: doc.id, ...orderData } });
   } catch (err) {
-    console.error(err);
+    logger.error({ message: "Failed to fetch order", orderId: req.params.id, error: (err as Error).message });
     res.status(500).json({ success: false, error: "Failed to fetch order" });
   }
 });
@@ -3817,6 +4046,19 @@ app.get("/api/orders/:id", async (req, res) => {
 app.patch("/api/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const orderRef = db.collection("orders").doc(id);
+    const orderDoc = await orderRef.get();
+
+    if (!orderDoc.exists) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    const orderData = orderDoc.data() || {};
+    const allowed = await enforceOrderPatchAccess(req, res, id, orderData);
+    if (!allowed) {
+      return;
+    }
+
     const { 
       status, 
       deliveryPartner, 
@@ -3834,15 +4076,6 @@ app.patch("/api/orders/:id", async (req, res) => {
     if (trackingLink !== undefined) updateData.trackingLink = trackingLink;
     if (riderName !== undefined) updateData.riderName = riderName;
     if (riderPhone !== undefined) updateData.riderPhone = riderPhone;
-
-    const orderRef = db.collection("orders").doc(id);
-    const orderDoc = await orderRef.get();
-    
-    if (!orderDoc.exists) {
-      return res.status(404).json({ success: false, error: "Order not found" });
-    }
-
-    const orderData = orderDoc.data() || {};
 
     if (status) {
       const gate = assertFulfillmentTransition(orderData, status);
@@ -3905,7 +4138,7 @@ app.patch("/api/orders/:id", async (req, res) => {
 // BEST-EFFORT STATUS NOTIFICATION
 // Used by admin/client flows that update Firestore directly and then ask the API
 // to fan out email, WhatsApp, and push notifications without re-writing order data.
-app.post("/api/orders/:id/notify-status", async (req: any, res: any) => {
+app.post("/api/orders/:id/notify-status", verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -3915,21 +4148,62 @@ app.post("/api/orders/:id/notify-status", async (req: any, res: any) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    const orderData = { id: orderDoc.id, ...orderDoc.data() };
-    const notificationStatus = status || orderData.status;
+    const orderData = orderDoc.data() || {};
+    const notifyDecision = await assertOrderNotifyAccess({
+      firebaseUser: {
+        uid: req.user.uid,
+        admin: req.user.admin === true,
+      },
+      order: {
+        userId: orderData.userId ?? null,
+        tenantId: orderData.tenantId,
+      },
+      getOwnedTenantIds: getOwnedTenantIdsForUser,
+    });
 
-    await notifyCustomer(orderData, notificationStatus);
+    if (!notifyDecision.allowed) {
+      return res.status(notifyDecision.statusCode || 403).json({
+        success: false,
+        error: notifyDecision.error || "Forbidden",
+        code: notifyDecision.reason,
+      });
+    }
+
+    const mergedOrderData = { id: orderDoc.id, ...orderData };
+    const notificationStatus = status || mergedOrderData.status;
+
+    await notifyCustomer(mergedOrderData, notificationStatus);
     res.json({ success: true, message: "Order notification dispatch initiated" });
   } catch (err: any) {
-    console.error("Order Notification Error:", err);
+    logger.error({
+      message: "Order notification error",
+      orderId: req.params.id,
+      error: err.message,
+    });
     res.status(500).json({ success: false, error: err.message || "Failed to send order notification" });
   }
 });
 
 // GET ORDERS BY USER ID
-app.get("/api/orders/user/:userId", async (req, res) => {
+app.get("/api/orders/user/:userId", verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const { userId } = req.params;
+    const listDecision = assertOrderUserListAccess(
+      {
+        uid: req.user.uid,
+        admin: req.user.admin === true,
+      },
+      userId
+    );
+
+    if (!listDecision.allowed) {
+      return res.status(listDecision.statusCode || 403).json({
+        success: false,
+        error: listDecision.error || "Forbidden",
+        code: listDecision.reason,
+      });
+    }
+
     const snapshot = await db.collection("orders")
       .where("userId", "==", userId)
       .orderBy("createdAt", "desc")
@@ -3937,8 +4211,12 @@ app.get("/api/orders/user/:userId", async (req, res) => {
       .get();
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     res.json({ success: true, data: orders });
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    logger.error({
+      message: "Failed to fetch user orders",
+      userId: req.params.userId,
+      error: err.message,
+    });
     res.status(500).json({ success: false, error: "Failed to fetch user orders" });
   }
 });

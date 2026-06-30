@@ -4,11 +4,11 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { updateOrderStatus } from '../services/api';
+import { updateOrderStatus, ensureGuestViewToken, fetchOrderByIdApi } from '../services/api';
 import { Order, OrderStatus } from '../types';
 import { m } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, ArrowRight, RefreshCw, ShoppingBag, Clock, X, Home } from 'lucide-react';
-import { saveGuestOrder } from '../lib/guestOrders';
+import { saveGuestOrder, getGuestCheckoutPhone } from '../lib/guestOrders';
 import toast from 'react-hot-toast';
 import { safeParseDate } from '../lib/utils';
 
@@ -36,23 +36,41 @@ const PaymentSuccess: React.FC = () => {
 
         saveGuestOrder(orderId);
 
-        const orderRef = doc(getDb(), 'orders', orderId);
-        const snapshot = await getDoc(orderRef);
-        if (!snapshot.exists()) {
-          throw new Error('Order not found. Please contact support.');
+        let orderData: Order;
+        if (!currentUser) {
+          const phone = getGuestCheckoutPhone() || '';
+          if (phone) {
+            await ensureGuestViewToken(orderId, phone);
+          }
+          const apiOrder = await fetchOrderByIdApi(orderId);
+          if (!apiOrder) {
+            throw new Error('Order not found. Please contact support.');
+          }
+          orderData = apiOrder;
+        } else {
+          const orderRef = doc(getDb(), 'orders', orderId);
+          const snapshot = await getDoc(orderRef);
+          if (!snapshot.exists()) {
+            throw new Error('Order not found. Please contact support.');
+          }
+          orderData = { id: snapshot.id, ...snapshot.data() } as Order;
         }
-
-        const orderData = { id: snapshot.id, ...snapshot.data() } as Order;
-        console.log('[PaymentSuccess] loaded order', orderData.id, 'status=', orderData.status, 'paymentStatus=', orderData.paymentStatus);
         const expiresAt = safeParseDate(orderData.expiresAt).getTime();
         const now = Date.now();
 
-        if (orderData.status !== OrderStatus.EXPIRED && now > expiresAt) {
-          await updateDoc(orderRef, {
-            status: OrderStatus.EXPIRED,
-            paymentStatus: 'expired',
-            updatedAt: serverTimestamp()
-          });
+        if (
+          orderData.status !== OrderStatus.EXPIRED &&
+          expiresAt > 0 &&
+          now > expiresAt
+        ) {
+          if (currentUser) {
+            const orderRef = doc(getDb(), 'orders', orderId);
+            await updateDoc(orderRef, {
+              status: OrderStatus.EXPIRED,
+              paymentStatus: 'expired',
+              updatedAt: serverTimestamp(),
+            });
+          }
           orderData.status = OrderStatus.EXPIRED;
           orderData.paymentStatus = 'expired';
         }
@@ -68,7 +86,7 @@ const PaymentSuccess: React.FC = () => {
     };
 
     loadOrder();
-  }, [clearCart, queryOrderId]);
+  }, [clearCart, queryOrderId, currentUser]);
 
 
 

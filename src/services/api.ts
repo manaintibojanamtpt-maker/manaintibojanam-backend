@@ -25,6 +25,10 @@ import {
   LEGACY_UNPAID_ADMIN_LABEL,
   LEGACY_UNPAID_CUSTOMER_LABEL,
 } from '../config/legacyPaymentCopy';
+import {
+  getGuestViewToken,
+  saveGuestViewToken,
+} from '../lib/guestOrders';
 
 const API_BASE_URL = EnvironmentConfig.getApiUrl();
 
@@ -72,6 +76,89 @@ if (typeof window !== 'undefined') {
 
 export const pingBackend = () => {
   fetch(`${API_BASE_URL}/api/health`).catch(() => {});
+};
+
+export interface GuestViewTokenInput {
+  phone?: string;
+  phoneLast4?: string;
+}
+
+export interface GuestViewTokenResult {
+  success: boolean;
+  token?: string;
+  expiresAt?: string;
+  error?: string;
+}
+
+export const requestGuestViewToken = async (
+  orderId: string,
+  input: GuestViewTokenInput
+): Promise<GuestViewTokenResult> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/guest-view-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Unable to verify order access',
+      };
+    }
+    return {
+      success: true,
+      token: payload.token,
+      expiresAt: payload.expiresAt,
+    };
+  } catch {
+    return { success: false, error: 'Unable to verify order access' };
+  }
+};
+
+export const ensureGuestViewToken = async (
+  orderId: string,
+  phone: string
+): Promise<boolean> => {
+  if (!orderId || !phone.trim()) {
+    return false;
+  }
+  if (getGuestViewToken(orderId)) {
+    return true;
+  }
+  const result = await requestGuestViewToken(orderId, { phone: phone.trim() });
+  if (!result.success || !result.token) {
+    return false;
+  }
+  saveGuestViewToken(orderId, result.token, result.expiresAt);
+  return true;
+};
+
+const buildGuestOrderFetchInit = (orderId: string): { headers: Headers; url: string } => {
+  const guestToken = getGuestViewToken(orderId);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  const url = new URL(`${API_BASE_URL}/api/orders/${orderId}`);
+
+  if (guestToken) {
+    headers.set('Authorization', `Guest ${guestToken}`);
+    url.searchParams.set('guestToken', guestToken);
+  }
+
+  return { headers, url: url.toString() };
+};
+
+export const fetchOrderByIdApi = async (orderId: string): Promise<Order | null> => {
+  const { headers, url } = buildGuestOrderFetchInit(orderId);
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    return null;
+  }
+  const payload = await response.json();
+  if (!payload?.success || !payload?.data) {
+    return null;
+  }
+  return payload.data as Order;
 };
 
 // --- MENU API ---
@@ -408,11 +495,15 @@ const normalizeOrderStatus = (value: string | OrderStatus | undefined | null): O
 
 const notifyOrderStatusChange = async (orderId: string, status: OrderStatus) => {
   try {
-    await fetch(`${API_BASE_URL}/api/orders/${orderId}/notify-status`, {
+    const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/notify-status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status }),
     });
+    if (!response.ok && response.status !== 401 && response.status !== 403) {
+      const payload = await response.json().catch(() => ({}));
+      console.warn('[api] Status notification request failed:', payload?.error || response.status);
+    }
   } catch (error) {
     console.warn('[api] Status notification request skipped or failed:', error);
   }

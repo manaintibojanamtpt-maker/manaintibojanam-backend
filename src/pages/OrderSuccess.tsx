@@ -7,11 +7,19 @@ import { m } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useTenant } from '../context/TenantContext';
+import { useAuth } from '../context/AuthContext';
+import { ensureGuestViewToken, fetchOrderByIdApi } from '../services/api';
+import {
+  getGuestCheckoutPhone,
+  rememberGuestCheckoutPhone,
+  saveGuestOrder,
+} from '../lib/guestOrders';
 
 const OrderSuccess: React.FC = () => {
   const location = useLocation();
   const { clearCart } = useCart();
   const { tenantSlug } = useTenant();
+  const { currentUser } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +28,8 @@ const OrderSuccess: React.FC = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       const searchParams = new URLSearchParams(location.search);
-      const stateOrderId = (location.state as { orderId?: string } | null)?.orderId;
+      const stateOrderId = (location.state as { orderId?: string; guestPhone?: string } | null)?.orderId;
+      const guestPhone = (location.state as { orderId?: string; guestPhone?: string } | null)?.guestPhone;
       const orderId = stateOrderId || searchParams.get('orderId');
 
       if (!orderId) {
@@ -30,15 +39,36 @@ const OrderSuccess: React.FC = () => {
       }
 
       try {
+        if (!currentUser) {
+          saveGuestOrder(orderId);
+          const phone = guestPhone || getGuestCheckoutPhone() || '';
+          if (phone) {
+            rememberGuestCheckoutPhone(phone);
+            await ensureGuestViewToken(orderId, phone);
+          }
+
+          const apiOrder = await fetchOrderByIdApi(orderId);
+          if (apiOrder) {
+            setOrder(apiOrder);
+            clearCart();
+          } else {
+            setOrder({
+              id: orderId,
+              orderNumber: orderId.slice(-6).toUpperCase(),
+            } as Order);
+            clearCart();
+          }
+          return;
+        }
+
         const orderDoc = await getDoc(doc(getDb(), 'orders', orderId));
         if (orderDoc.exists()) {
           setOrder({ id: orderDoc.id, ...orderDoc.data() } as Order);
-          clearCart(); // Clear cart here just in case
+          clearCart();
         } else {
           setError('Order not found');
         }
       } catch (err) {
-        console.error('Failed to fetch order details:', err);
         setError('Failed to load order details');
       } finally {
         setIsLoading(false);
@@ -46,7 +76,7 @@ const OrderSuccess: React.FC = () => {
     };
 
     fetchOrder();
-  }, [location.search, location.state, clearCart]);
+  }, [location.search, location.state, clearCart, currentUser]);
 
   if (isLoading) {
     return (

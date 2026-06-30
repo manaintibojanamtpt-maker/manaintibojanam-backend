@@ -11,5 +11,5 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx"
   },
-  "include": ["src", "server.ts"]
+  "include": ["src", "server.ts", "backend-lib"]
 }
