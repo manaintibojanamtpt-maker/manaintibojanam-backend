@@ -345,7 +345,7 @@ const OwnerDashboard = () => {
     sandboxMode: tenantInfo?.sandboxMode,
     isSandboxActive,
     deliveryFreeRadius: tenantInfo?.deliveryConfig?.freeRadius,
-    menuCount,
+    menuCount: ownerMenuCount,
     totalOrders: analytics?.totalOrders,
   });
 

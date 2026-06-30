@@ -26,7 +26,15 @@ export interface StoreSetupProgress {
 
 type TenantSnapshot = Pick<
   TenantInfo,
-  'name' | 'location' | 'deliveryConfig' | 'paymentConfig' | 'kyc' | 'onboardingStatus' | 'storeStatus' | 'sandboxMode'
+  | 'name'
+  | 'location'
+  | 'deliveryConfig'
+  | 'paymentConfig'
+  | 'kyc'
+  | 'onboardingStatus'
+  | 'storeStatus'
+  | 'sandboxMode'
+  | 'subscription'
 > | null | undefined;
 
 function isStepComplete(id: StoreSetupStepId, tenant: TenantSnapshot, menuCount: number): boolean {
