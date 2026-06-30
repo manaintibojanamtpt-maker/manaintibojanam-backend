@@ -31,6 +31,7 @@ import { FreeStorefrontBanner } from '../../components/owner/FreeStorefrontBanne
 import { StoreSetupGuide } from '../../components/owner/StoreSetupGuide';
 import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 import { getMenuTenantQueryKeys } from '../../lib/menuTenantKeys';
+import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { needsGrowthTrialActivation, isStoreLiveForOrders } from '../../lib/planStatus';
 import { AIInsightCard } from '../../components/owner/AIInsightCard';
 import { useTenantStoreStatus } from '../../hooks/useTenantStoreStatus';
