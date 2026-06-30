@@ -93,11 +93,7 @@ export function computeStoreSetupProgress(
   const requiredCompletedCount = steps.filter((s) => s.required && s.complete).length;
   const percentComplete = Math.round((requiredCompletedCount / STORE_SETUP_TOTAL_REQUIRED) * 100);
   const allRequiredDone = requiredCompletedCount >= STORE_SETUP_TOTAL_REQUIRED;
-  const onboardingComplete = tenant?.onboardingStatus?.isComplete === true;
-  const isComplete =
-    onboardingComplete ||
-    (allRequiredDone && completionMap.get('go-live') === true);
-
+  const isComplete = allRequiredDone;
   const needsSetup = !isComplete;
 
   const nextStep = firstIncomplete
@@ -118,9 +114,7 @@ export function computeStoreSetupProgress(
 }
 
 export function needsStoreSetup(tenant: TenantSnapshot, menuCount = 0): boolean {
-  if (tenant?.onboardingStatus?.isComplete === true) return false;
-  if (isStoreLiveForOrders(tenant)) return false;
-  if (tenant?.subscription?.status === 'trialing' && tenant?.storeStatus === 'active') return false;
+  if (!tenant) return false;
   return computeStoreSetupProgress(tenant, menuCount).needsSetup;
 }
 

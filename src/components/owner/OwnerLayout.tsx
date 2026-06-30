@@ -13,6 +13,7 @@ import { EnvironmentConfig } from '../../config/environment';
 import { buildCustomerPreviewStoreUrl } from '../../lib/storefrontPreview';
 import { ownerNavItems, ownerNavGroups, getOwnerPageTitle, OwnerNavItem } from '../../config/ownerNavigation';
 import { StoreSetupGuide } from './StoreSetupGuide';
+import { OwnerHomeScreenBanner } from './OwnerHomeScreenBanner';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 
@@ -398,6 +399,8 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
             </button>
           </div>
         )}
+
+        {tenantInfo && !showSetupNav && <OwnerHomeScreenBanner />}
 
         {/* Email Verification Banner */}
         {(!currentUser?.emailVerified && tenantInfo?.kyc?.emailVerificationStatus !== 'verified') && (
