@@ -1,0 +1,50 @@
+name: IaC Smoke Tests
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [IaC Deploy Staging]
+    types: [completed]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_CI_SA }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: bhojanos-staging-gke
+          location: asia-south1
+
+      - name: SDK regression
+        run: npm ci && npm run test:sdk
+
+      - name: Health probes
+        run: |
+          kubectl wait --for=condition=available deployment/bhojanos-api -n bhojanos-staging-spine --timeout=300s
+          kubectl wait --for=condition=available deployment/order-projection-worker -n bhojanos-staging-spine --timeout=300s
+          kubectl wait --for=condition=available deployment/menu-projection-worker -n bhojanos-staging-spine --timeout=300s
+
+      - name: Port-forward smoke
+        run: |
+          kubectl port-forward svc/bhojanos-api 8080:80 -n bhojanos-staging-spine &
+          sleep 5
+          curl -sf http://localhost:8080/health/live
+          curl -sf http://localhost:8080/health/ready
+
+      - name: Prod flag guard check
+        run: |
+          echo "Verify prod_spine_flags_enabled_count == 0 in Grafana (manual gate)"

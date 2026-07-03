@@ -43,6 +43,9 @@ import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import { activeTenantId as fallbackTenantId } from '../services/api';
 import toast from 'react-hot-toast';
+import { isLocationCustomerDetectionEnabled } from '../lib/locationFeatureFlags';
+import { detectCustomerLocation } from '../lib/customerLocation/CustomerLocationFacade';
+import { isSdkSuccess } from '../sdk/core/resultHelpers';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import MenuItemCard from '../components/MenuItemCard';
@@ -1360,6 +1363,25 @@ const Home: React.FC = () => {
               <div className="flex flex-col gap-4">
                 <button 
                   onClick={() => {
+                    if (isLocationCustomerDetectionEnabled()) {
+                      void detectCustomerLocation({ enableHighAccuracy: true, timeoutMs: 10_000 }).then((result) => {
+                        if (isSdkSuccess(result)) {
+                          localStorage.setItem('locationStatus', 'granted');
+                          setShowLocationPrompt(false);
+                          toast.success('Location enabled!');
+                          return;
+                        }
+                        localStorage.setItem('locationStatus', 'denied');
+                        setShowLocationPrompt(false);
+                        toast.error(
+                          result.error.code === 'FORBIDDEN'
+                            ? 'Location access denied.'
+                            : 'Could not detect your location.'
+                        );
+                      });
+                      return;
+                    }
+
                     navigator.geolocation.getCurrentPosition(
                       (pos) => {
                         localStorage.setItem('locationStatus', 'granted');

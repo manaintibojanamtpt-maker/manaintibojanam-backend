@@ -1,0 +1,23 @@
+/**
+ * EventSDK — error codes (M6 PR-1).
+ */
+
+import type { SdkErrorCode } from '../../core/errors';
+
+export type EventSdkErrorCode =
+  | SdkErrorCode
+  | 'SCHEMA_NOT_FOUND'
+  | 'SCHEMA_VERSION_MISMATCH'
+  | 'ENVELOPE_INVALID'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'OUTBOX_UNAVAILABLE'
+  | 'REPLAY_DISABLED';
+
+export const EVENT_ERROR_CODES = {
+  SCHEMA_NOT_FOUND: 'SCHEMA_NOT_FOUND',
+  SCHEMA_VERSION_MISMATCH: 'SCHEMA_VERSION_MISMATCH',
+  ENVELOPE_INVALID: 'ENVELOPE_INVALID',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+  OUTBOX_UNAVAILABLE: 'OUTBOX_UNAVAILABLE',
+  REPLAY_DISABLED: 'REPLAY_DISABLED',
+} as const satisfies Record<string, EventSdkErrorCode>;

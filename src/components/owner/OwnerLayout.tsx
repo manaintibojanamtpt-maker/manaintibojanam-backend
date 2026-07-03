@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { EnvironmentConfig } from '../../config/environment';
 import { buildCustomerPreviewStoreUrl } from '../../lib/storefrontPreview';
 import { ownerNavItems, ownerNavGroups, getOwnerPageTitle, OwnerNavItem } from '../../config/ownerNavigation';
+import { isOwnerBranchEnabledDefault } from '../../lib/owner-branches/ownerBranchFeatureFlags';
 import { StoreSetupGuide } from './StoreSetupGuide';
 import { OwnerHomeScreenBanner } from './OwnerHomeScreenBanner';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
@@ -41,10 +42,12 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   };
 
-  const navItems = ownerNavItems.map((item) => ({
-    ...item,
-    disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
-  }));
+  const navItems = ownerNavItems
+    .filter((item) => !item.ownerBranchFlag || isOwnerBranchEnabledDefault())
+    .map((item) => ({
+      ...item,
+      disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
+    }));
 
   const ownerMenuCount = useOwnerMenuCount();
 

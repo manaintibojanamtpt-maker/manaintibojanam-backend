@@ -4,6 +4,10 @@ import { m, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Tenant } from '../types';
 import { computeDeliveryFee, calculateDeliveryDistanceKm } from '../lib/deliveryFee';
+import { isLocationCustomerDetectionEnabled } from '../lib/locationFeatureFlags';
+import { detectCustomerLocation } from '../lib/customerLocation/CustomerLocationFacade';
+import type { CustomerCanonicalLocation } from '../lib/customerLocation/types';
+import { isSdkSuccess } from '../sdk/core/resultHelpers';
 
 export { computeDeliveryFee as getDeliveryFee, calculateDeliveryDistanceKm };
 
@@ -37,6 +41,7 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
   tenant,
   title = "Confirm Delivery Location"
 }) => {
+  const customerDetectionEnabled = isLocationCustomerDetectionEnabled();
   const [step, setStep] = useState<'detect' | 'manual' | 'form' | 'out_of_bounds'>('detect');
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedAddress, setDetectedAddress] = useState('');
@@ -70,15 +75,18 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
     }
   }, [isOpen]);
 
-  const processCoordinates = async (lat: number, lng: number) => {
+  const applyCoordinates = async (
+    lat: number,
+    lng: number,
+    formattedAddress?: string
+  ) => {
     try {
-      // Calculate Distance and Fee
-      const dist = tenant?.location?.lat 
+      const dist = tenant?.location?.lat
         ? calculateDeliveryDistanceKm(tenant.location.lat, tenant.location.lng, lat, lng)
         : 0;
-      
+
       const fee = computeDeliveryFee(dist, tenant?.deliveryConfig);
-      
+
       setCoordinates({ lat, lng });
       setDistanceInfo({ distance: dist, fee });
 
@@ -88,18 +96,23 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
         return;
       }
 
-      // Reverse Geocode
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      const data = await response.json();
-      
-      if (data && data.display_name) {
-        // Simplify the address to avoid overwhelming the user
-        const parts = data.display_name.split(',').map((p: string) => p.trim());
-        // Usually, we want the first 3-4 parts for a good summary
+      if (formattedAddress?.trim()) {
+        const parts = formattedAddress.split(',').map((part) => part.trim());
         const summary = parts.slice(0, Math.min(4, parts.length)).join(', ');
-        setDetectedAddress(summary || data.display_name);
+        setDetectedAddress(summary || formattedAddress);
       } else {
-        setDetectedAddress('Location Selected');
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const data = await response.json();
+
+        if (data && data.display_name) {
+          const parts = data.display_name.split(',').map((p: string) => p.trim());
+          const summary = parts.slice(0, Math.min(4, parts.length)).join(', ');
+          setDetectedAddress(summary || data.display_name);
+        } else {
+          setDetectedAddress('Location Selected');
+        }
       }
 
       setStep('form');
@@ -112,7 +125,42 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
     }
   };
 
-  const handleAutoDetect = () => {
+  const processCoordinates = async (lat: number, lng: number) => {
+    await applyCoordinates(lat, lng);
+  };
+
+  const processDetectedCanonical = async (canonical: CustomerCanonicalLocation) => {
+    setIsDetecting(true);
+    await applyCoordinates(canonical.lat, canonical.lng, canonical.formattedAddress);
+  };
+
+  const handleAutoDetect = async () => {
+    if (customerDetectionEnabled) {
+      setIsDetecting(true);
+      const result = await detectCustomerLocation({
+        enableHighAccuracy: true,
+        timeoutMs: 10_000,
+        maximumAgeMs: 0,
+      });
+
+      if (!isSdkSuccess(result)) {
+        const reason = result.error.details?.reason;
+        const message =
+          result.error.code === 'FORBIDDEN'
+            ? 'Location permission denied. Please search manually.'
+            : reason === 'TIMEOUT'
+              ? 'Location request timed out. Please search manually.'
+              : 'Could not auto-detect location. Please search manually.';
+        toast.error(message);
+        setIsDetecting(false);
+        setStep('manual');
+        return;
+      }
+
+      await processDetectedCanonical(result.value);
+      return;
+    }
+
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
       setStep('manual');

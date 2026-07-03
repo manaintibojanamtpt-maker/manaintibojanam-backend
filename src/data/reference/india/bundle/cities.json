@@ -1,0 +1,63 @@
+[
+  {"id":"ref-city-in-mh-pune","officialCode":"MH-PU-PUNE","displayName":"Pune","parentId":"ref-district-in-mh-pune","active":true,"kind":"city","aliases":["Poona"]},
+  {"id":"ref-city-in-mh-mumbai","officialCode":"MH-MC-MUMBAI","displayName":"Mumbai","parentId":"ref-district-in-mh-mumbai-city","active":true,"kind":"city","aliases":["Bombay"]},
+  {"id":"ref-city-in-mh-thane","officialCode":"MH-TH-THANE","displayName":"Thane","parentId":"ref-district-in-mh-thane","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-navi-mumbai","officialCode":"MH-RG-NAVIMUMBAI","displayName":"Navi Mumbai","parentId":"ref-district-in-mh-raigad","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-nashik","officialCode":"MH-NS-NASHIK","displayName":"Nashik","parentId":"ref-district-in-mh-nashik","active":true,"kind":"city","aliases":["Nasik"]},
+  {"id":"ref-city-in-mh-nagpur","officialCode":"MH-NG-NAGPUR","displayName":"Nagpur","parentId":"ref-district-in-mh-nagpur","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-aurangabad","officialCode":"MH-AU-AURANGABAD","displayName":"Chhatrapati Sambhajinagar","parentId":"ref-district-in-mh-aurangabad","active":true,"kind":"city","aliases":["Aurangabad"]},
+  {"id":"ref-city-in-mh-kolhapur","officialCode":"MH-KO-KOLHAPUR","displayName":"Kolhapur","parentId":"ref-district-in-mh-kolhapur","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-solapur","officialCode":"MH-SO-SOLAPUR","displayName":"Solapur","parentId":"ref-district-in-mh-solapur","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-satara","officialCode":"MH-ST-SATARA","displayName":"Satara","parentId":"ref-district-in-mh-satara","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-sangli","officialCode":"MH-SN-SANGLI","displayName":"Sangli","parentId":"ref-district-in-mh-sangli","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-pimpri","officialCode":"MH-PU-PIMPRI","displayName":"Pimpri-Chinchwad","parentId":"ref-district-in-mh-pune","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-lonavala","officialCode":"MH-PU-LONAVALA","displayName":"Lonavala","parentId":"ref-district-in-mh-pune","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-manjari","officialCode":"MH-PU-MANJARI","displayName":"Manjari","parentId":"ref-district-in-mh-pune","active":true,"kind":"city","aliases":["Manjari BK","Manjari Budruk"]},
+  {"id":"ref-city-in-mh-ahmednagar","officialCode":"MH-AH-AHMEDNAGAR","displayName":"Ahmednagar","parentId":"ref-district-in-mh-ahmednagar","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-jalgaon","officialCode":"MH-JA-JALGAON","displayName":"Jalgaon","parentId":"ref-district-in-mh-jalgaon","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-akola","officialCode":"MH-AK-AKOLA","displayName":"Akola","parentId":"ref-district-in-mh-akola","active":true,"kind":"city"},
+  {"id":"ref-city-in-mh-panvel","officialCode":"MH-RG-PANVEL","displayName":"Panvel","parentId":"ref-district-in-mh-raigad","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-ka-bengaluru","officialCode":"KA-BU-BENGALURU","displayName":"Bengaluru","parentId":"ref-district-in-ka-bengaluru-urban","active":true,"kind":"city","aliases":["Bangalore","Bangaluru"]},
+  {"id":"ref-city-in-ka-mysuru","officialCode":"KA-MY-MYSURU","displayName":"Mysuru","parentId":"ref-district-in-ka-mysuru","active":true,"kind":"city","aliases":["Mysore"]},
+  {"id":"ref-city-in-ka-mangaluru","officialCode":"KA-DK-MANGALURU","displayName":"Mangaluru","parentId":"ref-district-in-ka-dakshina-kannada","active":true,"kind":"city","aliases":["Mangalore"]},
+  {"id":"ref-city-in-ka-hubballi","officialCode":"KA-DH-HUBBALLI","displayName":"Hubballi","parentId":"ref-district-in-ka-dharwad","active":true,"kind":"city","aliases":["Hubli"]},
+  {"id":"ref-city-in-ka-belagavi","officialCode":"KA-BE-BELAGAVI","displayName":"Belagavi","parentId":"ref-district-in-ka-belagavi","active":true,"kind":"city","aliases":["Belgaum"]},
+  {"id":"ref-city-in-ka-kalaburagi","officialCode":"KA-KL-KALABURAGI","displayName":"Kalaburagi","parentId":"ref-district-in-ka-kalaburagi","active":true,"kind":"city","aliases":["Gulbarga"]},
+  {"id":"ref-city-in-ka-shivamogga","officialCode":"KA-SM-SHIVAMOGGA","displayName":"Shivamogga","parentId":"ref-district-in-ka-shivamogga","active":true,"kind":"city","aliases":["Shimoga"]},
+  {"id":"ref-city-in-ka-tumakuru","officialCode":"KA-TU-TUMAKURU","displayName":"Tumakuru","parentId":"ref-district-in-ka-tumakuru","active":true,"kind":"city","aliases":["Tumkur"]},
+  {"id":"ref-city-in-ka-davanagere","officialCode":"KA-DV-DAVANAGERE","displayName":"Davanagere","parentId":"ref-district-in-ka-davanagere","active":true,"kind":"city"},
+  {"id":"ref-city-in-ka-ballari","officialCode":"KA-BL-BALLARI","displayName":"Ballari","parentId":"ref-district-in-ka-ballari","active":true,"kind":"city","aliases":["Bellary"]},
+  {"id":"ref-city-in-ka-udupi","officialCode":"KA-UD-UDUPI","displayName":"Udupi","parentId":"ref-district-in-ka-udupi","active":true,"kind":"city"},
+  {"id":"ref-city-in-ka-hassan","officialCode":"KA-HS-HASSAN","displayName":"Hassan","parentId":"ref-district-in-ka-hassan","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-dl-new-delhi","officialCode":"DL-ND-NEWDELHI","displayName":"New Delhi","parentId":"ref-district-in-dl-new-delhi","active":true,"kind":"city"},
+  {"id":"ref-city-in-dl-south-delhi","officialCode":"DL-SO-SOUTHDELHI","displayName":"South Delhi","parentId":"ref-district-in-dl-south","active":true,"kind":"city"},
+  {"id":"ref-city-in-dl-west-delhi","officialCode":"DL-WE-WESTDELHI","displayName":"West Delhi","parentId":"ref-district-in-dl-west","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-gj-ahmedabad","officialCode":"GJ-AH-AHMEDABAD","displayName":"Ahmedabad","parentId":"ref-district-in-gj-ahmedabad","active":true,"kind":"city"},
+  {"id":"ref-city-in-gj-surat","officialCode":"GJ-SU-SURAT","displayName":"Surat","parentId":"ref-district-in-gj-surat","active":true,"kind":"city"},
+  {"id":"ref-city-in-gj-vadodara","officialCode":"GJ-VD-VADODARA","displayName":"Vadodara","parentId":"ref-district-in-gj-vadodara","active":true,"kind":"city","aliases":["Baroda"]},
+  {"id":"ref-city-in-gj-rajkot","officialCode":"GJ-RJ-RAJKOT","displayName":"Rajkot","parentId":"ref-district-in-gj-rajkot","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-tn-chennai","officialCode":"TN-CH-CHENNAI","displayName":"Chennai","parentId":"ref-district-in-tn-chennai","active":true,"kind":"city","aliases":["Madras"]},
+  {"id":"ref-city-in-tn-coimbatore","officialCode":"TN-CO-COIMBATORE","displayName":"Coimbatore","parentId":"ref-district-in-tn-coimbatore","active":true,"kind":"city"},
+  {"id":"ref-city-in-tn-madurai","officialCode":"TN-MD-MADURAI","displayName":"Madurai","parentId":"ref-district-in-tn-madurai","active":true,"kind":"city"},
+  {"id":"ref-city-in-tn-tiruchirappalli","officialCode":"TN-TR-TRICHY","displayName":"Tiruchirappalli","parentId":"ref-district-in-tn-tiruchirappalli","active":true,"kind":"city","aliases":["Trichy"]},
+
+  {"id":"ref-city-in-tg-hyderabad","officialCode":"TG-HY-HYDERABAD","displayName":"Hyderabad","parentId":"ref-district-in-tg-hyderabad","active":true,"kind":"city"},
+  {"id":"ref-city-in-tg-secunderabad","officialCode":"TG-MM-SECUNDERABAD","displayName":"Secunderabad","parentId":"ref-district-in-tg-medchal","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-up-lucknow","officialCode":"UP-LK-LUCKNOW","displayName":"Lucknow","parentId":"ref-district-in-up-lucknow","active":true,"kind":"city"},
+  {"id":"ref-city-in-up-prayagraj","officialCode":"UP-PR-PRAYAGRAJ","displayName":"Prayagraj","parentId":"ref-district-in-up-prayagraj","active":true,"kind":"city","aliases":["Allahabad"]},
+  {"id":"ref-city-in-up-varanasi","officialCode":"UP-VR-VARANASI","displayName":"Varanasi","parentId":"ref-district-in-up-varanasi","active":true,"kind":"city","aliases":["Banaras","Kashi"]},
+  {"id":"ref-city-in-up-noida","officialCode":"UP-GB-NOIDA","displayName":"Noida","parentId":"ref-district-in-up-gautam-buddha-nagar","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-wb-kolkata","officialCode":"WB-KO-KOLKATA","displayName":"Kolkata","parentId":"ref-district-in-wb-kolkata","active":true,"kind":"city","aliases":["Calcutta"]},
+
+  {"id":"ref-city-in-hr-gurugram","officialCode":"HR-GU-GURUGRAM","displayName":"Gurugram","parentId":"ref-district-in-hr-gurugram","active":true,"kind":"city","aliases":["Gurgaon"]},
+  {"id":"ref-city-in-hr-faridabad","officialCode":"HR-FA-FARIDABAD","displayName":"Faridabad","parentId":"ref-district-in-hr-faridabad","active":true,"kind":"city"},
+
+  {"id":"ref-city-in-pb-ludhiana","officialCode":"PB-LU-LUDHIANA","displayName":"Ludhiana","parentId":"ref-district-in-pb-ludhiana","active":true,"kind":"city"},
+  {"id":"ref-city-in-pb-amritsar","officialCode":"PB-AM-AMRITSAR","displayName":"Amritsar","parentId":"ref-district-in-pb-amritsar","active":true,"kind":"city"}
+]

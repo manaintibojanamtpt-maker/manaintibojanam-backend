@@ -28,6 +28,7 @@ import AIAssistant from './components/AIAssistant';
 import { TelemetryService } from './core/reliability/TelemetryService';
 import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './lib/splashScreen';
 import { activateCustomerPreviewFromUrl, isCustomerPreviewMode, exitCustomerPreviewMode } from './lib/storefrontPreview';
+import { isDiscoveryMarketplaceEnabled } from './lib/discovery/discoveryFeatureFlags';
 import CustomerPreviewBanner from './components/CustomerPreviewBanner';
 import OwnerLayout from './components/owner/OwnerLayout';
 const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'));
@@ -42,17 +43,20 @@ const DeliveryIntelligence = lazy(() => import('./pages/owner/DeliveryIntelligen
 const OwnerKYC = lazy(() => import('./pages/owner/OwnerKYC').then(module => ({ default: module.OwnerKYC })));
 import { EntitlementGate } from './components/owner/EntitlementGate';
 const OwnerFeedback = lazy(() => import('./pages/owner/OwnerFeedback'));
+const OwnerBranchManagement = lazy(() => import('./pages/owner/OwnerBranchManagement'));
 const NotificationCenter = lazy(() => import('./modules/notifications/NotificationCenter'));
 
-// Dev-only DB helpers — lazy so marketing pages don't pull Firestore seed logic up front
-(window as any).populateSampleData = async () => (await import('./populateData')).populateSampleData();
-(window as any).runEnterpriseMigration = async () => (await import('./scripts/migrateEnterprise')).runEnterpriseMigration();
-(window as any).runDatabaseSeeder = async () => {
-  console.log("Starting Database Seeder...");
-  const { populateSampleData } = await import('./populateData');
-  await populateSampleData();
-  console.log("Seeding complete! Please refresh the page.");
-};
+// Dev-only DB helpers — not exposed in production builds (M1 PR-1)
+if (import.meta.env.DEV) {
+  (window as any).populateSampleData = async () =>
+    (await import('./populateData')).populateSampleData();
+  (window as any).runEnterpriseMigration = async () =>
+    (await import('./scripts/migrateEnterprise')).runEnterpriseMigration();
+  (window as any).runDatabaseSeeder = async () => {
+    const { populateSampleData } = await import('./populateData');
+    await populateSampleData();
+  };
+}
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -62,6 +66,7 @@ const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));
 
 // Lazy load pages for code splitting
 const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
+const MarketplaceHome = lazy(() => import('./pages/MarketplaceHome'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
@@ -88,6 +93,7 @@ const AboutPage = lazy(() => import('./pages/marketing/AboutPage'));
 const PlatformPage = lazy(() => import('./pages/marketing/PlatformPage'));
 const SecurityPage = lazy(() => import('./pages/marketing/SecurityPage'));
 const ContactPage = lazy(() => import('./pages/marketing/ContactPage'));
+const HelpCenterPage = lazy(() => import('./pages/marketing/HelpCenterPage'));
 const BlogPage = lazy(() => import('./pages/marketing/BlogPage'));
 const PricingPage = lazy(() => import('./pages/marketing/PricingPage'));
 
@@ -300,6 +306,13 @@ const StorefrontRootRoute: React.FC = () => {
   }
 
   if (EnvironmentConfig.isBhojanOSRoot()) {
+    if (isDiscoveryMarketplaceEnabled()) {
+      return (
+        <Suspense fallback={null}>
+          <MarketplaceHome />
+        </Suspense>
+      );
+    }
     return <OnboardKitchen />;
   }
 
@@ -460,11 +473,7 @@ const AppContent: React.FC = () => {
       <Route path="/order-success" element={<OrderSuccess />} />
       <Route 
         path="/order/:orderId" 
-        element={
-          <ProtectedRoute>
-            <OrderTracking />
-          </ProtectedRoute>
-        } 
+        element={<OrderTracking />} 
       />
       <Route 
         path="/my-orders" 
@@ -495,6 +504,8 @@ const AppContent: React.FC = () => {
               <Route path="/platform" element={<PlatformPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/help" element={<HelpCenterPage />} />
+              <Route path="/refund" element={<Navigate to="/refund-policy" replace />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
@@ -509,6 +520,7 @@ const AppContent: React.FC = () => {
               <Route path="/owner/delivery" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="deliveryIntelligence"><DeliveryIntelligence /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/menu" element={<OwnerRoute><OwnerLayout><OwnerMenu /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/settings" element={<OwnerRoute><OwnerLayout><OwnerSettings /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/branches" element={<OwnerRoute><OwnerLayout><OwnerBranchManagement /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/subscription" element={<OwnerRoute><OwnerLayout><OwnerSubscription /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/orders" element={<OwnerRoute><OwnerLayout><OwnerOrders /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/customers" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="customerInsights"><OwnerCustomers /></EntitlementGate></OwnerLayout></OwnerRoute>} />

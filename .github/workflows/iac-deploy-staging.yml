@@ -1,0 +1,66 @@
+name: IaC Deploy Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Container image tag (git SHA)
+        required: true
+      confirm:
+        description: Type DEPLOY to confirm
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.event.inputs.confirm == 'DEPLOY'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_CI_SA }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: bhojanos-staging-gke
+          location: asia-south1
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Apply K8s base
+        run: kubectl apply -k k8s/staging/
+
+      - name: Deploy observability stack
+        run: |
+          helm upgrade --install otel-collector ./helm/charts/otel-collector \
+            -f helm/values/staging.yaml -n bhojanos-staging-spine --create-namespace
+          helm upgrade --install prometheus ./helm/charts/prometheus \
+            -f helm/values/staging.yaml -n bhojanos-staging-spine
+          helm upgrade --install grafana ./helm/charts/grafana \
+            -f helm/values/staging.yaml -n bhojanos-staging-spine
+          helm upgrade --install alertmanager ./helm/charts/alertmanager \
+            -f helm/values/staging.yaml -n bhojanos-staging-spine
+
+      - name: Deploy spine workers (flags OFF)
+        run: |
+          TAG="${{ github.event.inputs.image_tag }}"
+          for chart in bhojanos-api order-projection-worker menu-projection-worker outbox-service replay-service; do
+            helm upgrade --install "$chart" "./helm/charts/$chart" \
+              -f helm/values/staging.yaml \
+              --set image.tag="$TAG" \
+              -n bhojanos-staging-spine
+          done
+
+      - name: Verify all spine flags OFF
+        run: |
+          kubectl get configmap -n bhojanos-staging-spine -o yaml | grep -i "VITE_FF_.*: \"true\"" && exit 1 || true

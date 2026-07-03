@@ -6,6 +6,8 @@ import {
   StoreSetupStepId,
 } from '../config/storeSetupSteps';
 import { isStoreLiveForOrders } from './planStatus';
+import { isLocationOwnerRegistrationEnabled } from './locationFeatureFlags';
+import { isStructuredTenantLocationComplete } from './ownerLocation/validateOwnerAddressDraft';
 
 export interface StoreSetupStepStatus extends StoreSetupStepDefinition {
   complete: boolean;
@@ -46,11 +48,21 @@ function isStepComplete(id: StoreSetupStepId, tenant: TenantSnapshot, menuCount:
     case 'kitchen':
       return !!(tenant.name && tenant.name.trim().length > 1);
     case 'location':
+      if (isLocationOwnerRegistrationEnabled()) {
+        return isStructuredTenantLocationComplete(tenant.location);
+      }
       return !!(tenant.location?.address?.trim() && tenant.location?.city?.trim());
     case 'delivery':
       return (
         tenant.deliveryConfig?.enabled !== false &&
         (tenant.deliveryConfig?.maxRadius ?? 0) > 0
+      );
+    case 'hours':
+      return !!(
+        (tenant as { storeOperations?: { openTime?: string; closeTime?: string } }).storeOperations
+          ?.openTime &&
+        (tenant as { storeOperations?: { openTime?: string; closeTime?: string } }).storeOperations
+          ?.closeTime
       );
     case 'payments': {
       const providers = tenant.paymentConfig?.providers;

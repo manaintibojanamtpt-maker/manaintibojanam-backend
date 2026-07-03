@@ -42,6 +42,8 @@ import {
 } from '../../lib/dashboardPriorityActions';
 import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
+import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
+import { DashboardProductionMetrics } from '../../components/owner/DashboardProductionMetrics';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -57,6 +59,7 @@ const OwnerDashboard = () => {
   const tenantName = userProfile?.name || contextTenant?.name || 'Kitchen';
 
   const [tenantInfo, setTenantInfo] = React.useState<any>(null);
+  const [allOrders, setAllOrders] = React.useState<Order[]>([]);
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [analytics, setAnalytics] = React.useState<TenantAnalytics | null>(null);
   const [segments, setSegments] = React.useState<CustomerSegmentSummary | null>(null);
@@ -199,11 +202,13 @@ const OwnerDashboard = () => {
     const unsubscribeOrders = onSnapshot(
       ordersQuery,
       (snapshot) => {
-        let fetchedOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
-        fetchedOrders = fetchedOrders.filter(
-          (o) => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''),
+        const fetchedOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
+        setAllOrders(fetchedOrders);
+        setOrders(
+          fetchedOrders.filter(
+            (o) => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''),
+          ),
         );
-        setOrders(fetchedOrders);
         finishLoading();
       },
       (error) => {
@@ -411,12 +416,14 @@ const OwnerDashboard = () => {
         { priority: 'LOW', label: '3 high-value customers likely to reorder today. Send SMS campaign?', icon: <Users size={14}/>, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
       ];
 
-  const ordersToday = orders.filter((o) => {
+  const ordersToday = allOrders.filter((o) => {
     const d = safeParseDate(o.createdAt);
     if (!d) return false;
     const now = new Date();
     return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
+
+  const orderMetrics = React.useMemo(() => computeOwnerOrderMetrics(allOrders), [allOrders]);
 
   const storeLive = tenantInfo?.storeStatus === 'published' || !!tenantInfo?.sandboxMode || storeAcceptingOrders;
   const storeAlreadyLive = isStoreLiveForOrders(tenantInfo, storeAcceptingOrders);
@@ -470,6 +477,13 @@ const OwnerDashboard = () => {
         deliveryActive={deliveryActive}
         urgentCount={urgentCount}
         storeUrl={storeUrl}
+      />
+
+      <DashboardProductionMetrics
+        metrics={orderMetrics}
+        analyticsRevenue={analytics?.totalRevenue}
+        analyticsOrders={analytics?.totalOrders}
+        paymentOnlineEnabled={tenantInfo?.paymentConfig?.razorpayEnabled}
       />
 
       <StoreLiveControl variant="compact" />

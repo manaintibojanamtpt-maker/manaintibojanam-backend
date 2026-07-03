@@ -704,17 +704,7 @@ export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: 
     const orders = sortOrdersNewestFirst(
       snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Order)),
     );
-    console.log('[API] Fetched orders for user:', userId, 'Count:', orders.length);
-    console.log('[API] Raw orders:', orders.map(o => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      status: o.status,
-      paymentMethod: o.paymentMethod,
-      paymentStatus: o.paymentStatus,
-      deliveryType: o.deliveryType,
-      isCOD: o.isCOD
-    })));
-    
+
     // Auto-handle expired pending orders (ONLY for online orders)
     const now = Date.now();
     const expirableStatuses = [OrderStatus.PLACED, OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING, OrderStatus.PAYMENT_VERIFICATION];
@@ -750,8 +740,7 @@ export const subscribeToOrders = (callback: (orders: Order[]) => void, userId?: 
         }
       }
     }
-    
-    console.log('[API] Calling callback with', orders.length, 'orders');
+
     callback(orders);
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, path);

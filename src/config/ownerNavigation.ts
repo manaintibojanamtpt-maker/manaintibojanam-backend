@@ -13,6 +13,7 @@ import {
   Gift,
   MessageCircle,
   Settings,
+  GitBranch,
   LucideIcon,
 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export interface OwnerNavItem {
   mobileBar?: boolean;
   hideOnMobile?: boolean;
   featureGate?: 'customerInsights' | 'predictiveSupply' | 'marketing' | 'deliveryIntelligence';
+  ownerBranchFlag?: boolean;
 }
 
 export const ownerNavGroups: Record<OwnerNavItem['group'], string> = {
@@ -40,6 +42,7 @@ export const ownerNavItems: OwnerNavItem[] = [
   { id: 'orders', label: 'Orders', shortLabel: 'Orders', path: '/owner/orders', icon: ShoppingBag, group: 'run', mobileBar: true },
   { id: 'menu', label: 'Menu', shortLabel: 'Menu', path: '/owner/menu', icon: MenuIcon, group: 'run', mobileBar: true },
   { id: 'storefront', label: 'Storefront', shortLabel: 'Store', path: '/owner/settings', icon: Store, group: 'store', mobileBar: true },
+  { id: 'branches', label: 'Branches', shortLabel: 'Branches', path: '/owner/branches', icon: GitBranch, group: 'store', hideOnMobile: true, ownerBranchFlag: true },
   { id: 'delivery', label: 'Delivery', shortLabel: 'Delivery', path: '/owner/delivery', icon: Truck, group: 'store', hideOnMobile: true, featureGate: 'deliveryIntelligence' },
   { id: 'compliance', label: 'Compliance', shortLabel: 'KYC', path: '/owner/kyc', icon: CheckCircle2, group: 'store' },
   { id: 'customers', label: 'Customers', shortLabel: 'Customers', path: '/owner/customers', icon: Users, group: 'grow', hideOnMobile: true, featureGate: 'customerInsights' },
@@ -57,5 +60,6 @@ export const getOwnerPageTitle = (pathname: string): string => {
   if (pathname === '/owner/operations') return 'Reports';
   if (pathname === '/owner/import-data') return 'Import data';
   if (pathname === '/owner/setup') return 'Store setup';
+  if (pathname === '/owner/branches') return 'Branches';
   return 'Dashboard';
 };

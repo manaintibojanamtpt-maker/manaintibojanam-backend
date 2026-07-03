@@ -19,6 +19,16 @@ import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
 import { EnvironmentConfig } from '../../config/environment';
+import { isLocationOwnerRegistrationEnabled } from '../../lib/locationFeatureFlags';
+import StructuredOwnerAddressForm from '../../components/owner/StructuredOwnerAddressForm';
+import {
+  buildOwnerLocationSavePayload,
+  hydrateOwnerAddressDraftFromTenant,
+  canonicalLocationFromTenant,
+  mapCanonicalLocationToTenantLocation,
+} from '../../lib/ownerLocationReads';
+import type { OwnerAddressDraft, CanonicalLocation } from '../../lib/ownerLocation/types';
+import { EMPTY_OWNER_ADDRESS_DRAFT } from '../../lib/ownerLocation/types';
 
 const WIZARD_STEPS = STORE_SETUP_STEPS.filter((s) => s.wizardStep != null).map((s) => ({
   id: s.wizardStep!,
@@ -47,6 +57,9 @@ const OnboardingWizard: React.FC = () => {
   const [maxRadius, setMaxRadius] = useState(5);
   const [codEnabled, setCodEnabled] = useState(true);
   const [razorpayEnabled, setRazorpayEnabled] = useState(false);
+  const structuredAddressEnabled = isLocationOwnerRegistrationEnabled();
+  const [addressDraft, setAddressDraft] = useState<OwnerAddressDraft>(EMPTY_OWNER_ADDRESS_DRAFT);
+  const [resolvedLocation, setResolvedLocation] = useState<CanonicalLocation | null>(null);
 
   useEffect(() => {
     if (!tenantInfo?.id || !tenantInfo.onboardingStatus?.migrated) return;
@@ -91,6 +104,10 @@ const OnboardingWizard: React.FC = () => {
     setCity(tenantInfo.location?.city || '');
     setStateName(tenantInfo.location?.state || '');
     setPincode(tenantInfo.location?.pincode || '');
+    if (structuredAddressEnabled) {
+      setAddressDraft(hydrateOwnerAddressDraftFromTenant(tenantInfo.location));
+      setResolvedLocation(canonicalLocationFromTenant(tenantInfo.location));
+    }
     setFreeRadius(tenantInfo.deliveryConfig?.freeRadius ?? 2);
     setMaxRadius(tenantInfo.deliveryConfig?.maxRadius ?? 5);
     setCodEnabled(tenantInfo.paymentConfig?.providers?.cod?.enabled !== false);
@@ -107,7 +124,7 @@ const OnboardingWizard: React.FC = () => {
     }
 
     setCurrentStep(validParam ?? resumeStep);
-  }, [tenantInfo, navigate, searchParams, menuCount]);
+  }, [tenantInfo, navigate, searchParams, menuCount, structuredAddressEnabled]);
 
   if (loading || !tenantInfo) {
     return (
@@ -137,15 +154,28 @@ const OnboardingWizard: React.FC = () => {
     }
 
     if (step === 3) {
-      if (!address.trim() || !city.trim()) throw new Error('Address and city are required');
-      payload.location = {
-        address: address.trim(),
-        city: city.trim(),
-        state: stateName.trim(),
-        pincode: pincode.trim(),
-        lat: tenantInfo.location?.lat || 0,
-        lng: tenantInfo.location?.lng || 0,
-      };
+      if (structuredAddressEnabled) {
+        if (resolvedLocation) {
+          payload.location = mapCanonicalLocationToTenantLocation(resolvedLocation, addressDraft);
+        } else {
+          const saveResult = await buildOwnerLocationSavePayload(addressDraft);
+          if (saveResult.ok === false) {
+            throw new Error(saveResult.error.message || 'Could not resolve kitchen address');
+          }
+          payload.location = saveResult.value;
+        }
+      } else {
+        if (!address.trim() || !city.trim()) throw new Error('Address and city are required');
+        payload.location = {
+          address: address.trim(),
+          city: city.trim(),
+          state: stateName.trim(),
+          pincode: pincode.trim(),
+          lat: tenantInfo.location?.lat || 0,
+          lng: tenantInfo.location?.lng || 0,
+          addressModel: 'legacy',
+        };
+      }
     }
 
     if (step === 4) {
@@ -335,26 +365,40 @@ const OnboardingWizard: React.FC = () => {
               <p className="text-gray-400 mt-1">{meta.description}</p>
             </div>
             <SetupStepInstructions step={meta} />
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Street Address</label>
-                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your kitchen address" className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            {structuredAddressEnabled ? (
+              <>
+                <p className="text-sm text-orange-200/80">
+                  India structured address — select hierarchy, enter street, then resolve coordinates before continuing.
+                </p>
+                <StructuredOwnerAddressForm
+                  draft={addressDraft}
+                  onDraftChange={setAddressDraft}
+                  onResolvedChange={setResolvedLocation}
+                  disabled={saving}
+                />
+              </>
+            ) : (
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">City</label>
-                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Street Address</label>
+                  <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your kitchen address" className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">City</label>
+                    <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Pincode</label>
+                    <input type="text" value={pincode} onChange={(e) => setPincode(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Pincode</label>
-                  <input type="text" value={pincode} onChange={(e) => setPincode(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1">State</label>
+                  <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">State</label>
-                <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} className="w-full bg-dark-bg border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500" />
-              </div>
-            </div>
+            )}
           </div>
         );
       case 4:

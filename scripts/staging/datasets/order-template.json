@@ -1,0 +1,26 @@
+{
+  "orders": [
+    {
+      "id": "ord-synthetic-001",
+      "status": "confirmed",
+      "total": 398,
+      "items": [{ "itemId": "item-001", "qty": 2 }],
+      "createdAt": "2026-06-01T10:00:00Z"
+    },
+    {
+      "id": "ord-synthetic-002",
+      "status": "delivered",
+      "total": 299,
+      "items": [{ "itemId": "item-002", "qty": 1 }],
+      "createdAt": "2026-06-15T12:30:00Z"
+    }
+  ],
+  "shadowEvents": [
+    {
+      "id": "evt-shadow-001",
+      "type": "order.created.v1",
+      "aggregateId": "ord-synthetic-001",
+      "correlationId": "corr-001"
+    }
+  ]
+}

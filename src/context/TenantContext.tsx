@@ -29,6 +29,20 @@ export interface TenantInfo {
     pincode?: string;
     lat: number;
     lng: number;
+    geohash?: string;
+    stateCode?: string;
+    districtCode?: string;
+    districtName?: string;
+    cityCode?: string;
+    localityCode?: string;
+    localityName?: string;
+    referenceStateId?: string;
+    referenceDistrictId?: string;
+    referenceCityId?: string;
+    referenceLocalityId?: string;
+    landmark?: string;
+    formattedAddress?: string;
+    addressModel?: 'legacy' | 'india_structured';
   };
   deliveryConfig?: {
     enabled?: boolean;

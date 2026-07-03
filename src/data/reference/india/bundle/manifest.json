@@ -1,0 +1,16 @@
+{
+  "bundleVersion": "2026.07",
+  "schemaVersion": 1,
+  "countryCode": "IN",
+  "generatedAt": "2026-07-01",
+  "description": "BhojanOS India administrative reference bundle — canonical hierarchy with optional display aliases.",
+  "entityCounts": {
+    "countries": 1,
+    "states": 36,
+    "districts": 98,
+    "cities": 52,
+    "localities": 28,
+    "pincodes": 28,
+    "aliasEntries": 55
+  }
+}

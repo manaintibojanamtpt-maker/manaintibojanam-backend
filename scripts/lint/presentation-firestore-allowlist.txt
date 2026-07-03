@@ -1,0 +1,42 @@
+# M1 PR-1 — Existing presentation-layer Firestore imports (ADR-011 baseline).
+# Remove paths from this file as screens migrate to the SDK strangler.
+# New files under src/pages/ or src/components/ must NOT import firebase/firestore.
+
+src/components/ActiveOrderStrip.tsx
+src/components/AIAssistant.tsx
+src/components/admin/CourierBookingModal.tsx
+src/components/admin/PaymentVerificationPanel.tsx
+src/components/admin/ReleaseCenter.tsx
+src/components/Banner.tsx
+src/components/CourierTrackingTimeline.tsx
+src/components/HeaderLocationDropdown.tsx
+src/components/OrderTracking.tsx
+src/components/owner/StoreLiveControl.tsx
+src/components/releases/ReleaseNotesModal.tsx
+src/pages/Account.tsx
+src/pages/Addresses.tsx
+src/pages/AdminPanel.tsx
+src/pages/BhojanOSSuperAdmin.tsx
+src/pages/Checkout.tsx
+src/pages/DataImporter.tsx
+src/pages/Home.tsx
+src/pages/Menu.tsx
+src/pages/MyOrders.tsx
+src/pages/OrderSuccess.tsx
+src/pages/owner/DeliveryIntelligence.tsx
+src/pages/owner/OnboardingWizard.tsx
+src/pages/owner/OwnerCustomers.tsx
+src/pages/owner/OwnerDashboard.tsx
+src/pages/owner/OwnerFeedback.tsx
+src/pages/owner/OwnerKYC.tsx
+src/pages/owner/OwnerMarketing.tsx
+src/pages/owner/OwnerMenu.tsx
+src/pages/owner/OwnerOrders.tsx
+src/pages/owner/OwnerPromotionsPanel.tsx
+src/pages/owner/OwnerRecipes.tsx
+src/pages/owner/OwnerReferrals.tsx
+src/pages/owner/OwnerSettings.tsx
+src/pages/owner/OwnerSubscription.tsx
+src/pages/PaymentSuccess.tsx
+src/pages/SubscriptionPage.tsx
+src/pages/SystemHealth.tsx

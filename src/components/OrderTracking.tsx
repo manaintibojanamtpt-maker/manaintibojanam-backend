@@ -32,7 +32,7 @@ import { formatPrice, safeParseDate } from "../lib/utils";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
-import { fetchOrderByIdApi, requestGuestViewToken } from '../services/api';
+import { fetchOrderForTracking, requestGuestViewTokenForTracking } from '../lib/orderTrackingReads';
 import {
   clearGuestViewToken,
   getGuestViewToken,
@@ -173,7 +173,7 @@ export default function OrderTracking() {
     }
 
     setNeedsPhoneVerify(false);
-    const orderData = await fetchOrderByIdApi(orderId);
+    const orderData = await fetchOrderForTracking(orderId);
     if (!orderData) {
       clearGuestViewToken(orderId);
       if (options?.promptVerify) {
@@ -202,7 +202,7 @@ export default function OrderTracking() {
       const tokenInput = input.replace(/\D/g, '').length === 4
         ? { phoneLast4: input }
         : { phone: input };
-      const result = await requestGuestViewToken(orderId, tokenInput);
+      const result = await requestGuestViewTokenForTracking(orderId, tokenInput);
       if (!result.success || !result.token) {
         setVerifyError(result.error || 'Could not verify access to this order.');
         return;
@@ -223,7 +223,7 @@ export default function OrderTracking() {
     setIsRefreshing(true);
     try {
       if (!currentUser) {
-        const orderData = await fetchOrderByIdApi(orderId);
+        const orderData = await fetchOrderForTracking(orderId);
         if (orderData) {
           syncOrderFromSnapshot(orderData as Record<string, any>);
           toast.success("Order updated");

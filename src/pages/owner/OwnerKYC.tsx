@@ -153,6 +153,10 @@ export const OwnerKYC: React.FC = () => {
     gstNumber: tenantInfo?.kyc?.gstNumber || '',
     panNumber: tenantInfo?.kyc?.panNumber || '',
     fssaiNumber: tenantInfo?.fssai?.number || '',
+    bankAccountHolder: tenantInfo?.kyc?.bankAccountHolder || '',
+    bankAccountNumber: tenantInfo?.kyc?.bankAccountNumber || '',
+    bankIfsc: tenantInfo?.kyc?.bankIfsc || '',
+    bankName: tenantInfo?.kyc?.bankName || '',
   });
 
   useEffect(() => {
@@ -170,6 +174,10 @@ export const OwnerKYC: React.FC = () => {
         gstNumber: tenantInfo.kyc?.gstNumber || '',
         panNumber: tenantInfo.kyc?.panNumber || '',
         fssaiNumber: tenantInfo.fssai?.number || '',
+        bankAccountHolder: tenantInfo.kyc?.bankAccountHolder || '',
+        bankAccountNumber: tenantInfo.kyc?.bankAccountNumber || '',
+        bankIfsc: tenantInfo.kyc?.bankIfsc || '',
+        bankName: tenantInfo.kyc?.bankName || '',
       });
     }
   }, [tenantInfo]);
@@ -262,6 +270,10 @@ export const OwnerKYC: React.FC = () => {
         'kyc.pincode': kycForm.pincode,
         'kyc.gstNumber': kycForm.gstNumber,
         'kyc.panNumber': kycForm.panNumber,
+        'kyc.bankAccountHolder': kycForm.bankAccountHolder,
+        'kyc.bankAccountNumber': kycForm.bankAccountNumber,
+        'kyc.bankIfsc': kycForm.bankIfsc,
+        'kyc.bankName': kycForm.bankName,
         'fssai.number': kycForm.fssaiNumber,
         'fssai.verificationStatus': kycForm.fssaiNumber ? 'submitted' : tenantInfo?.fssai?.verificationStatus || 'not_submitted',
         'kyc.verificationLevel': 1,
@@ -621,6 +633,25 @@ export const OwnerKYC: React.FC = () => {
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">PAN Number (Optional)</label>
                 <input type="text" value={kycForm.panNumber} onChange={(e) => setKycForm({ ...kycForm, panNumber: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Bank account holder</label>
+                <input type="text" value={kycForm.bankAccountHolder} onChange={(e) => setKycForm({ ...kycForm, bankAccountHolder: e.target.value })} placeholder="Name as per bank records" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Bank name</label>
+                <input type="text" value={kycForm.bankName} onChange={(e) => setKycForm({ ...kycForm, bankName: e.target.value })} placeholder="e.g. HDFC Bank" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Account number</label>
+                <input type="text" value={kycForm.bankAccountNumber} onChange={(e) => setKycForm({ ...kycForm, bankAccountNumber: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">IFSC code</label>
+                <input type="text" value={kycForm.bankIfsc} onChange={(e) => setKycForm({ ...kycForm, bankIfsc: e.target.value.toUpperCase() })} placeholder="e.g. HDFC0001234" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none" />
               </div>
             </div>
 

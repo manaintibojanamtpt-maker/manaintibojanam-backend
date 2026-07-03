@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { 
-  subscribeToOrders, 
-  subscribeToGuestOrders,
   updateOrderStatus as apiUpdateOrderStatus, 
   getDisplayStatus,
   fetchMenu,
   buildRepeatOrderLines
 } from "../services/api";
+import { subscribeMyOrders } from "../lib/myOrdersReads";
 import { getOrderDisplayState } from "../lib/orderDisplay";
 import { OrderStatus, Order } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -110,7 +109,7 @@ export default function MyOrders() {
       const guestIds = getGuestOrders();
       if (guestIds.length > 0) {
         setLoading(true);
-        const unsubscribe = subscribeToGuestOrders(guestIds, (ordersList) => {
+        const unsubscribe = subscribeMyOrders({ guestOrderIds: guestIds }, (ordersList) => {
           setOrders(ordersList);
           setLoading(false);
         });
@@ -125,10 +124,10 @@ export default function MyOrders() {
     setOrders([]);
     setLoading(true);
 
-    const unsubscribe = subscribeToOrders((ordersList) => {
+    const unsubscribe = subscribeMyOrders({ userId: currentUser.uid }, (ordersList) => {
       setOrders(ordersList);
       setLoading(false);
-    }, currentUser.uid);
+    });
 
     return () => unsubscribe();
   }, [currentUser, tenantId]);

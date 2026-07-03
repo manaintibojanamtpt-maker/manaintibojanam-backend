@@ -1,0 +1,10 @@
+{
+  "id": "ref-country-in",
+  "officialCode": "IN",
+  "displayName": "India",
+  "parentId": null,
+  "active": true,
+  "kind": "country",
+  "isoCode": "IN",
+  "aliases": ["Bharat", "Republic of India"]
+}

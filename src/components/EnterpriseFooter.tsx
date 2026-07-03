@@ -25,7 +25,7 @@ export const EnterpriseFooter: React.FC = () => {
         { label: 'Documentation', to: '/docs' },
         { label: 'API', to: '/docs/api' },
         { label: 'Blog', to: '/blog' },
-        { label: 'Help Center', to: '/contact' },
+        { label: 'Help Center', to: '/help' },
       ],
     },
     {
@@ -42,7 +42,8 @@ export const EnterpriseFooter: React.FC = () => {
       links: [
         { label: 'Privacy Policy', to: '/privacy' },
         { label: 'Terms', to: '/terms' },
-        { label: 'Refund Policy', to: '/refund' },
+        { label: 'Refund Policy', to: '/refund-policy' },
+        { label: 'Cancellation', to: '/cancellation-policy' },
       ],
     },
   ];

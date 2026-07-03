@@ -1,0 +1,35 @@
+[
+  {"id":"ref-locality-in-mh-pune-koregaon-park","officialCode":"MH-PU-KP","displayName":"Koregaon Park","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-kalyani-nagar","officialCode":"MH-PU-KN","displayName":"Kalyani Nagar","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-hinjewadi","officialCode":"MH-PU-HJ","displayName":"Hinjewadi","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-wakad","officialCode":"MH-PU-WK","displayName":"Wakad","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-baner","officialCode":"MH-PU-BN","displayName":"Baner","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-kothrud","officialCode":"MH-PU-KT","displayName":"Kothrud","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-pune-hadapsar","officialCode":"MH-PU-HD","displayName":"Hadapsar","parentId":"ref-city-in-mh-pune","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-manjari-bk","officialCode":"MH-PU-MJBK","displayName":"Manjari Budruk","parentId":"ref-city-in-mh-manjari","active":true,"kind":"locality","aliases":["Manjari BK"]},
+  {"id":"ref-locality-in-mh-pimpri-chinchwad","officialCode":"MH-PU-PCMC","displayName":"Pimpri-Chinchwad","parentId":"ref-city-in-mh-pimpri","active":true,"kind":"locality"},
+
+  {"id":"ref-locality-in-mh-mumbai-bandra","officialCode":"MH-MC-BANDRA","displayName":"Bandra","parentId":"ref-city-in-mh-mumbai","active":true,"kind":"locality","aliases":["Bandra West"]},
+  {"id":"ref-locality-in-mh-mumbai-andheri","officialCode":"MH-MC-ANDHERI","displayName":"Andheri","parentId":"ref-city-in-mh-mumbai","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-mumbai-dadar","officialCode":"MH-MC-DADAR","displayName":"Dadar","parentId":"ref-city-in-mh-mumbai","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-mh-mumbai-colaba","officialCode":"MH-MC-COLABA","displayName":"Colaba","parentId":"ref-city-in-mh-mumbai","active":true,"kind":"locality"},
+
+  {"id":"ref-locality-in-ka-bengaluru-indiranagar","officialCode":"KA-BU-INDIRANAGAR","displayName":"Indiranagar","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-ka-bengaluru-koramangala","officialCode":"KA-BU-KORAMANGALA","displayName":"Koramangala","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-ka-bengaluru-whitefield","officialCode":"KA-BU-WHITEFIELD","displayName":"Whitefield","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-ka-bengaluru-electronic-city","officialCode":"KA-BU-ELECTRONICCITY","displayName":"Electronic City","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-ka-bengaluru-jayanagar","officialCode":"KA-BU-JAYANAGAR","displayName":"Jayanagar","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-ka-bengaluru-hebbal","officialCode":"KA-BU-HEBBAL","displayName":"Hebbal","parentId":"ref-city-in-ka-bengaluru","active":true,"kind":"locality"},
+
+  {"id":"ref-locality-in-dl-connaught-place","officialCode":"DL-ND-CP","displayName":"Connaught Place","parentId":"ref-city-in-dl-new-delhi","active":true,"kind":"locality","aliases":["CP"]},
+  {"id":"ref-locality-in-dl-karol-bagh","officialCode":"DL-WE-KAROLBAGH","displayName":"Karol Bagh","parentId":"ref-city-in-dl-west-delhi","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-dl-saket","officialCode":"DL-SO-SAKET","displayName":"Saket","parentId":"ref-city-in-dl-south-delhi","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-dl-hauz-khas","officialCode":"DL-SO-HAUZKHAS","displayName":"Hauz Khas","parentId":"ref-city-in-dl-south-delhi","active":true,"kind":"locality"},
+
+  {"id":"ref-locality-in-tg-hyderabad-banjara-hills","officialCode":"TG-HY-BANJARAHILLS","displayName":"Banjara Hills","parentId":"ref-city-in-tg-hyderabad","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-tg-hyderabad-gachibowli","officialCode":"TG-HY-GACHIBOWLI","displayName":"Gachibowli","parentId":"ref-city-in-tg-hyderabad","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-tg-hyderabad-hitech-city","officialCode":"TG-HY-HITECHCITY","displayName":"HITEC City","parentId":"ref-city-in-tg-hyderabad","active":true,"kind":"locality","aliases":["Hi-Tech City"]},
+
+  {"id":"ref-locality-in-up-noida-sector-62","officialCode":"UP-GB-SEC62","displayName":"Sector 62","parentId":"ref-city-in-up-noida","active":true,"kind":"locality"},
+  {"id":"ref-locality-in-up-noida-sector-18","officialCode":"UP-GB-SEC18","displayName":"Sector 18","parentId":"ref-city-in-up-noida","active":true,"kind":"locality"}
+]

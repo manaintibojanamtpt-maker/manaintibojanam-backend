@@ -1,0 +1,17 @@
+{
+  "categories": [
+    { "id": "cat-001", "name": "Starters", "sortOrder": 1 },
+    { "id": "cat-002", "name": "Mains", "sortOrder": 2 },
+    { "id": "cat-003", "name": "Beverages", "sortOrder": 3 }
+  ],
+  "items": [
+    { "id": "item-001", "categoryId": "cat-001", "name": "Synthetic Samosa", "price": 99, "available": true },
+    { "id": "item-002", "categoryId": "cat-002", "name": "Synthetic Biryani", "price": 299, "available": true }
+  ],
+  "combos": [
+    { "id": "combo-001", "name": "Lunch Combo", "itemIds": ["item-001", "item-002"] }
+  ],
+  "modifierGroups": [
+    { "id": "mod-001", "name": "Spice Level", "options": ["Mild", "Medium", "Hot"] }
+  ]
+}

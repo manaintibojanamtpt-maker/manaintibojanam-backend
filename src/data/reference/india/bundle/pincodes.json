@@ -1,0 +1,35 @@
+[
+  {"id":"ref-pincode-in-411001","officialCode":"411001","displayName":"411001","parentId":"ref-locality-in-mh-pune-koregaon-park","active":true,"kind":"pincode","postalCode":"411001"},
+  {"id":"ref-pincode-in-411006","officialCode":"411006","displayName":"411006","parentId":"ref-locality-in-mh-pune-kalyani-nagar","active":true,"kind":"pincode","postalCode":"411006"},
+  {"id":"ref-pincode-in-411057","officialCode":"411057","displayName":"411057","parentId":"ref-locality-in-mh-pune-hinjewadi","active":true,"kind":"pincode","postalCode":"411057"},
+  {"id":"ref-pincode-in-411057-wakad","officialCode":"411057","displayName":"411057","parentId":"ref-locality-in-mh-pune-wakad","active":true,"kind":"pincode","postalCode":"411057"},
+  {"id":"ref-pincode-in-411045","officialCode":"411045","displayName":"411045","parentId":"ref-locality-in-mh-pune-baner","active":true,"kind":"pincode","postalCode":"411045"},
+  {"id":"ref-pincode-in-411038","officialCode":"411038","displayName":"411038","parentId":"ref-locality-in-mh-pune-kothrud","active":true,"kind":"pincode","postalCode":"411038"},
+  {"id":"ref-pincode-in-411028","officialCode":"411028","displayName":"411028","parentId":"ref-locality-in-mh-pune-hadapsar","active":true,"kind":"pincode","postalCode":"411028"},
+  {"id":"ref-pincode-in-412307","officialCode":"412307","displayName":"412307","parentId":"ref-locality-in-mh-manjari-bk","active":true,"kind":"pincode","postalCode":"412307"},
+  {"id":"ref-pincode-in-411019","officialCode":"411019","displayName":"411019","parentId":"ref-locality-in-mh-pimpri-chinchwad","active":true,"kind":"pincode","postalCode":"411019"},
+
+  {"id":"ref-pincode-in-400050","officialCode":"400050","displayName":"400050","parentId":"ref-locality-in-mh-mumbai-bandra","active":true,"kind":"pincode","postalCode":"400050"},
+  {"id":"ref-pincode-in-400053","officialCode":"400053","displayName":"400053","parentId":"ref-locality-in-mh-mumbai-andheri","active":true,"kind":"pincode","postalCode":"400053"},
+  {"id":"ref-pincode-in-400028","officialCode":"400028","displayName":"400028","parentId":"ref-locality-in-mh-mumbai-dadar","active":true,"kind":"pincode","postalCode":"400028"},
+  {"id":"ref-pincode-in-400001","officialCode":"400001","displayName":"400001","parentId":"ref-locality-in-mh-mumbai-colaba","active":true,"kind":"pincode","postalCode":"400001"},
+
+  {"id":"ref-pincode-in-560038","officialCode":"560038","displayName":"560038","parentId":"ref-locality-in-ka-bengaluru-indiranagar","active":true,"kind":"pincode","postalCode":"560038"},
+  {"id":"ref-pincode-in-560034","officialCode":"560034","displayName":"560034","parentId":"ref-locality-in-ka-bengaluru-koramangala","active":true,"kind":"pincode","postalCode":"560034"},
+  {"id":"ref-pincode-in-560066","officialCode":"560066","displayName":"560066","parentId":"ref-locality-in-ka-bengaluru-whitefield","active":true,"kind":"pincode","postalCode":"560066"},
+  {"id":"ref-pincode-in-560100","officialCode":"560100","displayName":"560100","parentId":"ref-locality-in-ka-bengaluru-electronic-city","active":true,"kind":"pincode","postalCode":"560100"},
+  {"id":"ref-pincode-in-560041","officialCode":"560041","displayName":"560041","parentId":"ref-locality-in-ka-bengaluru-jayanagar","active":true,"kind":"pincode","postalCode":"560041"},
+  {"id":"ref-pincode-in-560024","officialCode":"560024","displayName":"560024","parentId":"ref-locality-in-ka-bengaluru-hebbal","active":true,"kind":"pincode","postalCode":"560024"},
+
+  {"id":"ref-pincode-in-110001","officialCode":"110001","displayName":"110001","parentId":"ref-locality-in-dl-connaught-place","active":true,"kind":"pincode","postalCode":"110001"},
+  {"id":"ref-pincode-in-110005","officialCode":"110005","displayName":"110005","parentId":"ref-locality-in-dl-karol-bagh","active":true,"kind":"pincode","postalCode":"110005"},
+  {"id":"ref-pincode-in-110017","officialCode":"110017","displayName":"110017","parentId":"ref-locality-in-dl-saket","active":true,"kind":"pincode","postalCode":"110017"},
+  {"id":"ref-pincode-in-110016","officialCode":"110016","displayName":"110016","parentId":"ref-locality-in-dl-hauz-khas","active":true,"kind":"pincode","postalCode":"110016"},
+
+  {"id":"ref-pincode-in-500034","officialCode":"500034","displayName":"500034","parentId":"ref-locality-in-tg-hyderabad-banjara-hills","active":true,"kind":"pincode","postalCode":"500034"},
+  {"id":"ref-pincode-in-500032","officialCode":"500032","displayName":"500032","parentId":"ref-locality-in-tg-hyderabad-gachibowli","active":true,"kind":"pincode","postalCode":"500032"},
+  {"id":"ref-pincode-in-500081","officialCode":"500081","displayName":"500081","parentId":"ref-locality-in-tg-hyderabad-hitech-city","active":true,"kind":"pincode","postalCode":"500081"},
+
+  {"id":"ref-pincode-in-201309","officialCode":"201309","displayName":"201309","parentId":"ref-locality-in-up-noida-sector-62","active":true,"kind":"pincode","postalCode":"201309"},
+  {"id":"ref-pincode-in-201301","officialCode":"201301","displayName":"201301","parentId":"ref-locality-in-up-noida-sector-18","active":true,"kind":"pincode","postalCode":"201301"}
+]

@@ -32,7 +32,7 @@ import { getDb } from '../lib/firebase-db';
 import { activeTenantId as fallbackTenantId } from '../services/api';
 import MenuItemCard from '../components/MenuItemCard';
 import Banner from '../components/Banner';
-import { collection, query, where, orderBy, onSnapshot, doc, limit, getDocs, addDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, limit, getDocs, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AiOrderingWidget from '../components/AiOrderingWidget';
 import HelpMeChooseModal from '../components/HelpMeChooseModal';
 import { triggerHaptic } from '../utils/haptics';

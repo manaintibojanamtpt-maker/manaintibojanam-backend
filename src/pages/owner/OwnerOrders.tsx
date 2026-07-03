@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import { getDb } from '../../lib/firebase-db';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { subscribeOwnerOrders, type OwnerOrder } from '../../lib/ownerOrdersReads';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { format } from 'date-fns';
@@ -14,24 +15,7 @@ import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../..
 import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 
-interface Order {
-  id: string;
-  customerName?: string;
-  customerPhone?: string;
-  phone?: string;
-  address?: string;
-  deliveryAddress?: { addressLine1: string; city: string };
-  totalAmount: number;
-  status: string;
-  createdAt: any;
-  items?: any[];
-  deliveryPartner?: string;
-  trackingUrl?: string;
-  trackingLink?: string;
-  riderName?: string;
-  riderPhone?: string;
-  deliveryAssignedAt?: string;
-}
+interface Order extends OwnerOrder {}
 
 const OwnerOrders: React.FC = () => {
   const { userProfile, profileLoading } = useAuth();
@@ -74,40 +58,30 @@ const OwnerOrders: React.FC = () => {
     if (!tenantId || tenantLoading || profileLoading) return;
 
     ordersErrorToastRef.current = false;
-    const db = getDb();
-    const q = query(
-      collection(db, 'orders'),
-      where('tenantId', '==', tenantId)
+
+    const unsubscribe = subscribeOwnerOrders(
+      tenantId,
+      orderLimit,
+      (fetchedOrders, hasMoreOrders) => {
+        setOrders(fetchedOrders as Order[]);
+        setHasMore(hasMoreOrders);
+        setLoading(false);
+      },
+      (error: unknown) => {
+        console.error("Error fetching orders:", error);
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: string }).code)
+          : '';
+        if (!ordersErrorToastRef.current && code !== 'permission-denied') {
+          ordersErrorToastRef.current = true;
+          toast.error("Failed to load live orders");
+        }
+        setLoading(false);
+      }
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let fetchedOrders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
-      
-      fetchedOrders = fetchedOrders.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      }).slice(0, orderLimit);
-      
-      setOrders(fetchedOrders);
-      setHasMore(snapshot.docs.length === orderLimit);
-      setLoading(false);
-    }, (error: unknown) => {
-      console.error("Error fetching orders:", error);
-      const code = typeof error === 'object' && error !== null && 'code' in error
-        ? String((error as { code?: string }).code)
-        : '';
-      if (!ordersErrorToastRef.current && code !== 'permission-denied') {
-        ordersErrorToastRef.current = true;
-        toast.error("Failed to load live orders");
-      }
-      setLoading(false);
-    });
-
     const fetchTenant = async () => {
+      const db = getDb();
       const tDoc = await getDoc(doc(db, 'tenants', tenantId));
       if (tDoc.exists()) {
         setTenantInfo(tDoc.data());

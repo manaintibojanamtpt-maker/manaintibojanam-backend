@@ -7,6 +7,7 @@ import {
   Phone,
   Rocket,
   UserCheck,
+  Clock,
   LucideIcon,
 } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export type StoreSetupStepId =
   | 'kitchen'
   | 'location'
   | 'delivery'
+  | 'hours'
   | 'payments'
   | 'menu'
   | 'mobile'
@@ -86,6 +88,18 @@ export const STORE_SETUP_STEPS: StoreSetupStepDefinition[] = [
     path: '/owner/setup',
     icon: Truck,
     required: true,
+  },
+  {
+    id: 'hours',
+    title: 'Set operating hours',
+    shortTitle: 'Hours',
+    description: 'Customers see when your kitchen is open for orders.',
+    instruction: 'Set open and close times and toggle your store live when ready.',
+    tip: 'Use Store Live on the dashboard to pause orders during breaks.',
+    estimatedMinutes: 2,
+    path: '/owner/settings?tab=hours',
+    icon: Clock,
+    required: false,
   },
   {
     id: 'payments',

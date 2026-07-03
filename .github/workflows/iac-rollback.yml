@@ -1,0 +1,63 @@
+name: IaC Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Rollback level
+        required: true
+        type: choice
+        options:
+          - L1
+          - L2
+          - L3
+          - L4
+      previous_sha:
+        description: Previous SHA (required for L3)
+        required: false
+      confirm:
+        description: Type ROLLBACK to confirm
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rollback:
+    if: github.event.inputs.confirm == 'ROLLBACK'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_CI_SA }}
+
+      - name: Execute L1
+        if: contains(fromJSON('["L1","L2","L3","L4"]'), github.event.inputs.level)
+        env:
+          LD_API_TOKEN: ${{ secrets.LD_STAGING_API_TOKEN }}
+        run: bash scripts/rollback/rollback-l1-staging.sh
+
+      - name: Execute L2
+        if: contains(fromJSON('["L2","L3","L4"]'), github.event.inputs.level)
+        env:
+          LD_API_TOKEN: ${{ secrets.LD_STAGING_API_TOKEN }}
+        run: bash scripts/rollback/rollback-l2-staging.sh
+
+      - name: Execute L3
+        if: contains(fromJSON('["L3","L4"]'), github.event.inputs.level)
+        run: |
+          git checkout ${{ github.event.inputs.previous_sha }}
+          gh workflow run iac-deploy-staging.yml -f image_tag=${{ github.event.inputs.previous_sha }} -f confirm=DEPLOY
+
+      - name: Execute L4
+        if: github.event.inputs.level == 'L4'
+        run: bash scripts/rollback/rollback-l4-restore.sh
+
+      - name: Post-rollback validation
+        run: bash scripts/rollback/validate-rollback.sh

@@ -254,7 +254,6 @@ export default function AdminPanel() {
         price: Number(doc.data().price || 0)
       } as MenuItem));
       setMenu(menuItems);
-      console.log("Admin Menu Loaded:", menuItems.length, menuItems);
     }, (err) => {
       console.error("Menu Listener Error:", err);
       if (err.code === 'permission-denied') {
