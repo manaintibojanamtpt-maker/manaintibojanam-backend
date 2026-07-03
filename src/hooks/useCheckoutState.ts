@@ -6,7 +6,12 @@ import { onSnapshot, doc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useTenant } from '../context/TenantContext';
 import { isTenantStoreOpenNow, resolveStoreSettings } from '../lib/tenantStoreOperations';
-import { resolveTenantPricing } from '../lib/tenantCheckoutConfig';
+import {
+  formatTaxAndChargesLabel,
+  hasValidDeliveryCoordinates,
+  resolveCheckoutDeliveryFee,
+  resolveTenantPricing,
+} from '../lib/tenantCheckoutConfig';
 import type { TenantInfo } from '../context/TenantContext';
 
 export function useCheckoutState() {
@@ -156,33 +161,63 @@ export function useCheckoutState() {
   const isRaining = globalFees?.isRaining || false;
   const activeOrders = globalFees?.activeOrders || 0;
 
-  const { calculatedFee, cheapestPartner, displayFee } = useMemo(() => {
+  const deliveryAddressReady = hasValidDeliveryCoordinates(deliveryState.selectedAddress);
+
+  const { calculatedFee, cheapestPartner, displayFee, deliveryFeePending, deliveryUnserviceable } = useMemo(() => {
     try {
+      const resolved = resolveCheckoutDeliveryFee({
+        orderType,
+        tenantInfo: liveTenant,
+        address: deliveryState.selectedAddress,
+        subtotal: total,
+        pricing,
+      });
+
       if (orderType === 'pickup') {
-        return { calculatedFee: 0, cheapestPartner: null, displayFee: 0 };
+        return {
+          calculatedFee: 0,
+          cheapestPartner: null,
+          displayFee: 0,
+          deliveryFeePending: false,
+          deliveryUnserviceable: false,
+        };
       }
 
-      const addressFee = deliveryState.selectedAddress?.deliveryFee;
-      let fee =
-        typeof addressFee === 'number' && addressFee >= 0
-          ? addressFee
-          : pricing.feesConfigured
-            ? pricing.baseDeliveryFee
-            : 0;
-      const appliedModifiers: string[] = [];
+      if (resolved.pending) {
+        return {
+          calculatedFee: 0,
+          cheapestPartner: null,
+          displayFee: 0,
+          deliveryFeePending: true,
+          deliveryUnserviceable: false,
+        };
+      }
 
-      if (pricing.peakPricingEnabled) {
+      if (resolved.unserviceable) {
+        return {
+          calculatedFee: 0,
+          cheapestPartner: null,
+          displayFee: 0,
+          deliveryFeePending: false,
+          deliveryUnserviceable: true,
+        };
+      }
+
+      let fee = resolved.fee;
+
+      if (pricing.usesLegacyGlobalFees && pricing.peakPricingEnabled) {
         const hour = new Date().getHours();
         const isPeak = (hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 22);
-        if (isPeak) { fee += 10; appliedModifiers.push('peak'); }
+        if (isPeak) fee += 10;
       }
 
-      if (pricing.surgeEnabled && isRaining) { fee += 15; appliedModifiers.push('rain'); }
+      if (pricing.usesLegacyGlobalFees && pricing.surgeEnabled && isRaining) {
+        fee += 15;
+      }
 
-      if (pricing.surgeEnabled) {
+      if (pricing.usesLegacyGlobalFees && pricing.surgeEnabled) {
         const surgeMultiplier = Math.min(1 + activeOrders / 50, 1.5);
         fee = Math.round(fee * surgeMultiplier);
-        if (surgeMultiplier > 1) appliedModifiers.push(`surge(${surgeMultiplier.toFixed(1)}x)`);
       }
 
       const safeFee = Math.max(Math.round(fee), 0);
@@ -190,18 +225,25 @@ export function useCheckoutState() {
         calculatedFee: safeFee,
         cheapestPartner: { partner: 'native', cost: 0 },
         displayFee: safeFee,
+        deliveryFeePending: false,
+        deliveryUnserviceable: false,
       };
     } catch (err) {
       console.error('[Pricing Failsafe]', err);
-      return { calculatedFee: 0, cheapestPartner: null, displayFee: 0 };
+      return {
+        calculatedFee: 0,
+        cheapestPartner: null,
+        displayFee: 0,
+        deliveryFeePending: false,
+        deliveryUnserviceable: false,
+      };
     }
   }, [
     orderType,
-    pricing.feesConfigured,
-    pricing.baseDeliveryFee,
-    pricing.peakPricingEnabled,
-    pricing.surgeEnabled,
-    deliveryState.selectedAddress?.deliveryFee,
+    pricing,
+    liveTenant,
+    deliveryState.selectedAddress,
+    total,
     isRaining,
     activeOrders,
   ]);
@@ -211,13 +253,11 @@ export function useCheckoutState() {
     pricing.freeDeliveryThreshold < Infinity && total >= pricing.freeDeliveryThreshold;
 
   const deliveryFee =
-    orderType === 'pickup'
+    orderType === 'pickup' || deliveryFeePending
       ? 0
       : qualifiesForFreeDelivery
         ? 0
-        : orderType === 'delivery'
-          ? baseDeliveryFee
-          : 0;
+        : baseDeliveryFee;
 
   const gstAmount = pricing.gstPercent > 0 ? (total * pricing.gstPercent) / 100 : 0;
   const packingFee = pricing.packingFee > 0 ? pricing.packingFee : 0;
@@ -259,5 +299,9 @@ export function useCheckoutState() {
     orderType, setOrderType,
     pricingConfigured: pricing.feesConfigured,
     taxesConfigured: pricing.gstPercent > 0 || pricing.packingFee > 0,
+    deliveryAddressReady,
+    deliveryFeePending,
+    deliveryUnserviceable,
+    taxLabel: formatTaxAndChargesLabel(pricing.gstPercent, pricing.packingFee),
   };
 }

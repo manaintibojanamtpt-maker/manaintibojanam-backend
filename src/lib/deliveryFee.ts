@@ -3,7 +3,7 @@ import type { TenantInfo } from '../context/TenantContext';
 
 type DeliveryConfigLike = TenantInfo['deliveryConfig'] | Tenant['deliveryConfig'];
 
-/** Used when owner enabled delivery zones but has not set Base Fee / Per KM yet. */
+/** Used only when delivery zones exist but owner has not configured fees (legacy incomplete setup). */
 export const DEFAULT_BASE_DELIVERY_FEE = 30;
 export const DEFAULT_PER_KM_BEYOND_PAID = 10;
 
@@ -52,13 +52,14 @@ export function computeDeliveryFee(distanceKm: number, config?: DeliveryConfigLi
   const maxRadius = Number(config.maxRadius ?? paidRadius);
   const baseFee = Number(config.baseFee ?? 0);
   const perKmCharge = Number(config.perKmCharge ?? 0);
+  const ownerExplicitFees = config.feesConfigured === true;
 
   if (distanceKm > maxRadius) return -1;
   if (distanceKm <= freeRadius) return 0;
 
   const ownerSetFees = baseFee > 0 || perKmCharge > 0;
 
-  if (ownerSetFees) {
+  if (ownerExplicitFees || ownerSetFees) {
     if (perKmCharge > 0 && baseFee <= 0) {
       return Math.ceil((distanceKm - freeRadius) * perKmCharge);
     }
@@ -71,7 +72,7 @@ export function computeDeliveryFee(distanceKm: number, config?: DeliveryConfigLi
     return Math.round(baseFee + extraKm * perKmCharge);
   }
 
-  // Delivery zones configured but fees left at zero — apply platform defaults
+  // Delivery zones configured but fees left at zero — legacy incomplete setup only
   if (distanceKm <= paidRadius) {
     return DEFAULT_BASE_DELIVERY_FEE;
   }

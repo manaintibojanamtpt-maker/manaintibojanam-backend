@@ -974,10 +974,21 @@ const Checkout: React.FC = () => {
               {state.pricingConfigured && state.orderType === 'delivery' && (
               <div className="flex justify-between text-sm">
                 <div className="flex flex-col">
-                  <span className="text-gray-500 dark:text-gray-400 font-medium">Delivery Partner Fee</span>
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">Delivery</span>
+                  {state.deliveryFeePending && (
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                      Calculated after address selection
+                    </span>
+                  )}
                 </div>
                 <span className="font-bold text-gray-900 dark:text-white tabular-nums">
-                  {state.deliveryFee === 0 ? <span className="text-emerald-500">FREE</span> : formatPrice(state.deliveryFee)}
+                  {state.deliveryFeePending ? (
+                    <span className="text-gray-400 text-xs font-medium">—</span>
+                  ) : state.deliveryFee === 0 ? (
+                    <span className="text-emerald-500">FREE</span>
+                  ) : (
+                    formatPrice(state.deliveryFee)
+                  )}
                 </span>
               </div>
               )}
@@ -987,11 +998,7 @@ const Checkout: React.FC = () => {
                 <div className="flex flex-col">
                   <span className="text-gray-500 dark:text-gray-400 font-medium">Taxes and Charges</span>
                   <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                    {state.fees.gst > 0 && state.packingFee > 0
-                      ? `GST (${state.fees.gst}%) + Packaging`
-                      : state.fees.gst > 0
-                        ? `GST (${state.fees.gst}%)`
-                        : 'Packaging'}
+                    {state.taxLabel}
                   </span>
                 </div>
                 <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatPrice(state.gstAmount + state.packingFee)}</span>

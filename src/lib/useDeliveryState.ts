@@ -40,8 +40,13 @@ if (typeof window !== 'undefined') {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure coordinates exist, otherwise discard invalid saved state
-      if (parsed.selectedAddress && (parsed.selectedAddress.lat === undefined || parsed.selectedAddress.lng === undefined)) {
+      // Ensure coordinates exist and are usable, otherwise discard invalid saved state
+      if (
+        parsed.selectedAddress &&
+        (parsed.selectedAddress.lat === undefined ||
+          parsed.selectedAddress.lng === undefined ||
+          (parsed.selectedAddress.lat === 0 && parsed.selectedAddress.lng === 0))
+      ) {
         parsed.selectedAddress = null;
       }
       globalDeliveryState = parsed;
