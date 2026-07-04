@@ -23,6 +23,13 @@ import type {
   ReverseGeocodeResult,
   ServiceabilityResult,
 } from '@/types/marketplace-location';
+import type {
+  SearchCollectionsResponse,
+  SearchPlatformResponse,
+  SearchRecentResponse,
+  SearchSuggestionsResponse,
+  SearchTrendingResponse,
+} from '@/types/marketplace-search';
 
 const MARKETPLACE_PREFIX = '/api/marketplace';
 
@@ -139,7 +146,52 @@ export class MarketplaceApiClient {
   }): Promise<SearchResponse> {
     return this.http.request<SearchResponse>({
       path: `${MARKETPLACE_PREFIX}/search`,
-      query: params,
+      query: { ...params, legacy: 'true' },
+    });
+  }
+
+  searchPlatform(
+    query: Record<string, string | number | boolean>,
+  ): Promise<SearchPlatformResponse> {
+    return this.http.request<SearchPlatformResponse>({
+      path: `${MARKETPLACE_PREFIX}/search`,
+      query,
+    });
+  }
+
+  searchSuggestions(
+    query: Record<string, string | number | boolean>,
+  ): Promise<SearchSuggestionsResponse> {
+    return this.http.request<SearchSuggestionsResponse>({
+      path: `${MARKETPLACE_PREFIX}/search/suggestions`,
+      query,
+    });
+  }
+
+  searchTrending(
+    query: Record<string, string | number | boolean>,
+  ): Promise<SearchTrendingResponse> {
+    return this.http.request<SearchTrendingResponse>({
+      path: `${MARKETPLACE_PREFIX}/search/trending`,
+      query,
+    });
+  }
+
+  searchRecent(
+    query: Record<string, string | number | boolean>,
+  ): Promise<SearchRecentResponse> {
+    return this.http.request<SearchRecentResponse>({
+      path: `${MARKETPLACE_PREFIX}/search/recent`,
+      query,
+    });
+  }
+
+  searchCollections(
+    query: Record<string, string | number | boolean>,
+  ): Promise<SearchCollectionsResponse> {
+    return this.http.request<SearchCollectionsResponse>({
+      path: `${MARKETPLACE_PREFIX}/search/collections`,
+      query,
     });
   }
 

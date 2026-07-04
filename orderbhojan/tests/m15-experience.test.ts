@@ -53,7 +53,7 @@ describe('M1.5 shell routes', () => {
 describe('M1.5 BDS compliance', () => {
   const experienceFiles = [
     'src/features/experience/ui/home/HeroHeader.tsx',
-    'src/features/experience/ui/search/SearchExperiencePage.tsx',
+    'src/features/experience/ui/search/MockSearchExperiencePage.tsx',
     'src/features/experience/ui/cart/CartExperiencePage.tsx',
     'src/features/experience/ui/shared/MarketplaceRestaurantTile.tsx',
   ];

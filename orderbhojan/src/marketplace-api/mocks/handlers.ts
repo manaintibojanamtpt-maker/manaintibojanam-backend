@@ -11,6 +11,15 @@ import {
   parseDiscoveryRequest,
 } from './discoveryMockLogic';
 import type { DiscoveryCollectionId } from '@/types/marketplace-discovery';
+import {
+  buildLegacySearchResponse,
+  buildSearchCollections,
+  buildSearchPlatformResponse,
+  buildSearchRecent,
+  buildSearchSuggestions,
+  buildSearchTrending,
+  parseSearchQueryParams,
+} from './searchMockLogic';
 
 const prefix = '/api/marketplace';
 
@@ -103,20 +112,25 @@ export const marketplaceHandlers = [
 
   http.get(`${prefix}/search`, ({ request }) => {
     const url = new URL(request.url);
-    const q = url.searchParams.get('q') ?? '';
-    const hits = MOCK_RESTAURANTS.filter((r) =>
-      r.displayName.toLowerCase().includes(q.toLowerCase()),
-    ).map((restaurant) => ({
-      type: 'restaurant' as const,
-      restaurant,
-      label: restaurant.displayName,
-      subtitle: restaurant.cuisines.join(', '),
-    }));
-    return success({
-      hits,
-      meta: { provider: 'mock-firestore-search' },
-    });
+    if (url.searchParams.get('legacy') === 'true') {
+      const q = url.searchParams.get('q') ?? '';
+      return success(buildLegacySearchResponse(q));
+    }
+    const params = parseSearchQueryParams(url);
+    return success(buildSearchPlatformResponse(params));
   }),
+
+  http.get(`${prefix}/search/suggestions`, ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams.get('q') ?? '';
+    return success(buildSearchSuggestions(q));
+  }),
+
+  http.get(`${prefix}/search/trending`, () => success(buildSearchTrending())),
+
+  http.get(`${prefix}/search/recent`, () => success(buildSearchRecent())),
+
+  http.get(`${prefix}/search/collections`, () => success(buildSearchCollections())),
 
   http.get(`${prefix}/restaurants/:slug`, ({ params }) => {
     const slug = String(params.slug);

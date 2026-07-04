@@ -10,6 +10,7 @@ import '@/styles/experience-shell.css';
 import '@/styles/experience-premium.css';
 import '@/styles/experience-location.css';
 import '@/styles/experience-discovery.css';
+import '@/styles/experience-search.css';
 
 async function bootstrap() {
   const config = getAppConfig();

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { DesignSystemProvider } from '@bhojan/design-system';
 import { DiscoveryProvider } from '@/features/discovery';
+import { SearchProvider } from '@/features/search';
 import { LocationProvider } from '@/features/location';
 import { AuthProvider } from './AuthProvider';
 import { BdsToastProvider, registerToastHandler, useBdsToast } from './BdsToastProvider';
@@ -35,9 +36,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             <LocationProvider>
               <QueryClientProvider client={queryClient}>
                 <DiscoveryProvider>
-                  <BdsToastProvider>
-                    <ToastRegistration>{children}</ToastRegistration>
-                  </BdsToastProvider>
+                  <SearchProvider>
+                    <BdsToastProvider>
+                      <ToastRegistration>{children}</ToastRegistration>
+                    </BdsToastProvider>
+                  </SearchProvider>
                 </DiscoveryProvider>
               </QueryClientProvider>
             </LocationProvider>

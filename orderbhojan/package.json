@@ -1,9 +1,9 @@
 {
   "name": "orderbhojan",
   "private": true,
-  "version": "0.5.0-m3",
+  "version": "0.6.0-m4",
   "type": "module",
-  "description": "OrderBhojan — production marketplace customer platform (M3 Discovery Engine)",
+  "description": "OrderBhojan — production marketplace customer platform (M4 Search Intelligence)",
   "scripts": {
     "dev": "vite",
     "prebuild": "npm run build --prefix ../packages/design-system",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts",
+    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts tests/m4-search.test.ts",
     "test:bds": "node --import tsx --test tests/bds-integration.test.ts tests/bds-theme.test.ts",
     "test:openapi": "node --import tsx scripts/validate-openapi.mjs",
     "test:performance": "node scripts/performance-smoke.mjs",
@@ -26,6 +26,7 @@
     "gate:m16": "node scripts/gate-m16.mjs",
     "gate:m2": "node scripts/gate-m2.mjs",
     "gate:m3": "node scripts/gate-m3.mjs",
+    "gate:m4": "node scripts/gate-m4.mjs",
     "audit": "npm audit --audit-level=high"
   },
   "dependencies": {

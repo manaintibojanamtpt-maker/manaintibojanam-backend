@@ -49,7 +49,7 @@ for (const file of requiredPremiumFiles) {
 }
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (!String(pkg.version).includes('m16') && !String(pkg.version).includes('m2') && !String(pkg.version).includes('m3')) {
+if (!String(pkg.version).includes('m16') && !String(pkg.version).includes('m2') && !String(pkg.version).includes('m3') && !String(pkg.version).includes('m4')) {
   console.error('[gate:m16] package.json version must include m16');
   process.exit(1);
 }
