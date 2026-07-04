@@ -18,6 +18,13 @@ import {
   buildRestaurantOffers,
 } from './restaurantExperienceMockLogic';
 import {
+  buildFoodBestsellers,
+  buildFoodCategories,
+  buildFoodMenuPayload,
+  buildFoodRecommended,
+  buildLegacyMenuResponse,
+} from './foodExperienceMockLogic';
+import {
   buildLegacySearchResponse,
   buildSearchCollections,
   buildSearchPlatformResponse,
@@ -159,7 +166,29 @@ export const marketplaceHandlers = [
     return success(buildRestaurantHighlights(String(params.slug)));
   }),
 
-  http.get(`${prefix}/menu`, () => success(MOCK_MENU)),
+  http.get(`${prefix}/restaurants/:slug/menu`, ({ params }) => {
+    return success(buildFoodMenuPayload(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/categories`, ({ params }) => {
+    return success(buildFoodCategories(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/recommended`, ({ params }) => {
+    return success(buildFoodRecommended(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/bestsellers`, ({ params }) => {
+    return success(buildFoodBestsellers(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/menu`, ({ request }) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get('legacy') !== 'true') {
+      return success(buildLegacyMenuResponse());
+    }
+    return success(MOCK_MENU);
+  }),
 
   http.post(`${prefix}/quote`, () => success(MOCK_QUOTE)),
 

@@ -1,9 +1,9 @@
 {
   "name": "orderbhojan",
   "private": true,
-  "version": "0.7.0-m5",
+  "version": "0.8.5-m65",
   "type": "module",
-  "description": "OrderBhojan — production marketplace customer platform (M5 Restaurant Experience)",
+  "description": "OrderBhojan — production marketplace customer platform (M6.5 Premium Evolution)",
   "scripts": {
     "dev": "vite",
     "prebuild": "npm run build --prefix ../packages/design-system",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts tests/m4-search.test.ts tests/m5-restaurant.test.ts",
+    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts tests/m4-search.test.ts tests/m5-restaurant.test.ts tests/m6-food.test.ts tests/m65-premium-evolution.test.ts",
     "test:bds": "node --import tsx --test tests/bds-integration.test.ts tests/bds-theme.test.ts",
     "test:openapi": "node --import tsx scripts/validate-openapi.mjs",
     "test:performance": "node scripts/performance-smoke.mjs",
@@ -28,6 +28,8 @@
     "gate:m3": "node scripts/gate-m3.mjs",
     "gate:m4": "node scripts/gate-m4.mjs",
     "gate:m5": "node scripts/gate-m5.mjs",
+    "gate:m6": "node scripts/gate-m6.mjs",
+    "gate:m65": "node scripts/gate-m65.mjs",
     "audit": "npm audit --audit-level=high"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
     "@tanstack/react-query": "^5.90.2",
     "clsx": "^2.1.1",
     "firebase": "^12.11.0",
+    "framer-motion": "^12.42.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.66.1",
@@ -62,6 +65,8 @@
     "yaml": "^2.8.2"
   },
   "msw": {
-    "workerDirectory": ["public"]
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

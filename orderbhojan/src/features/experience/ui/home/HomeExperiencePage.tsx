@@ -1,5 +1,6 @@
 import { Text } from '@bhojan/design-system';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed } from '@/features/discovery';
+import { MotionPage, MotionReveal } from '@/features/experience/motion/premiumMotion';
 import { HeroHeader } from './HeroHeader';
 import { HomeSearchBar } from './HomeSearchBar';
 import { HeroBannerCarousel } from './HeroBannerCarousel';
@@ -25,17 +26,27 @@ export function HomeExperiencePage() {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
 
   return (
-    <div className="ob-home-page ob-page-enter">
+    <MotionPage className="ob-home-page ob-page-enter ob-m65-home">
       <Text variant="caption" className="bds-sr-only" as="h1">OrderBhojan Home</Text>
       <HeroHeader />
       <div className="ob-home-page__stack">
-        <HomeSearchBar />
-        <HeroBannerCarousel />
-        <CategoryRail />
-        {discoveryEnabled ? <DiscoveryHomeFeed /> : <MockRestaurantRails />}
-        <TrendingFoodsSection />
+        <MotionReveal>
+          <HomeSearchBar />
+        </MotionReveal>
+        <MotionReveal delay={0.04}>
+          <HeroBannerCarousel />
+        </MotionReveal>
+        <MotionReveal delay={0.08}>
+          <CategoryRail />
+        </MotionReveal>
+        <MotionReveal delay={0.12}>
+          {discoveryEnabled ? <DiscoveryHomeFeed /> : <MockRestaurantRails />}
+        </MotionReveal>
+        <MotionReveal delay={0.16}>
+          <TrendingFoodsSection />
+        </MotionReveal>
       </div>
       <MarketplaceFloatingCart />
-    </div>
+    </MotionPage>
   );
 }

@@ -14,6 +14,7 @@ import { useBlurUpImage } from '@/features/experience/hooks/useBlurUpImage';
 import { useFavoritesStore } from '@/features/experience/store/favoritesStore';
 import { useScrollChrome } from '@/features/experience/hooks/useScrollChrome';
 import { useRestaurantExperience } from '../hooks/useRestaurantExperience';
+import { useFoodFeatureEnabled } from '@/features/food/hooks/useFoodFeature';
 import {
   cuisineHeadline,
   formatDeliveryFeeLabel,
@@ -87,6 +88,7 @@ function FavoriteButton({ restaurantId, name }: { restaurantId: string; name: st
 
 function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
   const navigate = useNavigate();
+  const menuEnabled = useFoodFeatureEnabled();
   const collapsed = useScrollChrome(160);
   const cover = useBlurUpImage();
   const { experience, hours, serviceability, policies, highlights } = data;
@@ -95,7 +97,7 @@ function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
     'https://placehold.co/1200x600/orange/white?text=Restaurant';
 
   return (
-    <div className="ob-restaurant-page ob-page-enter">
+    <div className="ob-restaurant-page ob-page-enter ob-m65-restaurant">
       <header
         className={`ob-restaurant-page__header${collapsed ? ' ob-restaurant-page__header--collapsed' : ''}`}
       >
@@ -321,8 +323,9 @@ function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
         <Button
           variant="primary"
           className="ob-restaurant-page__menu-cta"
-          disabled
-          aria-label="Open menu coming in M6"
+          disabled={!menuEnabled}
+          aria-label={menuEnabled ? 'Open menu' : 'Open menu requires M6 flag'}
+          onClick={() => navigate(`/restaurant/${experience.slug}/menu`)}
         >
           Open Menu
         </Button>

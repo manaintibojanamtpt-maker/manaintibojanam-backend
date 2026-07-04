@@ -4,9 +4,11 @@ import { DesignSystemProvider } from '@bhojan/design-system';
 import { DiscoveryProvider } from '@/features/discovery';
 import { SearchProvider } from '@/features/search';
 import { RestaurantProvider } from '@/features/restaurant';
+import { FoodProvider } from '@/features/food/ui/FoodProvider';
 import { LocationProvider } from '@/features/location';
 import { AuthProvider } from './AuthProvider';
 import { BdsToastProvider, registerToastHandler, useBdsToast } from './BdsToastProvider';
+import { PremiumMotionRoot } from '@/features/experience/motion/premiumMotion';
 import { FeatureFlagProvider } from '@/featureFlags';
 import { TelemetryProvider } from '@/telemetry';
 
@@ -33,21 +35,25 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <DesignSystemProvider theme="system">
       <TelemetryProvider>
         <FeatureFlagProvider>
-          <AuthProvider>
+          <PremiumMotionRoot>
+            <AuthProvider>
             <LocationProvider>
               <QueryClientProvider client={queryClient}>
                 <DiscoveryProvider>
                   <SearchProvider>
                     <RestaurantProvider>
-                      <BdsToastProvider>
-                        <ToastRegistration>{children}</ToastRegistration>
-                      </BdsToastProvider>
+                      <FoodProvider>
+                        <BdsToastProvider>
+                          <ToastRegistration>{children}</ToastRegistration>
+                        </BdsToastProvider>
+                      </FoodProvider>
                     </RestaurantProvider>
                   </SearchProvider>
                 </DiscoveryProvider>
               </QueryClientProvider>
             </LocationProvider>
-          </AuthProvider>
+            </AuthProvider>
+          </PremiumMotionRoot>
         </FeatureFlagProvider>
       </TelemetryProvider>
     </DesignSystemProvider>

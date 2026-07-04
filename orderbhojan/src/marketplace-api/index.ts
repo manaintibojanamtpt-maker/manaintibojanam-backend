@@ -31,6 +31,11 @@ import type {
   SearchTrendingResponse,
 } from '@/types/marketplace-search';
 import type {
+  FoodCategoriesResponse,
+  FoodCollectionResponse,
+  FoodMenuApiPayload,
+} from '@/types/marketplace-food';
+import type {
   RestaurantExperienceApiPayload,
   RestaurantGalleryResponse,
   RestaurantHighlightsResponse,
@@ -236,6 +241,34 @@ export class MarketplaceApiClient {
   restaurantHighlights(restaurantSlug: string): Promise<RestaurantHighlightsResponse> {
     return this.http.request<RestaurantHighlightsResponse>({
       path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/highlights`,
+    });
+  }
+
+  foodMenu(
+    restaurantSlug: string,
+    params?: { lat?: number; lng?: number },
+  ): Promise<FoodMenuApiPayload> {
+    return this.http.request<FoodMenuApiPayload>({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/menu`,
+      query: params,
+    });
+  }
+
+  foodCategories(restaurantSlug: string): Promise<FoodCategoriesResponse> {
+    return this.http.request<FoodCategoriesResponse>({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/categories`,
+    });
+  }
+
+  foodRecommended(restaurantSlug: string): Promise<FoodCollectionResponse> {
+    return this.http.request<FoodCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/recommended`,
+    });
+  }
+
+  foodBestsellers(restaurantSlug: string): Promise<FoodCollectionResponse> {
+    return this.http.request<FoodCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/bestsellers`,
     });
   }
 

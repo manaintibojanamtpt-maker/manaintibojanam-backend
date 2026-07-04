@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,8 +21,9 @@ for (const file of readdirSync(distAssets)) {
 }
 const measureMs = Math.round(performance.now() - start);
 
-// M1.5+ baseline: Firebase Auth + BDS + experience shell (~1.4MB JS precache assets)
-const maxJsKb = 1500;
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+// M6.5+ adds framer-motion for premium spring animations (~65 KB gzip main delta)
+const maxJsKb = String(pkg.version).includes('m65') ? 1650 : 1500;
 const totalJsKb = Math.round(totalJs / 1024);
 
 console.log(`[test:performance] measure time: ${measureMs}ms`);

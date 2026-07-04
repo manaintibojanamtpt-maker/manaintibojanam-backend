@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { MarketplaceLayout, AuthLayout, FullScreenLayout } from '@/shared/layouts';
@@ -21,6 +22,22 @@ import {
 } from '@/features/experience';
 
 import { RestaurantRoutePage } from '@/features/restaurant';
+import { Skeleton } from '@bhojan/design-system';
+
+const FoodRoutePage = lazy(() =>
+  import('@/features/food/ui/FoodRoutePage').then((module) => ({
+    default: module.FoodRoutePage,
+  })),
+);
+
+function FoodRouteFallback() {
+  return (
+    <div style={{ padding: 'var(--bds-space-4)' }} aria-busy="true">
+      <Skeleton height="3rem" />
+      <Skeleton height="12rem" style={{ marginTop: 'var(--bds-space-4)' }} />
+    </div>
+  );
+}
 
 const protectedFeatureRoutes = [
   { path: 'orders/:orderId/track', feature: 'Tracking', milestone: 'M11' },
@@ -79,6 +96,14 @@ export function AppRouter() {
 
       <Route element={<FullScreenLayout />}>
         <Route path="restaurant/:restaurantSlug" element={<RestaurantRoutePage />} />
+        <Route
+          path="restaurant/:restaurantSlug/menu"
+          element={
+            <Suspense fallback={<FoodRouteFallback />}>
+              <FoodRoutePage />
+            </Suspense>
+          }
+        />
         <Route
           path="immersive-demo"
           element={

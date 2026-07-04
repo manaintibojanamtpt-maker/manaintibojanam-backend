@@ -12,6 +12,8 @@ import '@/styles/experience-location.css';
 import '@/styles/experience-discovery.css';
 import '@/styles/experience-search.css';
 import '@/styles/experience-restaurant.css';
+import '@/styles/experience-food.css';
+import '@/styles/experience-premium-m65.css';
 
 async function bootstrap() {
   const config = getAppConfig();

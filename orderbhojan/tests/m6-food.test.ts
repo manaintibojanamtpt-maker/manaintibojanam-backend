@@ -1,0 +1,123 @@
+import assert from 'node:assert/strict';
+import { readFileSync, statSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, it } from 'node:test';
+import {
+  buildFoodBestsellers,
+  buildFoodCategories,
+  buildFoodMenu,
+  buildFoodMenuPayload,
+  buildFoodRecommended,
+} from '../src/marketplace-api/mocks/foodExperienceMockLogic';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = resolve(__dirname, '..');
+
+describe('M6 food experience mock logic', () => {
+  it('builds menu payload with public food fields only', () => {
+    const payload = buildFoodMenuPayload('demo-biryani-house');
+    assert.equal(payload.slug, 'demo-biryani-house');
+    assert.ok(payload.items.length > 0);
+    assert.ok(payload.contextToken);
+    const item = payload.items[0];
+    assert.ok(item.foodId);
+    assert.ok(item.slug);
+    assert.equal(Object.hasOwn(item, 'tenantId'), false);
+    assert.equal(Object.hasOwn(item, 'branchId'), false);
+  });
+
+  it('exposes categories, recommended, and bestsellers endpoints', () => {
+    assert.ok(buildFoodCategories('demo-biryani-house').categories.length > 0);
+    assert.ok(buildFoodRecommended('demo-dosa-corner').items.length > 0);
+    assert.ok(buildFoodBestsellers('demo-biryani-house').items.length > 0);
+  });
+
+  it('includes variants and addons on menu items', () => {
+    const menu = buildFoodMenu('demo-biryani-house');
+    const biryani = menu.items.find((item) => item.slug === 'hyderabadi-chicken-biryani');
+    assert.ok(biryani);
+    assert.ok(biryani!.variants.length > 0);
+    assert.ok(biryani!.addons.length > 0);
+  });
+});
+
+describe('M6 food module structure', () => {
+  const requiredFiles = [
+    'src/features/food/engine/foodExperienceLayer.ts',
+    'src/features/food/infrastructure/foodApiClient.ts',
+    'src/features/food/ui/FoodExperiencePage.tsx',
+    'src/types/marketplace-food.ts',
+    'src/styles/experience-food.css',
+    'scripts/gate-m6.mjs',
+  ];
+
+  for (const file of requiredFiles) {
+    it(`includes ${file}`, () => {
+      statSync(join(root, file));
+    });
+  }
+
+  it('loads food CSS from main entry', () => {
+    const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+    assert.match(main, /experience-food\.css/);
+  });
+
+  it('routes food menu page in fullscreen layout', () => {
+    const router = readFileSync(join(root, 'src/app/routes/AppRouter.tsx'), 'utf8');
+    assert.match(router, /FoodRoutePage/);
+    assert.match(router, /restaurant\/:restaurantSlug\/menu/);
+    assert.match(router, /FullScreenLayout/);
+  });
+
+  it('menu flag defaults OFF', () => {
+    const flags = readFileSync(join(root, 'src/featureFlags/flags.ts'), 'utf8');
+    assert.match(flags, /FF_OB_MENU: false/);
+  });
+
+  it('MSW handlers expose food menu endpoints', () => {
+    const handlers = readFileSync(join(root, 'src/marketplace-api/mocks/handlers.ts'), 'utf8');
+    assert.match(handlers, /restaurants\/:slug\/menu/);
+    assert.match(handlers, /restaurants\/:slug\/categories/);
+    assert.match(handlers, /restaurants\/:slug\/recommended/);
+    assert.match(handlers, /restaurants\/:slug\/bestsellers/);
+  });
+
+  it('marketplace client exposes food menu methods', () => {
+    const client = readFileSync(join(root, 'src/marketplace-api/index.ts'), 'utf8');
+    assert.match(client, /foodMenu/);
+    assert.match(client, /foodCategories/);
+    assert.match(client, /foodRecommended/);
+    assert.match(client, /foodBestsellers/);
+  });
+
+  it('experience layer strips contextToken from UI path', () => {
+    const layer = readFileSync(
+      join(root, 'src/features/food/engine/foodExperienceLayer.ts'),
+      'utf8',
+    );
+    assert.match(layer, /stripInternal/);
+    assert.doesNotMatch(layer, /contextToken/);
+  });
+
+  it('food UI does not import marketplace client directly', () => {
+    const page = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
+    assert.doesNotMatch(page, /getMarketplaceApiClient/);
+    assert.doesNotMatch(page, /checkout/);
+  });
+
+  it('food CSS includes safe-area and reduced motion', () => {
+    const css = readFileSync(join(root, 'src/styles/experience-food.css'), 'utf8');
+    assert.match(css, /safe-area-inset-bottom/);
+    assert.match(css, /prefers-reduced-motion/);
+  });
+
+  it('restaurant page wires Open Menu when M6 flag enabled', () => {
+    const page = readFileSync(
+      join(root, 'src/features/restaurant/ui/RestaurantExperiencePage.tsx'),
+      'utf8',
+    );
+    assert.match(page, /useFoodFeatureEnabled/);
+    assert.match(page, /\/menu/);
+  });
+});

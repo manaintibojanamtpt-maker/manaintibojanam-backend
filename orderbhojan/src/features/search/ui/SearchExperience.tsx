@@ -54,7 +54,7 @@ export function SearchExperience() {
   };
 
   return (
-    <div className="ob-page-enter ob-search-page ob-search-platform">
+    <div className="ob-page-enter ob-search-page ob-search-platform ob-m65-search">
       <header className="ob-search-platform__header">
         <Button
           variant="ghost"

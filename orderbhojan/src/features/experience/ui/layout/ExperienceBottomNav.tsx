@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BottomNavigation, Icon } from '@bhojan/design-system';
+import { BottomNavigation, Icon, useReducedMotion } from '@bhojan/design-system';
+import { m } from 'framer-motion';
+import { PREMIUM_SPRING } from '@/features/experience/motion/premiumMotion';
 
 const NAV_ITEMS = [
   {
@@ -75,10 +77,21 @@ export function ExperienceBottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const activeId = resolveActiveId(pathname);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="ob-bottom-nav-shell">
-      <div className="ob-bottom-nav-indicator" data-active={activeId} aria-hidden />
+      {reduceMotion ? (
+        <div className="ob-bottom-nav-indicator" data-active={activeId} aria-hidden />
+      ) : (
+        <m.div
+          className="ob-bottom-nav-indicator"
+          layout
+          transition={PREMIUM_SPRING}
+          data-active={activeId}
+          aria-hidden
+        />
+      )}
       <BottomNavigation
         className="ob-bottom-nav"
         items={[...NAV_ITEMS]}
