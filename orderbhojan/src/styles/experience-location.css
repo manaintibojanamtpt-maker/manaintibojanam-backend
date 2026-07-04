@@ -1,0 +1,162 @@
+/* M2 — Location Intelligence Platform */
+
+.ob-location-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--bds-space-2);
+  min-height: 44px;
+  padding: var(--bds-space-2) var(--bds-space-3);
+  border-radius: var(--bds-radius-lg);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ob-location-chip__label {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ob-location-chip--hero {
+  margin-top: var(--bds-space-2);
+}
+
+.ob-location-chip--compact {
+  max-width: min(100%, 280px);
+}
+
+.ob-location-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-4);
+  padding-bottom: calc(var(--bds-space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+.ob-location-sheet__gps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bds-space-2);
+  min-height: 48px;
+}
+
+.ob-location-sheet__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-2);
+}
+
+.ob-location-sheet__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start !important;
+  gap: var(--bds-space-1);
+  min-height: 48px;
+  text-align: left;
+}
+
+.ob-location-sheet__error,
+.ob-location-sheet__guest {
+  padding: var(--bds-space-3);
+}
+
+.ob-location-sheet__hint {
+  color: var(--bds-color-text-secondary);
+}
+
+.ob-address-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-3);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.ob-address-form__labels {
+  display: flex;
+  gap: var(--bds-space-2);
+  flex-wrap: wrap;
+}
+
+.ob-address-form__field select {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--bds-space-2) var(--bds-space-3);
+  border-radius: var(--bds-radius-md);
+  border: 1px solid var(--bds-color-border);
+  background: var(--bds-color-surface);
+  color: var(--bds-color-text-primary);
+}
+
+.ob-map-pin-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-2);
+}
+
+.ob-map-pin-picker__preview {
+  position: relative;
+  min-height: 160px;
+  border-radius: var(--bds-radius-lg);
+  background: linear-gradient(145deg, var(--bds-color-surface-muted), var(--bds-color-surface));
+  border: 1px dashed var(--bds-color-border);
+  overflow: hidden;
+}
+
+.ob-map-pin-picker__pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -24px 0 0 -12px;
+  background: var(--bds-color-primary);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+}
+
+.ob-map-pin-picker__controls {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--bds-space-2);
+}
+
+.ob-compact-header__location {
+  flex: 1;
+  min-width: 0;
+  margin-inline: var(--bds-space-2);
+}
+
+@media (min-width: 320px) {
+  .ob-location-chip__label {
+    max-width: clamp(12rem, 55vw, 20rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .ob-location-sheet {
+    max-width: 480px;
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ob-map-pin-picker__preview {
+    min-height: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-location-chip {
+    transition: none;
+  }
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .ob-location-chip--hero {
+    padding-left: max(var(--bds-space-3), env(safe-area-inset-left));
+    padding-right: max(var(--bds-space-3), env(safe-area-inset-right));
+  }
+}

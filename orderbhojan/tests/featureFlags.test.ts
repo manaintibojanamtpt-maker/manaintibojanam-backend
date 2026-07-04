@@ -1,0 +1,18 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { loadFeatureFlags, isFeatureEnabled } from '../src/featureFlags/flags';
+
+describe('featureFlags', () => {
+  it('defaults all OrderBhojan flags to OFF', () => {
+    const flags = loadFeatureFlags();
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_DISCOVERY'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_SEARCH'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_TRACKING'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_NOTIFICATIONS'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_PAYMENTS'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_PROMOTIONS'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_ENABLED'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_GEOCODE_API'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_MAP_ENABLED'), false);
+  });
+});

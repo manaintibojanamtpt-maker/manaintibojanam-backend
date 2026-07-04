@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  title: OrderBhojan Marketplace API
+  version: 1.0.0-m1
+  description: Customer-facing marketplace API consumed by OrderBhojan. Implemented on BhojanOS Render backend (M3+). M0 uses MSW mocks only.
+servers:
+  - url: https://manaintibojanam-backend.onrender.com
+    description: Production BhojanOS host
+paths:
+  /api/marketplace/health:
+    get:
+      summary: Marketplace layer health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessMarketplaceHealth'
+  /api/marketplace/discover:
+    get:
+      summary: Discover nearby restaurants and curated rails
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number }
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number }
+        - in: query
+          name: radiusKm
+          schema: { type: number }
+        - in: query
+          name: rails
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Discovery result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessDiscoverResponse'
+  /api/marketplace/search:
+    get:
+      summary: Unified marketplace search
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number }
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number }
+        - in: query
+          name: type
+          schema: { type: string }
+      responses:
+        '200':
+          description: Search hits
+  /api/marketplace/restaurants/{restaurantSlug}:
+    get:
+      summary: Restaurant detail with context token
+      parameters:
+        - in: path
+          name: restaurantSlug
+          required: true
+          schema: { type: string }
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number }
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number }
+      responses:
+        '200':
+          description: Restaurant detail
+  /api/marketplace/menu:
+    get:
+      summary: Menu catalog for resolved branch
+      parameters:
+        - in: query
+          name: restaurantId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: contextToken
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Menu categories
+  /api/marketplace/quote:
+    post:
+      summary: Server-authoritative bill quote
+      responses:
+        '200':
+          description: Bill quote
+  /api/marketplace/checkout/prepare:
+    post:
+      summary: Prepare checkout
+      responses:
+        '200':
+          description: Payment methods and quote
+  /api/marketplace/checkout/place:
+    post:
+      summary: Place order
+      responses:
+        '200':
+          description: Order created
+  /api/marketplace/orders:
+    get:
+      summary: List customer orders
+      responses:
+        '200':
+          description: Order list
+  /api/marketplace/orders/{orderId}:
+    get:
+      summary: Order detail
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Order detail
+  /api/marketplace/orders/{orderId}/tracking:
+    get:
+      summary: Order tracking timeline
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Tracking state
+  /api/marketplace/profile:
+    get:
+      summary: Customer profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile
+        '401':
+          description: Unauthorized
+    patch:
+      summary: Update profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated profile
+        '401':
+          description: Unauthorized
+  /api/marketplace/favorites:
+    get:
+      summary: List favorites
+      responses:
+        '200':
+          description: Favorites
+    post:
+      summary: Add favorite
+      responses:
+        '200':
+          description: Updated favorites
+  /api/marketplace/favorites/{restaurantId}:
+    delete:
+      summary: Remove favorite
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Updated favorites
+  /api/marketplace/notifications/register:
+    post:
+      summary: Register device token
+      responses:
+        '200':
+          description: Registered
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiMeta:
+      type: object
+      properties:
+        correlationId: { type: string }
+    ApiSuccessMarketplaceHealth:
+      type: object
+      required: [ok, value]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        value:
+          type: object
+          properties:
+            status: { type: string, enum: [ok] }
+            version: { type: string }
+            environment: { type: string }
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    RestaurantPublic:
+      type: object
+      required: [restaurantId, restaurantSlug, displayName, cuisines, isOpen, badges]
+      properties:
+        restaurantId: { type: string }
+        restaurantSlug: { type: string }
+        displayName: { type: string }
+        logoUrl: { type: string }
+        coverUrl: { type: string }
+        rating: { type: number }
+        ratingCount: { type: integer }
+        cuisines:
+          type: array
+          items: { type: string }
+        priceForTwo: { type: number }
+        distanceKm: { type: number }
+        deliveryFee: { type: number, nullable: true }
+        isOpen: { type: boolean }
+        badges:
+          type: array
+          items: { type: string }
+    ApiSuccessDiscoverResponse:
+      type: object
+      required: [ok, value]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        value:
+          type: object
+          properties:
+            locationLabel: { type: string }
+            rails:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  restaurants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RestaurantPublic'

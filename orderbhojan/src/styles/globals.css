@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@bhojan/design-system/styles.css";
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--bds-color-background);
+    color: var(--bds-color-text-primary);
+    font-family: var(--bds-font-sans);
+  }
+
+  a {
+    color: inherit;
+  }
+}
