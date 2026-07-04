@@ -52,7 +52,7 @@ for (const file of requiredExperienceFiles) {
 }
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (!String(pkg.version).includes('m15') && !String(pkg.version).includes('m16') && !String(pkg.version).includes('m2')) {
+if (!String(pkg.version).includes('m15') && !String(pkg.version).includes('m16') && !String(pkg.version).includes('m2') && !String(pkg.version).includes('m3')) {
   console.error('[gate:m15] package.json version must include m15 or m16 tag');
   process.exit(1);
 }

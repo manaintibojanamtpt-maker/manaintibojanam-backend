@@ -5,6 +5,12 @@ import {
   MOCK_QUOTE,
   MOCK_RESTAURANTS,
 } from './fixtures';
+import {
+  buildDiscoveryCollection,
+  buildDiscoveryHome,
+  parseDiscoveryRequest,
+} from './discoveryMockLogic';
+import type { DiscoveryCollectionId } from '@/types/marketplace-discovery';
 
 const prefix = '/api/marketplace';
 
@@ -52,6 +58,47 @@ export const marketplaceHandlers = [
       locationLabel: 'Demo Locality, Hyderabad',
       rails,
     });
+  }),
+
+  http.get(`${prefix}/discovery`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success(buildDiscoveryHome(params));
+  }),
+
+  http.get(`${prefix}/discovery/nearby`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('nearby', params) });
+  }),
+
+  http.get(`${prefix}/discovery/featured`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('featured', params) });
+  }),
+
+  http.get(`${prefix}/discovery/trending`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('trending', params) });
+  }),
+
+  http.get(`${prefix}/discovery/cloud-kitchens`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('cloud-kitchens', params) });
+  }),
+
+  http.get(`${prefix}/discovery/top-rated`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('top-rated', params) });
+  }),
+
+  http.get(`${prefix}/discovery/offers`, ({ request }) => {
+    const params = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection('offers', params) });
+  }),
+
+  http.get(`${prefix}/discovery/:collectionId`, ({ request, params }) => {
+    const collectionId = String(params.collectionId) as DiscoveryCollectionId;
+    const parsed = parseDiscoveryRequest(new URL(request.url));
+    return success({ collection: buildDiscoveryCollection(collectionId, parsed) });
   }),
 
   http.get(`${prefix}/search`, ({ request }) => {

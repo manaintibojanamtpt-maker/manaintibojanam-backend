@@ -12,6 +12,11 @@ import type {
   SearchResponse,
 } from '@/types/marketplace';
 import type {
+  DiscoveryCollectionId,
+  DiscoveryCollectionResponse,
+  DiscoveryHomeResponse,
+} from '@/types/marketplace-discovery';
+import type {
   DeliveryZoneResult,
   DistanceResult,
   PincodeValidationResult,
@@ -41,6 +46,87 @@ export class MarketplaceApiClient {
       path: `${MARKETPLACE_PREFIX}/discover`,
       query: params,
     });
+  }
+
+  discoveryHome(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryHomeResponse> {
+    return this.http.request<DiscoveryHomeResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery`,
+      query,
+    });
+  }
+
+  discoveryNearby(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/nearby`,
+      query,
+    });
+  }
+
+  discoveryFeatured(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/featured`,
+      query,
+    });
+  }
+
+  discoveryTrending(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/trending`,
+      query,
+    });
+  }
+
+  discoveryCloudKitchens(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/cloud-kitchens`,
+      query,
+    });
+  }
+
+  discoveryTopRated(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/top-rated`,
+      query,
+    });
+  }
+
+  discoveryOffers(
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    return this.http.request<DiscoveryCollectionResponse>({
+      path: `${MARKETPLACE_PREFIX}/discovery/offers`,
+      query,
+    });
+  }
+
+  discoveryCollection(
+    collectionId: DiscoveryCollectionId,
+    query: Record<string, string | number | boolean>,
+  ): Promise<DiscoveryCollectionResponse> {
+    const dedicated: Partial<Record<DiscoveryCollectionId, string>> = {
+      nearby: `${MARKETPLACE_PREFIX}/discovery/nearby`,
+      featured: `${MARKETPLACE_PREFIX}/discovery/featured`,
+      trending: `${MARKETPLACE_PREFIX}/discovery/trending`,
+      'cloud-kitchens': `${MARKETPLACE_PREFIX}/discovery/cloud-kitchens`,
+      'top-rated': `${MARKETPLACE_PREFIX}/discovery/top-rated`,
+      offers: `${MARKETPLACE_PREFIX}/discovery/offers`,
+    };
+    const path =
+      dedicated[collectionId] ??
+      `${MARKETPLACE_PREFIX}/discovery/${encodeURIComponent(collectionId)}`;
+    return this.http.request<DiscoveryCollectionResponse>({ path, query });
   }
 
   search(params: {

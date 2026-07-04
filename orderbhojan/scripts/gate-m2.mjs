@@ -48,7 +48,7 @@ for (const file of requiredFiles) {
 }
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (!String(pkg.version).includes('m2')) {
+if (!String(pkg.version).includes('m2') && !String(pkg.version).includes('m3')) {
   console.error('[gate:m2] package.json version must include m2');
   process.exit(1);
 }

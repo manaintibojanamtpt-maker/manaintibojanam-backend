@@ -1,0 +1,42 @@
+import type { RestaurantPublic } from '@/types/marketplace';
+
+export function formatEta(restaurant: RestaurantPublic): string {
+  if (!restaurant.etaMinutes) return '—';
+  const { min, max } = restaurant.etaMinutes;
+  return `${min}–${max} min`;
+}
+
+export function formatDistance(restaurant: RestaurantPublic): string {
+  if (restaurant.distanceKm == null) return '—';
+  return `${restaurant.distanceKm.toFixed(1)} km`;
+}
+
+export function formatDeliveryFee(restaurant: RestaurantPublic): string {
+  if (restaurant.deliveryFee == null) return 'Free';
+  if (restaurant.deliveryFee === 0) return 'Free';
+  return `₹${restaurant.deliveryFee}`;
+}
+
+export function formatPriceRange(restaurant: RestaurantPublic): string | undefined {
+  if (restaurant.priceForTwo == null) return undefined;
+  if (restaurant.priceForTwo < 300) return '₹';
+  if (restaurant.priceForTwo < 500) return '₹₹';
+  if (restaurant.priceForTwo < 800) return '₹₹₹';
+  return '₹₹₹₹';
+}
+
+export function isVegRestaurant(restaurant: RestaurantPublic): boolean {
+  return restaurant.badges.includes('pure_veg') || restaurant.badges.includes('veg');
+}
+
+export function isCloudKitchen(restaurant: RestaurantPublic): boolean {
+  return restaurant.badges.includes('cloud_kitchen');
+}
+
+export function hasOffer(restaurant: RestaurantPublic): boolean {
+  return restaurant.badges.includes('offer');
+}
+
+export function cuisineLabel(restaurant: RestaurantPublic): string {
+  return restaurant.cuisines.slice(0, 2).join(' · ');
+}
