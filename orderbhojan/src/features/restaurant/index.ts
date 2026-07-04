@@ -1,2 +1,16 @@
-/** M5 — Restaurant feature module (not implemented in M0) */
-export const RESTAURANT_FEATURE = 'restaurant' as const;
+export const M5_MILESTONE = 'M5';
+
+export { RestaurantProvider } from './ui/RestaurantProvider';
+export { RestaurantRoutePage } from './ui/RestaurantRoutePage';
+export { RestaurantExperiencePage } from './ui/RestaurantExperiencePage';
+export { useRestaurantFeatureEnabled } from './hooks/useRestaurantFeature';
+export { useRestaurantExperience, useRestaurantLocationInvalidation } from './hooks/useRestaurantExperience';
+export { restaurantKeys } from './hooks/restaurantQueryKeys';
+export {
+  loadRestaurantExperience,
+  loadRestaurantGallery,
+  loadRestaurantOffers,
+  loadRestaurantHighlights,
+  resolveRestaurantCoords,
+  DEFAULT_RESTAURANT_COORDS,
+} from './engine/restaurantExperienceLayer';

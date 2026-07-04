@@ -45,6 +45,7 @@ const uiPageFiles = [
   'features/experience/ui/home/HomeExperiencePage.tsx',
   'features/experience/ui/search/MockSearchExperiencePage.tsx',
   'features/search/ui/SearchExperience.tsx',
+  'features/restaurant/ui/RestaurantExperiencePage.tsx',
   'features/experience/ui/cart/CartExperiencePage.tsx',
   'features/experience/ui/orders/OrdersExperiencePage.tsx',
   'app/pages/FoundationPage.tsx',

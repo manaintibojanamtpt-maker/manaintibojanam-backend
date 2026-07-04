@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import {
-  MOCK_CONTEXT_TOKEN,
   MOCK_MENU,
   MOCK_QUOTE,
   MOCK_RESTAURANTS,
@@ -11,6 +10,13 @@ import {
   parseDiscoveryRequest,
 } from './discoveryMockLogic';
 import type { DiscoveryCollectionId } from '@/types/marketplace-discovery';
+import {
+  buildLegacyRestaurantDetail,
+  buildRestaurantExperiencePayload,
+  buildRestaurantGallery,
+  buildRestaurantHighlights,
+  buildRestaurantOffers,
+} from './restaurantExperienceMockLogic';
 import {
   buildLegacySearchResponse,
   buildSearchCollections,
@@ -132,20 +138,25 @@ export const marketplaceHandlers = [
 
   http.get(`${prefix}/search/collections`, () => success(buildSearchCollections())),
 
-  http.get(`${prefix}/restaurants/:slug`, ({ params }) => {
+  http.get(`${prefix}/restaurants/:slug`, ({ request, params }) => {
     const slug = String(params.slug);
-    const restaurant =
-      MOCK_RESTAURANTS.find((r) => r.restaurantSlug === slug) ?? MOCK_RESTAURANTS[0];
-    return success({
-      restaurant,
-      contextToken: MOCK_CONTEXT_TOKEN,
-      description: 'Demo restaurant for M0 MSW mock server.',
-      serviceability: {
-        delivery: restaurant.isOpen,
-        pickup: true,
-        message: restaurant.isOpen ? undefined : 'Currently closed',
-      },
-    });
+    const url = new URL(request.url);
+    if (url.searchParams.get('legacy') === 'true') {
+      return success(buildLegacyRestaurantDetail(slug));
+    }
+    return success(buildRestaurantExperiencePayload(slug));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/gallery`, ({ params }) => {
+    return success(buildRestaurantGallery(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/offers`, ({ params }) => {
+    return success(buildRestaurantOffers(String(params.slug)));
+  }),
+
+  http.get(`${prefix}/restaurants/:slug/highlights`, ({ params }) => {
+    return success(buildRestaurantHighlights(String(params.slug)));
   }),
 
   http.get(`${prefix}/menu`, () => success(MOCK_MENU)),

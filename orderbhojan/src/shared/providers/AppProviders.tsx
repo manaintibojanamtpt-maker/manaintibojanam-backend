@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { DesignSystemProvider } from '@bhojan/design-system';
 import { DiscoveryProvider } from '@/features/discovery';
 import { SearchProvider } from '@/features/search';
+import { RestaurantProvider } from '@/features/restaurant';
 import { LocationProvider } from '@/features/location';
 import { AuthProvider } from './AuthProvider';
 import { BdsToastProvider, registerToastHandler, useBdsToast } from './BdsToastProvider';
@@ -37,9 +38,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <QueryClientProvider client={queryClient}>
                 <DiscoveryProvider>
                   <SearchProvider>
-                    <BdsToastProvider>
-                      <ToastRegistration>{children}</ToastRegistration>
-                    </BdsToastProvider>
+                    <RestaurantProvider>
+                      <BdsToastProvider>
+                        <ToastRegistration>{children}</ToastRegistration>
+                      </BdsToastProvider>
+                    </RestaurantProvider>
                   </SearchProvider>
                 </DiscoveryProvider>
               </QueryClientProvider>

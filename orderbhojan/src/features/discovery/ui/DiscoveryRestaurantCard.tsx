@@ -6,7 +6,9 @@ import {
   Icon,
   Text,
 } from '@bhojan/design-system';
+import { useNavigate } from 'react-router-dom';
 import type { RestaurantPublic } from '@/types/marketplace';
+import { useRestaurantFeatureEnabled } from '@/features/restaurant';
 import { useBlurUpImage } from '@/features/experience/hooks/useBlurUpImage';
 import { useFavoritesStore } from '@/features/experience/store/favoritesStore';
 import {
@@ -28,6 +30,8 @@ export function DiscoveryRestaurantCard({
   restaurant,
   width = '17.5rem',
 }: DiscoveryRestaurantCardProps) {
+  const navigate = useNavigate();
+  const restaurantEnabled = useRestaurantFeatureEnabled();
   const { isFavorite, toggle } = useFavoritesStore();
   const favorite = isFavorite(restaurant.restaurantId);
   const cover = useBlurUpImage();
@@ -40,6 +44,11 @@ export function DiscoveryRestaurantCard({
       interactive
       className="bds-restaurant-card ob-restaurant-tile ob-discovery-card"
       style={{ width, minWidth: width }}
+      onClick={() => {
+        if (restaurantEnabled) {
+          navigate(`/restaurant/${restaurant.restaurantSlug}`);
+        }
+      }}
       aria-label={`${restaurant.displayName}, ${cuisineLabel(restaurant)}, rated ${restaurant.rating ?? '—'}`}
     >
       <div className="ob-restaurant-tile__media-wrap">

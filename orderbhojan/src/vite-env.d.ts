@@ -19,6 +19,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MEASUREMENT_ID?: string;
   readonly VITE_FF_OB_DISCOVERY?: string;
   readonly VITE_FF_OB_SEARCH?: string;
+  readonly VITE_FF_OB_RESTAURANT?: string;
   readonly VITE_FF_OB_TRACKING?: string;
   readonly VITE_FF_OB_NOTIFICATIONS?: string;
   readonly VITE_FF_OB_PAYMENTS?: string;
