@@ -113,7 +113,14 @@ const OwnerLogin = () => {
       await afterSignIn();
     } catch (error: any) {
       logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
-      toast.error('Invalid email or password. Did you sign up with Google?');
+      const code = error?.code as string | undefined;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        toast.error('Invalid email or password. This account uses email sign-in, not Google.');
+      } else if (code === 'auth/unauthorized-domain') {
+        toast.error('This domain is not authorized for sign-in. Add bhojanos.com in Firebase Auth → Settings → Authorized domains.');
+      } else {
+        toast.error(error?.message || 'Sign-in failed. Try again or use Forgot password.');
+      }
       setLoading(false);
     }
   };
@@ -130,7 +137,14 @@ const OwnerLogin = () => {
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
-        toast.error(error.message || 'Google login failed');
+        const code = error?.code as string | undefined;
+        if (code === 'auth/account-exists-with-different-credential') {
+          toast.error('This email was registered with a password. Sign in with email and password instead.');
+        } else if (code === 'auth/unauthorized-domain') {
+          toast.error('Google sign-in is blocked for this domain. Add bhojanos.com in Firebase Auth authorized domains.');
+        } else {
+          toast.error(error.message || 'Google login failed');
+        }
       }
       setLoading(false);
     }

@@ -1,7 +1,9 @@
 {
   "projects": {
     "default": "bhojanos2",
-    "bhojanos-prod": "bhojanos-prod"
+    "bhojanos-prod": "bhojanos-prod",
+    "bhojanos": "bhojanos-prod",
+    "orderbhojan": "orderbhojan"
   },
   "targets": {
     "mana-inti-bojanam-pune-492610": {
@@ -11,6 +13,13 @@
         ],
         "saas": [
           "bhojanos"
+        ]
+      }
+    },
+    "bhojanos-prod": {
+      "hosting": {
+        "saas": [
+          "bhojanos-prod"
         ]
       }
     }

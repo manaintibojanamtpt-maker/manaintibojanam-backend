@@ -1,5 +1,4 @@
-import { collection, doc, getDocs, query, where, writeBatch, serverTimestamp } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
+import { ownerApiRequest } from '../lib/ownerProvisioning';
 
 /** Starter menu for cloud-kitchen onboarding — popular South Indian items */
 export const CLOUD_KITCHEN_TEMPLATE_ITEMS = [
@@ -14,48 +13,6 @@ export const CLOUD_KITCHEN_TEMPLATE_ITEMS = [
 ];
 
 export async function seedCloudKitchenTemplate(tenantId: string): Promise<number> {
-  const { ownerApiRequest } = await import('../lib/ownerProvisioning');
-  try {
-    const payload = await ownerApiRequest<{ added: number }>('POST', '/api/owner/menu/seed-template', { tenantId });
-    return payload.added ?? 0;
-  } catch (apiError) {
-    console.warn('seedCloudKitchenTemplate API failed, falling back to client Firestore', apiError);
-  }
-
-  const db = getDb();
-  const existing = await getDocs(query(collection(db, 'menu'), where('tenantId', '==', tenantId)));
-  if (existing.size >= 3) {
-    throw new Error('Menu already has items. Delete existing items first or add manually.');
-  }
-
-  const batch = writeBatch(db);
-  const existingNames = new Set(
-    existing.docs.map((d) => (d.data().name || '').toString().trim().toLowerCase())
-  );
-
-  let added = 0;
-  for (const item of CLOUD_KITCHEN_TEMPLATE_ITEMS) {
-    if (existingNames.has(item.name.trim().toLowerCase())) continue;
-    const ref = doc(collection(db, 'menu'));
-    batch.set(ref, {
-      tenantId,
-      name: item.name,
-      description: item.description,
-      price: item.price,
-      category: item.category,
-      type: item.type,
-      isVeg: item.isVeg,
-      isAvailable: true,
-      image: '',
-      createdAt: serverTimestamp(),
-    });
-    added += 1;
-  }
-
-  if (added === 0) {
-    throw new Error('All template items already exist in your menu.');
-  }
-
-  await batch.commit();
-  return added;
+  const payload = await ownerApiRequest<{ added: number }>('POST', '/api/owner/menu/seed-template', { tenantId });
+  return payload.added ?? 0;
 }

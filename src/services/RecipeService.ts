@@ -1,13 +1,11 @@
-import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
 import { Recipe, RecipeIngredient, MenuItem } from '../types';
+import { fetchOwnerRecipes, saveOwnerRecipe } from '../lib/ownerRecipesApi';
 
 export const getRecipes = async (tenantId: string): Promise<Recipe[]> => {
   if (!tenantId) return [];
   try {
-    const q = query(collection(getDb(), 'recipes'), where('tenantId', '==', tenantId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+    const response = await fetchOwnerRecipes(tenantId);
+    return response.recipes ?? [];
   } catch (err) {
     console.error('Error fetching recipes:', err);
     return [];
@@ -17,16 +15,7 @@ export const getRecipes = async (tenantId: string): Promise<Recipe[]> => {
 export const saveRecipe = async (tenantId: string, menuItemId: string, ingredients: RecipeIngredient[]): Promise<boolean> => {
   if (!tenantId || !menuItemId) return false;
   try {
-    // We use menuItemId as the document ID for the recipe to ensure 1:1 mapping
-    const recipeRef = doc(getDb(), 'recipes', `${tenantId}_${menuItemId}`);
-    
-    const recipe: Recipe = {
-      menuItemId,
-      tenantId,
-      ingredients,
-    };
-    
-    await setDoc(recipeRef, recipe, { merge: true });
+    await saveOwnerRecipe(tenantId, menuItemId, ingredients);
     return true;
   } catch (err) {
     console.error('Error saving recipe:', err);
@@ -37,12 +26,8 @@ export const saveRecipe = async (tenantId: string, menuItemId: string, ingredien
 export const getRecipeForMenuItem = async (tenantId: string, menuItemId: string): Promise<Recipe | null> => {
   if (!tenantId || !menuItemId) return null;
   try {
-    const recipeRef = doc(getDb(), 'recipes', `${tenantId}_${menuItemId}`);
-    const snapshot = await getDoc(recipeRef);
-    if (snapshot.exists()) {
-      return { id: snapshot.id, ...snapshot.data() } as Recipe;
-    }
-    return null;
+    const recipes = await getRecipes(tenantId);
+    return recipes.find((recipe) => recipe.menuItemId === menuItemId) ?? null;
   } catch (err) {
     console.error('Error fetching recipe:', err);
     return null;

@@ -64,6 +64,11 @@ export async function saveUserIfNotExists(user: {
     }
     return { id: userDoc.id, ...userData } as unknown as UserProfile;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('INTERNAL ASSERTION FAILED')) {
+      console.warn('Firestore unavailable during profile bootstrap — using API fallback.');
+      throw error;
+    }
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
   }

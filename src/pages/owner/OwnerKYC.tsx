@@ -4,10 +4,9 @@ import { Shield, CheckCircle2, UploadCloud, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant, type TenantInfo } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
-import { getDb } from '../../lib/firebase-db';
-import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { uploadKycDocumentViaApi } from '../../services/KycUploadService';
+import { acceptOwnerKycDeclaration, saveOwnerKycProfile } from '../../lib/ownerPortalApi';
 import {
   assertNotDuplicateUpload,
   hashFileSha256,
@@ -257,27 +256,23 @@ export const OwnerKYC: React.FC = () => {
 
     setLoading(true);
     try {
-      const db = getDb();
-      await updateDoc(doc(db, 'tenants', resolvedTenantId), {
-        'kyc.ownerName': kycForm.ownerName,
-        'kyc.businessName': kycForm.businessName,
-        'kyc.phone': kycForm.phone,
-        'kyc.email': kycForm.email,
-        'kyc.address': kycForm.address,
-        'kyc.city': kycForm.city,
-        'kyc.state': kycForm.state,
-        'kyc.country': kycForm.country,
-        'kyc.pincode': kycForm.pincode,
-        'kyc.gstNumber': kycForm.gstNumber,
-        'kyc.panNumber': kycForm.panNumber,
-        'kyc.bankAccountHolder': kycForm.bankAccountHolder,
-        'kyc.bankAccountNumber': kycForm.bankAccountNumber,
-        'kyc.bankIfsc': kycForm.bankIfsc,
-        'kyc.bankName': kycForm.bankName,
-        'fssai.number': kycForm.fssaiNumber,
-        'fssai.verificationStatus': kycForm.fssaiNumber ? 'submitted' : tenantInfo?.fssai?.verificationStatus || 'not_submitted',
-        'kyc.verificationLevel': 1,
-        'kyc.status': 'pending_verification',
+      await saveOwnerKycProfile(resolvedTenantId, {
+        ownerName: kycForm.ownerName,
+        businessName: kycForm.businessName,
+        phone: kycForm.phone,
+        email: kycForm.email,
+        address: kycForm.address,
+        city: kycForm.city,
+        state: kycForm.state,
+        country: kycForm.country,
+        pincode: kycForm.pincode,
+        gstNumber: kycForm.gstNumber,
+        panNumber: kycForm.panNumber,
+        bankAccountHolder: kycForm.bankAccountHolder,
+        bankAccountNumber: kycForm.bankAccountNumber,
+        bankIfsc: kycForm.bankIfsc,
+        bankName: kycForm.bankName,
+        fssaiNumber: kycForm.fssaiNumber,
       });
       toast.success('Business identity saved — submitted for review');
       setOpenStep(areDocumentsComplete ? null : 'documents');
@@ -301,10 +296,7 @@ export const OwnerKYC: React.FC = () => {
     }
     setLoading(true);
     try {
-      const db = getDb();
-      await updateDoc(doc(db, 'tenants', resolvedTenantId), {
-        'legal.merchantDeclarationAcceptedAt': new Date().toISOString(),
-      });
+      await acceptOwnerKycDeclaration(resolvedTenantId);
       toast.success('Merchant Declaration Accepted');
       setOpenStep('identity');
       refreshTenant();

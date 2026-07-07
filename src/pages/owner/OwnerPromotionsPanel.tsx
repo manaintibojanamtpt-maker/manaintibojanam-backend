@@ -1,22 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { getDb } from '../../lib/firebase-db';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { Plus, Trash2, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface CouponRow {
-  id: string;
-  code: string;
-  discountType: 'fixed' | 'percentage';
-  discountValue: number;
-  minOrder: number;
-  isActive: boolean;
-}
+import {
+  createOwnerCoupon,
+  deleteOwnerCoupon,
+  fetchOwnerCoupons,
+  setOwnerCouponActive,
+  type OwnerCoupon,
+} from '../../lib/ownerCouponsApi';
 
 const OwnerPromotionsPanel: React.FC = () => {
   const tenantId = useOwnerTenantId();
-  const [coupons, setCoupons] = useState<CouponRow[]>([]);
+  const [coupons, setCoupons] = useState<OwnerCoupon[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     code: '',
@@ -25,20 +22,28 @@ const OwnerPromotionsPanel: React.FC = () => {
     minOrder: '0',
   });
 
+  const loadCoupons = useCallback(async (activeTenantId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetchOwnerCoupons(activeTenantId);
+      setCoupons(response.coupons ?? []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load coupons');
+      setCoupons([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!tenantId) return;
-    const q = query(collection(getDb(), 'coupons'), where('tenantId', '==', tenantId));
-    return onSnapshot(q, (snap) => {
-      setCoupons(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          discountValue: Number(d.data().discountValue),
-          minOrder: Number(d.data().minOrder || 0),
-        })) as CouponRow[]
-      );
-    });
-  }, [tenantId]);
+    if (!tenantId) {
+      setCoupons([]);
+      setLoading(false);
+      return;
+    }
+    void loadCoupons(tenantId);
+  }, [tenantId, loadCoupons]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,38 +53,40 @@ const OwnerPromotionsPanel: React.FC = () => {
     }
     setSaving(true);
     try {
-      await addDoc(collection(getDb(), 'coupons'), {
+      await createOwnerCoupon({
         tenantId,
         code: form.code.toUpperCase().trim(),
         discountType: form.discountType,
         discountValue: Number(form.discountValue),
         minOrder: Number(form.minOrder) || 0,
-        isActive: true,
-        createdAt: serverTimestamp(),
       });
       setForm({ code: '', discountType: 'fixed', discountValue: '', minOrder: '0' });
       toast.success('Coupon created — customers can apply it at checkout');
+      await loadCoupons(tenantId);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to create coupon');
+      toast.error(err instanceof Error ? err.message : 'Failed to create coupon');
     } finally {
       setSaving(false);
     }
   };
 
   const toggleActive = async (id: string, current: boolean) => {
+    if (!tenantId) return;
     try {
-      await updateDoc(doc(getDb(), 'coupons', id), { isActive: !current });
+      await setOwnerCouponActive(tenantId, id, !current);
+      await loadCoupons(tenantId);
     } catch {
       toast.error('Failed to update coupon');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this coupon?')) return;
+    if (!tenantId || !window.confirm('Delete this coupon?')) return;
     try {
-      await deleteDoc(doc(getDb(), 'coupons', id));
+      await deleteOwnerCoupon(tenantId, id);
       toast.success('Coupon deleted');
+      await loadCoupons(tenantId);
     } catch {
       toast.error('Failed to delete coupon');
     }
@@ -150,7 +157,9 @@ const OwnerPromotionsPanel: React.FC = () => {
       </form>
 
       <div className="space-y-2">
-        {coupons.length === 0 ? (
+        {loading ? (
+          <p className="text-white/40 text-sm py-4 text-center">Loading coupons…</p>
+        ) : coupons.length === 0 ? (
           <p className="text-white/40 text-sm py-4 text-center">No coupons yet — checkout promo field stays hidden until you create one.</p>
         ) : (
           coupons.map((c) => (

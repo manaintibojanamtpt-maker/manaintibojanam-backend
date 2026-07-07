@@ -1,5 +1,10 @@
-import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, increment, collection } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
+import {
+  backfillOwnerAnalytics,
+  fetchOwnerAnalytics,
+  recordOwnerOrderCompletion,
+} from '../lib/ownerAnalyticsApi';
 import { Order } from '../types';
 
 export type AnalyticsEvent = 
@@ -50,76 +55,25 @@ export interface TenantAnalytics {
 }
 
 export const getTenantAnalytics = async (tenantId: string): Promise<TenantAnalytics | null> => {
-  const db = getDb();
-  const docRef = doc(db, 'tenants', tenantId, 'analytics', 'overview');
-  const snapshot = await getDoc(docRef);
-  if (snapshot.exists()) {
-    return snapshot.data() as TenantAnalytics;
-  }
-  return null;
+  const response = await fetchOwnerAnalytics(tenantId);
+  return response.analytics;
 };
 
-// Use this for testing/backfilling. In production, this should be a Cloud Function.
 export const backfillAnalytics = async (tenantId: string) => {
-  const db = getDb();
-  const ordersRef = collection(db, 'orders');
-  const q = query(ordersRef, where('tenantId', '==', tenantId));
-  const snapshot = await getDocs(q);
-  
-  let totalRevenue = 0;
-  let totalOrders = 0;
-  const customers = new Set<string>();
-  const repeatSet = new Set<string>();
-  
-  snapshot.docs.forEach(docSnap => {
-    const order = docSnap.data() as Order;
-    // Only count successful/delivered orders in revenue (or all valid orders)
-    if (order.status !== 'CANCELLED' && order.status !== 'EXPIRED' && order.status !== 'FAILED_DELIVERY') {
-      totalRevenue += (order.totalAmount || 0);
-      totalOrders++;
-      
-      const customerKey = order.userId || order.phone;
-      if (customerKey) {
-        if (customers.has(customerKey)) {
-          repeatSet.add(customerKey);
-        } else {
-          customers.add(customerKey);
-        }
-      }
-    }
-  });
-
-  const analyticsRef = doc(db, 'tenants', tenantId, 'analytics', 'overview');
-  await setDoc(analyticsRef, {
-    totalRevenue,
-    totalOrders,
-    averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
-    customerCount: customers.size,
-    repeatCustomers: repeatSet.size,
-    lastUpdated: new Date()
-  });
-  
-  return {
-    totalRevenue,
-    totalOrders,
-    customerCount: customers.size,
-    repeatCustomers: repeatSet.size
-  };
+  const response = await backfillOwnerAnalytics(tenantId);
+  return response.analytics;
 };
 
 export const recordOrderCompletion = async (tenantId: string, order: Order) => {
-  const db = getDb();
-  const analyticsRef = doc(db, 'tenants', tenantId, 'analytics', 'overview');
-  
   try {
-    const amount = order.totalAmount || 0;
-    await updateDoc(analyticsRef, {
-      totalRevenue: increment(amount),
-      totalOrders: increment(1),
-      lastUpdated: new Date()
+    await recordOwnerOrderCompletion(tenantId, {
+      totalAmount: order.totalAmount,
+      userId: order.userId,
+      phone: order.phone,
+      status: order.status,
     });
   } catch (error) {
-    console.error("Error updating analytics:", error);
+    console.error('Error updating analytics:', error);
     await backfillAnalytics(tenantId);
   }
 };

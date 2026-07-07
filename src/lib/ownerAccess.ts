@@ -1,10 +1,17 @@
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { getDb } from './firebase-db';
+import { ensureFirestoreNetwork, getDb } from './firebase-db';
 import { syncOwnerTenantsViaApi } from './ownerProvisioning';
 import { readCachedOwnerTenantIds, cacheOwnerTenantIds } from './ownerRedirect';
+import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
 
 const FIRESTORE_READ_TIMEOUT_MS = 4_000;
 const API_SYNC_TIMEOUT_MS = 12_000;
+
+function filterOwnedTenantIds(ids: string[], email?: string | null): string[] {
+  return ids.filter(
+    (id) => Boolean(id) && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(email)),
+  );
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -14,9 +21,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 }
 
 /** Read ownedTenantIds — cache-first for speed after login. */
-async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
+async function readOwnedTenantIdsFromFirestore(uid: string, email?: string | null): Promise<string[]> {
   const cached = readCachedOwnerTenantIds();
-  if (cached.length > 0) return cached;
+  const filteredCache = filterOwnedTenantIds(cached, email);
+  if (filteredCache.length > 0) return filteredCache;
 
   const db = getDb();
   try {
@@ -28,9 +36,11 @@ async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
     if (userSnap?.exists()) {
       const owned = userSnap.data()?.ownedTenantIds;
       if (Array.isArray(owned) && owned.length > 0) {
-        const ids = owned.filter(Boolean);
-        cacheOwnerTenantIds(ids);
-        return ids;
+        const ids = filterOwnedTenantIds(owned.filter(Boolean), userSnap.data()?.email);
+        if (ids.length > 0) {
+          cacheOwnerTenantIds(ids);
+          return ids;
+        }
       }
     }
   } catch (error) {
@@ -57,18 +67,26 @@ async function readOwnedTenantIdsFromFirestore(uid: string): Promise<string[]> {
 
 /** Ensure the signed-in user has ownedTenantIds populated (server sync when needed). */
 export async function resolveOwnerTenantIds(uid: string, email?: string | null): Promise<string[]> {
-  const fromUserDoc = await readOwnedTenantIdsFromFirestore(uid);
-  if (fromUserDoc.length > 0) return fromUserDoc;
+  const cached = filterOwnedTenantIds(readCachedOwnerTenantIds(), email);
+  if (cached.length > 0) return cached;
 
   try {
     const synced = await withTimeout(syncOwnerTenantsViaApi(), API_SYNC_TIMEOUT_MS, [] as string[]);
     if (synced.length > 0) {
-      cacheOwnerTenantIds(synced);
-      return synced;
+      const filtered = filterOwnedTenantIds(synced, email);
+      if (filtered.length > 0) {
+        cacheOwnerTenantIds(filtered);
+        return filtered;
+      }
     }
   } catch (error) {
     console.warn('resolveOwnerTenantIds: server sync failed', error);
   }
+
+  await ensureFirestoreNetwork();
+
+  const fromUserDoc = await readOwnedTenantIdsFromFirestore(uid, email);
+  if (fromUserDoc.length > 0) return fromUserDoc;
 
   if (email) {
     try {

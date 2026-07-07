@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, Power, Store } from 'lucide-react';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { getDb } from '../../lib/firebase-db';
 import { useTenant } from '../../context/TenantContext';
+import { updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { DEFAULT_STORE_OPERATIONS, TenantStoreOperations } from '../../lib/tenantStoreOperations';
 
 interface StoreLiveControlProps {
@@ -38,14 +37,13 @@ export const StoreLiveControl: React.FC<StoreLiveControlProps> = ({ variant = 'c
 
     setSaving(true);
     try {
-      await updateDoc(doc(getDb(), 'tenants', tenantId), {
+      await updateOwnerStorefront(tenantId, {
         storeOperations: {
           isStoreOpen: nextOps.isStoreOpen !== false,
           businessHoursEnabled: nextOps.businessHoursEnabled === true,
           openTime: nextOps.openTime || DEFAULT_STORE_OPERATIONS.openTime,
           closeTime: nextOps.closeTime || DEFAULT_STORE_OPERATIONS.closeTime,
           offlineMessage: nextOps.offlineMessage?.trim() || '',
-          updatedAt: serverTimestamp(),
         },
       });
       toast.success(successMessage);

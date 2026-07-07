@@ -6,8 +6,7 @@ import { m } from 'framer-motion';
 import { Rocket, Send, Copy, AlertTriangle, CheckCircle2, TrendingUp, Users, Activity, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { trackEvent } from '../../services/AnalyticsService';
-import { getDb } from '../../lib/firebase-db';
-import { collection, addDoc } from 'firebase/firestore';
+import { launchOwnerCampaign } from '../../lib/ownerPortalApi';
 import { EnvironmentConfig } from '../../config/environment';
 
 const CAMPAIGN_OPTIONS = [
@@ -89,8 +88,7 @@ const OwnerMarketing: React.FC = () => {
     setIsSending(true);
 
     try {
-      const db = getDb();
-      await addDoc(collection(db, 'campaigns'), {
+      await launchOwnerCampaign({
         tenantId,
         audience: selectedAudience,
         couponCode: generatedCampaign.couponCode,
@@ -98,8 +96,6 @@ const OwnerMarketing: React.FC = () => {
         expectedOrders: generatedCampaign.expectedOrders,
         expectedRevenueLift: generatedCampaign.expectedRevenueLift,
         confidenceScore: generatedCampaign.confidenceScore,
-        status: 'launched',
-        createdAt: new Date().toISOString(),
       });
 
       trackEvent(tenantId, 'campaignSent', { audience: selectedAudience, expectedOrders: generatedCampaign.expectedOrders });

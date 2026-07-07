@@ -1,0 +1,328 @@
+import React, { useEffect, useState } from 'react';
+import { Image as ImageIcon, Loader2, Palette, Plus, Save, Trash2, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
+import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
+
+interface GalleryItem {
+  galleryId: string;
+  url: string;
+  caption: string;
+  sortOrder: number;
+}
+
+interface ThemeForm {
+  primaryColor: string;
+  secondaryColor: string;
+  highlightColor: string;
+  coverUrl: string;
+  tagline: string;
+  description: string;
+}
+
+const DEFAULT_THEME: ThemeForm = {
+  primaryColor: '#FF6B00',
+  secondaryColor: '#1a1a1a',
+  highlightColor: '#ef4444',
+  coverUrl: '',
+  tagline: '',
+  description: '',
+};
+
+function compressImage(file: File, maxWidth = 800, maxHeight = 600): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height && width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        } else if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
+
+export const OwnerGalleryThemePanel: React.FC = () => {
+  const tenantId = useOwnerTenantId();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [theme, setTheme] = useState<ThemeForm>(DEFAULT_THEME);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
+
+    const load = async () => {
+      try {
+        const data = await fetchOwnerStorefront(tenantId);
+        const mp = data.marketplace ?? {};
+        const rawGallery = Array.isArray(mp.gallery) ? mp.gallery : [];
+        setGallery(
+          rawGallery
+            .map((entry, index) => {
+              const item = entry as Record<string, unknown>;
+              return {
+                galleryId: typeof item.galleryId === 'string' ? item.galleryId : `gallery_${index}`,
+                url: typeof item.url === 'string' ? item.url : '',
+                caption: typeof item.caption === 'string' ? item.caption : '',
+                sortOrder: typeof item.sortOrder === 'number' ? item.sortOrder : index,
+              };
+            })
+            .filter((item) => item.url)
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        );
+
+        const rawTheme = (mp.theme ?? {}) as Record<string, unknown>;
+        setTheme({
+          primaryColor: typeof rawTheme.primaryColor === 'string' ? rawTheme.primaryColor : DEFAULT_THEME.primaryColor,
+          secondaryColor: typeof rawTheme.secondaryColor === 'string' ? rawTheme.secondaryColor : DEFAULT_THEME.secondaryColor,
+          highlightColor: typeof rawTheme.highlightColor === 'string' ? rawTheme.highlightColor : DEFAULT_THEME.highlightColor,
+          coverUrl: typeof rawTheme.coverUrl === 'string' ? rawTheme.coverUrl : '',
+          tagline: typeof mp.tagline === 'string' ? mp.tagline : '',
+          description: typeof mp.description === 'string' ? mp.description : '',
+        });
+      } catch (error) {
+        console.error('Failed to load gallery/theme:', error);
+        toast.error('Failed to load gallery and theme');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [tenantId]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    const toastId = toast.loading('Processing image...');
+    try {
+      const base64Image = await compressImage(file);
+      setGallery((prev) => [
+        ...prev,
+        {
+          galleryId: `gallery_${Date.now()}`,
+          url: base64Image,
+          caption: '',
+          sortOrder: prev.length,
+        },
+      ]);
+      toast.success('Image added — save to publish on OrderBhojan', { id: toastId });
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      toast.error('Failed to process image', { id: toastId });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const base64Image = await compressImage(file, 1200, 675);
+      setTheme((prev) => ({ ...prev, coverUrl: base64Image }));
+      toast.success('Cover image attached');
+    } catch {
+      toast.error('Failed to process cover image');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSave = async () => {
+    if (!tenantId) return;
+    setSaving(true);
+    try {
+      await updateOwnerStorefront(tenantId, {
+        marketplace: {
+          gallery: gallery.map((item, index) => ({
+            galleryId: item.galleryId,
+            url: item.url,
+            caption: item.caption.trim() || undefined,
+            sortOrder: index,
+          })),
+          theme: {
+            primaryColor: theme.primaryColor,
+            secondaryColor: theme.secondaryColor,
+            highlightColor: theme.highlightColor,
+            coverUrl: theme.coverUrl || undefined,
+          },
+          tagline: theme.tagline.trim() || undefined,
+          description: theme.description.trim() || undefined,
+        },
+      });
+      toast.success('Gallery and theme saved — syncing to OrderBhojan');
+    } catch (error) {
+      console.error('Failed to save gallery/theme:', error);
+      toast.error('Failed to save gallery and theme');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-8 space-y-8">
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Palette size={20} className="text-[#FF6B00]" />
+          <h3 className="text-lg font-bold text-white">Storefront Theme</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Tagline</label>
+            <input
+              type="text"
+              value={theme.tagline}
+              onChange={(e) => setTheme((prev) => ({ ...prev, tagline: e.target.value }))}
+              className="w-full rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-3 text-white"
+              placeholder="Authentic home-style meals"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Primary Color</label>
+            <input
+              type="color"
+              value={theme.primaryColor}
+              onChange={(e) => setTheme((prev) => ({ ...prev, primaryColor: e.target.value }))}
+              className="h-12 w-full rounded-lg border border-white/10 bg-[#0a0a0a] cursor-pointer"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">About (shown on restaurant page)</label>
+            <textarea
+              rows={3}
+              value={theme.description}
+              onChange={(e) => setTheme((prev) => ({ ...prev, description: e.target.value }))}
+              className="w-full rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-3 text-white"
+              placeholder="Tell customers what makes your kitchen special"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Cover Image</label>
+            <div className="flex items-center gap-4">
+              <div className="h-24 w-40 rounded-xl border border-dashed border-white/20 bg-[#0a0a0a] overflow-hidden flex items-center justify-center">
+                {theme.coverUrl ? (
+                  <img src={theme.coverUrl} alt="Cover preview" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="text-white/30" size={28} />
+                )}
+              </div>
+              <label className="cursor-pointer rounded-lg border border-white/10 bg-[#151515] px-4 py-2 text-sm font-medium text-white hover:bg-[#1a1a1a]">
+                <span className="flex items-center gap-2">
+                  {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                  Upload Cover
+                </span>
+                <input type="file" className="sr-only" accept="image/*" onChange={handleCoverUpload} disabled={uploading} />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="h-px bg-white/10" />
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={20} className="text-blue-400" />
+            <h3 className="text-lg font-bold text-white">Photo Gallery</h3>
+          </div>
+          <label className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/10">
+            <Plus size={16} />
+            Add Photo
+            <input type="file" className="sr-only" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
+          </label>
+        </div>
+
+        {gallery.length === 0 ? (
+          <p className="text-sm text-white/50">No gallery photos yet. Add kitchen, dish, or team photos customers see on OrderBhojan.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {gallery.map((item) => (
+              <div key={item.galleryId} className="rounded-xl border border-white/10 bg-[#0a0a0a] overflow-hidden">
+                <img src={item.url} alt={item.caption || 'Gallery'} className="h-36 w-full object-cover" />
+                <div className="p-3 space-y-2">
+                  <input
+                    type="text"
+                    value={item.caption}
+                    onChange={(e) =>
+                      setGallery((prev) =>
+                        prev.map((entry) =>
+                          entry.galleryId === item.galleryId ? { ...entry, caption: e.target.value } : entry,
+                        ),
+                      )
+                    }
+                    className="w-full rounded-lg border border-white/10 bg-[#0f0f11] px-3 py-2 text-sm text-white"
+                    placeholder="Caption (optional)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGallery((prev) => prev.filter((entry) => entry.galleryId !== item.galleryId))}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 size={14} />
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <button
+        type="button"
+        disabled={saving || !tenantId}
+        onClick={handleSave}
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-orange-500 px-6 py-3 text-base font-bold text-white disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+        {saving ? 'Saving…' : 'Save Gallery & Theme'}
+      </button>
+    </div>
+  );
+};
+
+export default OwnerGalleryThemePanel;

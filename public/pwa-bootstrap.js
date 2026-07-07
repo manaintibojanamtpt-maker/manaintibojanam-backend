@@ -17,8 +17,32 @@
     }
   }
 
+  function siteUrl(relativePath) {
+    return window.location.origin + relativePath;
+  }
+
+  function absolutizeManifest(manifest) {
+    var out = Object.assign({}, manifest);
+    if (manifest.start_url && manifest.start_url.charAt(0) === '/') {
+      out.start_url = siteUrl(manifest.start_url);
+    }
+    if (manifest.scope && manifest.scope.charAt(0) === '/') {
+      out.scope = siteUrl(manifest.scope);
+    }
+    if (manifest.icons) {
+      out.icons = manifest.icons.map(function (icon) {
+        return Object.assign({}, icon, {
+          src: icon.src && icon.src.charAt(0) === '/' ? siteUrl(icon.src) : icon.src,
+        });
+      });
+    }
+    return out;
+  }
+
   function injectManifest(manifest) {
-    var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+    var blob = new Blob([JSON.stringify(absolutizeManifest(manifest))], {
+      type: 'application/manifest+json',
+    });
     var url = URL.createObjectURL(blob);
     document.write('<link rel="manifest" href="' + url + '" />');
     window.__PWA_MANIFEST_INJECTED__ = true;
@@ -64,23 +88,9 @@
   }
 
   if (isBhojanHost && path.indexOf('/owner') === 0) {
-    injectManifest({
-      name: 'BhojanOS',
-      short_name: 'BhojanOS',
-      description: 'Direct ordering OS for food businesses',
-      id: 'com.bhojanos.owner',
-      start_url: '/owner/dashboard',
-      scope: '/',
-      display: 'standalone',
-      background_color: '#1A0505',
-      theme_color: '#1A0505',
-      orientation: 'portrait',
-      categories: ['food', 'business'],
-      icons: [
-        { src: '/bhojan-os-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        { src: '/bhojan-os-icon.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      ],
-    });
+    document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=5" />');
+    window.__PWA_MANIFEST_INJECTED__ = true;
+    rememberStartUrl('/owner/dashboard');
     injectIcons('/bhojan-os-icon.png', 'BhojanOS');
     document.title = 'BhojanOS Owner';
     return;

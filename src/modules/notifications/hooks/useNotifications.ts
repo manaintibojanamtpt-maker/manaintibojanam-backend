@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { getDb } from '../../../lib/firebase-db';
 import { resolveOwnerTenantDocId } from '../../../lib/dashboardPriorityActions';
 import { useAuth } from '../../../context/AuthContext';
 import { notificationService } from '../NotificationService';
 import { NotificationFilter, NotificationStatus, TenantNotification } from '../NotificationTypes';
 
-const DEBOUNCE_MS = 300;
+const NOTIFICATION_POLL_MS = 12_000;
 
 export function useNotifications(
   tenantId: string | undefined,
@@ -19,7 +17,6 @@ export function useNotifications(
   const [notifications, setNotifications] = useState<TenantNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!resolvedTenantId || !ownedTenantIds?.includes(resolvedTenantId)) {
@@ -29,31 +26,34 @@ export function useNotifications(
       return;
     }
 
-    const q = query(
-      collection(getDb(), 'tenants', resolvedTenantId, 'notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(Math.max(previewLimit, 50))
-    );
+    let cancelled = false;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-          const items = snapshot.docs
-            .map((d) => d.data() as TenantNotification)
-            .filter((n) => n.status !== NotificationStatus.ARCHIVED);
-          setNotifications(items);
-          setUnreadCount(items.filter((n) => n.status === NotificationStatus.UNREAD).length);
-          setLoading(false);
-        }, DEBOUNCE_MS);
-      },
-      () => setLoading(false)
-    );
+    const load = async () => {
+      try {
+        const items = await notificationService.getRecent(
+          resolvedTenantId,
+          ownedTenantIds,
+          Math.max(previewLimit, 50),
+        );
+        if (cancelled) return;
+        const active = items.filter((n) => n.status !== NotificationStatus.ARCHIVED);
+        setNotifications(active);
+        setUnreadCount(active.filter((n) => n.status === NotificationStatus.UNREAD).length);
+      } catch (error) {
+        console.warn('Notification poll failed:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, NOTIFICATION_POLL_MS);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      unsubscribe();
+      cancelled = true;
+      window.clearInterval(timer);
     };
   }, [resolvedTenantId, ownedTenantIds, previewLimit]);
 

@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getDb } from '../../lib/firebase-db';
-import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { useTenant } from '../../context/TenantContext';
 import { MessageCircle, Bug, Lightbulb, HelpCircle, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateMerchantHealth } from '../../lib/merchantHealth';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
-import { auth } from '../../firebase';
-import { EnvironmentConfig } from '../../config/environment';
+import { submitOwnerFeedback } from '../../lib/ownerPortalApi';
 import { CONTACT_INFO } from '../../constants';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 
 const OwnerFeedback: React.FC = () => {
   const { userProfile } = useAuth();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const { tenantInfo } = useTenant();
+  const tenantId = useOwnerTenantId();
   const [type, setType] = useState<'feature' | 'bug' | 'suggestion' | 'help' | 'rating' | null>(null);
   const [description, setDescription] = useState('');
   const [rating, setRating] = useState<number>(0);
@@ -27,71 +27,33 @@ const OwnerFeedback: React.FC = () => {
 
     setSubmitting(true);
     try {
-      // Get tenant metadata for context
-      const tenantDoc = await getDoc(doc(getDb(), 'tenants', tenantId));
-      let healthScore = 0;
-      let plan = 'free';
-      let businessType = 'unknown';
-      if (tenantDoc.exists()) {
-        const tData = tenantDoc.data() as any;
-        plan = tData.subscription?.plan || 'free';
-        businessType = tData.businessType || 'home_kitchen';
-        const healthRes = calculateMerchantHealth(tData, undefined, 10);
-        healthScore = healthRes.score;
-      }
+      const plan = tenantInfo?.subscription?.plan || 'free';
+      const businessType = tenantInfo?.businessType || 'home_kitchen';
+      const healthScore = tenantInfo
+        ? calculateMerchantHealth(tenantInfo, undefined, 10).score
+        : 0;
 
-      await addDoc(collection(getDb(), 'merchant_feedback'), {
+      const result = await submitOwnerFeedback({
         tenantId,
         type,
-        description,
+        description: type === 'rating' ? `Rating: ${rating}/5` : description,
         rating: type === 'rating' ? rating : null,
         merchantHealthSnapshot: healthScore,
         plan,
         businessType,
-        status: 'new',
-        timestamp: serverTimestamp()
+        ownerName: userProfile?.name,
+        ownerEmail: userProfile?.email,
       });
-
-      let emailSent = false;
-      try {
-        const idToken = await auth.currentUser?.getIdToken();
-        if (idToken) {
-          const response = await fetch(`${EnvironmentConfig.getApiUrl()}/api/owner/feedback`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${idToken}`,
-              'x-tenant-id': tenantId,
-            },
-            body: JSON.stringify({
-              type,
-              description: type === 'rating' ? `Rating: ${rating}/5` : description,
-              rating: type === 'rating' ? rating : null,
-              plan,
-              businessType,
-              merchantHealthSnapshot: healthScore,
-              ownerName: userProfile?.name,
-              ownerEmail: userProfile?.email,
-            }),
-          });
-          if (response.ok) {
-            const data = await response.json();
-            emailSent = Boolean(data.emailSent);
-          }
-        }
-      } catch (emailErr) {
-        console.error('Feedback email dispatch failed:', emailErr);
-      }
 
       setSuccess(true);
       toast.success(
-        emailSent
+        result.emailSent
           ? 'Feedback sent to founders!'
-          : 'Feedback saved. Email delivery requires server mail configuration.'
+          : 'Feedback saved. Email delivery requires server mail configuration.',
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error('Failed to submit feedback.');
+      toast.error(err instanceof Error ? err.message : 'Failed to submit feedback.');
     } finally {
       setSubmitting(false);
     }

@@ -1,97 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { m } from 'framer-motion';
-import { MapPin, TrendingUp, AlertCircle, CheckCircle2, Rocket, BrainCircuit, Activity, Target, Navigation } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { getDb } from '../../lib/firebase-db';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { MapPin, AlertCircle, CheckCircle2, Rocket, BrainCircuit, Activity, Target, Navigation } from 'lucide-react';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
+import { fetchOwnerOrdersFromApi } from '../../lib/ownerOrdersApi';
+import { computeDeliveryIntelligenceMetrics } from '../../lib/deliveryIntelligenceMetrics';
 import { formatPrice } from '../../lib/utils';
 
 export const DeliveryIntelligence: React.FC = () => {
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const tenantId = useOwnerTenantId();
   const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState({
-    avgDistance: 0,
-    successRate: 0,
-    totalDeliveries: 0,
-    avgFee: 0,
-    topAreas: [] as { name: string; revenue: number; orders: number }[],
-    outOfBoundsAttempts: 0
-  });
+  const [metrics, setMetrics] = useState(() => computeDeliveryIntelligenceMetrics([]));
 
   useEffect(() => {
     if (!tenantId) return;
 
     const fetchDeliveryData = async () => {
       try {
-        const ordersRef = collection(getDb(), 'orders');
-        const q = query(ordersRef, where('tenantId', '==', tenantId), where('status', 'in', ['DELIVERED', 'CANCELLED']));
-        const snapshot = await getDocs(q);
-
-        let totalDistance = 0;
-        let successful = 0;
-        let totalFee = 0;
-        const areaMap = new Map<string, { revenue: number; orders: number }>();
-
-        const extractArea = (deliveryAddress: unknown): string => {
-          if (!deliveryAddress) return 'Local Area';
-          if (typeof deliveryAddress === 'string') {
-            const parts = deliveryAddress.split(',');
-            return parts.length > 2 ? parts[parts.length - 2].trim() : parts[0]?.trim() || 'Local Area';
-          }
-          if (typeof deliveryAddress === 'object') {
-            const addr = deliveryAddress as { city?: string; addressLine1?: string; address?: string };
-            if (addr.city) return addr.city;
-            if (addr.addressLine1) return addr.addressLine1.split(',')[0]?.trim() || 'Local Area';
-            if (addr.address) return addr.address.split(',')[0]?.trim() || 'Local Area';
-          }
-          return 'Local Area';
-        };
-
-        snapshot.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          const status = String(data.status || '').toUpperCase();
-          const isDelivered = status === 'DELIVERED';
-          
-          if (isDelivered) {
-            successful++;
-            if (data.deliveryFee) totalFee += data.deliveryFee;
-            
-            const area = extractArea(data.deliveryAddress);
-            
-            const orderTotal = Number(data.totalAmount ?? data.total ?? 0) || 0;
-            const current = areaMap.get(area) || { revenue: 0, orders: 0 };
-            areaMap.set(area, {
-              revenue: current.revenue + orderTotal,
-              orders: current.orders + 1
-            });
-          }
-
-          // We don't have direct distance saved in all legacy orders, mock for demonstration based on fee
-          const approxDistance = data.deliveryFee ? data.deliveryFee / 10 : 2; 
-          totalDistance += approxDistance;
+        const response = await fetchOwnerOrdersFromApi(tenantId, 200);
+        const terminalOrders = (response.orders ?? []).filter((order) => {
+          const status = String(order.status || '').toUpperCase();
+          return status === 'DELIVERED' || status === 'CANCELLED';
         });
-
-        const total = snapshot.docs.length;
-        const topAreas = Array.from(areaMap.entries())
-          .map(([name, stats]) => ({
-            name,
-            orders: stats.orders,
-            revenue: Math.round(stats.revenue),
-          }))
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 5);
-
-        setMetrics({
-          avgDistance: total ? totalDistance / total : 0,
-          successRate: total ? (successful / total) * 100 : 0,
-          totalDeliveries: total,
-          avgFee: successful ? totalFee / successful : 0,
-          topAreas,
-          outOfBoundsAttempts: Math.floor(total * 0.15) // Mocked value for abandoned carts due to distance
-        });
+        setMetrics(computeDeliveryIntelligenceMetrics(terminalOrders));
       } catch (err) {
         console.error('Error fetching delivery metrics:', err);
       } finally {
@@ -99,7 +31,7 @@ export const DeliveryIntelligence: React.FC = () => {
       }
     };
 
-    fetchDeliveryData();
+    void fetchDeliveryData();
   }, [tenantId]);
 
   if (loading) {

@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getDb } from '../../lib/firebase-db';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
+import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Map, Truck, Navigation, Settings, Clock, Bell } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Truck, Navigation, Settings, Clock, Bell, Palette } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
+import { OwnerGalleryThemePanel } from '../../components/owner/OwnerGalleryThemePanel';
 import { NotificationSettingsPanel } from '../../modules/notifications/NotificationSettingsPanel';
 import OwnerPromotionsPanel from './OwnerPromotionsPanel';
 
@@ -20,7 +20,7 @@ const OwnerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'promotions' | 'notifications'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'promotions' | 'notifications' | 'brand'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
   const [searchParams] = useSearchParams();
 
@@ -32,6 +32,8 @@ const OwnerSettings: React.FC = () => {
       setActiveTab('hours');
     } else if (tab === 'notifications') {
       setActiveTab('notifications');
+    } else if (tab === 'brand') {
+      setActiveTab('brand');
     }
   }, [searchParams]);
   
@@ -68,36 +70,31 @@ const OwnerSettings: React.FC = () => {
       }
       
       try {
-        const db = getDb();
-        const tenantRef = doc(db, 'tenants', tenantId);
-        const tenantDoc = await getDoc(tenantRef);
-        
-        if (tenantDoc.exists()) {
-          const data = tenantDoc.data();
-          setFormData({
-            name: data.name || '',
-            whatsapp: data.contact?.whatsapp || '',
-            deliveryNotes: data.deliveryNotes || '',
-            logoUrl: data.branding?.logoUrl || '',
-            subscriptionEnabled: data.features?.subscriptionEnabled || false,
-            address: data.location?.address || '',
-            city: data.location?.city || '',
-            state: data.location?.state || '',
-            pincode: data.location?.pincode || '',
-            lat: data.location?.lat ? String(data.location.lat) : '',
-            lng: data.location?.lng ? String(data.location.lng) : '',
-            freeRadius: data.deliveryConfig?.freeRadius || 3,
-            paidRadius: data.deliveryConfig?.paidRadius || 5,
-            maxRadius: data.deliveryConfig?.maxRadius || 10,
-            baseFee: data.deliveryConfig?.baseFee || 0,
-            perKmCharge: data.deliveryConfig?.perKmCharge || 0,
-            prepTime: data.deliveryConfig?.prepTime || 20,
-            gstPercent: data.pricingConfig?.gstPercent ?? 0,
-            packingFee: data.pricingConfig?.packingFee ?? 0,
-            codEnabled: data.paymentConfig?.providers?.cod?.enabled !== false,
-            razorpayEnabled: data.paymentConfig?.providers?.razorpay?.enabled === true,
-          });
-        }
+        const data = await fetchOwnerStorefront(tenantId);
+        const branding = data.branding ?? {};
+        setFormData({
+          name: data.name || '',
+          whatsapp: typeof data.contact?.whatsapp === 'string' ? data.contact.whatsapp : '',
+          deliveryNotes: data.deliveryNotes || '',
+          logoUrl: typeof branding.logoUrl === 'string' ? branding.logoUrl : '',
+          subscriptionEnabled: data.features?.subscriptionEnabled === true,
+          address: typeof data.location?.address === 'string' ? data.location.address : '',
+          city: typeof data.location?.city === 'string' ? data.location.city : '',
+          state: typeof data.location?.state === 'string' ? data.location.state : '',
+          pincode: typeof data.location?.pincode === 'string' ? data.location.pincode : '',
+          lat: data.location?.lat != null ? String(data.location.lat) : '',
+          lng: data.location?.lng != null ? String(data.location.lng) : '',
+          freeRadius: typeof data.deliveryConfig?.freeRadius === 'number' ? data.deliveryConfig.freeRadius : 3,
+          paidRadius: typeof data.deliveryConfig?.paidRadius === 'number' ? data.deliveryConfig.paidRadius : 5,
+          maxRadius: typeof data.deliveryConfig?.maxRadius === 'number' ? data.deliveryConfig.maxRadius : 10,
+          baseFee: typeof data.deliveryConfig?.baseFee === 'number' ? data.deliveryConfig.baseFee : 0,
+          perKmCharge: typeof data.deliveryConfig?.perKmCharge === 'number' ? data.deliveryConfig.perKmCharge : 0,
+          prepTime: typeof data.deliveryConfig?.prepTime === 'number' ? data.deliveryConfig.prepTime : 20,
+          gstPercent: typeof data.pricingConfig?.gstPercent === 'number' ? data.pricingConfig.gstPercent : 0,
+          packingFee: typeof data.pricingConfig?.packingFee === 'number' ? data.pricingConfig.packingFee : 0,
+          codEnabled: data.paymentConfig?.providers?.cod?.enabled !== false,
+          razorpayEnabled: data.paymentConfig?.providers?.razorpay?.enabled === true,
+        });
       } catch (error) {
         console.error("Failed to load settings:", error);
         toast.error("Failed to load settings");
@@ -120,22 +117,19 @@ const OwnerSettings: React.FC = () => {
 
     setSaving(true);
     try {
-      const db = getDb();
-      const tenantRef = doc(db, 'tenants', tenantId);
-      
-      await updateDoc(tenantRef, {
+      await updateOwnerStorefront(tenantId, {
         name: formData.name,
-        'contact.whatsapp': formData.whatsapp,
+        contact: { whatsapp: formData.whatsapp },
         deliveryNotes: formData.deliveryNotes,
-        'branding.logoUrl': formData.logoUrl,
-        'features.subscriptionEnabled': formData.subscriptionEnabled,
+        branding: { logoUrl: formData.logoUrl },
+        features: { subscriptionEnabled: formData.subscriptionEnabled },
         location: {
           address: formData.address,
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
           lat: Number(formData.lat) || 0,
-          lng: Number(formData.lng) || 0
+          lng: Number(formData.lng) || 0,
         },
         deliveryConfig: {
           enabled: true,
@@ -159,8 +153,8 @@ const OwnerSettings: React.FC = () => {
           },
         },
       });
-      
-      toast.success("Settings saved successfully");
+
+      toast.success('Settings saved — syncing to OrderBhojan');
     } catch (error) {
       console.error("Failed to save settings:", error);
       toast.error("Failed to save settings");
@@ -312,6 +306,10 @@ const OwnerSettings: React.FC = () => {
             <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Promos</span>
           </button>
+          <button onClick={() => setActiveTab('brand')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'brand' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Palette size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Gallery</span>
+          </button>
           <button onClick={() => setActiveTab('notifications')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'notifications' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
             <Bell size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Alerts</span>
@@ -329,6 +327,8 @@ const OwnerSettings: React.FC = () => {
             <div className="p-6 md:p-8">
               <OwnerPromotionsPanel />
             </div>
+          ) : activeTab === 'brand' ? (
+            <OwnerGalleryThemePanel />
           ) : (
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             

@@ -17,7 +17,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { currentUser, userProfile, loading: authLoading, profileLoading, logout, refreshProfile } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, profileLoading, logout } = useAuth();
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
 
   useEffect(() => {
@@ -40,7 +40,6 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       await auth.currentUser?.getIdToken(true);
-      await refreshProfile();
       toast.success('Signed in — verifying super admin access…');
     } catch (error: any) {
       console.error('Super Admin login error:', error);

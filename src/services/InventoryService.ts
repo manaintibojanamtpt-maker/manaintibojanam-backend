@@ -1,5 +1,4 @@
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
+import { updateOwnerMenuItemStock } from '../lib/ownerMenuApi';
 import { trackEvent } from './AnalyticsService';
 
 export interface CartItemInventory {
@@ -13,43 +12,43 @@ export interface CartItemInventory {
  */
 export const reserveStock = async (tenantId: string, items: CartItemInventory[]) => {
   try {
-    const db = getDb();
     for (const item of items) {
       if (!item.menuItemId) continue;
-      
-      const itemRef = doc(db, 'menu', item.menuItemId);
-      const itemSnap = await getDoc(itemRef);
-      
-      if (itemSnap.exists()) {
-        const data = itemSnap.data();
-        if (data.stockCount !== undefined) {
-          const newStock = Math.max(0, data.stockCount - item.quantity);
-          const updates: any = { stockCount: newStock };
-          
-          if (newStock <= 0 && data.autoLockEnabled) {
-            updates.isAvailable = false;
-            trackEvent(tenantId, 'autoLocked', { itemId: item.menuItemId });
-          } else if (data.lowStockThreshold && newStock <= data.lowStockThreshold) {
-            trackEvent(tenantId, 'stockAlert', { itemId: item.menuItemId, stock: newStock });
-          }
 
-          await updateDoc(itemRef, updates);
-          trackEvent(tenantId, 'stockReserved', { itemId: item.menuItemId, qty: item.quantity });
+      const result = await updateOwnerMenuItemStock(
+        tenantId,
+        item.menuItemId,
+        'reserve',
+        item.quantity,
+      );
+
+      if (result.skipped) continue;
+
+      for (const effect of result.sideEffects ?? []) {
+        if (effect === 'autoLocked') {
+          trackEvent(tenantId, 'autoLocked', { itemId: item.menuItemId });
+        } else if (effect === 'stockAlert') {
+          trackEvent(tenantId, 'stockAlert', {
+            itemId: item.menuItemId,
+            stock: result.stockCount,
+          });
         }
       }
+
+      trackEvent(tenantId, 'stockReserved', { itemId: item.menuItemId, qty: item.quantity });
     }
   } catch (error) {
-    console.error("Failed to reserve stock", error);
+    console.error('Failed to reserve stock', error);
   }
 };
 
 /**
  * Stage 2: Deduct Stock (Confirmed on payment success)
- * In this model, reservation already decremented the counter to prevent overselling. 
+ * In this model, reservation already decremented the counter to prevent overselling.
  * This simply finalizes the analytics tracking.
  */
 export const confirmStockDeduction = async (tenantId: string, items: CartItemInventory[]) => {
-  items.forEach(item => {
+  items.forEach((item) => {
     trackEvent(tenantId, 'stockReduced', { itemId: item.menuItemId, qty: item.quantity });
   });
 };
@@ -60,30 +59,25 @@ export const confirmStockDeduction = async (tenantId: string, items: CartItemInv
  */
 export const releaseStock = async (tenantId: string, items: CartItemInventory[]) => {
   try {
-    const db = getDb();
     for (const item of items) {
       if (!item.menuItemId) continue;
-      
-      const itemRef = doc(db, 'menu', item.menuItemId);
-      const itemSnap = await getDoc(itemRef);
-      
-      if (itemSnap.exists()) {
-        const data = itemSnap.data();
-        if (data.stockCount !== undefined) {
-          const newStock = data.stockCount + item.quantity;
-          const updates: any = { stockCount: newStock };
-          
-          if (newStock > 0 && !data.isAvailable && data.autoLockEnabled) {
-            updates.isAvailable = true;
-            trackEvent(tenantId, 'itemRestocked', { itemId: item.menuItemId });
-          }
 
-          await updateDoc(itemRef, updates);
-          trackEvent(tenantId, 'stockReleased', { itemId: item.menuItemId, qty: item.quantity });
-        }
+      const result = await updateOwnerMenuItemStock(
+        tenantId,
+        item.menuItemId,
+        'release',
+        item.quantity,
+      );
+
+      if (result.skipped) continue;
+
+      if (result.sideEffects?.includes('itemRestocked')) {
+        trackEvent(tenantId, 'itemRestocked', { itemId: item.menuItemId });
       }
+
+      trackEvent(tenantId, 'stockReleased', { itemId: item.menuItemId, qty: item.quantity });
     }
   } catch (error) {
-    console.error("Failed to release stock", error);
+    console.error('Failed to release stock', error);
   }
 };

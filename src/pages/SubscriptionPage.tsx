@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { m } from 'framer-motion';
 import { Check, Info, Sparkles, ArrowRight, Loader2, Star, Gift, ShieldCheck, ChevronLeft, PauseCircle, PlayCircle, Utensils } from 'lucide-react';
 import { activeTenantId } from '../services/api';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { applyMarketplaceReferralCode } from '../lib/marketplaceReferralApi';
 import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -55,7 +56,7 @@ export default function SubscriptionPage() {
   const [referralCode, setReferralCode] = useState('');
   const [referralStatus, setReferralStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [referralMessage, setReferralMessage] = useState('');
-  const [validReferralDoc, setValidReferralDoc] = useState<any>(null);
+  const [validReferralCode, setValidReferralCode] = useState<string | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingSubDoc, setExistingSubDoc] = useState<any>(null);
@@ -104,40 +105,38 @@ export default function SubscriptionPage() {
 
     setReferralStatus('loading');
     try {
-      const q = query(collection(getDb(), 'referrals'), where('referralCode', '==', referralCode.trim().toUpperCase()));
-      const snap = await getDocs(q);
-      
-      if (snap.empty) {
+      const idToken = await currentUser.getIdToken();
+      const result = await applyMarketplaceReferralCode(referralCode, idToken);
+
+      if (!result.ok) {
         setReferralStatus('invalid');
-        setReferralMessage('Invalid referral code');
-        setValidReferralDoc(null);
+        setReferralMessage(result.message);
+        setValidReferralCode(null);
         return;
       }
 
-      const refDoc = snap.docs[0];
-      const data = refDoc.data();
-
-      if (data.userId === currentUser.uid) {
-        setReferralStatus('invalid');
-        setReferralMessage('You cannot use your own referral code');
-        setValidReferralDoc(null);
-        return;
-      }
-
-      if (data.referredUsers?.includes(currentUser.uid)) {
+      if (result.value.alreadyUsed) {
         setReferralStatus('invalid');
         setReferralMessage('You have already used this referral code');
-        setValidReferralDoc(null);
+        setValidReferralCode(null);
+        return;
+      }
+
+      if (!result.value.applied) {
+        setReferralStatus('invalid');
+        setReferralMessage('Could not apply referral code');
+        setValidReferralCode(null);
         return;
       }
 
       setReferralStatus('valid');
       setReferralMessage('Referral applied! ₹100 Discount');
-      setValidReferralDoc({ id: refDoc.id, ...data });
+      setValidReferralCode(result.value.referralCode ?? referralCode.trim().toUpperCase());
     } catch (error) {
       console.error("Error applying referral", error);
       setReferralStatus('invalid');
       setReferralMessage('Failed to verify code');
+      setValidReferralCode(null);
     }
   };
 
@@ -291,17 +290,9 @@ export default function SubscriptionPage() {
           deliverySlot: deliverySlot,
           status: 'active',
           usedReferral: referralStatus === 'valid',
-          referralCodeUsed: referralStatus === 'valid' ? validReferralDoc?.referralCode : null,
+          referralCodeUsed: referralStatus === 'valid' ? validReferralCode : null,
           createdAt: serverTimestamp()
         });
-
-        if (referralStatus === 'valid' && validReferralDoc) {
-          await updateDoc(doc(getDb(), 'referrals', validReferralDoc.id), {
-            referredUsers: arrayUnion(currentUser.uid),
-            totalEarnings: (validReferralDoc.totalEarnings || 0) + 100,
-            discountGiven: (validReferralDoc.discountGiven || 0) + 100
-          });
-        }
 
         setSubscriptionSuccess(true);
         setIsSubmitting(false);
@@ -347,37 +338,9 @@ export default function SubscriptionPage() {
                 deliverySlot: deliverySlot,
                 status: 'active',
                 usedReferral: referralStatus === 'valid',
-                referralCodeUsed: referralStatus === 'valid' ? validReferralDoc?.referralCode : null,
+                referralCodeUsed: referralStatus === 'valid' ? validReferralCode : null,
                 createdAt: serverTimestamp()
               });
-
-              // 5. Update referral doc and referrer's pending discount if used
-              if (referralStatus === 'valid' && validReferralDoc) {
-                await updateDoc(doc(getDb(), 'referrals', validReferralDoc.id), {
-                  referredUsers: arrayUnion(currentUser.uid),
-                  totalEarnings: (validReferralDoc.totalEarnings || 0) + 100,
-                  discountGiven: (validReferralDoc.discountGiven || 0) + 100
-                });
-
-                // Apply discount to referrer's active subscription
-                try {
-                  const subQuery = query(
-                    collection(getDb(), 'subscriptions'),
-                    where('userId', '==', validReferralDoc.userId),
-                    where('status', '==', 'active')
-                  );
-                  const subSnap = await getDocs(subQuery);
-                  if (!subSnap.empty) {
-                    const referrerSubId = subSnap.docs[0].id;
-                    const currentDiscount = subSnap.docs[0].data().pendingDiscount || 0;
-                    await updateDoc(doc(getDb(), 'subscriptions', referrerSubId), {
-                      pendingDiscount: currentDiscount + 100
-                    });
-                  }
-                } catch (e) {
-                  console.error("Failed to add pending discount to referrer:", e);
-                }
-              }
 
               toast.success('Successfully subscribed to Monthly Plan!');
               setSubscriptionSuccess(true);

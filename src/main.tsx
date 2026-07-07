@@ -32,6 +32,8 @@ async function bootstrap() {
   const rootEl = document.getElementById('root');
   if (!rootEl) return;
 
+  clearBootFallback();
+
   await clearFirebaseProjectCacheIfChanged();
 
   void mountPwaUpdatePrompt();

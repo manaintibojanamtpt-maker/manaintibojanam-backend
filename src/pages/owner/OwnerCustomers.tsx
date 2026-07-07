@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { getDb } from '../../lib/firebase-db';
-import { useAuth } from '../../context/AuthContext';
+import { subscribeOwnerOrders } from '../../lib/ownerOrdersReads';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { Order } from '../../types';
 import toast from 'react-hot-toast';
 import { deriveOwnerCustomerMemories } from '../../utils/customerMemory';
@@ -10,8 +9,7 @@ import { MessageCircle, Phone, Search, Users } from 'lucide-react';
 import { generateWhatsAppLink } from '../../utils/whatsapp';
 
 const OwnerCustomers: React.FC = () => {
-  const { userProfile } = useAuth();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
+  const tenantId = useOwnerTenantId();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -24,16 +22,11 @@ const OwnerCustomers: React.FC = () => {
     }
 
     setLoading(true);
-
-    const customersQuery = query(
-      collection(getDb(), 'orders'),
-      where('tenantId', '==', tenantId)
-    );
-
-    const unsubscribe = onSnapshot(
-      customersQuery,
-      (snapshot) => {
-        setOrders(snapshot.docs.map((snapshotDoc) => ({ id: snapshotDoc.id, ...snapshotDoc.data() } as Order)));
+    const unsubscribe = subscribeOwnerOrders(
+      tenantId,
+      300,
+      (fetchedOrders) => {
+        setOrders(fetchedOrders as Order[]);
         setLoading(false);
       },
       (error) => {
@@ -41,7 +34,7 @@ const OwnerCustomers: React.FC = () => {
         toast.error('Could not load customer memory');
         setOrders([]);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();

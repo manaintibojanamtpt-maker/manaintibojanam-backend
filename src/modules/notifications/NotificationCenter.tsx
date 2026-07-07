@@ -25,8 +25,7 @@ import {
   NotificationStatus,
   TenantNotification,
 } from './NotificationTypes';
-import { getDb } from '../../lib/firebase-db';
-import { collection, getCountFromServer, query, where } from 'firebase/firestore';
+import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
 import {
   DashboardPriorityAction,
   getDashboardPriorityActions,
@@ -87,9 +86,8 @@ export const NotificationCenter: React.FC = () => {
     if (!tenantDocId) return;
     const loadMenuCount = async () => {
       try {
-        const q = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantDocId));
-        const snap = await getCountFromServer(q);
-        setMenuCount(snap.data().count);
+        const response = await fetchOwnerMenuItems(tenantDocId);
+        setMenuCount(response.items?.length ?? 0);
       } catch {
         setMenuCount(0);
       }

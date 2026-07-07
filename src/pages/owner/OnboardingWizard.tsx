@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '../../context/TenantContext';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { getDb } from '../../lib/firebase-db';
 import { logIncident } from '../../lib/monitoring';
-import { doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { Store, CheckCircle, ArrowRight, ArrowLeft, LogOut, Loader2, Menu as MenuIcon, ExternalLink } from 'lucide-react';
 import { m } from 'framer-motion';
@@ -14,7 +12,7 @@ import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import { STORE_SETUP_STEPS, getSetupStepByWizardStep } from '../../config/storeSetupSteps';
 import SetupStepInstructions from '../../components/owner/SetupStepInstructions';
 import { computeStoreSetupProgress, needsStoreSetup } from '../../lib/storeSetupProgress';
-import { getMenuTenantQueryKeys } from '../../lib/menuTenantKeys';
+import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
 import SoftButton from '../../components/ui/SoftButton';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
@@ -40,7 +38,6 @@ const OnboardingWizard: React.FC = () => {
   const { tenantInfo, loading, refreshTenant } = useTenant();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const db = getDb();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -61,40 +58,39 @@ const OnboardingWizard: React.FC = () => {
   const [addressDraft, setAddressDraft] = useState<OwnerAddressDraft>(EMPTY_OWNER_ADDRESS_DRAFT);
   const [resolvedLocation, setResolvedLocation] = useState<CanonicalLocation | null>(null);
 
+  const refreshMenuCount = useCallback(async (activeTenantId: string) => {
+    try {
+      const response = await fetchOwnerMenuItems(activeTenantId);
+      const size = response.items?.length ?? 0;
+      setMenuCount(size);
+      if (size >= 3) setMenuSeeded(true);
+      return size;
+    } catch (err) {
+      console.warn('Failed to load menu count for onboarding', err);
+      return 0;
+    }
+  }, []);
+
   useEffect(() => {
     if (!tenantInfo?.id || !tenantInfo.onboardingStatus?.migrated) return;
     if (!needsStoreSetup(tenantInfo, menuCount)) return;
 
-    void updateDoc(doc(db, 'tenants', tenantInfo.id), {
-      'onboardingStatus.migrated': false,
-      'onboardingStatus.isComplete': false,
+    void ownerApiRequest('POST', '/api/owner/onboarding/step', {
+      tenantId: tenantInfo.id,
+      step: tenantInfo.onboardingStatus?.currentStep ?? 1,
+      payload: { onboardingStatus: { migrated: false, isComplete: false } },
+      nextStep: tenantInfo.onboardingStatus?.currentStep ?? 1,
     }).catch((err) => console.warn('Failed to reset stale migrated onboarding flag', err));
   }, [tenantInfo, menuCount]);
 
   useEffect(() => {
     if (!tenantInfo?.id) return;
-    const keys = getMenuTenantQueryKeys(tenantInfo);
-    if (keys.length === 0) return;
-
-    const docIds = new Set<string>();
-    const byKey = new Map<string, Set<string>>();
-    const recompute = () => {
-      docIds.clear();
-      byKey.forEach((ids) => ids.forEach((id) => docIds.add(id)));
-      const size = docIds.size;
-      setMenuCount(size);
-      if (size >= 3) setMenuSeeded(true);
-    };
-
-    const unsubs = keys.map((key) => {
-      const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', key));
-      return onSnapshot(menuQuery, (snap) => {
-        byKey.set(key, new Set(snap.docs.map((d) => d.id)));
-        recompute();
-      });
-    });
-    return () => unsubs.forEach((u) => u());
-  }, [tenantInfo?.id, tenantInfo?.slug]);
+    void refreshMenuCount(tenantInfo.id);
+    const timer = window.setInterval(() => {
+      void refreshMenuCount(tenantInfo.id);
+    }, 8_000);
+    return () => window.clearInterval(timer);
+  }, [tenantInfo?.id, refreshMenuCount]);
 
   useEffect(() => {
     if (!tenantInfo) return;
@@ -309,8 +305,9 @@ const OnboardingWizard: React.FC = () => {
     try {
       const count = await seedCloudKitchenTemplate(tenantInfo.id);
       setMenuSeeded(true);
+      const total = await refreshMenuCount(tenantInfo.id);
       toast.success(`Added ${count} items from Cloud Kitchen template`);
-      if (menuCount + count >= 3 && currentStep === 6) {
+      if (total >= 3 && currentStep === 6) {
         toast.success('Menu ready — tap Save & continue to go to the final step.');
       }
     } catch (error: any) {

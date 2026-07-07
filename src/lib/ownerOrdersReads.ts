@@ -1,16 +1,12 @@
 /**
- * M1B PR-1 — Owner Order Management read paths (Firestore vs OrderSDK behind FF_SDK_OWNER_ORDERS_ENABLED).
- *
- * Performance: flag ON preserves the same single Firestore onSnapshot listener as legacy.
- * SDK path maps snapshots through OrderReadModel contracts; one-shot list uses OrderSDK.listOrdersForTenant.
+ * Owner order reads — API polling (no client Firestore listeners).
  */
 
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { createOrderSDK } from '../sdk/orders/createOrderSDK';
 import type { OrderId, TenantId } from '../sdk/core/types';
 import type { ApiOrderRecord } from '../sdk/orders/mappers/mapOrderToReadModel';
 import { mapOrdersToReadModels } from '../sdk/orders/mappers/mapOrderToReadModel';
-import { getDb } from './firebase-db';
+import { fetchOwnerOrdersFromApi, OWNER_ORDERS_POLL_MS } from './ownerOrdersApi';
 import { ownerOrderApiPort } from './ownerOrderApiPort';
 import {
   apiRecordToOwnerOrder,
@@ -22,18 +18,11 @@ import { isSdkOwnerOrdersEnabled } from './sdkFeatureFlags';
 
 export type OwnerOrder = OwnerOrderSnapshot;
 
-const createTenantOrdersQuery = (tenantId: string) =>
-  query(collection(getDb(), 'orders'), where('tenantId', '==', tenantId));
-
-const mapSnapshotDocsToOwnerOrders = (
-  docs: Array<{ id: string; data: () => Record<string, unknown> }>,
+const mapApiRecordsToOwnerOrders = (
+  records: ApiOrderRecord[],
   tenantId: string,
-  useSdkMapping: boolean
+  useSdkMapping: boolean,
 ): OwnerOrder[] => {
-  const records = docs.map(
-    (docSnap) => ({ id: docSnap.id, ...docSnap.data() }) as ApiOrderRecord
-  );
-
   if (!useSdkMapping) {
     return sortOwnerOrdersNewestFirst(records as unknown as OwnerOrder[]);
   }
@@ -42,55 +31,69 @@ const mapSnapshotDocsToOwnerOrders = (
   return sortOwnerOrdersNewestFirst(
     models
       .filter((model) => model.tenantId === tenantId)
-      .map((model, index) => readModelToOwnerOrder(model, records[index]))
+      .map((model, index) => readModelToOwnerOrder(model, records[index])),
   );
 };
 
-const subscribeLegacyTenantOrders = (
+/**
+ * Poll tenant orders via authenticated owner API.
+ */
+export const subscribeOwnerOrders = (
   tenantId: string,
   orderLimit: number,
   callback: (orders: OwnerOrder[], hasMore: boolean) => void,
   onError?: (error: unknown) => void,
-  useSdkMapping = false
-): (() => void) =>
-  onSnapshot(
-    createTenantOrdersQuery(tenantId),
-    (snapshot) => {
-      const fetchedOrders = mapSnapshotDocsToOwnerOrders(
-        snapshot.docs,
-        tenantId,
-        useSdkMapping
-      ).slice(0, orderLimit);
+): (() => void) => {
+  let cancelled = false;
+  const useSdkMapping = isSdkOwnerOrdersEnabled();
 
-      callback(fetchedOrders, snapshot.docs.length === orderLimit);
-    },
-    (error) => {
+  const poll = async () => {
+    try {
+      const response = await fetchOwnerOrdersFromApi(tenantId, orderLimit);
+      if (cancelled) return;
+      const records = (response.orders ?? []) as ApiOrderRecord[];
+      callback(mapApiRecordsToOwnerOrders(records, tenantId, useSdkMapping), response.hasMore === true);
+    } catch (error) {
       onError?.(error);
     }
-  );
+  };
 
-/**
- * One-shot owner order list via OrderSDK (same tenant query as onSnapshot via ownerOrderApiPort).
- */
-export const fetchOwnerOrdersList = async (
-  tenantId: string,
-  limit?: number
-): Promise<OwnerOrder[]> => {
-  const sdk = createOrderSDK(ownerOrderApiPort);
-  const result = await sdk.listOrdersForTenant({ tenantId: tenantId as TenantId, limit }, {});
+  void poll();
+  const timer = window.setInterval(() => {
+    void poll();
+  }, OWNER_ORDERS_POLL_MS);
 
-  if (result.ok === false) {
-    return [];
-  }
-
-  return sortOwnerOrdersNewestFirst(
-    result.value.map((model) => readModelToOwnerOrder(model))
-  ).slice(0, limit ?? result.value.length);
+  return () => {
+    cancelled = true;
+    window.clearInterval(timer);
+  };
 };
 
-/**
- * Fetch a single order for owner detail views via OrderSDK.
- */
+export const fetchOwnerOrdersList = async (
+  tenantId: string,
+  limit?: number,
+): Promise<OwnerOrder[]> => {
+  if (isSdkOwnerOrdersEnabled()) {
+    const sdk = createOrderSDK(ownerOrderApiPort);
+    const result = await sdk.listOrdersForTenant({ tenantId: tenantId as TenantId, limit }, {});
+
+    if (result.ok === false) {
+      return [];
+    }
+
+    return sortOwnerOrdersNewestFirst(
+      result.value.map((model) => readModelToOwnerOrder(model)),
+    ).slice(0, limit ?? result.value.length);
+  }
+
+  const response = await fetchOwnerOrdersFromApi(tenantId, limit ?? 50);
+  return mapApiRecordsToOwnerOrders(
+    (response.orders ?? []) as ApiOrderRecord[],
+    tenantId,
+    false,
+  ).slice(0, limit ?? response.orders.length);
+};
+
 export const fetchOwnerOrderById = async (orderId: string): Promise<OwnerOrder | null> => {
   if (!isSdkOwnerOrdersEnabled()) {
     return null;
@@ -106,27 +109,7 @@ export const fetchOwnerOrderById = async (orderId: string): Promise<OwnerOrder |
   return readModelToOwnerOrder(result.value);
 };
 
-/**
- * Subscribe to tenant order list. Flag OFF: legacy mapping. Flag ON: SDK read-model mapping, same listener.
- */
-export const subscribeOwnerOrders = (
-  tenantId: string,
-  orderLimit: number,
-  callback: (orders: OwnerOrder[], hasMore: boolean) => void,
-  onError?: (error: unknown) => void
-): (() => void) => {
-  const useSdkMapping = isSdkOwnerOrdersEnabled();
-  return subscribeLegacyTenantOrders(
-    tenantId,
-    orderLimit,
-    callback,
-    onError,
-    useSdkMapping
-  );
-};
-
-/**
- * Maps raw API/Firestore records to owner orders using SDK mapper (parity helper for tests).
- */
 export const mapOwnerOrderRecords = (records: ApiOrderRecord[]): OwnerOrder[] =>
   sortOwnerOrdersNewestFirst(records.map(apiRecordToOwnerOrder));
+
+export { OWNER_ORDERS_POLL_MS };

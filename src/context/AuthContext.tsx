@@ -1,47 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-  onAuthStateChanged, 
-  signOut, 
-  User as FirebaseUser 
+import {
+  onAuthStateChanged,
+  signOut,
+  User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { EnvironmentConfig } from '../config/environment';
 import { BiometricService } from '../services/biometric.service';
-
-interface SavedAddress {
-  id: string;
-  label: string; // Home, Work, etc.
-  address: string;
-  isDefault: boolean;
-}
-
 import { UserProfile } from '../types';
-
 import { saveUserIfNotExists as bootstrapSaveUserIfNotExists } from '../lib/userProfileBootstrap';
 import { cacheOwnerTenantIds, readCachedOwnerTenantIds } from '../lib/ownerRedirect';
-
-/** Keep owner tenant ids stable when Firestore snapshots arrive without them. */
-function mergeProfileFromSnapshot(
-  uid: string,
-  data: Record<string, unknown>,
-  prev: UserProfile | null,
-): UserProfile {
-  const fromSnap = { userId: uid, ...data } as UserProfile;
-  const snapOwned = Array.isArray(fromSnap.ownedTenantIds)
-    ? fromSnap.ownedTenantIds.filter(Boolean)
-    : [];
-  const prevOwned =
-    prev?.userId === uid && Array.isArray(prev.ownedTenantIds)
-      ? prev.ownedTenantIds.filter(Boolean)
-      : [];
-  const ownedTenantIds = snapOwned.length > 0 ? snapOwned : prevOwned;
-  const role =
-    ownedTenantIds.length > 0 && (!fromSnap.role || fromSnap.role === 'user')
-      ? 'owner'
-      : fromSnap.role;
-
-  return { ...fromSnap, ownedTenantIds, role };
-}
+import {
+  buildAuthFallbackProfile,
+  hydrateOwnerProfileViaApi,
+  isOwnerPortalPath,
+  mergeAuthProfile,
+} from '../lib/authProfile';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -71,6 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setProfileLoading(true);
     try {
+      if (isOwnerPortalPath()) {
+        const apiProfile = await hydrateOwnerProfileViaApi(user, null);
+        if (apiProfile) {
+          setUserProfile(apiProfile);
+          return;
+        }
+      }
+
       const { getDb } = await import('../lib/firebase-db');
       const { doc, getDoc } = await import('firebase/firestore');
       const snap = await Promise.race([
@@ -82,23 +64,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (snap.exists()) {
         const data = snap.data() as UserProfile;
-        if (data.userId && data.userId !== user.uid) {
-          console.warn(
-            `[Auth] users/${user.uid} has mismatched userId field (${data.userId}). App uses document ID; run repair-user-by-email if login fails.`,
-          );
-        }
-        setUserProfile((prev) => mergeProfileFromSnapshot(user.uid, { ...data }, prev));
+        setUserProfile((prev) => mergeAuthProfile(user.uid, { ...data }, prev));
+      } else {
+        setUserProfile((prev) => prev ?? buildAuthFallbackProfile(user));
       }
     } catch (err) {
       console.error('Profile refresh failed:', err);
+      const apiProfile = await hydrateOwnerProfileViaApi(user, null);
+      if (apiProfile) {
+        setUserProfile(apiProfile);
+      } else {
+        setUserProfile((prev) => prev ?? buildAuthFallbackProfile(user));
+      }
     } finally {
       setProfileLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let unsubProfile: (() => void) | null = null;
-    let profileTimeoutId: number | null = null;
     let cancelled = false;
 
     void auth.authStateReady().then(() => {
@@ -114,51 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
 
-      if (profileTimeoutId !== null) {
-        window.clearTimeout(profileTimeoutId);
-        profileTimeoutId = null;
-      }
-
-      if (unsubProfile) {
-        unsubProfile();
-        unsubProfile = null;
-      }
-
       if (!user) {
         setUserProfile(null);
         setProfileLoading(false);
         return;
       }
 
+      const cachedOwned = readCachedOwnerTenantIds();
+      setUserProfile(buildAuthFallbackProfile(user, cachedOwned));
       setProfileLoading(true);
 
       void (async () => {
-        let profileBootstrapDone = false;
-
         try {
-          const { getDb } = await import('../lib/firebase-db');
-          const { doc, onSnapshot } = await import('firebase/firestore');
-          const userRef = doc(getDb(), 'users', user.uid);
-
-          unsubProfile = onSnapshot(
-            userRef,
-            (docSnap) => {
-              if (docSnap.exists()) {
-                setUserProfile((prev) =>
-                  mergeProfileFromSnapshot(user.uid, docSnap.data(), prev),
-                );
-              }
-              if (profileBootstrapDone) {
-                setProfileLoading(false);
-              }
-            },
-            (err) => {
-              console.warn('Real-time profile sync blocked or failed.', err);
-              if (profileBootstrapDone) {
-                setProfileLoading(false);
-              }
-            },
-          );
+          if (isOwnerPortalPath()) {
+            const apiProfile = await hydrateOwnerProfileViaApi(user, null);
+            if (!cancelled && apiProfile) {
+              setUserProfile(apiProfile);
+            }
+          }
 
           try {
             const profile = await Promise.race([
@@ -169,56 +125,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 phone: user.phoneNumber,
               }),
               new Promise<never>((_, reject) => {
-                window.setTimeout(() => reject(new Error('Firebase connection timeout')), 5000);
+                window.setTimeout(() => reject(new Error('Firebase connection timeout')), 6_000);
               }),
             ]);
+
+            if (cancelled) return;
 
             const profileOwned = Array.isArray(profile.ownedTenantIds)
               ? profile.ownedTenantIds.filter(Boolean)
               : [];
-            const cachedOwned = readCachedOwnerTenantIds();
-            const ownedIds = profileOwned.length > 0 ? profileOwned : cachedOwned;
+            const ownedIds = profileOwned.length > 0 ? profileOwned : readCachedOwnerTenantIds();
             const elevatedRole =
               ownedIds.length > 0 && (!profile.role || profile.role === 'user')
                 ? 'owner'
                 : profile.role;
+
             if (ownedIds.length > 0) {
               cacheOwnerTenantIds(ownedIds);
-              setUserProfile({
-                ...profile,
-                ownedTenantIds: ownedIds,
-                role: elevatedRole || 'owner',
-              } as UserProfile);
-            } else {
-              setUserProfile({ ...profile, role: elevatedRole || profile.role } as UserProfile);
             }
+
+            setUserProfile((prev) =>
+              mergeAuthProfile(
+                user.uid,
+                {
+                  ...profile,
+                  ownedTenantIds: ownedIds,
+                  role: elevatedRole || (ownedIds.length > 0 ? 'owner' : profile.role),
+                },
+                prev,
+              ),
+            );
           } catch (err) {
-            console.error('Auth Profile Error:', err);
-            await refreshProfile();
-          } finally {
-            profileBootstrapDone = true;
-            setProfileLoading(false);
+            console.warn('Firestore profile bootstrap skipped:', err);
+            if (!isOwnerPortalPath()) {
+              const apiProfile = await hydrateOwnerProfileViaApi(user, null);
+              if (!cancelled && apiProfile) {
+                setUserProfile(apiProfile);
+              }
+            }
           }
         } catch (err) {
-          console.error('Auth Profile Sync Error:', err);
-          profileBootstrapDone = true;
-          setProfileLoading(false);
+          console.error('Auth profile hydration failed:', err);
+        } finally {
+          if (!cancelled) setProfileLoading(false);
         }
       })();
-
-      profileTimeoutId = window.setTimeout(() => {
-        setProfileLoading(false);
-      }, 4_000);
     });
 
     return () => {
       cancelled = true;
       window.clearTimeout(authFallback);
-      if (profileTimeoutId !== null) window.clearTimeout(profileTimeoutId);
       unsubscribeAuth();
-      if (unsubProfile) unsubProfile();
     };
-  }, [refreshProfile]);
+  }, []);
 
   const logout = async () => {
     try {
@@ -227,22 +186,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.error(e);
     }
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("cart");
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('cart');
+    sessionStorage.removeItem('bhojanos_owner_tenant_ids');
     setUserProfile(null);
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    const loginPath = path.startsWith('/super-admin') ? '/super-admin/login' : path.startsWith('/admin') ? '/admin/login' : '/login';
+    const loginPath = path.startsWith('/super-admin')
+      ? '/super-admin/login'
+      : path.startsWith('/admin')
+        ? '/admin/login'
+        : path.startsWith('/owner')
+          ? '/owner/login'
+          : '/login';
     window.location.href = EnvironmentConfig.getBaseUrl() + loginPath;
   };
 
   const login = (user: any) => {
     setCurrentUser(user);
-    // Profile is handled by onAuthStateChanged listener
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, logout, login, loading, profileLoading, refreshProfile }}>
+    <AuthContext.Provider
+      value={{ currentUser, userProfile, logout, login, loading, profileLoading, refreshProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

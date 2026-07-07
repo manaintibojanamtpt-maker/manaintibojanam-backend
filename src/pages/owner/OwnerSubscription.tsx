@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../context/TenantContext';
 import { useAuth } from '../../context/AuthContext';
 import { AlertCircle, CheckCircle2, Shield } from 'lucide-react';
-import { getDb } from '../../lib/firebase-db';
-import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { PricingPlanCard, PricingComparisonTable } from '../../components/pricing/PricingPlanCard';
@@ -17,6 +15,7 @@ import {
   isTrialCurrentlyActive,
   activateGrowthOnboardingTrial,
 } from '../../lib/planStatus';
+import { upgradeOwnerSubscriptionPlan } from '../../lib/ownerSubscriptionApi';
 import {
   FREE_PLAN,
   PAID_PLANS,
@@ -29,7 +28,7 @@ import {
 } from '../../config/pricing';
 
 const OwnerSubscription = () => {
-  const { tenantInfo } = useTenant();
+  const { tenantInfo, refreshTenant } = useTenant();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState<PaidPlanId | null>(null);
@@ -80,36 +79,23 @@ const OwnerSubscription = () => {
 
     setLoadingPlan(planId);
     try {
-      const db = getDb();
-      const tenantRef = doc(db, 'tenants', tenantInfo.slug);
-
+      const tenantDocId = tenantInfo.id || tenantInfo.slug;
       if (
         planId === 'growth' &&
         effectivePlanId === 'starter' &&
         !tenantInfo.subscription?.trialUsed
       ) {
-        await activateGrowthOnboardingTrial(tenantInfo.slug);
+        await activateGrowthOnboardingTrial(tenantDocId);
+        await refreshTenant();
         toast.success(`${PLAN_TRIALS.growthOnboardingDays}-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
         return;
       }
 
+      await upgradeOwnerSubscriptionPlan(tenantDocId, planId);
+      await refreshTenant();
       if (!tenantInfo.subscription?.trialUsed && effectivePlanId === 'starter') {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + PLAN_TRIALS.paidUpgradeDays);
-        await updateDoc(tenantRef, {
-          'subscription.planId': planId,
-          'subscription.status': 'trialing',
-          'subscription.trialActivatedAt': new Date().toISOString(),
-          'subscription.trialExpiresAt': expiresAt.toISOString(),
-          'subscription.trialUsed': true,
-          'subscription.trialType': planId,
-        });
         toast.success(`${PLAN_TRIALS.paidUpgradeDays}-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
       } else {
-        await updateDoc(tenantRef, {
-          'subscription.planId': planId,
-          'subscription.status': 'active',
-        });
         toast.success(copy.upgradeSuccess);
       }
     } catch (err: unknown) {

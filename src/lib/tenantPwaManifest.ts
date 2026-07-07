@@ -12,6 +12,12 @@ function rememberPwaStartUrl(startUrl: string) {
 
 const MANIFEST_LINK_ID = 'bhojanos-tenant-manifest';
 
+function toAbsoluteUrl(path: string): string {
+  if (typeof window === 'undefined') return path;
+  if (!path.startsWith('/')) return path;
+  return `${window.location.origin}${path}`;
+}
+
 export type TenantPwaBranding = {
   name: string;
   slug: string;
@@ -56,8 +62,8 @@ export function applyTenantPwaManifest(branding: TenantPwaBranding | null) {
     short_name: branding.name.slice(0, 12),
     description: `Order directly from ${branding.name} — 0% commission.`,
     id: `com.bhojanos.store.${slug}`,
-    start_url: startPath,
-    scope: `/k/${slug}/`,
+    start_url: toAbsoluteUrl(startPath),
+    scope: toAbsoluteUrl(`/k/${slug}/`),
     display: 'standalone',
     background_color: branding.themeColor || '#1A0505',
     theme_color: branding.themeColor || '#1A0505',
@@ -65,13 +71,13 @@ export function applyTenantPwaManifest(branding: TenantPwaBranding | null) {
     categories: ['food', 'lifestyle'],
     icons: [
       {
-        src: branding.iconUrl || '/bhojan-os-icon.png',
+        src: toAbsoluteUrl(branding.iconUrl || '/bhojan-os-icon.png'),
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable',
       },
       {
-        src: branding.iconUrl || '/bhojan-os-icon.png',
+        src: toAbsoluteUrl(branding.iconUrl || '/bhojan-os-icon.png'),
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any maskable',

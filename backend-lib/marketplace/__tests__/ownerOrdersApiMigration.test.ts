@@ -26,13 +26,25 @@ describe('owner orders API migration', () => {
   });
 
   it('owner dashboard and orders pages avoid direct order listeners', () => {
-    for (const file of ['src/pages/owner/OwnerDashboard.tsx', 'src/pages/owner/OwnerOrders.tsx']) {
-      const source = fs.readFileSync(path.join(process.cwd(), file), 'utf8');
-      assert.match(source, /subscribeOwnerOrders/);
-      assert.doesNotMatch(source, /onSnapshot\(.*orders/);
-    }
+    const dashboard = fs.readFileSync(
+      path.join(process.cwd(), 'src/pages/owner/OwnerDashboard.tsx'),
+      'utf8',
+    );
+    assert.match(dashboard, /useDashboardOrders/);
+    assert.doesNotMatch(dashboard, /onSnapshot\(.*orders/);
+    assert.doesNotMatch(dashboard, /firebase\/firestore/);
+
     const orders = fs.readFileSync(path.join(process.cwd(), 'src/pages/owner/OwnerOrders.tsx'), 'utf8');
+    assert.match(orders, /subscribeOwnerOrders/);
+    assert.doesNotMatch(orders, /onSnapshot\(.*orders/);
     assert.doesNotMatch(orders, /firebase\/firestore/);
+
+    const provider = fs.readFileSync(
+      path.join(process.cwd(), 'src/context/DashboardRealtimeProvider.tsx'),
+      'utf8',
+    );
+    assert.match(provider, /fetchOwnerOrdersList|fetchOwnerOrdersFromApi/);
+    assert.doesNotMatch(provider, /onSnapshot/);
   });
 
   it('useOwnerMenuCount polls owner menu API', () => {

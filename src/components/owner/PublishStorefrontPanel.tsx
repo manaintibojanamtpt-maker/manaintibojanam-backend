@@ -1,0 +1,108 @@
+import React, { useMemo, useState } from 'react';
+import { Loader2, Rocket, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useTenant } from '../../context/TenantContext';
+import { publishOwnerStorefrontViaApi } from '../../lib/ownerProvisioning';
+import { EnvironmentConfig } from '../../config/environment';
+
+export const PublishStorefrontPanel: React.FC = () => {
+  const { tenantId, tenantInfo, refreshTenant } = useTenant();
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+
+  const isPublished = tenantInfo?.storeStatus === 'published';
+  const storeUrl = useMemo(() => {
+    const slug = tenantInfo?.slug || tenantId;
+    return slug ? EnvironmentConfig.getStorefrontUrl(slug) : '';
+  }, [tenantInfo?.slug, tenantId]);
+
+  const handlePublish = async () => {
+    if (!tenantId) {
+      toast.error('Kitchen not loaded yet.');
+      return;
+    }
+    setLoading(true);
+    setErrors([]);
+    try {
+      const result = await publishOwnerStorefrontViaApi(tenantId);
+      if (!result.success) {
+        setErrors(result.validationErrors ?? ['Publish failed. Complete setup checklist first.']);
+        toast.error('Kitchen is not ready to publish on OrderBhojan.');
+        return;
+      }
+      toast.success('Published on OrderBhojan — customers can discover your kitchen.');
+      await refreshTenant();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Publish failed';
+      setErrors([message]);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isPublished) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-bold text-emerald-300">Live on OrderBhojan</p>
+            <p className="mt-1 text-xs text-emerald-100/80">
+              Your kitchen is published. Edits sync to customers automatically within seconds.
+            </p>
+            {storeUrl ? (
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs font-bold text-emerald-300 underline"
+              >
+                View customer storefront
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/15 to-[#0A0A0A] p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-orange-300/80">OrderBhojan</p>
+          <h3 className="text-lg font-black text-white mt-1">Publish to marketplace</h3>
+          <p className="mt-1 text-sm text-white/60 max-w-xl">
+            Make your kitchen discoverable on OrderBhojan home, nearby, and restaurant pages.
+            Requires location, store hours, menu items, and delivery fees.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={loading || !tenantId}
+          onClick={() => void handlePublish()}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50 shadow-lg shadow-orange-500/20"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
+          {loading ? 'Publishing…' : 'Publish Now'}
+        </button>
+      </div>
+
+      {errors.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+            <ul className="text-xs text-red-100/90 space-y-1 list-disc pl-4">
+              {errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+export default PublishStorefrontPanel;

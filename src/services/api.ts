@@ -854,49 +854,25 @@ export const buildRepeatOrderLines = (orderItems: any[], menuItems: any[]) => {
   return lines;
 };
 
-import { deleteDoc, addDoc } from 'firebase/firestore';
-
 export const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
   const finalTenantId = (item as any).tenantId || activeTenantId;
   if (!finalTenantId) {
     throw new Error('No tenant selected for this menu item');
   }
 
-  try {
-    const payload = await ownerApiRequest<{ id: string }>('POST', '/api/owner/menu/items', {
-      ...item,
-      tenantId: finalTenantId,
-    });
-    return { id: payload.id };
-  } catch (apiError) {
-    console.warn('addMenuItem API failed, falling back to Firestore client', apiError);
-    return addDoc(collection(getDb(), 'menu'), {
-      ...item,
-      tenantId: finalTenantId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  }
+  const payload = await ownerApiRequest<{ id: string }>('POST', '/api/owner/menu/items', {
+    ...item,
+    tenantId: finalTenantId,
+  });
+  return { id: payload.id };
 };
 
 export const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
-  try {
-    await ownerApiRequest('PUT', `/api/owner/menu/items/${id}`, updates as Record<string, unknown>);
-    return;
-  } catch (apiError) {
-    console.warn('updateMenuItem API failed, falling back to Firestore client', apiError);
-    return updateDoc(doc(getDb(), 'menu', id), { ...updates, updatedAt: serverTimestamp() });
-  }
+  await ownerApiRequest('PUT', `/api/owner/menu/items/${id}`, updates as Record<string, unknown>);
 };
 
 export const deleteMenuItem = async (id: string) => {
-  try {
-    await ownerApiRequest('DELETE', `/api/owner/menu/items/${id}`);
-    return;
-  } catch (apiError) {
-    console.warn('deleteMenuItem API failed, falling back to Firestore client', apiError);
-    return deleteDoc(doc(getDb(), 'menu', id));
-  }
+  await ownerApiRequest('DELETE', `/api/owner/menu/items/${id}`);
 };
 
 export const fetchAllTenants = async () => {

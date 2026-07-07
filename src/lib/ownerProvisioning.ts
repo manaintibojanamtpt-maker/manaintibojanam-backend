@@ -13,7 +13,7 @@ async function ownerApiPost<T>(path: string, body?: Record<string, unknown>): Pr
 }
 
 export async function ownerApiRequest<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T> {
@@ -45,7 +45,15 @@ export async function ownerApiRequest<T>(
 
     const payload = await res.json().catch(() => ({}));
     if (!res.ok || payload.success === false) {
-      throw new Error(payload.error || payload.message || 'Request failed. Please try again.');
+      const err = new Error(payload.error || payload.message || 'Request failed. Please try again.') as Error & {
+        validationErrors?: string[];
+        status?: number;
+      };
+      err.status = res.status;
+      if (Array.isArray(payload.validationErrors)) {
+        err.validationErrors = payload.validationErrors.filter(Boolean);
+      }
+      throw err;
     }
     return payload as T;
   } catch (error) {
@@ -73,4 +81,27 @@ export async function provisionOwnerStore(params: ProvisionOwnerParams): Promise
 export async function syncOwnerTenantsViaApi(): Promise<string[]> {
   const payload = await ownerApiPost<{ ownedTenantIds: string[] }>('/api/owner/sync-tenants');
   return Array.isArray(payload.ownedTenantIds) ? payload.ownedTenantIds.filter(Boolean) : [];
+}
+
+/** Publish kitchen to OrderBhojan after server-side validation. */
+export async function publishOwnerStorefrontViaApi(tenantId: string): Promise<{
+  success: boolean;
+  validationErrors?: string[];
+}> {
+  try {
+    await ownerApiPost<{ success: boolean }>(`/api/owner/storefront/${tenantId}/publish`);
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const validationErrors =
+      error && typeof error === 'object' && Array.isArray((error as { validationErrors?: unknown }).validationErrors)
+        ? (error as { validationErrors: string[] }).validationErrors
+        : message.includes('not ready to publish')
+          ? [message]
+          : undefined;
+    if (validationErrors) {
+      return { success: false, validationErrors };
+    }
+    throw error;
+  }
 }
