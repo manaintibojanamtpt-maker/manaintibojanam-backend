@@ -1,14 +1,12 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { encodeGeohashPoint } from '../../src/sdk/location/adapters/localGeoComputation.js';
 import {
   buildExpansionPrefixPlan,
   buildGeoIndexPrefixPlan,
-} from '../../src/sdk/discovery/repository/GeoIndexStrategy.js';
-import {
   dedupeGeoIndexEntries,
+  encodeGeohashPoint,
   extractTenantIdsFromGeoIndex,
-} from '../../src/sdk/discovery/repository/GeoIndexMapper.js';
-import type { GeoIndexReadRecord } from '../../src/sdk/discovery/repository/GeoIndexPort.js';
+  type GeoIndexReadRecord,
+} from '../shared/serverBundleHelpers.js';
 
 export function encodeCustomerGeohash(lat: number, lng: number): string | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;

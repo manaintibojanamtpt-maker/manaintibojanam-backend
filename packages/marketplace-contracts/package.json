@@ -1,0 +1,24 @@
+{
+  "name": "@bhojan/marketplace-contracts",
+  "version": "1.0.0-sprint18",
+  "private": true,
+  "description": "Frozen Marketplace API v1.0 public DTO contracts (PX6.1A.5)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

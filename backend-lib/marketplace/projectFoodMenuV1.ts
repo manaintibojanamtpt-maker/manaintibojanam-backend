@@ -16,7 +16,7 @@ import {
   type VariantDTO,
   type VariantKind,
 } from '@bhojan/marketplace-contracts';
-import { parseTenantMarketplace, type TenantMarketplaceProjection } from '../../src/domain/storefront/tenant-marketplace.js';
+import { parseTenantMarketplace, type TenantMarketplaceProjection } from '../domain/tenant-marketplace.js';
 
 const V = CONTRACT_SCHEMA_VERSION;
 

@@ -7,7 +7,7 @@ import {
 } from './discoveryProfileWriter.js';
 import { publishTenantDomainEvent } from './tenantDomainEventBus.js';
 import { syncTenantGeoIndexEntry } from './geoIndexWriter.js';
-import { inferTenantEventTypeFromLegacySource } from '../../src/domain/tenant/TenantDomainEventTypes.js';
+import { inferTenantEventTypeFromLegacySource } from '../domain/TenantDomainEventTypes.js';
 
 const SYNC_EVENTS = 'marketplace_sync_events';
 const META_DOC = 'marketplace_meta/global';

@@ -1,6 +1,5 @@
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
-import { encodeGeohashPoint } from '../../src/sdk/location/adapters/localGeoComputation.js';
-import { toGeohashPrefix } from '../../src/sdk/discovery/repository/GeoHashPrefixResolver.js';
+import { encodeGeohashPoint, toGeohashPrefix } from '../shared/serverBundleHelpers.js';
 import { isMarketplaceVisibleTenant } from './marketplaceVisibility.js';
 
 const GEO_INDEX_PREFIXES = [6, 5] as const;

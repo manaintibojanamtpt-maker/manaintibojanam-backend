@@ -1,12 +1,12 @@
 import type { Express, Request, Response } from 'express';
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
-import { parseTenantMarketplace } from '../../src/domain/storefront/tenant-marketplace.js';
+import { parseTenantMarketplace } from '../domain/tenant-marketplace.js';
 import {
   countTenantMenuItems,
 } from './discoveryProfileWriter.js';
 import { validateTenantPublishable } from './tenantDiscoveryProfile.js';
 import { publishTenantDomainEvent } from './tenantDomainEventBus.js';
-import { inferStorefrontEventType } from '../../src/domain/tenant/TenantDomainEventTypes.js';
+import { inferStorefrontEventType } from '../domain/TenantDomainEventTypes.js';
 import { parseFirestoreTenant } from './projectFoodMenuV1.js';
 import { isStoreOpenNow, resolveStoreTiming } from './tenantProjectionHelpers.js';
 

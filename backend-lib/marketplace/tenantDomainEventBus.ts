@@ -3,8 +3,8 @@ import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import type {
   TenantDomainEvent,
   TenantDomainEventType,
-} from '../../src/domain/tenant/TenantDomainEventTypes.js';
-import { createTenantDomainEvent } from '../../src/domain/tenant/TenantDomainEventTypes.js';
+} from '../domain/TenantDomainEventTypes.js';
+import { createTenantDomainEvent } from '../domain/TenantDomainEventTypes.js';
 import type { TenantSyncResult } from './tenantSyncService.js';
 
 const DOMAIN_EVENTS = 'tenant_domain_events';

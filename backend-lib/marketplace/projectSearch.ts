@@ -1,6 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { classifyTextMatch } from '../../src/domain/search/matching/SearchMatchClassifier.js';
-import { normalizeForMatch } from '../../src/domain/search/shared/SearchLanguage.js';
+import { classifyTextMatch, normalizeForMatch } from '../shared/serverBundleHelpers.js';
 import { loadVisibleDiscoveryProfiles } from './discoveryProfileWriter.js';
 import { parseFirestoreMenuItem } from './projectFoodMenuV1.js';
 import {
