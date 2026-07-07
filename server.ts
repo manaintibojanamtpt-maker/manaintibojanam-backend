@@ -64,6 +64,13 @@ import { registerOwnerIngredientsRoutes } from "./backend-lib/marketplace/ownerI
 import { registerOwnerMenuRoutes } from "./backend-lib/marketplace/ownerMenuRoutes.js";
 import { queryMenuForTenant } from "./backend-lib/marketplace/menuTenantQuery.js";
 import { registerOwnerAnalyticsRoutes } from "./backend-lib/marketplace/ownerAnalyticsRoutes.js";
+import {
+  createIncidentRepository,
+  getAutopilotIncidentTypes,
+  type IncidentRepository,
+} from "./backend-lib/observability/IncidentRepository.js";
+import { registerOpsRoutes } from "./backend-lib/observability/registerOpsRoutes.js";
+import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
 import { registerTenantDomainEventSubscribers } from "./backend-lib/marketplace/registerTenantDomainEvents.js";
@@ -111,26 +118,43 @@ const noteFirestoreQuotaExceeded = (source: string) => {
 
 const isFirestoreBackedOff = () => Date.now() < firestoreQuotaBackoffUntil;
 
-// Write to system_incidents safely
-const writeSystemIncident = async (type: string, status: string, payload: any, correlationId?: string) => {
-  if (isFirestoreBackedOff()) return;
-  try {
-    if (!_db) return;
-    const { randomUUID } = await import('crypto');
-    await _db.collection("system_incidents").doc(randomUUID()).set({
-      type,
-      status,
-      payload,
-      correlationId: correlationId || "none",
-      retryCount: 0,
-      maxRetries: 3,
-      createdAt: new Date().toISOString()
+let _incidentRepo: IncidentRepository | undefined;
+
+const getIncidentRepository = (): IncidentRepository | undefined => {
+  if (!_incidentRepo && _db) {
+    _incidentRepo = createIncidentRepository({
+      db: _db,
+      fieldValue: FieldValue,
+      isBackedOff: isFirestoreBackedOff,
+      onQuotaError: noteFirestoreQuotaExceeded,
+      isQuotaError: isFirestoreQuotaError,
+      log: (level, message, meta) => {
+        if (level === "info") logger.info({ message, ...meta });
+        else if (level === "warn") logger.warn({ message, ...meta });
+        else logger.error({ message, ...meta });
+      },
     });
-    logger.info({ message: "System incident logged", type, status, correlationId });
-  } catch (err: any) {
-    if (isFirestoreQuotaError(err)) noteFirestoreQuotaExceeded("writeSystemIncident");
-    else logger.error({ message: "Failed to write system incident", err: err.message, correlationId });
   }
+  return _incidentRepo;
+};
+
+/** @deprecated Use getIncidentRepository().writeIncident — kept as thin alias during migration. */
+const writeSystemIncident = async (
+  type: string,
+  status: string,
+  payload: any,
+  correlationId?: string,
+  source: "server" | "webhook" | "monitoring" = "server",
+) => {
+  const repo = getIncidentRepository();
+  if (!repo) return;
+  await repo.writeIncident({
+    type,
+    status: status as any,
+    payload: payload ?? {},
+    correlationId,
+    source,
+  });
 };
 
 // ================= PAYMENT RECONCILIATION =================
@@ -446,29 +470,6 @@ const isFirestorePermissionError = (err: any) =>
 const isFirestoreNotFoundError = (err: any) =>
   err?.code === 5 || String(err?.message || '').includes("NOT_FOUND");
 
-const firestoreCountSince = async (collectionName: string, field: string, sinceIso: string): Promise<number> => {
-  if (!_db) return 0;
-  try {
-    const snapshot = await _db
-      .collection(collectionName)
-      .where(field, ">=", sinceIso)
-      .count()
-      .get();
-    return snapshot.data().count;
-  } catch (err: any) {
-    if (isFirestoreQuotaError(err)) {
-      noteFirestoreQuotaExceeded(`count:${collectionName}`);
-      throw err;
-    }
-    const fallback = await _db
-      .collection(collectionName)
-      .where(field, ">=", sinceIso)
-      .limit(200)
-      .get();
-    return fallback.size;
-  }
-};
-
 // Test connection using the already-initialized FirebaseAdminProvider instance only.
 const verifyConnection = async () => {
   if (!_db) {
@@ -554,6 +555,30 @@ const guestViewTokenLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many verification attempts. Please try again later.' },
+});
+
+const clientErrorIpLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: isProductionApi ? 60 : 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'rate_limited', error: 'Too many client error reports from this IP' },
+});
+
+const clientErrorTenantLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: isProductionApi ? 120 : 1_000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: any) => {
+    const tenant =
+      req.headers['x-tenant-id'] ||
+      req.body?.info?.tenantId ||
+      req.body?.tenantId ||
+      'unknown';
+    return `client-error-tenant:${tenant}`;
+  },
+  message: { status: 'rate_limited', error: 'Too many client error reports for this tenant' },
 });
 
 // Authentication Middlewares
@@ -903,7 +928,7 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
       event: payload.event,
       eventId,
       payload: payload.payload
-    }, correlationId as string);
+    }, correlationId as string, "webhook");
 
     // BATCH 2: RECONCILIATION PROMOTION
     if (payload.event === 'payment.captured' || payload.event === 'order.paid') {
@@ -1318,16 +1343,82 @@ const sanitizeData = (data: any): any => {
   }));
 };
 
-// Client Errors Endpoint
-app.post("/api/client-errors", (req: any, res) => {
-  const { error, info } = req.body;
-  logger.error({ message: "Client React Error", error, info, correlationId: req.correlationId });
-  res.json({ status: "logged" });
-});
+// Client Errors Endpoint — Winston log + unified incident persistence
+app.post(
+  "/api/client-errors",
+  clientErrorIpLimiter,
+  clientErrorTenantLimiter,
+  async (req: any, res) => {
+    const body = req.body || {};
+    const { error, info } = body;
 
-// Monitoring / incident response intake
+    logger.error({ message: "Client React Error", error, info, correlationId: req.correlationId });
+
+    try {
+      const tenantHeader = req.headers["x-tenant-id"];
+      const tenantId =
+        (typeof tenantHeader === "string" && tenantHeader) ||
+        (typeof body.tenantId === "string" && body.tenantId) ||
+        (info && typeof info.tenantId === "string" ? info.tenantId : undefined);
+
+      const result = await ingestClientError(
+        body,
+        {
+          correlationId: req.correlationId,
+          tenantId,
+          clientIp: req.ip,
+          userAgent:
+            (typeof req.headers["user-agent"] === "string" && req.headers["user-agent"]) ||
+            (info && typeof info.userAgent === "string" ? info.userAgent : undefined),
+          user: req.user
+            ? { uid: req.user.uid, email: req.user.email as string | undefined }
+            : undefined,
+        },
+        {
+          repo: getIncidentRepository(),
+          isFirestoreBackedOff,
+        },
+      );
+
+      if (result.outcome === "deduped") {
+        return res.json({
+          status: "logged",
+          deduped: true,
+          correlationId: result.correlationId,
+          dedupeKey: result.dedupeKey,
+        });
+      }
+
+      if (result.outcome === "skipped_firestore_backoff" || result.outcome === "skipped_no_repo") {
+        return res.json({
+          status: "logged",
+          skipped: result.outcome,
+          correlationId: result.correlationId,
+        });
+      }
+
+      res.json({
+        status: "logged",
+        correlationId: result.correlationId,
+        incidentId: result.incidentId,
+        dedupeKey: result.dedupeKey,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Client error ingest failed";
+      logger.error({ message: "Client error pipeline failed", err: message, correlationId: req.correlationId });
+      res.json({ status: "logged", correlationId: req.correlationId });
+    }
+  },
+);
+
+// Monitoring / incident response intake — unified write path
 app.post("/api/monitoring/log", async (req: any, res) => {
   try {
+    const repo = getIncidentRepository();
+    if (!repo) {
+      return res.status(503).json({ success: false, error: "Incident repository unavailable" });
+    }
+
     if (isFirestoreBackedOff()) {
       return res.status(202).json({ success: true, skipped: "firestore_quota_backoff" });
     }
@@ -1350,35 +1441,26 @@ app.post("/api/monitoring/log", async (req: any, res) => {
       correlationId,
     };
 
-    await writeSystemIncident(type, "DETECTED", enrichedPayload, correlationId);
+    const writeResult = await repo.writeIncident({
+      type,
+      status: "DETECTED",
+      payload: enrichedPayload,
+      correlationId,
+      source: "monitoring",
+      tenantId: typeof enrichedPayload.tenantId === "string" ? enrichedPayload.tenantId : undefined,
+      route: typeof enrichedPayload.route === "string" ? enrichedPayload.route : undefined,
+    });
 
-    const shouldMirrorToClientErrors = [
-      "system_errors",
-      "merchant_blockers",
-      "payment_incidents",
-      "security_events",
-      "firestore_errors",
-    ].includes(type);
-
-    if (shouldMirrorToClientErrors && _db) {
-      await _db.collection("client_errors").add({
-        level: enrichedPayload.severity === "Critical" ? "CRITICAL" : "ERROR",
-        message:
-          enrichedPayload.error ||
-          enrichedPayload.blockerType ||
-          enrichedPayload.failureReason ||
-          type,
-        contextSummary: JSON.stringify(enrichedPayload).slice(0, 500),
-        tenantId: enrichedPayload.tenantId || "unknown",
-        route: enrichedPayload.route || "",
-        incidentType: type,
-        correlationId,
-        timestamp: FieldValue.serverTimestamp(),
-        resolved: false,
-      });
+    if (writeResult.skipped) {
+      return res.status(202).json({ success: true, skipped: writeResult.skipped, correlationId });
     }
 
-    res.json({ success: true, correlationId });
+    res.json({
+      success: true,
+      correlationId,
+      incidentId: writeResult.incidentId,
+      schemaVersion: "1.0",
+    });
   } catch (err: any) {
     logger.error({ message: "Monitoring log failed", err: err.message, correlationId: req.correlationId });
     res.status(500).json({ success: false, error: "Failed to log incident" });
@@ -3007,6 +3089,7 @@ registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerAnalyticsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOpsRoutes(app, getIncidentRepository, requireSuperadmin);
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
@@ -5088,12 +5171,17 @@ const runHourlyAutoPilotAggregator = async () => {
     );
   }
 
-  const crashes = await firestoreCountSince("system_errors", "serverTimestamp", oneHourAgo);
-  const payments = await firestoreCountSince("payment_incidents", "serverTimestamp", oneHourAgo);
-  const security = await firestoreCountSince("security_events", "serverTimestamp", oneHourAgo);
-  const firestore = await firestoreCountSince("firestore_errors", "serverTimestamp", oneHourAgo);
-  const apiErrs = await firestoreCountSince("api_errors", "serverTimestamp", oneHourAgo);
-  const blockers = await firestoreCountSince("merchant_blockers", "serverTimestamp", oneHourAgo);
+  const autopilotTypes = getAutopilotIncidentTypes();
+  const incidentStats = await getIncidentRepository()?.countIncidentsByTypesSince(autopilotTypes, oneHourAgo);
+  const countFor = (type: string) =>
+    incidentStats?.counts.find((entry) => entry.type === type)?.count ?? 0;
+
+  const crashes = countFor("system_errors");
+  const payments = countFor("payment_incidents");
+  const security = countFor("security_events");
+  const firestore = countFor("firestore_errors");
+  const apiErrs = countFor("api_errors");
+  const blockers = countFor("merchant_blockers");
   let emailFails = 0;
   try {
     const failedAlerts = await _db!
@@ -5119,6 +5207,8 @@ const runHourlyAutoPilotAggregator = async () => {
     timestamp: new Date().toISOString(),
     score,
     statusLabel,
+    schemaVersion: "1.0",
+    incidentSource: "system_incidents",
     metrics: { crashes, payments, security, firestore, apiErrs, blockers, emailFails, isHeartbeatHealthy },
   });
 
