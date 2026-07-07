@@ -244,6 +244,17 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!userProfile) {
+    if (effectiveOwnedTenants.length > 0) {
+      return <>{children}</>;
+    }
+    if (profileLoading || repairing) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+          <p className="text-sm text-white/60">Loading your owner profile…</p>
+        </div>
+      );
+    }
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-6 px-6 text-center">
         <h2 className="text-2xl font-bold text-white">Profile not loaded</h2>
@@ -270,7 +281,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Owner portal is only for users who own a kitchen — never for platform admin impersonation.
   if (effectiveOwnedTenants.length === 0) {
-    if (userProfile.role === 'superadmin' && !isFounderOwnerEmail(currentUser.email)) {
+    if (userProfile?.role === 'superadmin' && !isFounderOwnerEmail(currentUser.email)) {
       return <Navigate to="/super-admin" replace />;
     }
     if (isFounderOwnerEmail(currentUser.email) && !repairAttempted) {
@@ -281,10 +292,10 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       );
     }
-    if (userProfile.role === 'admin' && !isFounderOwnerEmail(currentUser.email)) {
+    if (userProfile?.role === 'admin' && !isFounderOwnerEmail(currentUser.email)) {
       return <Navigate to="/admin" replace />;
     }
-    if (userProfile.role === 'owner' && !repairAttempted) {
+    if (userProfile?.role === 'owner' && !repairAttempted) {
       return (
         <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-brand-bg dark:bg-dark-bg gap-3">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
@@ -328,6 +339,19 @@ const AppContent: React.FC = () => {
     TelemetryService.initializeGlobalHandlers();
 
     const handleGlobalError = (event: ErrorEvent) => {
+      const message = event.message || '';
+      if (message.includes('INTERNAL ASSERTION FAILED')) {
+        void import('./lib/clearFirebaseProjectCache').then(({ recoverFromFirestoreAssertionFailure }) =>
+          recoverFromFirestoreAssertionFailure().then((recovering) => {
+            if (recovering) {
+              toast('Refreshing session…', { icon: '🔄', duration: 4000 });
+            } else {
+              toast.error('Session sync error — please refresh the page once.', { duration: 12000 });
+            }
+          }),
+        );
+        return;
+      }
       // Handle chunk load errors silently by notifying the user to refresh, instead of a sudden crash reload
       if (
         event.message?.includes('Failed to fetch dynamically imported module') ||
@@ -345,9 +369,27 @@ const AppContent: React.FC = () => {
       }
     };
 
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const message =
+        event.reason instanceof Error ? event.reason.message : String(event.reason ?? '');
+      if (message.includes('INTERNAL ASSERTION FAILED')) {
+        void import('./lib/clearFirebaseProjectCache').then(({ recoverFromFirestoreAssertionFailure }) =>
+          recoverFromFirestoreAssertionFailure().then((recovering) => {
+            if (recovering) {
+              toast('Refreshing session…', { icon: '🔄', duration: 4000 });
+            } else {
+              toast.error('Session sync error — please refresh the page once.', { duration: 12000 });
+            }
+          }),
+        );
+      }
+    };
+
     window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
     return () => {
       window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
 

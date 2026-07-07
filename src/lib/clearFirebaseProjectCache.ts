@@ -22,6 +22,67 @@ function isFirebaseIndexedDb(name: string): boolean {
   );
 }
 
+/** Drop Firestore persistence databases — stale IndexedDB after deploy causes INTERNAL ASSERTION FAILED. */
+export async function deleteFirebaseIndexedDb(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+
+  try {
+    if (typeof indexedDB.databases !== 'function') return;
+
+    const dbs = await indexedDB.databases();
+    await Promise.all(
+      dbs
+        .map((db) => db.name)
+        .filter((name): name is string => !!name && isFirebaseIndexedDb(name))
+        .map(
+          (name) =>
+            new Promise<void>((resolve) => {
+              const req = indexedDB.deleteDatabase(name);
+              req.onsuccess = () => resolve();
+              req.onerror = () => resolve();
+              req.onblocked = () => resolve();
+            }),
+        ),
+    );
+  } catch (err) {
+    console.warn('[Firebase] IndexedDB cleanup failed:', err);
+  }
+}
+
+export function resetFirestoreClientSingleton(): void {
+  if (typeof window !== 'undefined') {
+    delete window.__bhojanos_firestore_db__;
+  }
+}
+
+const ASSERTION_RECOVERY_KEY = 'bh_firestore_assertion_recovery';
+
+export function isFirestoreAssertionError(message: string): boolean {
+  return message.includes('INTERNAL ASSERTION FAILED');
+}
+
+/**
+ * One-shot recovery when Firestore client enters a broken persistence state.
+ * Clears IndexedDB + SW caches, then reloads once per session.
+ */
+export async function recoverFromFirestoreAssertionFailure(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  if (sessionStorage.getItem(ASSERTION_RECOVERY_KEY) === 'done') return false;
+
+  sessionStorage.setItem(ASSERTION_RECOVERY_KEY, 'done');
+
+  const { SelfHealingUtils } = await import('../core/reliability/SelfHealingUtils');
+  if (!SelfHealingUtils.canAttemptRecovery()) return false;
+
+  console.warn('[Firebase] Recovering from Firestore internal assertion — clearing client caches.');
+  await deleteFirebaseIndexedDb();
+  resetFirestoreClientSingleton();
+  await SelfHealingUtils.unregisterServiceWorkers();
+  await SelfHealingUtils.purgeCaches();
+  window.location.reload();
+  return true;
+}
+
 /**
  * One-time clear when Firebase project changes (bhojanos2 → bhojanos-prod).
  * Prevents Firestore INTERNAL ASSERTION failures from mismatched IndexedDB persistence.
@@ -47,27 +108,7 @@ export async function clearFirebaseProjectCacheIfChanged(): Promise<void> {
 
   console.warn(`[Firebase] Project changed ${previous} → ${projectId}. Clearing stale client caches.`);
 
-  try {
-    if (typeof indexedDB.databases === 'function') {
-      const dbs = await indexedDB.databases();
-      await Promise.all(
-        dbs
-          .map((db) => db.name)
-          .filter((name): name is string => !!name && isFirebaseIndexedDb(name))
-          .map(
-            (name) =>
-              new Promise<void>((resolve) => {
-                const req = indexedDB.deleteDatabase(name);
-                req.onsuccess = () => resolve();
-                req.onerror = () => resolve();
-                req.onblocked = () => resolve();
-              }),
-          ),
-      );
-    }
-  } catch (err) {
-    console.warn('[Firebase] IndexedDB cleanup failed:', err);
-  }
+  await deleteFirebaseIndexedDb();
 
   localStorage.setItem(storageKey, projectId);
   sessionStorage.setItem('bh_firebase_cache_clear_done', projectId);

@@ -63,7 +63,12 @@ class SelfHealingImpl {
     }
 
     TelemetryService.logWarn(`Attempting hard recovery due to: ${reason}`, { context: 'SelfHealing' });
-    
+
+    const { deleteFirebaseIndexedDb, resetFirestoreClientSingleton } = await import(
+      '../../lib/clearFirebaseProjectCache'
+    );
+    await deleteFirebaseIndexedDb();
+    resetFirestoreClientSingleton();
     await this.unregisterServiceWorkers();
     await this.purgeCaches();
     
