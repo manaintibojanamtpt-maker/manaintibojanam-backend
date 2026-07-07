@@ -21,6 +21,9 @@ export interface MenuItem {
   rating?: number;
   isVegetarian?: boolean;
   addons?: Addon[];
+  /** Half/full and portion pricing — projected to OrderBhojan menu DTO. */
+  variants?: import('./domain/storefront/menu-item-projection').StorefrontVariantSnapshot[];
+  addonGroups?: import('./domain/storefront/menu-item-projection').StorefrontAddonGroupSnapshot[];
   isUpsell?: boolean;
   upsellPriority?: number;
   pairWith?: string[];
@@ -583,10 +586,84 @@ export interface Tenant {
 // Phase 6D: Recipes & Forecasting Types
 // ==========================================
 
+export interface RawIngredient {
+  id: string;
+  tenantId?: string;
+  name: string;
+  category: string;
+  unit: string;
+  currentStock: number;
+  reorderLevel: number;
+  costPerUnit: number;
+  supplier: string;
+  brand: string;
+  gstPercent: number;
+  shelfLifeDays: number;
+  storageType: string;
+  barcode?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
 export interface RecipeIngredient {
-  ingredient: string; // e.g., "Rice", "Chicken"
+  ingredientId?: string;
+  ingredient?: string;
   quantity: number;
-  unit: string; // e.g., "grams", "kg", "pieces", "L"
+  unit: string;
+}
+
+export interface RecipeCostResult {
+  ingredientCost: number;
+  labourCost: number;
+  packagingCost: number;
+  totalCost: number;
+  sellingPrice: number;
+  profit: number;
+  marginPercent: number;
+  lines: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+    unitCost: number;
+    lineCost: number;
+  }>;
+}
+
+export interface RecipeIntelligenceSummary {
+  recipeCoveragePercent: number;
+  totalIngredients: number;
+  averageRecipeCost: number;
+  mostExpensiveCost: number;
+  highestMarginPercent: number;
+  lowestMarginPercent: number;
+  configuredCount: number;
+  menuCount: number;
+}
+
+export interface IngredientForecastLine {
+  ingredientId: string;
+  name: string;
+  unit: string;
+  currentStock: number;
+  forecastNeed: number;
+  expectedBalance: number;
+  shortage: number;
+  recommendedPurchase: number;
+}
+
+export interface IngredientForecast {
+  forecastDate: string;
+  lines: IngredientForecastLine[];
+  alerts: Array<{ severity: 'low' | 'critical'; message: string; ingredientId: string }>;
+  purchaseRecommendations: Array<{
+    ingredientId: string;
+    name: string;
+    supplier: string;
+    quantity: number;
+    unit: string;
+    estimatedCost: number;
+    daysRemaining: number;
+  }>;
 }
 
 export interface Recipe {

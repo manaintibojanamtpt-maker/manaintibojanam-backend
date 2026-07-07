@@ -1,0 +1,377 @@
+import type { Firestore, FieldValue } from 'firebase-admin/firestore';
+import { randomUUID } from 'crypto';
+
+export interface MarketplaceQuoteLine {
+  itemId: string;
+  quantity: number;
+  unitPrice?: number;
+  name?: string;
+}
+
+export interface MarketplaceQuoteRequest {
+  restaurantId: string;
+  contextToken?: string;
+  orderType: 'delivery' | 'pickup';
+  lines: MarketplaceQuoteLine[];
+  deliveryAddress?: { lat?: number; lng?: number; distanceKm?: number };
+  couponCode?: string;
+}
+
+export interface BillQuote {
+  subtotal: number;
+  gstAmount: number;
+  gstPercent: number;
+  packagingFee: number;
+  deliveryFee: number;
+  deliveryPending: boolean;
+  discountAmount: number;
+  grandTotal: number;
+  taxLabel: string;
+  lineItems: { label: string; amount: number }[];
+}
+
+type TenantRaw = Record<string, unknown>;
+
+function readPackagingFee(tenant: TenantRaw): number {
+  const pricing = (tenant.pricingConfig ?? {}) as Record<string, unknown>;
+  return Number(pricing.packingFee ?? pricing.packagingFee ?? 0);
+}
+
+function readGstPercent(tenant: TenantRaw): number {
+  const pricing = (tenant.pricingConfig ?? {}) as Record<string, unknown>;
+  return Number(pricing.gstPercent ?? 0);
+}
+
+function isDeliveryFeesConfigured(tenant: TenantRaw): boolean {
+  const delivery = (tenant.deliveryConfig ?? {}) as Record<string, unknown>;
+  return delivery.feesConfigured === true || Number(delivery.baseFee ?? 0) > 0;
+}
+
+function resolveDeliveryFee(
+  tenant: TenantRaw,
+  orderType: 'delivery' | 'pickup',
+  deliveryAddress?: { lat?: number; lng?: number; distanceKm?: number },
+): { fee: number; pending: boolean } {
+  if (orderType === 'pickup') return { fee: 0, pending: false };
+
+  const delivery = (tenant.deliveryConfig ?? {}) as Record<string, unknown>;
+  const kitchen = (tenant.location ?? {}) as { lat?: number; lng?: number };
+
+  const hasCoords =
+    typeof deliveryAddress?.lat === 'number' &&
+    typeof deliveryAddress?.lng === 'number' &&
+    Number.isFinite(deliveryAddress.lat) &&
+    Number.isFinite(deliveryAddress.lng) &&
+    !(deliveryAddress.lat === 0 && deliveryAddress.lng === 0);
+
+  if (!hasCoords) {
+    return { fee: 0, pending: true };
+  }
+
+  if (!isDeliveryFeesConfigured(tenant)) {
+    return { fee: 0, pending: false };
+  }
+
+  const baseFee = Number(delivery.baseFee ?? 0);
+  const freeRadius = Number(delivery.freeRadius ?? 0);
+  const perKmCharge = Number(delivery.perKmCharge ?? 0);
+  const paidRadius = Number(delivery.paidRadius ?? delivery.maxRadius ?? 0);
+
+  let distanceKm = Number(deliveryAddress?.distanceKm ?? 0);
+  if ((!Number.isFinite(distanceKm) || distanceKm <= 0) && kitchen.lat && kitchen.lng) {
+    distanceKm = haversineKm(kitchen.lat, kitchen.lng, deliveryAddress!.lat!, deliveryAddress!.lng!);
+  }
+
+  if (paidRadius > 0 && distanceKm > paidRadius) {
+    return { fee: 0, pending: false };
+  }
+
+  if (distanceKm <= freeRadius) {
+    return { fee: 0, pending: false };
+  }
+
+  const extraKm = Math.max(0, distanceKm - freeRadius);
+  return { fee: Math.round(baseFee + extraKm * perKmCharge), pending: false };
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatTaxLabel(gstPercent: number, packagingFee: number): string {
+  if (gstPercent > 0 && packagingFee > 0) return `GST (${gstPercent}%) + Packaging`;
+  if (gstPercent > 0) return `GST (${gstPercent}%)`;
+  if (packagingFee > 0) return 'Packaging';
+  return 'Taxes and Charges';
+}
+
+async function loadTenantByRestaurantId(db: Firestore, restaurantId: string) {
+  const direct = await db.collection('tenants').doc(restaurantId).get();
+  if (direct.exists) return { id: direct.id, raw: direct.data() as TenantRaw };
+
+  const query = await db.collection('tenants').where('slug', '==', restaurantId).limit(1).get();
+  if (query.empty) return null;
+  const doc = query.docs[0];
+  return { id: doc.id, raw: doc.data() as TenantRaw };
+}
+
+async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<Map<string, { price: number; name: string }>> {
+  const snapshot = await db.collection('menu').where('tenantId', '==', tenantId).get();
+  const map = new Map<string, { price: number; name: string }>();
+  for (const doc of snapshot.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    if (data.isAvailable === false || data.isActive === false) continue;
+    map.set(doc.id, {
+      price: Number(data.price ?? 0),
+      name: String(data.name ?? 'Item'),
+    });
+  }
+  return map;
+}
+
+export async function buildMarketplaceQuote(
+  db: Firestore,
+  request: MarketplaceQuoteRequest,
+): Promise<{ tenantId: string; quote: BillQuote }> {
+  const restaurantId = request.restaurantId?.trim();
+  if (!restaurantId) throw Object.assign(new Error('restaurantId is required'), { statusCode: 400 });
+  if (!Array.isArray(request.lines) || request.lines.length === 0) {
+    throw Object.assign(new Error('At least one line item is required'), { statusCode: 400 });
+  }
+
+  const loaded = await loadTenantByRestaurantId(db, restaurantId);
+  if (!loaded) throw Object.assign(new Error('Restaurant not found'), { statusCode: 404 });
+
+  const menuPrices = await loadMenuPriceMap(db, loaded.id);
+  let subtotal = 0;
+  const resolvedLines: MarketplaceQuoteLine[] = [];
+
+  for (const line of request.lines) {
+    const itemId = String(line.itemId ?? '').trim();
+    const quantity = Math.max(1, Math.floor(Number(line.quantity ?? 1)));
+    const menuItem = menuPrices.get(itemId);
+    if (!menuItem) {
+      throw Object.assign(new Error(`Menu item not found: ${itemId}`), { statusCode: 400 });
+    }
+    const unitPrice = Number(line.unitPrice ?? menuItem.price);
+    subtotal += unitPrice * quantity;
+    resolvedLines.push({
+      itemId,
+      quantity,
+      unitPrice,
+      name: line.name ?? menuItem.name,
+    });
+  }
+
+  const gstPercent = readGstPercent(loaded.raw);
+  const packagingFee = readPackagingFee(loaded.raw);
+  const gstAmount = Math.round((subtotal * gstPercent) / 100);
+  const { fee: deliveryFee, pending: deliveryPending } = resolveDeliveryFee(
+    loaded.raw,
+    request.orderType ?? 'delivery',
+    request.deliveryAddress,
+  );
+
+  let discountAmount = 0;
+  if (request.couponCode?.trim()) {
+    const couponSnap = await db
+      .collection('coupons')
+      .where('code', '==', request.couponCode.trim().toUpperCase())
+      .where('tenantId', '==', loaded.id)
+      .where('isActive', '==', true)
+      .limit(1)
+      .get();
+    if (!couponSnap.empty) {
+      const coupon = couponSnap.docs[0].data() as Record<string, unknown>;
+      const minOrder = Number(coupon.minOrder ?? 0);
+      if (subtotal >= minOrder) {
+        if (coupon.discountType === 'percentage') {
+          discountAmount = Math.round((subtotal * Number(coupon.discountValue ?? 0)) / 100);
+        } else {
+          discountAmount = Number(coupon.discountValue ?? 0);
+        }
+      }
+    }
+  }
+
+  const grandTotal = Math.max(0, subtotal - discountAmount + gstAmount + packagingFee + deliveryFee);
+  const lineItems: { label: string; amount: number }[] = [{ label: 'Item Total', amount: Math.round(subtotal) }];
+  if (discountAmount > 0) lineItems.push({ label: 'Discount', amount: -discountAmount });
+  if (gstAmount > 0) lineItems.push({ label: `GST (${gstPercent}%)`, amount: gstAmount });
+  if (packagingFee > 0) lineItems.push({ label: 'Packaging', amount: packagingFee });
+  if (deliveryFee > 0) lineItems.push({ label: 'Delivery', amount: deliveryFee });
+
+  return {
+    tenantId: loaded.id,
+    quote: {
+      subtotal: Math.round(subtotal),
+      gstAmount,
+      gstPercent,
+      packagingFee,
+      deliveryFee,
+      deliveryPending,
+      discountAmount,
+      grandTotal,
+      taxLabel: formatTaxLabel(gstPercent, packagingFee),
+      lineItems,
+    },
+  };
+}
+
+export function enabledPaymentMethods(tenant: TenantRaw): string[] {
+  const paymentConfig = (tenant.paymentConfig ?? {}) as Record<string, unknown>;
+  const providers = (paymentConfig.providers ?? {}) as Record<string, { enabled?: boolean }>;
+  const methods: string[] = [];
+  if (providers.cod?.enabled !== false) methods.push('cod');
+  if (providers.razorpay?.enabled === true) methods.push('razorpay');
+  return methods.length > 0 ? methods : ['cod'];
+}
+
+export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
+  paymentMethod: 'cod' | 'razorpay';
+  phone: string;
+  customerName?: string;
+  userId?: string | null;
+  userEmail?: string | null;
+  deliveryAddress?: Record<string, unknown>;
+  instructions?: string;
+}
+
+export type MarketplacePlaceResult =
+  | { kind: 'cod'; orderId: string; tenantId: string; quote: BillQuote }
+  | { kind: 'razorpay'; draftId: string; tenantId: string; quote: BillQuote; amountInPaise: number };
+
+async function buildResolvedOrderItems(
+  db: Firestore,
+  tenantId: string,
+  request: MarketplacePlaceRequest,
+  quote: BillQuote,
+) {
+  const menuPrices = await loadMenuPriceMap(db, tenantId);
+  return request.lines.map((line) => {
+    const itemId = String(line.itemId);
+    const quantity = Math.max(1, Math.floor(Number(line.quantity ?? 1)));
+    const menuItem = menuPrices.get(itemId);
+    const unitPrice = Number(line.unitPrice ?? menuItem?.price ?? 0);
+    const lineSubtotal = unitPrice * quantity;
+    const lineTax = Math.round((lineSubtotal * quote.gstPercent) / 100);
+    return {
+      menuItemId: itemId,
+      name: line.name ?? menuItem?.name ?? 'Item',
+      unitPrice,
+      quantity,
+      lineSubtotal,
+      discount: 0,
+      discountApplied: false,
+      lineTax,
+      lineTotal: lineSubtotal + lineTax,
+    };
+  });
+}
+
+function buildOrderPayload(
+  tenantId: string,
+  request: MarketplacePlaceRequest,
+  quote: BillQuote,
+  orderItems: Awaited<ReturnType<typeof buildResolvedOrderItems>>,
+  paymentMethod: 'cod' | 'razorpay',
+) {
+  const orderNumber = Math.floor(100000 + Math.random() * 900000);
+  return {
+    tenantId,
+    orderNumber,
+    userId: request.userId ?? null,
+    customerName: request.customerName ?? null,
+    userEmail: request.userEmail ?? null,
+    phone: request.phone.trim(),
+    address: request.deliveryAddress ?? null,
+    deliveryAddress: request.deliveryAddress ?? null,
+    items: orderItems,
+    subtotal: quote.subtotal,
+    discountAmount: quote.discountAmount,
+    gst: quote.gstPercent,
+    gstAmount: quote.gstAmount,
+    packingFee: quote.packagingFee,
+    deliveryFee: quote.deliveryFee,
+    totalAmount: quote.grandTotal,
+    total: quote.grandTotal,
+    status: paymentMethod === 'cod' ? 'PLACED' : 'PENDING_PAYMENT',
+    paymentMethod,
+    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
+    isCOD: paymentMethod === 'cod',
+    instructions: request.instructions ?? null,
+    deliveryTimeSlot: 'ASAP',
+    eta: 30 + Math.floor(Math.random() * 15),
+    source: 'marketplace_checkout_v1',
+    contextToken: request.contextToken ?? null,
+  };
+}
+
+export async function placeMarketplaceOrder(
+  db: Firestore,
+  fieldValue: typeof FieldValue,
+  request: MarketplacePlaceRequest,
+): Promise<MarketplacePlaceResult> {
+  if (!request.phone?.trim()) {
+    throw Object.assign(new Error('phone is required'), { statusCode: 400 });
+  }
+
+  const paymentMethod = request.paymentMethod === 'razorpay' ? 'razorpay' : 'cod';
+  const { tenantId, quote } = await buildMarketplaceQuote(db, request);
+  const loaded = await loadTenantByRestaurantId(db, request.restaurantId);
+  if (!loaded) throw Object.assign(new Error('Restaurant not found'), { statusCode: 404 });
+
+  const orderItems = await buildResolvedOrderItems(db, tenantId, request, quote);
+  const orderPayload = buildOrderPayload(tenantId, request, quote, orderItems, paymentMethod);
+
+  if (paymentMethod === 'razorpay') {
+    const draftRef = db.collection('order_drafts').doc();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await draftRef.set({
+      id: draftRef.id,
+      tenantId,
+      orderPayload,
+      subscriptionPayload: null,
+      status: 'pending_payment',
+      source: 'marketplace_checkout_v1',
+      createdAt: fieldValue.serverTimestamp(),
+      expiresAt: expiresAt.toISOString(),
+    });
+
+    return {
+      kind: 'razorpay',
+      draftId: draftRef.id,
+      tenantId,
+      quote,
+      amountInPaise: Math.round(quote.grandTotal * 100),
+    };
+  }
+
+  const ref = await db.collection('orders').add({
+    ...orderPayload,
+    createdAt: fieldValue.serverTimestamp(),
+    updatedAt: fieldValue.serverTimestamp(),
+  });
+
+  const batch = db.batch();
+  for (const item of orderItems) {
+    if (item.menuItemId) {
+      batch.update(db.collection('menu').doc(item.menuItemId), {
+        itemOrderCount: fieldValue.increment(item.quantity),
+      });
+    }
+  }
+  await batch.commit().catch(() => undefined);
+
+  return { kind: 'cod', orderId: ref.id, tenantId, quote };
+}
+
+export function createCheckoutCorrelationId(): string {
+  return randomUUID();
+}

@@ -3,11 +3,20 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { getDb } from '../../lib/firebase-db';
-import { MenuItem } from '../../types';
+import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
+import type { MenuItem } from '../../types';
+import type {
+  StorefrontAddonGroupSnapshot,
+  StorefrontVariantSnapshot,
+} from '../../domain/storefront/menu-item-projection';
+import {
+  countMenuOptions,
+  normalizeAddonGroupsForSave,
+  normalizeVariantsForSave,
+} from '../../lib/menuItemOptions';
+import { MenuItemOptionsEditor } from '../../components/owner/MenuItemOptionsEditor';
 import { addMenuItem, updateMenuItem, deleteMenuItem } from '../../services/api';
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, Loader2, ClipboardList } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, Loader2, ClipboardList, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
 
@@ -90,39 +99,31 @@ const OwnerMenu = () => {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [variants, setVariants] = useState<StorefrontVariantSnapshot[]>([]);
+  const [addonGroups, setAddonGroups] = useState<StorefrontAddonGroupSnapshot[]>([]);
+
+  const loadMenuItems = async (activeTenantId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetchOwnerMenuItems(activeTenantId);
+      setItems(response.items ?? []);
+    } catch (error) {
+      console.error('Menu load error:', error);
+      toast.error('Failed to load menu. Check your connection and try again.');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading || tenantLoading) return;
-
     if (!tenantId) {
       setItems([]);
       setLoading(false);
       return;
     }
-
-    const q = query(
-      collection(getDb(), 'menu'),
-      where('tenantId', '==', tenantId)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const menuItems = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as MenuItem[];
-        setItems(menuItems);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Menu listener error:', error);
-        toast.error('Failed to load menu. Check your connection and try again.');
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+    void loadMenuItems(tenantId);
   }, [tenantId, authLoading, tenantLoading]);
 
   const handleOpenModal = (item?: MenuItem) => {
@@ -138,6 +139,8 @@ const OwnerMenu = () => {
         image: item.image || '',
         magicEnhance: true
       });
+      setVariants(item.variants ? [...item.variants] : []);
+      setAddonGroups(item.addonGroups ? [...item.addonGroups] : []);
     } else {
       setEditingItem(null);
       setFormData({
@@ -150,6 +153,8 @@ const OwnerMenu = () => {
         image: '',
         magicEnhance: true
       });
+      setVariants([]);
+      setAddonGroups([]);
     }
     setIsModalOpen(true);
   };
@@ -162,6 +167,7 @@ const OwnerMenu = () => {
   const handleToggleAvailability = async (item: MenuItem) => {
     try {
       await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
+      if (tenantId) await loadMenuItems(tenantId);
       toast.success(`${item.name} is now ${!item.isAvailable ? 'Available' : 'Sold Out'}`);
     } catch (err) {
       console.error(err);
@@ -201,15 +207,18 @@ const OwnerMenu = () => {
 
     setSaving(true);
     try {
+      const basePrice = Number(formData.price);
       const itemData = {
         tenantId,
         name: formData.name,
         description: formData.description,
-        price: Number(formData.price),
+        price: basePrice,
         category: formData.category,
         type: formData.type,
         isAvailable: formData.isAvailable,
-        image: formData.image || ''
+        image: formData.image || '',
+        variants: normalizeVariantsForSave(variants, basePrice),
+        addonGroups: normalizeAddonGroupsForSave(addonGroups),
       };
 
       if (editingItem) {
@@ -220,6 +229,7 @@ const OwnerMenu = () => {
         toast.success('Item added successfully');
       }
       handleCloseModal();
+      if (tenantId) await loadMenuItems(tenantId);
     } catch (error) {
       console.error('Save failed:', error);
       const message = error instanceof Error ? error.message : 'Failed to save menu item';
@@ -233,6 +243,7 @@ const OwnerMenu = () => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
         await deleteMenuItem(id);
+        if (tenantId) await loadMenuItems(tenantId);
         toast.success('Item deleted');
       } catch (error) {
         console.error('Delete failed:', error);
@@ -348,6 +359,17 @@ const OwnerMenu = () => {
                               {item.name}
                             </div>
                             <div className="text-xs text-white/40 truncate max-w-[200px]">{item.description}</div>
+                            {(() => {
+                              const counts = countMenuOptions(item.variants ?? [], item.addonGroups ?? []);
+                              if (counts.variantCount === 0 && counts.addonCount === 0) return null;
+                              return (
+                                <div className="text-[10px] text-emerald-400/80 mt-0.5">
+                                  {counts.variantCount > 0 ? `${counts.variantCount} size${counts.variantCount > 1 ? 's' : ''}` : null}
+                                  {counts.variantCount > 0 && counts.addonCount > 0 ? ' · ' : null}
+                                  {counts.addonCount > 0 ? `${counts.addonCount} add-on${counts.addonCount > 1 ? 's' : ''}` : null}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </td>
@@ -367,6 +389,13 @@ const OwnerMenu = () => {
                         </button>
                       </td>
                       <td className="p-4 text-right space-x-2">
+                        <Link
+                          to={`/owner/recipes?menuItemId=${encodeURIComponent(item.id)}`}
+                          className="inline-flex p-2 hover:bg-purple-500/20 rounded-lg text-purple-400/70 hover:text-purple-300 transition-colors"
+                          title="Open Recipe Builder"
+                        >
+                          <BookOpen size={16} />
+                        </Link>
                         <button onClick={() => handleOpenModal(item)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors">
                           <Edit2 size={16} />
                         </button>
@@ -489,6 +518,14 @@ const OwnerMenu = () => {
                   </label>
                 </div>
               </div>
+
+              <MenuItemOptionsEditor
+                basePrice={Number(formData.price) || 0}
+                variants={variants}
+                addonGroups={addonGroups}
+                onVariantsChange={setVariants}
+                onAddonGroupsChange={setAddonGroups}
+              />
 
               <div className="pt-4 border-t border-white/10">
                 <button

@@ -278,10 +278,41 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /discovery_profiles/{tenantId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /marketplace_meta/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /marketplace_sync_events/{eventId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    match /tenant_domain_events/{eventId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    match /geoIndex/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /tenants/{tenantId} {
       allow read: if true;
       allow create: if isAuthenticated() && !isReservedSlug(tenantId) && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug));
-      allow update: if isAuthenticated() && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug)) && (isAdmin() || request.auth.token.email == 'bhojanos26@gmail.com' || request.auth.token.email == 'manaintibojanamtpt@gmail.com' || isUnmodified(['createdAt', 'ownerId']));
+      allow update: if isAuthenticated() && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug)) && (
+        isAdmin() ||
+        request.auth.token.email == 'bhojanos26@gmail.com' ||
+        request.auth.token.email == 'manaintibojanamtpt@gmail.com' ||
+        isTenantOwner(tenantId) ||
+        (isUnmodified(['createdAt', 'ownerId']))
+      );
       
       match /analytics/{docId} {
         allow read: if isAdmin() || isTenantOwner(tenantId);
@@ -293,6 +324,11 @@ service cloud.firestore {
       match /kycPrivate/{slot} {
         allow read: if isAdmin() || isTenantOwner(tenantId);
         allow write: if isAdmin() || isTenantOwner(tenantId);
+      }
+
+      match /ingredients/{ingredientId} {
+        allow read: if isAdmin() || isTenantOwner(tenantId);
+        allow create, update, delete: if isAdmin() || isTenantOwner(tenantId);
       }
     }
 
@@ -313,11 +349,15 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable
     }
 
-    match /customers/{docId} {
-      allow read: if isAdmin() || isTenantOwner(resource.data.tenantId);
-      allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId);
-      allow update: if isAdmin() || (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId));
+    match /customers/{customerId} {
+      allow read: if isAdmin() || isTenantOwner(resource.data.tenantId) || isOwner(customerId);
+      allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId) || isOwner(customerId);
+      allow update: if isAdmin() || (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId)) || isOwner(customerId);
       allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId);
+
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(customerId);
+      }
     }
 
     match /release_notes/{docId} {

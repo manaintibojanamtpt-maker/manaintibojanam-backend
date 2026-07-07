@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 import { createHmac } from "crypto";
 import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
-import { getFirestore, initializeFirestore, FieldValue } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import Razorpay from "razorpay";
@@ -49,6 +49,30 @@ import {
   GuestOrderTokenError,
   signGuestOrderToken,
 } from "./backend-lib/guestOrderToken";
+import { registerMarketplaceRoutes } from "./backend-lib/marketplace/marketplaceRoutes";
+import { registerMarketplaceReferralRoutes } from "./backend-lib/marketplace/marketplaceReferralRoutes.js";
+import { registerOwnerStorefrontRoutes } from "./backend-lib/marketplace/ownerStorefrontRoutes";
+import { registerOwnerCouponsRoutes } from "./backend-lib/marketplace/ownerCouponsRoutes.js";
+import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrdersRoutes.js";
+import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
+import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
+import {
+  registerOwnerRecipesRoutes,
+  maybeDeductInventoryOnOrderStatus,
+} from "./backend-lib/marketplace/ownerRecipesRoutes.js";
+import { registerOwnerIngredientsRoutes } from "./backend-lib/marketplace/ownerIngredientsRoutes.js";
+import { registerOwnerMenuRoutes } from "./backend-lib/marketplace/ownerMenuRoutes.js";
+import { queryMenuForTenant } from "./backend-lib/marketplace/menuTenantQuery.js";
+import { registerOwnerAnalyticsRoutes } from "./backend-lib/marketplace/ownerAnalyticsRoutes.js";
+import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
+import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
+import { registerTenantDomainEventSubscribers } from "./backend-lib/marketplace/registerTenantDomainEvents.js";
+import {
+  FirebaseAdminProvider,
+  resolveFirebaseProjectId,
+  resolveStorageBucket,
+  resolveDatabaseId,
+} from "./backend-lib/firebase/FirebaseAdminProvider";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -314,8 +338,8 @@ validateSecrets();
 
 const DIST_PATH = path.join(process.cwd(), "dist");
 
-// ================= FIREBASE ADMIN SETUP =================
-let firebaseConfig: any = {};
+// ================= FIREBASE ADMIN (FirebaseAdminProvider) =================
+let firebaseConfig: Record<string, unknown> = {};
 try {
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(configPath)) {
@@ -331,19 +355,18 @@ const isFreeTierPlatform = (): boolean => {
   return process.env.NODE_ENV === "production";
 };
 
-const ambientProjectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
-const configProjectId = firebaseConfig.projectId;
-const configStorageBucket =
-  process.env.FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket ||
-  (process.env.NODE_ENV === 'production' ? 'bhojanos-prod.firebasestorage.app' : 'bhojanos2.firebasestorage.app');
-const projectId = ambientProjectId || configProjectId ||
-  (process.env.NODE_ENV === 'production' ? 'bhojanos-prod' : 'bhojanos2');
-const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+let projectId = "";
+let databaseId = resolveDatabaseId();
+let configStorageBucket = "";
+const configProjectId =
+  typeof firebaseConfig.projectId === "string" ? firebaseConfig.projectId : "";
+const ambientProjectId =
+  process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
 const FIRESTORE_READ_TIMEOUT_MS = Number(process.env.FIRESTORE_READ_TIMEOUT_MS || 12000);
 
 /** Browser Firebase SDK config — shared by /api/client-config and /api/health?webClient=1 */
 function getFirebaseWebClientConfig() {
-  const pid = projectId || "bhojanos-prod";
+  const pid = projectId || resolveFirebaseProjectId();
   const webApiKey =
     process.env.FIREBASE_WEB_API_KEY ||
     process.env.VITE_FIREBASE_API_KEY ||
@@ -365,7 +388,7 @@ function getFirebaseWebClientConfig() {
       projectId: pid,
       storageBucket:
         process.env.FIREBASE_STORAGE_BUCKET ||
-        `${pid}.firebasestorage.app`,
+        resolveStorageBucket(pid),
       messagingSenderId,
       appId: webAppId,
     },
@@ -373,118 +396,22 @@ function getFirebaseWebClientConfig() {
   };
 }
 
-console.log("--- Firebase Admin Initialization ---");
-console.log(`Ambient Project ID: ${ambientProjectId || 'not set'}`);
-console.log(`Config Project ID: ${configProjectId || 'not set'}`);
-console.log(`Using Project ID: ${projectId || 'unknown'}`);
-console.log(`Using Database ID: ${databaseId}`);
-console.log(`Environment: ${process.env.NODE_ENV}`);
-console.log(`Platform tier: ${isFreeTierPlatform() ? "free (Spark-safe)" : "standard"}`);
-console.log("-------------------------------------");
+let appAdmin: ReturnType<typeof getApp> | undefined;
+let _db: Firestore | undefined;
 
-let appAdmin: any;
-try {
-  if (getApps().length === 0) {
-    const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
-    
-    if (serviceAccountVar) {
-      try {
-        const serviceAccount = JSON.parse(serviceAccountVar);
-        appAdmin = initializeApp({
-          credential: cert(serviceAccount),
-          projectId: projectId,
-          storageBucket: configStorageBucket,
-        });
-        console.log(`✅ [Firebase Admin] Initialized with Service Account (Project: ${projectId})`);
-      } catch (parseErr) {
-        console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:", parseErr);
-        // Fallback
-        appAdmin = initializeApp({
-          projectId,
-          storageBucket: configStorageBucket,
-        });
-      }
-    } else {
-      // Standard initialization for GCP/Firebase environments
-      appAdmin = initializeApp({
-        projectId,
-        storageBucket: configStorageBucket,
-      });
-      console.log(`✅ [Firebase Admin] Initialized [DEFAULT] app (Project: ${appAdmin.options.projectId || 'ambient'}).`);
-    }
-  } else {
-    appAdmin = getApp();
-  }
-} catch (err: any) {
-  console.error(`❌ [Firebase Admin] Primary initialization failed: ${err.message}`);
-  // 2. Fallback to explicit named app initialization
-  try {
-    const appOptions = { projectId: projectId || configProjectId, storageBucket: configStorageBucket };
-    const appName = `app-fallback-${Date.now()}`;
-    appAdmin = initializeApp(appOptions, appName);
-    console.log(`✅ [Firebase Admin] Initialized fallback app '${appName}' (Project: ${appAdmin.options.projectId}).`);
-  } catch (innerErr: any) {
-    console.error(`❌ [Firebase Admin] Fallback initialization failed: ${innerErr.message}`);
-  }
-}
-
-// Use a function to get the current working database instance
-let _db: any;
-const initFirestoreInstance = (app: any, dbId: string) => {
-  try {
-    const dbInstance = (dbId && dbId !== "(default)")
-      ? initializeFirestore(app, { preferRest: true }, dbId)
-      : initializeFirestore(app, { preferRest: true });
-    console.log(`✅ [Firestore Admin] Initialized instance for database: ${dbId || '(default)'}`);
-    return dbInstance;
-  } catch (err: any) {
-    console.warn(`⚠️ [Firestore Admin] Failed to init with database '${dbId}': ${err.message}`);
-    return getFirestore(app);
-  }
-};
-
-if (appAdmin) {
-  _db = initFirestoreInstance(appAdmin, databaseId);
-}
-
-// Proxy to ensure all routes use the latest _db instance
-export const db = new Proxy({} as any, {
+export const db = new Proxy({} as Firestore, {
   get: (_, prop) => {
     if (!_db) {
-      console.warn("⚠️ [Firestore Proxy] _db is not initialized yet. Attempting emergency init.");
-      try {
-        const app = getApps().length > 0 ? getApp() : initializeApp();
-        // Try named database first if available
-        if (databaseId && databaseId !== "(default)") {
-          try {
-            _db = initializeFirestore(app, { preferRest: true }, databaseId);
-            console.log(`✅ [Firestore Proxy] Emergency init successful with named database: ${databaseId}`);
-          } catch (e) {
-            _db = getFirestore(app);
-            console.log(`⚠️ [Firestore Proxy] Emergency init fallback to default database.`);
-          }
-        } else {
-          _db = getFirestore(app);
-          console.log(`✅ [Firestore Proxy] Emergency init successful with default database.`);
-        }
-      } catch (err: any) {
-        console.error(`🚨 [Firestore Proxy] Emergency init failed: ${err.message}`);
-        return (...args: any[]) => {
-          throw new Error(`Firestore not initialized. Cannot call ${String(prop)}: ${err.message}`);
-        };
-      }
+      throw new Error(
+        "Firestore not initialized. FirebaseAdminProvider.initialize() must complete before database access.",
+      );
     }
-    
-    if (prop === "databaseId") return (_db as any).databaseId || "(default)";
-    
     const value = (_db as any)[prop];
-    if (typeof value === 'function') {
-      return (...args: any[]) => {
-        return value.apply(_db, args);
-      };
+    if (typeof value === "function") {
+      return (...args: unknown[]) => value.apply(_db, args);
     }
     return value;
-  }
+  },
 });
 
 let connectionLogs: string[] = [];
@@ -542,106 +469,22 @@ const firestoreCountSince = async (collectionName: string, field: string, sinceI
   }
 };
 
-// Test connection and handle fallback
+// Test connection using the already-initialized FirebaseAdminProvider instance only.
 const verifyConnection = async () => {
-  const testConnection = async (dbInstance: any, label: string) => {
-    if (!dbInstance) return false;
-    const dbId = (dbInstance as any).databaseId || "(default)";
-    const projId = (dbInstance as any).projectId || "unknown";
-    try {
-      // Use a simple get to test permissions
-      await dbInstance.collection("_admin_test_").doc("connection").get();
-      logConnection(`✅ [Firestore Admin] Connection SUCCESS: ${label} [Project: ${projId}, DB: ${dbId}]`);
-      return true;
-    } catch (err: any) {
-      logConnection(`ℹ️ [Firestore Admin] Connection FAILED: ${label} [Project: ${projId}, DB: ${dbId}] - ${err.message} (Code: ${err.code})`);
-      return false;
-    }
-  };
-
-  logConnection(`[Firestore Admin] Starting exhaustive connection verification...`);
-  
-  // 2. Try combinations with Ambient Project ID
-  if (ambientProjectId) {
-    console.log(`[Firestore Admin] Testing combinations with Ambient Project ID: ${ambientProjectId}`);
-    try {
-      const app = initializeApp({ projectId: ambientProjectId }, `verify-ambient-${Date.now()}`);
-      
-      // Try named database
-      if (databaseId && databaseId !== "(default)") {
-        const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
-        if (await testConnection(dbNamed, "Ambient Proj + Named DB")) {
-          _db = dbNamed; appAdmin = app; return;
-        }
-      }
-      
-      // Try default database
-      const dbDefault = getFirestore(app);
-      if (await testConnection(dbDefault, "Ambient Proj + Default DB")) {
-        _db = dbDefault; appAdmin = app; return;
-      }
-    } catch (e) {}
+  if (!_db) {
+    logConnection('❌ [Firestore Admin] verifyConnection: Firestore not initialized');
+    return;
   }
-
-  // 3. Try combinations with Config Project ID
-  if (configProjectId && configProjectId !== ambientProjectId) {
-    console.log(`[Firestore Admin] Testing combinations with Config Project ID: ${configProjectId}`);
-    try {
-      const app = initializeApp({ projectId: configProjectId }, `verify-config-${Date.now()}`);
-      
-      // Try named database
-      if (databaseId && databaseId !== "(default)") {
-        const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
-        if (await testConnection(dbNamed, "Config Proj + Named DB")) {
-          _db = dbNamed; appAdmin = app; return;
-        }
-      }
-      
-      // Try default database
-      const dbDefault = getFirestore(app);
-      if (await testConnection(dbDefault, "Config Proj + Default DB")) {
-        _db = dbDefault; appAdmin = app; return;
-      }
-    } catch (e) {}
-  }
-
-  // 4. Try completely ambient (no project ID)
-  console.log(`[Firestore Admin] Testing completely ambient initialization...`);
+  const dbId = _db.databaseId || '(default)';
+  const projId = appAdmin?.options?.projectId || projectId || 'unknown';
   try {
-    const app = initializeApp({}, `verify-pure-ambient-${Date.now()}`);
-    
-    if (databaseId && databaseId !== "(default)") {
-      const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
-      if (await testConnection(dbNamed, "Pure Ambient + Named DB")) {
-        _db = dbNamed; appAdmin = app; return;
-      }
-    }
-    
-    const dbDefault = getFirestore(app);
-    if (await testConnection(dbDefault, "Pure Ambient + Default DB")) {
-      _db = dbDefault; appAdmin = app; return;
-    }
-  } catch (e) {}
-
-  // 5. Last resort: Try any existing app
-  const apps = getApps();
-  logConnection(`[Firestore Admin] Found ${apps.length} existing apps.`);
-  for (const app of apps) {
-    const appProjId = app.options.projectId || "unknown";
-    logConnection(`[Firestore Admin] Testing existing app: ${app.name} [Project: ${appProjId}]`);
-    const dbDefault = getFirestore(app);
-    if (await testConnection(dbDefault, `Existing App (${app.name}) + Default DB`)) {
-      _db = dbDefault; appAdmin = app; return;
-    }
-    if (databaseId && databaseId !== "(default)") {
-      const dbNamed = initializeFirestore(app, { preferRest: true }, databaseId);
-      if (await testConnection(dbNamed, `Existing App (${app.name}) + Named DB`)) {
-        _db = dbNamed; appAdmin = app; return;
-      }
-    }
+    await _db.collection('_admin_test_').doc('connection').get();
+    logConnection(`✅ [Firestore Admin] Connection SUCCESS [Project: ${projId}, DB: ${dbId}]`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = (err as { code?: number })?.code;
+    logConnection(`ℹ️ [Firestore Admin] Connection check failed [Project: ${projId}, DB: ${dbId}] - ${message} (Code: ${code})`);
   }
-
-  console.error("🚨 [Firestore Admin] ALL connection fallbacks failed. Permission errors are likely.");
 };
 
 // We will call this only inside startServer to avoid redundant calls
@@ -676,11 +519,25 @@ app.set('trust proxy', 1);
 
 // ================= MIDDLEWARE =================
 // Rate Limiting
+const isProductionApi = process.env.NODE_ENV === 'production';
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  max: isProductionApi ? 100 : 50_000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const url = req.originalUrl || req.url || '';
+    // Local dev: OrderBhojan polls revision + discovery/menu every few seconds.
+    if (!isProductionApi && url.includes('/marketplace')) {
+      return true;
+    }
+    return (
+      url.includes('/marketplace/sync/revision') ||
+      url.includes('/marketplace/health') ||
+      url === '/api/health'
+    );
+  },
 });
 app.use("/api/", globalLimiter);
 
@@ -948,6 +805,18 @@ const applyOrderStatusUpdate = async (
   }
 
   await db.collection('orders').doc(orderId).update(updatePayload);
+
+  try {
+    await maybeDeductInventoryOnOrderStatus(db, FieldValue, orderId, orderData, status);
+  } catch (inventoryErr) {
+    logger.warn({
+      message: 'Inventory deduction skipped',
+      orderId,
+      tenantId: orderData.tenantId,
+      err: inventoryErr instanceof Error ? inventoryErr.message : String(inventoryErr),
+    });
+  }
+
   return { ...orderData, ...updatePayload, id: orderId };
 };
 
@@ -2786,7 +2655,23 @@ async function syncOwnerTenantsForUser(
   }
 
   if (existingOwned.length > 0) {
-    return existingOwned.filter(Boolean);
+    const verified: string[] = [];
+    for (const tid of existingOwned) {
+      if (!tid || tid === 'mana-inti') continue;
+      const tenantSnap = await db.collection('tenants').doc(tid).get();
+      if (tenantSnap.exists && tenantSnap.data()?.ownerId === userId) {
+        verified.push(tid);
+      }
+    }
+    if (verified.length > 0) {
+      if (verified.length !== existingOwned.length) {
+        await userRef.set(
+          { ownedTenantIds: verified, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true },
+        );
+      }
+      return verified;
+    }
   }
 
   const byOwnerSnap = await db.collection('tenants').where('ownerId', '==', userId).get();
@@ -2842,7 +2727,28 @@ app.post('/api/owner/sync-tenants', verifyFirebaseToken, async (req: any, res: a
   }
 });
 
-const MAX_MENU_IMAGE_CHARS = 900_000;
+app.get('/api/owner/profile', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const ownedTenantIds = await syncOwnerTenantsForUser(userId, req.user.email);
+    const userDoc = await db.collection('users').doc(userId).get();
+    const data = userDoc.exists ? userDoc.data() || {} : {};
+    res.json({
+      success: true,
+      profile: {
+        userId,
+        email: req.user.email || data.email || '',
+        name: data.name || req.user.name || '',
+        phone: data.phone || '',
+        role: data.role || (ownedTenantIds.length > 0 ? 'owner' : 'user'),
+        ownedTenantIds,
+      },
+    });
+  } catch (err: any) {
+    logger.error({ message: 'Owner profile fetch failed', err: err.message, uid: req.user?.uid });
+    res.status(500).json({ success: false, error: err.message || 'Failed to load owner profile' });
+  }
+});
 
 async function assertOwnerTenantAccess(
   userId: string,
@@ -2915,37 +2821,32 @@ async function assertOwnerTenantAccess(
   throw err;
 }
 
-function normalizeMenuItemPayload(body: Record<string, unknown>, tenantId: string) {
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const category = typeof body.category === 'string' ? body.category.trim() : '';
-  const price = Number(body.price);
-  const type = body.type === 'non-veg' ? 'non-veg' : 'veg';
-  const description = typeof body.description === 'string' ? body.description.trim() : '';
-  const image = typeof body.image === 'string' ? body.image : '';
-  const isAvailable = body.isAvailable !== false;
+app.get('/api/owner/menu/items', verifyFirebaseToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.uid;
+    const tenantId = typeof req.query?.tenantId === 'string' ? req.query.tenantId.trim() : '';
+    const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
+    const tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+    const slug = tenantDoc.exists ? String((tenantDoc.data() as { slug?: string })?.slug ?? '') : '';
+    const tenantKeys = slug && slug !== resolvedTenantId ? [resolvedTenantId, slug] : [resolvedTenantId];
 
-  if (!name || !category || !Number.isFinite(price) || price < 0) {
-    const err: any = new Error('Name, category, and a valid price are required');
-    err.statusCode = 400;
-    throw err;
+    const seen = new Set<string>();
+    const items: Record<string, unknown>[] = [];
+    for (const key of tenantKeys) {
+      const snapshot = await db.collection('menu').where('tenantId', '==', key).get();
+      for (const doc of snapshot.docs) {
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+        items.push({ id: doc.id, ...doc.data() });
+      }
+    }
+    res.json({ success: true, tenantId: resolvedTenantId, items });
+  } catch (err: any) {
+    const status = err.statusCode || 500;
+    logger.error({ message: 'Owner menu list failed', err: err.message, uid: req.user?.uid });
+    res.status(status).json({ success: false, error: err.message || 'Failed to load menu items' });
   }
-  if (image.length > MAX_MENU_IMAGE_CHARS) {
-    const err: any = new Error('Image is too large. Use a smaller photo (under 200KB).');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  return {
-    tenantId,
-    name,
-    category,
-    price,
-    type,
-    description,
-    image,
-    isAvailable,
-  };
-}
+});
 
 app.post('/api/owner/menu/items', verifyFirebaseToken, async (req: any, res: any) => {
   try {
@@ -2957,6 +2858,11 @@ app.post('/api/owner/menu/items', verifyFirebaseToken, async (req: any, res: any
       ...item,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+    });
+    await publishTenantDomainEvent(db, FieldValue, {
+      tenantId: resolvedTenantId,
+      type: 'MenuUpdated',
+      source: 'owner_menu_create',
     });
     res.json({ success: true, id: ref.id });
   } catch (err: any) {
@@ -2983,6 +2889,11 @@ app.put('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, res: 
       { ...item, updatedAt: FieldValue.serverTimestamp() },
       { merge: true },
     );
+    await publishTenantDomainEvent(db, FieldValue, {
+      tenantId: resolvedTenantId,
+      type: 'MenuUpdated',
+      source: 'owner_menu_update',
+    });
     res.json({ success: true, id: itemId });
   } catch (err: any) {
     const status = err.statusCode || 500;
@@ -3002,6 +2913,11 @@ app.delete('/api/owner/menu/items/:id', verifyFirebaseToken, async (req: any, re
     const tenantId = existing.data()?.tenantId;
     await assertOwnerTenantAccess(userId, tenantId, req.user.email);
     await db.collection('menu').doc(itemId).delete();
+    await publishTenantDomainEvent(db, FieldValue, {
+      tenantId,
+      type: 'MenuUpdated',
+      source: 'owner_menu_delete',
+    });
     res.json({ success: true, id: itemId });
   } catch (err: any) {
     const status = err.statusCode || 500;
@@ -3027,10 +2943,9 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
     const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
     const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
 
-    const existing = await db.collection('menu').where('tenantId', '==', resolvedTenantId).get();
-    if (existing.size >= 3) {
-      return res.status(400).json({ success: false, error: 'Menu already has items. Edit in Menu Builder or delete items first.' });
-    }
+    const tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+    const tenantSlug = tenantDoc.exists ? String(tenantDoc.data()?.slug || '') : '';
+    const existing = await queryMenuForTenant(db, resolvedTenantId, tenantSlug);
 
     const existingNames = new Set(
       existing.docs.map((d) => (d.data().name || '').toString().trim().toLowerCase()),
@@ -3063,6 +2978,12 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
 
     await batch.commit();
 
+    await publishTenantDomainEvent(db, FieldValue, {
+      tenantId: resolvedTenantId,
+      type: 'MenuUpdated',
+      source: 'owner_menu_seed_template',
+    });
+
     res.json({ success: true, added, tenantId: resolvedTenantId });
   } catch (err: any) {
     const status = err.statusCode || 500;
@@ -3070,6 +2991,22 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
     res.status(status).json({ success: false, error: err.message || 'Failed to import template menu' });
   }
 });
+
+registerMarketplaceRoutes(app, db, { verifyFirebaseToken });
+registerMarketplaceReferralRoutes(app, db, FieldValue, verifyFirebaseToken);
+registerOwnerStorefrontRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerCouponsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess);
+registerOwnerPortalRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue, {
+  sendEmailNotification,
+  getTransporter,
+  getFounderEmail,
+});
+registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerAnalyticsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
@@ -3079,7 +3016,18 @@ app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res
       return res.status(400).json({ success: false, error: 'tenantId is required' });
     }
     const resolvedTenantId = await assertOwnerTenantAccess(userId, tenantId, req.user.email);
-    const updates: Record<string, unknown> = { ...(payload || {}), updatedAt: FieldValue.serverTimestamp() };
+    const rawPayload = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+    const updates: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+
+    for (const [key, value] of Object.entries(rawPayload)) {
+      if (key === 'onboardingStatus' && value && typeof value === 'object' && !Array.isArray(value)) {
+        for (const [statusKey, statusValue] of Object.entries(value as Record<string, unknown>)) {
+          updates[`onboardingStatus.${statusKey}`] = statusValue;
+        }
+        continue;
+      }
+      updates[key] = value;
+    }
 
     if (typeof nextStep === 'number') {
       updates['onboardingStatus.currentStep'] = nextStep;
@@ -4614,80 +4562,6 @@ app.get("/api/owner/kyc/document/:tenantId/:slot", verifyFirebaseToken, async (r
   }
 });
 
-app.get("/api/owner/orders", verifyFirebaseToken, async (req: any, res: any) => {
-  try {
-    const userId = req.user.uid;
-    const userDoc = await db.collection("users").doc(userId).get();
-    
-    if (!userDoc.exists) return res.status(403).json({ error: "User not found" });
-    const userData = userDoc.data();
-    
-    if (!userData?.ownedTenantIds || userData.ownedTenantIds.length === 0) {
-      return res.status(403).json({ error: "Unauthorized. Not a tenant owner." });
-    }
-
-    const tenantId = userData.ownedTenantIds[0]; // For Sprint 1, single tenant
-    
-    const snapshot = await db.collection("orders")
-      .where("tenantId", "==", tenantId)
-      .orderBy("createdAt", "desc")
-      .limit(50)
-      .get();
-      
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json({ success: true, orders });
-  } catch (error: any) {
-    console.error("Owner Orders Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post("/api/owner/feedback", verifyFirebaseToken, async (req: any, res: any) => {
-  try {
-    const userId = req.user.uid;
-    const userDoc = await db.collection("users").doc(userId).get();
-
-    if (!userDoc.exists) return res.status(403).json({ error: "User not found" });
-    const userData = userDoc.data();
-
-    if (!userData?.ownedTenantIds?.length) {
-      return res.status(403).json({ error: "Unauthorized. Not a tenant owner." });
-    }
-
-    const tenantId = userData.ownedTenantIds[0];
-    const { type, description, rating, plan, businessType, merchantHealthSnapshot, ownerName, ownerEmail } = req.body;
-
-    const tenantDoc = await db.collection("tenants").doc(tenantId).get();
-    const tenantName = tenantDoc.exists ? (tenantDoc.data()?.name || tenantId) : tenantId;
-
-    const founderEmail = getFounderEmail();
-    const subject = `[BhojanOS Merchant Feedback] ${type || "general"} — ${tenantName}`;
-    const body = [
-      "Merchant feedback received",
-      "",
-      `Tenant: ${tenantName} (${tenantId})`,
-      `Owner: ${ownerName || userData.name || userId}`,
-      `Owner Email: ${ownerEmail || userData.email || req.user.email || "N/A"}`,
-      `Category: ${type || "general"}`,
-      `Plan: ${plan || "unknown"}`,
-      `Business Type: ${businessType || "unknown"}`,
-      `Merchant Health Score: ${merchantHealthSnapshot ?? "N/A"}`,
-      rating ? `Rating: ${rating}/5` : "",
-      "",
-      "Message:",
-      description || "No additional message provided.",
-    ].filter(Boolean).join("\n");
-
-    await sendEmailNotification(founderEmail, subject, body);
-
-    const transporter = getTransporter();
-    res.json({ success: true, emailSent: Boolean(transporter) });
-  } catch (error: any) {
-    console.error("Owner Feedback Email Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.put("/api/owner/orders/:id/status", verifyFirebaseToken, async (req: any, res: any) => {
   try {
     const orderId = req.params.id;
@@ -4986,6 +4860,21 @@ const startOutboxWorker = () => {
 };
 
 async function startServer() {
+  try {
+    const firebaseProvider = await FirebaseAdminProvider.initialize();
+    _db = firebaseProvider.getFirestore();
+    appAdmin = firebaseProvider.getApp();
+    registerTenantDomainEventSubscribers();
+    const firebaseCtx = firebaseProvider.getContext();
+    projectId = firebaseCtx.projectId;
+    databaseId = firebaseCtx.databaseId;
+    configStorageBucket = firebaseCtx.storageBucket;
+  } catch (error) {
+    console.error("Fatal: Firebase authentication failed. Server will not start.");
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+
   const isBhojanMarketingRequest = (req: express.Request) => {
     const host = (req.hostname || req.headers.host?.toString().split(":")[0] || "").toLowerCase();
     const isBhojanHost =

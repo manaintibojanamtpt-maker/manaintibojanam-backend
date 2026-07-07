@@ -86,6 +86,7 @@ export const useEntitlements = (): Entitlements => {
           ...defaultEntitlements.features,
           marketing: true,
           customerInsights: true,
+          predictiveSupply: true,
           aiBusinessCoach: true,
         }
       };
