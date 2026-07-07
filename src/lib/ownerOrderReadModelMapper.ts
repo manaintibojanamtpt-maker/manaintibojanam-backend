@@ -68,19 +68,29 @@ export const sortOwnerOrdersNewestFirst = (
     return timeB - timeA;
   });
 
-const toSortableTime = (value: unknown): number => {
-  if (value && typeof value === 'object') {
+/** Normalize Firestore Timestamp, ISO string, epoch ms, or seconds object to Date. */
+export const coerceOwnerOrderDate = (value: unknown): Date | null => {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'object') {
     const record = value as { seconds?: number; toDate?: () => Date };
-    if (typeof record.seconds === 'number') {
-      return record.seconds * 1000;
-    }
     if (typeof record.toDate === 'function') {
-      return record.toDate().getTime();
+      const parsed = record.toDate();
+      return parsed instanceof Date && !Number.isNaN(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof record.seconds === 'number') {
+      return new Date(record.seconds * 1000);
     }
   }
   if (typeof value === 'string' || typeof value === 'number') {
-    const parsed = new Date(value).getTime();
-    return Number.isNaN(parsed) ? 0 : parsed;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
-  return 0;
+  return null;
+};
+
+const toSortableTime = (value: unknown): number => {
+  return coerceOwnerOrderDate(value)?.getTime() ?? 0;
 };

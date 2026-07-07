@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { m, AnimatePresence } from 'framer-motion';
-import { getDb } from '../../lib/firebase-db';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { subscribeOwnerOrders, type OwnerOrder } from '../../lib/ownerOrdersReads';
+import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
+import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
+import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { format } from 'date-fns';
 import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,10 +20,9 @@ interface Order extends OwnerOrder {}
 
 const OwnerOrders: React.FC = () => {
   const { userProfile, profileLoading } = useAuth();
-  const { tenantId: contextTenantId, loading: tenantLoading } = useTenant();
+  const { tenantInfo, loading: tenantLoading } = useTenant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [orderLimit, setOrderLimit] = useState(50);
   const [hasMore, setHasMore] = useState(true);
@@ -45,14 +45,14 @@ const OwnerOrders: React.FC = () => {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [fetchingMenu, setFetchingMenu] = useState(false);
 
-  const tenantId = contextTenantId || userProfile?.ownedTenantIds?.[0] || null;
+  const tenantId = useOwnerTenantId();
 
-  const parseTrialDate = (value: any): Date | null => {
-    if (!value) return null;
-    if (typeof value?.toDate === 'function') return value.toDate();
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  const formatOrderTime = (createdAt: unknown) => {
+    const created = coerceOwnerOrderDate(createdAt);
+    return created ? format(created, 'h:mm a') : 'Just now';
   };
+
+  const parseTrialDate = (value: unknown): Date | null => coerceOwnerOrderDate(value);
 
   useEffect(() => {
     if (!tenantId || tenantLoading || profileLoading) return;
@@ -79,15 +79,6 @@ const OwnerOrders: React.FC = () => {
         setLoading(false);
       }
     );
-
-    const fetchTenant = async () => {
-      const db = getDb();
-      const tDoc = await getDoc(doc(db, 'tenants', tenantId));
-      if (tDoc.exists()) {
-        setTenantInfo(tDoc.data());
-      }
-    };
-    void fetchTenant();
 
     return () => unsubscribe();
   }, [tenantId, tenantLoading, profileLoading, orderLimit]);
@@ -170,16 +161,16 @@ const OwnerOrders: React.FC = () => {
   };
 
   const handleOpenStockModal = async () => {
+    if (!tenantId) return;
     setStockModalOpen(true);
     setFetchingMenu(true);
     try {
-      const q = query(collection(getDb(), 'menu'), where('tenantId', '==', tenantId));
-      onSnapshot(q, (snapshot) => {
-        setMenuItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        setFetchingMenu(false);
-      });
+      const response = await fetchOwnerMenuItems(tenantId);
+      setMenuItems(response.items ?? []);
     } catch (e) {
       console.error(e);
+      toast.error('Failed to load menu for stock updates');
+    } finally {
       setFetchingMenu(false);
     }
   };
@@ -291,7 +282,7 @@ const OwnerOrders: React.FC = () => {
                         </span>
                         <span className="text-sm text-gray-400 flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
-                          {order.createdAt ? format(order.createdAt.toDate(), 'h:mm a') : 'Just now'}
+                          {formatOrderTime(order.createdAt)}
                         </span>
                       </div>
                       

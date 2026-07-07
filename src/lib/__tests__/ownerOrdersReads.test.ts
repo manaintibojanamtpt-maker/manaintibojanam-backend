@@ -6,6 +6,7 @@ import type { OrderId, TenantId } from '../../sdk/core/types';
 import { mapOrdersToReadModels } from '../../sdk/orders/mappers/mapOrderToReadModel';
 import {
   apiRecordToOwnerOrder,
+  coerceOwnerOrderDate,
   readModelToOwnerOrder,
   sortOwnerOrdersNewestFirst,
 } from '../ownerOrderReadModelMapper';
@@ -136,5 +137,11 @@ describe('Owner Orders SDK read parity (M1B PR-1)', () => {
     ]);
 
     assert.equal(sorted[0].id, 'b');
+  });
+
+  it('coerceOwnerOrderDate accepts ISO strings from owner API', () => {
+    const parsed = coerceOwnerOrderDate('2026-06-26T11:00:00.000Z');
+    assert.ok(parsed instanceof Date);
+    assert.equal(parsed?.toISOString(), '2026-06-26T11:00:00.000Z');
   });
 });
