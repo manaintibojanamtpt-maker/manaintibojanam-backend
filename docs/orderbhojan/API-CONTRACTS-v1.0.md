@@ -1,6 +1,10 @@
 # OrderBhojan — BhojanOS API Contracts v1.0
 
-**Status:** Draft — pending BhojanOS backend exposure review  
+> **Legacy draft — superseded for path conventions.**  
+> **Canonical API surface:** [MARKETPLACE-API-v1.0.md](./MARKETPLACE-API-v1.0.md) (`/api/marketplace/*`, version via `X-BhojanOS-API-Version` header).  
+> Resolved in [M0-ARB-REVIEW.md](./M0-ARB-REVIEW.md) §4 issue #2 — no `/api/v1/` in marketplace paths.
+
+**Status:** Draft — historical reference only  
 **Consumer:** OrderBhojan frontend only  
 **Principle:** OrderBhojan never implements logic described here — only orchestrates
 
@@ -11,7 +15,7 @@
 | Item | Value |
 |------|-------|
 | Base URL (prod) | `https://manaintibojanam-backend.onrender.com` |
-| API prefix | `/api/v1/marketplace/*` (new surface) + existing legacy paths where frozen |
+| API prefix | `/api/marketplace/*` (Marketplace surface only — no version segment in path) |
 | Auth | `Authorization: Bearer <Firebase ID Token>` |
 | Guest | No Bearer; `X-Guest-Phone`, `X-Guest-Token` on order reads |
 | Correlation | `X-Correlation-Id: <uuid>` |
@@ -19,13 +23,15 @@
 | Error shape | `{ ok: false, error: { code, message, layer, retryable? } }` |
 | Success shape | `{ ok: true, value: T }` or legacy unwrapped (migration noted per endpoint) |
 
+Public DTOs use opaque `restaurantId` / `restaurantSlug` — never `tenantId` or `branchId` (ADR-OB-002). Branch assignment is server-side; clients use `contextToken` on quote/checkout.
+
 ---
 
 ## 1. Discovery APIs
 
-### `GET /api/v1/marketplace/discover`
+### `GET /api/marketplace/discover`
 
-Discover nearby restaurants (one card per tenant; nearest branch embedded).
+Discover nearby restaurants (one card per brand; branch assignment server-only).
 
 **Query**
 
@@ -55,9 +61,9 @@ interface DiscoveryResult {
 }
 
 interface RestaurantCard {
-  tenantId: string;
-  slug: string;
-  name: string;
+  restaurantId: string;
+  restaurantSlug: string;
+  displayName: string;
   logoUrl?: string;
   coverUrl?: string;
   cuisines: string[];
@@ -69,11 +75,7 @@ interface RestaurantCard {
   isOpen: boolean;
   hasOffers: boolean;
   isVegFriendly?: boolean;
-  assignedBranch: {
-    branchId: string;
-    distanceKm: number;
-    serviceable: boolean;
-  };
+  serviceable: boolean;
 }
 ```
 
@@ -83,7 +85,7 @@ interface RestaurantCard {
 
 ## 2. Search APIs
 
-### `GET /api/v1/marketplace/search`
+### `GET /api/marketplace/search`
 
 **Query**
 
@@ -94,85 +96,58 @@ interface RestaurantCard {
 | `radiusKm` | number | no |
 | `limit` | number | no |
 
-**Response:** `SearchResult` with `hits: SearchHit[]` enriched via Discovery intersection (M4 contract).
+**Response:** `SearchResult` with `hits: SearchHit[]` enriched via Discovery intersection.
 
-### `GET /api/v1/marketplace/search/autocomplete`
+### `GET /api/marketplace/search/suggestions`
 
 **Query:** `q` (prefix), `lat`, `lng`  
 **Response:** `SearchSuggestion[]` — restaurants, cuisines, areas.
 
 ---
 
-## 3. Branch APIs
+## 3. Branch resolution (server-only)
 
-### `POST /api/v1/branches/assign`
+Branch assignment is **not** a customer-facing endpoint. On `GET /api/marketplace/restaurants/:restaurantSlug`, the server runs `BranchAssignmentService` and returns a signed `contextToken` binding branch + location for quote/checkout.
 
-Select nearest serviceable branch for a tenant.
-
-**Body**
-
-```typescript
-{
-  tenantId: string;
-  customerLat: number;
-  customerLng: number;
-  orderType: 'delivery' | 'pickup';
-}
-```
-
-**Response**
-
-```typescript
-{
-  tenantId: string;
-  branchId: string;
-  branchName?: string;      // internal; UI may hide
-  distanceKm: number;
-  etaMinutes: { min: number; max: number };
-  serviceable: boolean;
-  reason?: 'OUT_OF_RADIUS' | 'CLOSED' | 'NO_BRANCH';
-}
-```
-
-**BhojanOS mapping:** BranchAssignmentEngine (M5).
+See [MARKETPLACE-API-v1.0.md](./MARKETPLACE-API-v1.0.md) § Restaurant.
 
 ---
 
 ## 4. Restaurant APIs
 
-### `GET /api/v1/restaurants/:slug`
+### `GET /api/marketplace/restaurants/:restaurantSlug`
 
-Public restaurant profile for marketplace detail page.
+Public restaurant profile for marketplace detail page. Server assigns branch invisibly.
 
-**Query:** `branchId` (optional — if omitted, server runs assign)
+**Query:** `lat`, `lng`, `orderType` (`delivery` \| `pickup`)
 
-**Response:** `RestaurantDetail` — hours, description, offers, delivery config summary, assigned branch.
+**Response:** `RestaurantDetail` — hours, description, offers, delivery config summary, `contextToken`, `serviceable`.
 
 ---
 
 ## 5. Menu APIs
 
-### `GET /api/v1/menu`
+### `GET /api/marketplace/menu`
 
 **Query**
 
 | Param | Required |
 |-------|----------|
-| `tenantId` | yes |
-| `branchId` | yes |
+| `restaurantId` | yes |
+| `contextToken` | yes |
 | `includeUnavailable` | no (default false) |
 
-**Response:** `MenuCatalog` — categories, items, modifier groups (M7 read model).
+**Response:** `MenuCatalog` — categories, items, modifier groups.
 
-### `GET /api/v1/menu/items/:itemId`
+### `GET /api/marketplace/menu/items/:itemId`
 
-Item detail with modifiers.
+Item detail with modifiers (same auth context as menu list).
 
 ---
 
 ## 6. Pricing & Checkout APIs
 
-### `POST /api/v1/pricing/quote`
+### `POST /api/marketplace/quote`
 
 Server-authoritative bill computation (GA-3 SSOT pattern).
 
@@ -180,66 +155,46 @@ Server-authoritative bill computation (GA-3 SSOT pattern).
 
 ```typescript
 {
-  tenantId: string;
-  branchId: string;
+  restaurantId: string;
+  contextToken: string;
   lines: { menuItemId: string; quantity: number; modifiers?: ModifierSelection[] }[];
-  customerLat?: number;
-  customerLng?: number;
+  address?: CustomerAddressRef;
   orderType: 'delivery' | 'pickup';
   couponCode?: string;
 }
 ```
 
-**Response**
+**Response:** `BillQuoteDTO` — subtotal, taxes, fees, discounts, grandTotal (UI renders verbatim).
 
-```typescript
-{
-  subtotal: number;
-  gstAmount: number;
-  gstPercent: number;
-  packagingFee: number;
-  deliveryFee: number;
-  deliveryPending: boolean;
-  discountAmount: number;
-  grandTotal: number;
-  taxLabel: string;
-  freeDeliveryApplied: boolean;
-}
-```
-
-### `POST /api/v1/checkout/prepare`
+### `POST /api/marketplace/checkout/prepare`
 
 Validate cart + return payment methods + final quote.
 
-### `POST /api/v1/checkout/place`
+### `POST /api/marketplace/checkout/place`
 
 Create order (delegates to existing order creation pipeline).
 
-**Body:** extends legacy checkout payload with `branchId`, `correlationId`.
+**Body:** extends checkout payload with `contextToken`, `correlationId`.
 
 ---
 
 ## 7. Order APIs
 
-### `POST /api/v1/orders`
-
-Create order (authenticated or guest).
-
-### `GET /api/v1/orders/:orderId`
-
-Order detail — auth: owner token, guest token, or Bearer.
-
-### `GET /api/v1/orders`
+### `GET /api/marketplace/orders`
 
 List orders for authenticated customer.
 
 **Query:** `limit`, `cursor`, `status`
 
+### `GET /api/marketplace/orders/:orderId`
+
+Order detail — auth: owner token, guest token, or Bearer.
+
 ---
 
 ## 8. Tracking APIs
 
-### `GET /api/v1/orders/:orderId/tracking`
+### `GET /api/marketplace/orders/:orderId/tracking`
 
 **Response**
 
@@ -253,31 +208,29 @@ List orders for authenticated customer.
 }
 ```
 
-### `GET /api/v1/orders/:orderId/tracking/stream`
-
 Optional SSE/WebSocket — future milestone.
 
 ---
 
 ## 9. Customer APIs
 
-### `PATCH /api/v1/customers/me`
+### `GET /api/marketplace/profile`
 
-Sync profile fields to BhojanOS user record (if dual-write required for orders).
+### `PATCH /api/marketplace/profile`
 
-**Body:** `{ displayName?, phone?, email? }`
+Sync minimal profile fields (Marketplace DTO — not legacy `/api/v1/customers/me`).
 
 ---
 
 ## 10. Eligibility / Health
 
-### `GET /api/v1/marketplace/eligibility/:tenantId`
+### `GET /api/marketplace/health`
 
-Check if tenant is discoverable (debug/admin; not required for MVP UI).
+Marketplace router health (stub in M0).
 
 ### `GET /api/health`
 
-Existing — platform build version, Firestore status.
+Existing platform health — build version, Firestore status.
 
 ---
 
@@ -286,11 +239,11 @@ Existing — platform build version, Firestore status.
 | Capability | BhojanOS today | OrderBhojan need | Action |
 |------------|----------------|------------------|--------|
 | Discovery | SDK + facade (flags OFF) | HTTP discover | **M0:** Add marketplace router on Render |
-| Search | SDK (partial) | HTTP search | **M3:** Expose search endpoints |
-| Branch assign | SDK NOT_CONFIGURED | HTTP assign | **M4:** Implement M5 adapter + endpoint |
+| Search | SDK (partial) | HTTP search | **M4:** Expose search endpoints |
+| Branch assign | Server-only | contextToken on restaurant | **M4:** BranchAssignmentService in Marketplace API |
 | Menu read | Firestore direct in storefront | HTTP menu | **M5:** Read adapter endpoint |
 | Pricing quote | Client-side (legacy) | Server quote | **M7:** Mandatory for marketplace |
-| Orders | Legacy API exists | Reuse + branchId | **M7:** Extend payload |
+| Orders | Legacy API exists | Marketplace orders routes | **M8+:** Extend via `/api/marketplace/orders` |
 
 **M0 deliverable:** OpenAPI spec + mock server for OrderBhojan development without waiting for all endpoints.
 
@@ -298,10 +251,11 @@ Existing — platform build version, Firestore status.
 
 ## Versioning & Compatibility
 
-- Breaking changes require `X-BhojanOS-API-Version` bump
+- API version is carried in **`X-BhojanOS-API-Version`** header — not in URL path
 - OrderBhojan pins minimum API version in config
 - Deprecation window: 90 days with sunset header
+- **Do not implement** `/api/v1/marketplace/*` — rejected at M0 ARB (issue #2)
 
 ---
 
-**Status:** Draft for ARB + BhojanOS backend team review
+**Status:** Legacy draft aligned to M0 ARB resolutions — prefer [MARKETPLACE-API-v1.0.md](./MARKETPLACE-API-v1.0.md) for implementation.

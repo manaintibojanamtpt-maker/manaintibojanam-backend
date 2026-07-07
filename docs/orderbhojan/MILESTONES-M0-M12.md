@@ -1,5 +1,7 @@
 # OrderBhojan — Milestone Plan M0–M12
 
+**Canonical milestone sequence** for OrderBhojan (see also [M0-ARB-REVIEW.md](./M0-ARB-REVIEW.md) §23).
+
 **Governance:** Mirrors BhojanOS milestone discipline  
 **Policy:** No milestone N+1 starts until milestone N exit criteria met and ARB signed  
 **BhojanOS:** Consumed via API only — no modifications unless explicit backend exposure PR approved separately
@@ -169,7 +171,7 @@ Verify: no restaurant data in orderbhojan Firestore
 
 ### Architecture
 
-- `features/discovery/` facade → `GET /api/v1/marketplace/discover`
+- `features/discovery/` facade → `GET /api/marketplace/discover`
 - Requires M2 location OR manual coordinates
 - Cards map `RestaurantCard` → presentation view model
 - Session cache via React Query
@@ -210,7 +212,7 @@ Verify: no restaurant data in orderbhojan Firestore
 ### Architecture
 
 - `features/restaurant/` + branch assign API
-- `POST /api/v1/branches/assign` on detail load
+- `GET /api/marketplace/restaurants/:restaurantSlug` on detail load (server assigns branch; returns `contextToken`)
 - Store `branchId` in session for menu/checkout
 - One card per tenant enforced at discovery; detail confirms branch
 
@@ -249,7 +251,7 @@ Verify: no restaurant data in orderbhojan Firestore
 
 ### Architecture
 
-- `features/menu/` → `GET /api/v1/menu?tenantId&branchId`
+- `features/menu/` → `GET /api/marketplace/menu?restaurantId&contextToken`
 - Modifier validation client-side for UX; server validates on quote
 - Image lazy loading + placeholders
 
@@ -341,7 +343,7 @@ Verify: no restaurant data in orderbhojan Firestore
 
 ### BhojanOS Dependency
 
-**Requires:** `POST /api/v1/pricing/quote` endpoint
+**Requires:** `POST /api/marketplace/quote` endpoint
 
 ---
 

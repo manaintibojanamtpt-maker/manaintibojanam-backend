@@ -69,7 +69,7 @@ OrderBhojan App (React · Vite · PWA · Vercel)
 | 7 | Organization model unspecified | P2 | `restaurantId` maps to **Brand**; 1:1 with tenant until org schema ships |
 | 8 | Restaurant lifecycle not formalized | P1 | See §8 — only `LIVE` in discovery |
 | 9 | Marketplace API mixed with legacy route exposure | P0 | Dedicated router module; OrderBhojan never calls legacy `/api/coupons` etc. directly |
-| 10 | Milestone M4 was "Restaurant" before Search | P3 | Reordered: M3 Discovery, **M4 Search**, M5 Restaurant (per product spec) |
+| 10 | Milestone M4 was "Restaurant" before Search in v1.0 draft | P3 | **Canonical order (MILESTONES-M0-M12.md):** M3 Discovery → **M4 Restaurant** → M5 Menu → M6 Cart → M7 Checkout → M8 Payments → M9 Tracking → M10 Customer → M11 Notifications → M12 Production |
 
 ---
 
@@ -459,9 +459,9 @@ BhojanOS stub router: feature flag `FF_MARKETPLACE_API_ENABLED=false` (default O
 
 ---
 
-## 23. Milestone Roadmap (M0–M13)
+## 23. Milestone Roadmap (M0–M12)
 
-See [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md).
+**Canonical plan:** [MILESTONES-M0-M12.md](./MILESTONES-M0-M12.md)
 
 | Phase | Focus |
 |-------|-------|
@@ -469,16 +469,17 @@ See [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md).
 | M1 | Authentication |
 | M2 | Location |
 | M3 | Discovery |
-| M4 | Search |
-| M5 | Restaurant |
-| M6 | Menu |
-| M7 | Cart |
-| M8 | Checkout |
-| M9 | Payments |
-| M10 | Orders |
-| M11 | Tracking |
-| M12 | Notifications |
-| M13 | Production Readiness |
+| M4 | Restaurant Experience |
+| M5 | Menu Platform |
+| M6 | Cart Platform |
+| M7 | Checkout Platform |
+| M8 | Payments |
+| M9 | Order Tracking |
+| M10 | Customer Experience |
+| M11 | Notifications |
+| M12 | Production Readiness |
+
+> **Note:** An alternate M0–M13 draft ([MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md)) placed Search at M4; that sequencing was **not adopted**. Use MILESTONES-M0-M12.md for implementation order.
 
 ---
 
@@ -512,7 +513,8 @@ See [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md).
 - [ADR-OB-002](./adr/ADR-OB-002-public-restaurant-identity.md)
 - [ADR-OB-003](./adr/ADR-OB-003-search-provider-abstraction.md)
 - [MARKETPLACE-API-v1.0.md](./MARKETPLACE-API-v1.0.md)
-- [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md)
+- [MILESTONES-M0-M12.md](./MILESTONES-M0-M12.md) — **canonical milestone sequence**
+- [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md) — alternate draft (superseded for ordering)
 - [FIRESTORE-CUSTOMER-SCHEMA-v1.0.md](./FIRESTORE-CUSTOMER-SCHEMA-v1.0.md)
 
 ---

@@ -33,11 +33,11 @@ These documents were written **before** the `orderbhojan/` app was scaffolded. T
 |----------|---------|
 | [M0-ARB-REVIEW.md](./M0-ARB-REVIEW.md) | Pre-implementation M0 gate draft (**superseded**) |
 | [MARKETPLACE-API-v1.0.md](./MARKETPLACE-API-v1.0.md) | Public API contracts (opaque IDs) |
-| [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md) | Original M0–M13 roadmap |
-| [MILESTONES-M0-M12.md](./MILESTONES-M0-M12.md) | Alternate roadmap draft |
+| [MILESTONES-M0-M12.md](./MILESTONES-M0-M12.md) | **Canonical** M0–M12 milestone sequence |
+| [MILESTONES-M0-M13.md](./MILESTONES-M0-M13.md) | Alternate draft (superseded for sequencing) |
 | [ARCHITECTURE-v1.0.md](./ARCHITECTURE-v1.0.md) | v1.0 reference |
 | [FIRESTORE-CUSTOMER-SCHEMA-v1.0.md](./FIRESTORE-CUSTOMER-SCHEMA-v1.0.md) | Customer Firebase schema |
-| [API-CONTRACTS-v1.0.md](./API-CONTRACTS-v1.0.md) | Legacy draft — see MARKETPLACE-API for current |
+| [API-CONTRACTS-v1.0.md](./API-CONTRACTS-v1.0.md) | Legacy draft — aligned to `/api/marketplace/*`; prefer MARKETPLACE-API-v1.0 |
 
 ### ADRs
 

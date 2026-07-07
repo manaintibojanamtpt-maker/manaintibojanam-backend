@@ -1,5 +1,7 @@
 # OrderBhojan — Milestones M0–M13
 
+> **Superseded for milestone sequencing.** Use [MILESTONES-M0-M12.md](./MILESTONES-M0-M12.md) as the canonical order (M4 = Restaurant Experience, not Search at M4). This file retains an alternate draft layout for historical reference.
+
 **Governance:** BhojanOS milestone discipline · ARB gate per milestone · no N+1 until N exits  
 **Implementation blocked until M0 ARB approval**
 
