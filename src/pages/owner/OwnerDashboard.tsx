@@ -8,15 +8,12 @@ import {
   X, Rocket
 } from 'lucide-react';
 import { m } from 'framer-motion';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, updateDoc, limit } from 'firebase/firestore';
 import { logIncident } from '../../lib/monitoring';
-import { getDb } from '../../lib/firebase-db';
 import toast from 'react-hot-toast';
 import { Order, Subscription, ReleaseNote } from '../../types';
 import { safeParseDate } from '../../lib/utils';
 import { ReleaseNotesModal } from '../../components/releases/ReleaseNotesModal';
 import { deriveOwnerCustomerMemories } from '../../utils/customerMemory';
-import { auth } from '../../firebase';
 import { CustomerSegmentSummary, getCustomerSegmentsSummary } from '../../services/CustomerIntelligenceService';
 import { KitchenHealthResult, calculateKitchenHealth } from '../../services/KitchenHealthService';
 import { TenantAnalytics, getTenantAnalytics, backfillAnalytics } from '../../services/AnalyticsService';
@@ -28,13 +25,12 @@ import { useFeatureFlags } from '../../context/FeatureFlagContext';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { DashboardStatusBar } from '../../components/owner/DashboardStatusBar';
 import { FreeStorefrontBanner } from '../../components/owner/FreeStorefrontBanner';
+import { PublishStorefrontPanel } from '../../components/owner/PublishStorefrontPanel';
 import { StoreSetupGuide } from '../../components/owner/StoreSetupGuide';
-import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
-import { getMenuTenantQueryKeys } from '../../lib/menuTenantKeys';
+import { useDashboardMenu, useDashboardOrders, useDashboardStoreStatus } from '../../context/DashboardRealtimeProvider';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { needsGrowthTrialActivation, isStoreLiveForOrders } from '../../lib/planStatus';
 import { AIInsightCard } from '../../components/owner/AIInsightCard';
-import { useTenantStoreStatus } from '../../hooks/useTenantStoreStatus';
 import { aiInsightLabels } from '../../config/productMessaging';
 import {
   countUrgentAttentionItems,
@@ -43,6 +39,9 @@ import {
 import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
+import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
+import { ownerApiRequest } from '../../lib/ownerProvisioning';
+import { fetchLatestReleaseNote, updateOwnerTenantPreferences } from '../../lib/ownerPortalApi';
 import { DashboardProductionMetrics } from '../../components/owner/DashboardProductionMetrics';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
@@ -55,24 +54,22 @@ const OwnerDashboard = () => {
   const { flags } = useFeatureFlags();
   const { tenantInfo: contextTenant, tenantSlug, loading: tenantContextLoading } = useTenant();
   const resolvedTenantId = useOwnerTenantId();
-  const tenantId = resolvedTenantId || userProfile?.ownedTenantIds?.[0] || null;
-  const tenantName = userProfile?.name || contextTenant?.name || 'Kitchen';
+  const tenantId = resolvedTenantId;
 
   const [tenantInfo, setTenantInfo] = React.useState<any>(null);
-  const [allOrders, setAllOrders] = React.useState<Order[]>([]);
-  const [orders, setOrders] = React.useState<Order[]>([]);
   const [analytics, setAnalytics] = React.useState<TenantAnalytics | null>(null);
   const [segments, setSegments] = React.useState<CustomerSegmentSummary | null>(null);
   const [healthScore, setHealthScore] = React.useState<MerchantHealthResult | null>(null);
-  const [inventoryAlerts, setInventoryAlerts] = React.useState<{name: string, stock: number, isCritical: boolean}[]>([]);
-  const [loading, setLoading] = React.useState(true);
   const [growthSnapshot, setGrowthSnapshot] = React.useState<AIGrowthSnapshot | null>(null);
-  const ownerMenuCount = useOwnerMenuCount();
+  const { orders: allOrders, activeOrders: orders, loading: ordersLoading } = useDashboardOrders();
+  const { menuCount: ownerMenuCount, lowStockAlerts: inventoryAlerts } = useDashboardMenu();
+  const { isOpen: storeAcceptingOrders } = useDashboardStoreStatus();
   const [latestRelease, setLatestRelease] = React.useState<ReleaseNote | null>(null);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
   const [dismissedInsights, setDismissedInsights] = React.useState<Set<number>>(new Set());
-  const { isOpen: storeAcceptingOrders } = useTenantStoreStatus();
+
+  const loading = ordersLoading;
 
   const storeSlug = tenantInfo?.slug || contextTenant?.slug || tenantSlug || tenantId;
   const { unreadCount: notificationUnreadCount } = useNotifications(
@@ -119,61 +116,36 @@ const OwnerDashboard = () => {
   }, [contextTenant]);
 
   React.useEffect(() => {
-    const healTenantDoc = async () => {
-      if (!tenantId || !userProfile?.userId) return;
-      try {
-        const tenantRef = doc(getDb(), 'tenants', tenantId);
-        const tenantDoc = await getDoc(tenantRef);
-        if (!tenantDoc.exists()) {
-          await setDoc(tenantRef, {
-            name: tenantName,
-            slug: tenantId,
-            ownerId: userProfile.userId,
-            status: 'active',
-            createdAt: serverTimestamp()
-          });
-          setTenantInfo({ id: tenantId, slug: tenantId, name: tenantName, status: 'active' });
-          return;
-        }
-        setTenantInfo({ id: tenantDoc.id, ...tenantDoc.data() });
-      } catch (error) {
-        console.error('Failed to auto-heal tenant doc:', error);
-      }
-    };
-    healTenantDoc();
-  }, [tenantId, tenantName, userProfile]);
-
-  React.useEffect(() => {
     const migrateTenant = async () => {
       if (!tenantInfo || !tenantInfo.id || !flags.onboardingWizardV2) return;
       if (tenantInfo.onboardingStatus !== undefined) return;
 
       try {
-        const menuSnap = await getDocs(
-          query(collection(getDb(), 'menu'), where('tenantId', '==', tenantInfo.id), limit(3)),
-        );
-        const hasMenu = menuSnap.size >= 3;
+        const response = await fetchOwnerMenuItems(tenantInfo.id);
+        const hasMenu = (response.items?.length ?? 0) >= 3;
         const hasLocation = !!(tenantInfo.location?.address?.trim() && tenantInfo.location?.city?.trim());
         const hasName = !!(tenantInfo.name && tenantInfo.name.trim().length > 1);
 
-        if (hasMenu && hasLocation && hasName) {
-          await updateDoc(doc(getDb(), 'tenants', tenantInfo.id), {
-            onboardingStatus: {
-              isComplete: true,
-              currentStep: 7,
-              completedAt: serverTimestamp(),
-              migrated: true,
-            },
-          });
-        } else {
-          await updateDoc(doc(getDb(), 'tenants', tenantInfo.id), {
-            onboardingStatus: {
-              isComplete: false,
-              currentStep: 1,
-              migrated: false,
-            },
-          });
-        }
+        const onboardingStatus =
+          hasMenu && hasLocation && hasName
+            ? {
+                isComplete: true,
+                currentStep: 7,
+                completedAt: new Date().toISOString(),
+                migrated: true,
+              }
+            : {
+                isComplete: false,
+                currentStep: 1,
+                migrated: false,
+              };
+
+        await ownerApiRequest('POST', '/api/owner/onboarding/step', {
+          tenantId: tenantInfo.id,
+          step: onboardingStatus.currentStep,
+          payload: { onboardingStatus },
+          nextStep: onboardingStatus.currentStep,
+        });
       } catch (e) {
         console.error('Failed to initialize tenant onboarding status:', e);
       }
@@ -184,38 +156,7 @@ const OwnerDashboard = () => {
   React.useEffect(() => {
     if (profileLoading || tenantContextLoading) return;
 
-    if (!tenantId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    let settled = false;
-    const finishLoading = () => {
-      if (settled) return;
-      settled = true;
-      setLoading(false);
-    };
-    const loadTimeout = window.setTimeout(finishLoading, 10_000);
-
-    const ordersQuery = query(collection(getDb(), 'orders'), where('tenantId', '==', tenantId));
-    const unsubscribeOrders = onSnapshot(
-      ordersQuery,
-      (snapshot) => {
-        const fetchedOrders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
-        setAllOrders(fetchedOrders);
-        setOrders(
-          fetchedOrders.filter(
-            (o) => !['DELIVERED', 'CANCELLED', 'EXPIRED', 'FAILED_DELIVERY'].includes(o.status || ''),
-          ),
-        );
-        finishLoading();
-      },
-      (error) => {
-        console.error('Owner dashboard orders listener failed:', error);
-        finishLoading();
-      },
-    );
+    if (!tenantId) return;
 
     getTenantAnalytics(tenantId).then((data) => {
       if (!data) backfillAnalytics(tenantId).then((newData) => setAnalytics(newData as any));
@@ -228,61 +169,18 @@ const OwnerDashboard = () => {
       console.error('Owner dashboard segments failed:', error);
     });
 
-    const menuKeys = getMenuTenantQueryKeys(tenantInfo, tenantId);
-    const menuDocMap = new Map<string, Record<string, any>>();
-
-    const applyMenuSnapshot = () => {
-      const alerts: { name: string; stock: number; isCritical: boolean }[] = [];
-      menuDocMap.forEach((data) => {
-        if (
-          data.stockCount !== undefined &&
-          data.lowStockThreshold !== undefined &&
-          data.stockCount <= data.lowStockThreshold
-        ) {
-          alerts.push({ name: data.name, stock: data.stockCount, isCritical: data.stockCount <= 0 });
-        }
-      });
-      setInventoryAlerts(alerts);
-    };
-
-    const menuUnsubs = menuKeys.map((key) => {
-      const menuQuery = query(collection(getDb(), 'menu'), where('tenantId', '==', key));
-      return onSnapshot(
-        menuQuery,
-        (snapshot) => {
-          snapshot.docs.forEach((menuDoc) => menuDocMap.set(menuDoc.id, menuDoc.data()));
-          // Drop stale ids if this key's snapshot shrinks
-          const liveIds = new Set(snapshot.docs.map((d) => d.id));
-          [...menuDocMap.keys()].forEach((id) => {
-            const row = menuDocMap.get(id);
-            if (row?.tenantId === key && !liveIds.has(id)) menuDocMap.delete(id);
-          });
-          applyMenuSnapshot();
-        },
-        (error) => console.error('Owner dashboard menu listener failed:', key, error),
-      );
-    });
-
     const fetchLatestRelease = async () => {
       try {
-        const snap = await getDocs(query(collection(getDb(), 'release_notes'), where('isPublished', '==', true)));
-        const releases = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ReleaseNote));
-        releases.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
-        if (releases.length > 0) {
-          setLatestRelease(releases[0]);
+        const response = await fetchLatestReleaseNote();
+        if (response.release) {
+          setLatestRelease(response.release as ReleaseNote);
         }
       } catch (e) {
         console.error('Failed to fetch release note', e);
       }
     };
     void fetchLatestRelease();
-
-    return () => {
-      window.clearTimeout(loadTimeout);
-      unsubscribeOrders();
-      menuUnsubs.forEach((u) => u());
-    };
-  }, [tenantId, tenantInfo, profileLoading, tenantContextLoading]);
+  }, [tenantId, profileLoading, tenantContextLoading]);
 
   React.useEffect(() => {
     if (tenantInfo) {
@@ -297,7 +195,12 @@ const OwnerDashboard = () => {
   }, [tenantInfo, analytics, segments, orders]);
 
   // Mock Operational Recommendations based on intelligence
-  const repeatCustomers = deriveOwnerCustomerMemories(orders).slice(0, 4);
+  const repeatCustomers = deriveOwnerCustomerMemories(orders as Order[]).slice(0, 4);
+  const orderMetrics = React.useMemo(
+    () => computeOwnerOrderMetrics(allOrders as Order[]),
+    [allOrders],
+  );
+  const ordersToday = orderMetrics.todayOrderCount;
 
   // Mock Activity Timeline
   const timeline = [
@@ -416,15 +319,6 @@ const OwnerDashboard = () => {
         { priority: 'LOW', label: '3 high-value customers likely to reorder today. Send SMS campaign?', icon: <Users size={14}/>, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
       ];
 
-  const ordersToday = allOrders.filter((o) => {
-    const d = safeParseDate(o.createdAt);
-    if (!d) return false;
-    const now = new Date();
-    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-
-  const orderMetrics = React.useMemo(() => computeOwnerOrderMetrics(allOrders), [allOrders]);
-
   const storeLive = tenantInfo?.storeStatus === 'published' || !!tenantInfo?.sandboxMode || storeAcceptingOrders;
   const storeAlreadyLive = isStoreLiveForOrders(tenantInfo, storeAcceptingOrders);
   const showStoreSetupGuide = needsStoreSetup(tenantInfo, ownerMenuCount);
@@ -491,6 +385,8 @@ const OwnerDashboard = () => {
       {showStoreSetupGuide && (
         <StoreSetupGuide tenantInfo={tenantInfo} menuCount={ownerMenuCount} variant="full" />
       )}
+
+      <PublishStorefrontPanel />
 
       {showGrowthTrialBanner && (
         <FreeStorefrontBanner
@@ -600,7 +496,9 @@ const OwnerDashboard = () => {
               setIsReleaseModalOpen(true);
               if (tenantInfo?.lastViewedReleaseVersion !== latestRelease.version) {
                 setTenantInfo({ ...tenantInfo, lastViewedReleaseVersion: latestRelease.version });
-                updateDoc(doc(getDb(), 'tenants', tenantId), { lastViewedReleaseVersion: latestRelease.version });
+                void updateOwnerTenantPreferences(tenantId, {
+                  lastViewedReleaseVersion: latestRelease.version,
+                });
               }
             }}
             className="whitespace-nowrap px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold text-sm border border-white/10 transition-colors w-full sm:w-auto"
@@ -866,7 +764,7 @@ const OwnerDashboard = () => {
           setIsReleaseModalOpen(false);
           if (latestRelease && tenantId && tenantInfo) {
             setTenantInfo({ ...tenantInfo, lastViewedReleaseVersion: latestRelease.version });
-            void updateDoc(doc(getDb(), 'tenants', tenantId), {
+            void updateOwnerTenantPreferences(tenantId, {
               lastViewedReleaseVersion: latestRelease.version,
             });
           }

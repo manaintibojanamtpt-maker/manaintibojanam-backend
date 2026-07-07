@@ -1,14 +1,17 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { setActiveTenantId } from '../services/api';
-import { getDb } from '../lib/firebase-db';
-import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { ensureFirestoreNetwork, getDb, getDoc, getDocs } from '../lib/firebase-db';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import {
   parseStorefrontSlug,
-  readCachedTenant,
+  readValidatedCachedTenant,
   writeCachedTenant,
+  fetchValidatedCachedTenant,
 } from '../lib/tenantPath';
 import { applyTenantPwaManifest } from '../lib/tenantPwaManifest';
+import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
 
 export interface TenantInfo {
   id: string;
@@ -98,6 +101,7 @@ interface TenantContextType {
   tenantInfo: TenantInfo | null;
   loading: boolean;
   tenantNotFound: boolean;
+  tenantError: string | null;
   refreshTenant: () => Promise<void>;
 }
 
@@ -127,24 +131,56 @@ const TenantContext = createContext<TenantContextType>({
   tenantInfo: null,
   loading: false,
   tenantNotFound: false,
+  tenantError: null,
   refreshTenant: async () => {},
 });
+
+const TenantLoadError: React.FC<{ message: string; onRetry: () => void; retrying: boolean }> = ({
+  message,
+  onRetry,
+  retrying,
+}) => (
+  <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-brand-bg p-6 text-center dark:bg-dark-bg">
+    <div className="max-w-sm rounded-3xl border border-white/10 bg-black/40 p-8">
+      <h1 className="mb-3 text-xl font-bold text-white">Could not load store</h1>
+      <p className="mb-6 text-sm leading-relaxed text-white/60">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        className="btn-orange inline-flex items-center justify-center gap-2 disabled:opacity-60"
+      >
+        <RefreshCw className={`h-4 w-4 ${retrying ? 'animate-spin' : ''}`} />
+        {retrying ? 'Retrying…' : 'Try again'}
+      </button>
+    </div>
+  </div>
+);
 
 export const useTenant = () => useContext(TenantContext);
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userProfile, loading: authLoading } = useAuth();
-  const ownerTenantId = userProfile?.ownedTenantIds?.[0];
+  const rawOwnerTenantId = userProfile?.ownedTenantIds?.[0];
+  const ownerTenantId =
+    rawOwnerTenantId &&
+    (rawOwnerTenantId !== FOUNDER_TENANT_ID || isFounderOwnerEmail(userProfile?.email))
+      ? rawOwnerTenantId
+      : userProfile?.ownedTenantIds?.find(
+          (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(userProfile?.email)),
+        );
 
   const initialPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const initialStoreSlug = parseStorefrontSlug(initialPath);
-  const initialCached = initialStoreSlug ? readCachedTenant(initialStoreSlug) : null;
+  const initialCached = initialStoreSlug ? readValidatedCachedTenant(initialStoreSlug) : null;
 
   const [tenantId, setTenantId] = useState<string>(() => initialCached?.id || initialStoreSlug || '');
   const [tenantSlug, setTenantSlug] = useState<string>(() => initialCached?.slug || initialStoreSlug || '');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(() => initialCached);
   const [loading, setLoading] = useState(() => needsTenantResolution(initialPath) && !initialCached);
   const [tenantNotFound, setTenantNotFound] = useState(false);
+  const [tenantError, setTenantError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (tenantInfo?.name && typeof document !== 'undefined') {
@@ -179,7 +215,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isOwnerPanel = path.startsWith('/owner');
 
     const sessionTenant = sessionStorage.getItem('tenant_preview');
-    if (sessionTenant) {
+    if (sessionTenant && !isOwnerPanel) {
       try {
         const data = JSON.parse(sessionTenant) as TenantInfo;
         applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo });
@@ -192,13 +228,14 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     if (storefrontSlug) {
-      const cached = readCachedTenant(storefrontSlug);
+      const cached = readValidatedCachedTenant(storefrontSlug);
       if (cached) {
         applyTenantState(cached, { setTenantId, setTenantSlug, setTenantInfo });
       } else {
         setTenantId(storefrontSlug);
         setTenantSlug(storefrontSlug);
         setActiveTenantId(storefrontSlug);
+        setTenantInfo(null);
       }
     } else if (isOwnerPanel) {
       if (authLoading) {
@@ -225,35 +262,71 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setLoading(true);
     setTenantNotFound(false);
+    setTenantError(null);
 
     try {
-      const docRef = doc(getDb(), 'tenants', lookupKey);
-      const docSnap = await getDoc(docRef);
+      await ensureFirestoreNetwork();
 
-      if (docSnap.exists()) {
-        const data = { id: docSnap.id, ...docSnap.data() } as TenantInfo;
-        applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo }, lookupKey);
-      } else {
+      const loadTenant = async (): Promise<TenantInfo | null> => {
+        const docRef = doc(getDb(), 'tenants', lookupKey);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          return { id: docSnap.id, ...docSnap.data() } as TenantInfo;
+        }
+
         const q = query(collection(getDb(), 'tenants'), where('slug', '==', lookupKey), limit(1));
         const snapshot = await getDocs(q);
 
         if (!snapshot.empty) {
           const docSnapQuery = snapshot.docs[0];
-          const data = { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
-          applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo }, lookupKey);
-        } else if (storefrontSlug) {
-          setTenantNotFound(true);
+          return { id: docSnapQuery.id, ...docSnapQuery.data() } as TenantInfo;
         }
+
+        return null;
+      };
+
+      const data = await fetchValidatedCachedTenant(lookupKey, loadTenant);
+
+      if (data) {
+        applyTenantState(data, { setTenantId, setTenantSlug, setTenantInfo }, lookupKey);
+      } else if (storefrontSlug) {
+        setTenantNotFound(true);
+        setTenantInfo(null);
+      } else if (isOwnerPanel) {
+        setTenantError('Your restaurant profile could not be found. Check your connection and try again.');
+        setTenantInfo(null);
       }
     } catch (error) {
       console.error('Failed to resolve tenant slug:', error);
-      if (storefrontSlug && !readCachedTenant(storefrontSlug)) {
-        setTenantNotFound(true);
+      const cacheKey = storefrontSlug || (isOwnerPanel ? ownerTenantId : '');
+      const validatedCache = cacheKey ? readValidatedCachedTenant(cacheKey) : null;
+
+      if (validatedCache) {
+        applyTenantState(validatedCache, { setTenantId, setTenantSlug, setTenantInfo });
+        setTenantError(null);
+      } else {
+        setTenantError(
+          'Unable to reach the store directory. Check your connection and try again.',
+        );
+        if (!storefrontSlug && isOwnerPanel) {
+          setTenantInfo(null);
+          setTenantId('');
+          setTenantSlug('');
+        } else if (storefrontSlug) {
+          setTenantNotFound(false);
+        }
       }
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   }, [ownerTenantId, authLoading]);
+
+  const refreshTenant = useCallback(async () => {
+    setRetrying(true);
+    await resolveTenant();
+  }, [resolveTenant]);
 
   useEffect(() => {
     void resolveTenant();
@@ -266,10 +339,25 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       tenantInfo,
       loading,
       tenantNotFound,
-      refreshTenant: resolveTenant,
+      tenantError,
+      refreshTenant,
     }),
-    [tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, resolveTenant],
+    [tenantId, tenantSlug, tenantInfo, loading, tenantNotFound, tenantError, refreshTenant],
   );
 
-  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+  const showTenantError = tenantError && !tenantInfo && !loading;
+
+  return (
+    <TenantContext.Provider value={value}>
+      {showTenantError ? (
+        <TenantLoadError
+          message={tenantError}
+          onRetry={() => void refreshTenant()}
+          retrying={retrying}
+        />
+      ) : (
+        children
+      )}
+    </TenantContext.Provider>
+  );
 };

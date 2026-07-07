@@ -80,6 +80,7 @@ import {
   resolveStorageBucket,
   resolveDatabaseId,
 } from "./backend-lib/firebase/FirebaseAdminProvider";
+import { mountOwnerApiGateway } from "./backend-lib/shared/apiGatewayMiddleware.js";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -2797,6 +2798,18 @@ async function syncOwnerTenantsForUser(
 
   return tenantIds;
 }
+
+// Phase 12 — Owner API gateway (rateLimit → tenant resolver → auth → capability router).
+// rateLimit hook is a passthrough stub here; globalLimiter already covers /api/*.
+// Per-route verifyFirebaseToken remains during rollout; gateway auth runs first for /api/owner/*.
+mountOwnerApiGateway(app, {
+  verifyAuth: verifyFirebaseToken,
+  log: (level, message, meta) => {
+    if (level === 'debug' && process.env.NODE_ENV !== 'production') {
+      logger.debug({ message, ...meta });
+    }
+  },
+});
 
 app.post('/api/owner/sync-tenants', verifyFirebaseToken, async (req: any, res: any) => {
   try {

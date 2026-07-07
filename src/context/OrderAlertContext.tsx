@@ -1,7 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
-import { useAuth } from './AuthContext';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   isOrderSoundEnabled,
@@ -11,8 +8,9 @@ import {
   setOrderSoundEnabled,
   unlockOrderSound,
 } from '../lib/orderAlertSound';
-
-const NEW_ORDER_STATUSES = ['PENDING', 'CREATED', 'PLACED', 'PAYMENT_PENDING', 'PAYMENT_VERIFICATION'];
+import { useDashboardPendingOrders } from './DashboardRealtimeProvider';
+import { detectNewOrderIds } from './dashboardRealtimeHelpers';
+import { useOwnerTenantId } from '../hooks/useOwnerTenantId';
 
 interface OrderAlertContextValue {
   pendingCount: number;
@@ -27,11 +25,10 @@ interface OrderAlertContextValue {
 const OrderAlertContext = createContext<OrderAlertContextValue | null>(null);
 
 export const OrderAlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userProfile } = useAuth();
-  const tenantId = userProfile?.ownedTenantIds?.[0];
-  const [pendingCount, setPendingCount] = useState(0);
-  const [soundEnabled, setSoundEnabledState] = useState(isOrderSoundEnabled);
-  const [soundUnlocked, setSoundUnlocked] = useState(isOrderSoundUnlocked);
+  const tenantId = useOwnerTenantId();
+  const { pendingCount, pendingOrders } = useDashboardPendingOrders();
+  const [soundEnabled, setSoundEnabledState] = React.useState(isOrderSoundEnabled);
+  const [soundUnlocked, setSoundUnlocked] = React.useState(isOrderSoundUnlocked);
   const knownOrderIdsRef = useRef<Set<string> | null>(null);
 
   const enableSoundAlerts = useCallback(async () => {
@@ -73,50 +70,22 @@ export const OrderAlertProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   useEffect(() => {
-    if (!tenantId) {
-      setPendingCount(0);
-      knownOrderIdsRef.current = null;
-      return;
+    const { nextKnownIds, newOrderCount } = detectNewOrderIds(knownOrderIdsRef.current, pendingOrders);
+
+    if (knownOrderIdsRef.current !== null && newOrderCount > 0) {
+      void playOrderAlertSound();
+      toast.success(newOrderCount === 1 ? 'New order arrived!' : `${newOrderCount} new orders arrived!`, {
+        duration: 6000,
+        icon: '🔔',
+        style: { background: '#222', color: '#fff', fontWeight: 'bold' },
+      });
     }
 
-    const ordersQuery = query(
-      collection(getDb(), 'orders'),
-      where('tenantId', '==', tenantId),
-      where('status', 'in', NEW_ORDER_STATUSES),
-    );
+    knownOrderIdsRef.current = nextKnownIds;
+  }, [pendingOrders]);
 
-    const unsubscribe = onSnapshot(
-      ordersQuery,
-      (snapshot) => {
-        const docs = snapshot.docs;
-        setPendingCount(docs.length);
-
-        const currentIds = new Set(docs.map((docSnap) => docSnap.id));
-        if (knownOrderIdsRef.current === null) {
-          knownOrderIdsRef.current = currentIds;
-          return;
-        }
-
-        let newOrders = 0;
-        currentIds.forEach((id) => {
-          if (!knownOrderIdsRef.current!.has(id)) newOrders += 1;
-        });
-
-        if (newOrders > 0) {
-          void playOrderAlertSound();
-          toast.success(newOrders === 1 ? 'New order arrived!' : `${newOrders} new orders arrived!`, {
-            duration: 6000,
-            icon: '🔔',
-            style: { background: '#222', color: '#fff', fontWeight: 'bold' },
-          });
-        }
-
-        knownOrderIdsRef.current = currentIds;
-      },
-      (error) => console.error('Order alert listener error:', error),
-    );
-
-    return () => unsubscribe();
+  useEffect(() => {
+    knownOrderIdsRef.current = null;
   }, [tenantId]);
 
   const showSoundPrompt = isStandalonePwa() && !soundUnlocked;

@@ -1,5 +1,17 @@
-import { getFirestore, initializeFirestore, doc, getDocFromServer, Firestore, enableNetwork } from 'firebase/firestore';
-import { useState, useEffect } from 'react';
+import {
+  getFirestore,
+  initializeFirestore,
+  Firestore,
+  enableNetwork,
+  getDoc as firebaseGetDoc,
+  getDocs as firebaseGetDocs,
+  type DocumentReference,
+  type DocumentSnapshot,
+  type Query,
+  type QuerySnapshot,
+} from 'firebase/firestore';
+import { defaultFirestoreRetryPolicy, isFirestoreQuotaError } from './firestoreRetryPolicy';
+import { useState, useCallback } from 'react';
 import { app } from '../firebase';
 import { getFirestoreDatabaseId, getResolvedFirebaseProjectId } from '../config/firebaseClientConfig';
 
@@ -7,91 +19,111 @@ const databaseId = getFirestoreDatabaseId();
 
 console.log(`[Firestore Client] Project: ${getResolvedFirebaseProjectId()}, Database: ${databaseId}`);
 
+declare global {
+  interface Window {
+    __bhojanos_firestore_db__?: Firestore;
+  }
+}
+
 /** Single Firestore instance — never call initializeFirestore twice (causes SDK assertion crashes). */
 let _dbInstance: Firestore | null = null;
 
+function isFirestoreAlreadyInitializedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('already been initialized') || message.includes('already exists');
+}
+
 function createDbInstance(): Firestore {
-  if (databaseId && databaseId !== '(default)') {
+  const settings = { ignoreUndefinedProperties: true };
+  const useNamedDb = Boolean(databaseId && databaseId !== '(default)');
+
+  if (useNamedDb) {
     try {
-      return initializeFirestore(app, { ignoreUndefinedProperties: true }, databaseId);
-    } catch {
-      /* already initialized — reuse default instance */
+      return initializeFirestore(app, settings, databaseId);
+    } catch (error: unknown) {
+      if (isFirestoreAlreadyInitializedError(error)) {
+        return getFirestore(app, databaseId);
+      }
+      throw error;
     }
   }
-  return getFirestore(app);
+
+  try {
+    return initializeFirestore(app, settings);
+  } catch (error: unknown) {
+    if (isFirestoreAlreadyInitializedError(error)) {
+      return getFirestore(app);
+    }
+    throw error;
+  }
 }
 
 export function getDb(): Firestore {
+  if (typeof window !== 'undefined' && window.__bhojanos_firestore_db__) {
+    _dbInstance = window.__bhojanos_firestore_db__;
+    return _dbInstance;
+  }
+
   if (!_dbInstance) {
     _dbInstance = createDbInstance();
+    if (typeof window !== 'undefined') {
+      window.__bhojanos_firestore_db__ = _dbInstance;
+    }
   }
+
   return _dbInstance;
 }
 
-export let isFirestoreConnected = false;
+/** Avoid overlapping enableNetwork calls — a known trigger for Firestore internal assertion failures. */
+let networkReady = false;
+let networkEnablePromise: Promise<boolean> | null = null;
 
-let resolveConnection: (value: boolean) => void = () => {};
+export async function ensureFirestoreNetwork(): Promise<boolean> {
+  if (networkReady) return true;
+  if (networkEnablePromise) return networkEnablePromise;
 
-export const firestoreConnectionPromise = new Promise<boolean>((resolve) => {
-  resolveConnection = resolve;
-});
+  networkEnablePromise = (async () => {
+    try {
+      await enableNetwork(getDb());
+      networkReady = true;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      networkEnablePromise = null;
+    }
+  })();
 
-export async function forceOnline() {
-  try {
-    await enableNetwork(getDb());
-    return true;
-  } catch {
-    return false;
-  }
+  return networkEnablePromise;
+}
+
+/**
+ * Do NOT probe Firestore with getDocFromServer on a cold connection — it can permanently
+ * brick the client (Firebase SDK ca9/da08/b815). Assume online until an operation fails.
+ */
+export let isFirestoreConnected = true;
+
+export function markFirestoreDisconnected(): void {
+  isFirestoreConnected = false;
+}
+
+export function markFirestoreConnected(): void {
+  isFirestoreConnected = true;
 }
 
 export function useFirestoreConnection() {
   const [connected, setConnected] = useState(isFirestoreConnected);
-  const [loading, setLoading] = useState(!isFirestoreConnected);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    firestoreConnectionPromise.then((status) => {
-      if (mounted) {
-        setConnected(status);
-        setLoading(false);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
+  const retry = useCallback(async () => {
+    setLoading(true);
+    const ok = await ensureFirestoreNetwork();
+    isFirestoreConnected = ok;
+    setConnected(ok);
+    setLoading(false);
   }, []);
 
-  return { connected, loading, retry: testConnection };
-}
-
-async function testConnection(retries = 2) {
-  await forceOnline();
-
-  for (let i = 0; i < retries; i++) {
-    try {
-      await Promise.race([
-        getDocFromServer(doc(getDb(), '_connection_test_', 'init')),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
-      ]);
-      isFirestoreConnected = true;
-      resolveConnection(true);
-      return;
-    } catch (error: unknown) {
-      const code = (error as { code?: string })?.code;
-      if (code === 'permission-denied') {
-        isFirestoreConnected = true;
-        resolveConnection(true);
-        return;
-      }
-      if (i < retries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-      }
-    }
-  }
-
-  isFirestoreConnected = false;
-  resolveConnection(false);
+  return { connected, loading, retry };
 }
 
 export enum OperationType {
@@ -115,10 +147,46 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   if (errorMessage.includes('default credentials') || errorMessage.includes('GOOGLE_APPLICATION_CREDENTIALS')) {
     return;
   }
+  if (errorMessage.includes('INTERNAL ASSERTION FAILED')) {
+    markFirestoreDisconnected();
+  }
+  if (isFirestoreQuotaError(error)) {
+    markFirestoreDisconnected();
+  }
   console.error('Firestore Error: ', errorMessage, operationType, path);
   throw new Error(errorMessage);
 }
 
-setTimeout(() => {
-  void testConnection();
-}, 5000);
+function docCoalesceKey(ref: DocumentReference): string {
+  return `doc:${ref.path}`;
+}
+
+function queryCoalesceKey(query: Query): string {
+  const internal = query as unknown as {
+    _query?: {
+      path?: { canonicalString?: () => string };
+      filters?: unknown[];
+    };
+  };
+  const path = internal._query?.path?.canonicalString?.() ?? 'unknown';
+  const filterCount = internal._query?.filters?.length ?? 0;
+  return `query:${path}:${filterCount}`;
+}
+
+/** Quota-protected getDoc wrapper — use instead of firebase/firestore getDoc directly. */
+export async function getDoc<T = DocumentSnapshot>(
+  ref: DocumentReference,
+): Promise<T extends DocumentSnapshot ? T : DocumentSnapshot> {
+  return defaultFirestoreRetryPolicy.executeRead(docCoalesceKey(ref), () => firebaseGetDoc(ref)) as Promise<
+    T extends DocumentSnapshot ? T : DocumentSnapshot
+  >;
+}
+
+/** Quota-protected getDocs wrapper — use instead of firebase/firestore getDocs directly. */
+export async function getDocs<T = QuerySnapshot>(
+  query: Query,
+): Promise<T extends QuerySnapshot ? T : QuerySnapshot> {
+  return defaultFirestoreRetryPolicy.executeRead(queryCoalesceKey(query), () => firebaseGetDocs(query)) as Promise<
+    T extends QuerySnapshot ? T : QuerySnapshot
+  >;
+}

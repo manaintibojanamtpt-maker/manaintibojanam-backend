@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
-import { collection, getDocs, query, orderBy, limit, doc, deleteDoc } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
+import {
+  loadOpsDashboardSnapshot,
+  OPS_UNAVAILABLE,
+  type OpsIncidentRecord,
+} from '../lib/opsHealthApi';
 import { 
   Activity, 
   AlertTriangle, 
@@ -11,8 +14,6 @@ import {
   RefreshCcw, 
   FileWarning, 
   Mail, 
-  MessageSquare, 
-  Bell, 
   Clock, 
   Copy,
   Info,
@@ -26,8 +27,6 @@ import {
 import { 
   LineChart, 
   Line, 
-  AreaChart, 
-  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -38,105 +37,36 @@ import {
 import toast from 'react-hot-toast';
 
 // ============================================================================
-// TYPES & MOCK DATA
+// TYPES
 // ============================================================================
 
 interface SystemIncident {
   id: string;
-  type: 'PAYMENT_ORPHANED' | 'NOTIFICATION_FAILED' | 'WEBHOOK_TIMEOUT' | 'UNKNOWN';
+  type: string;
   status: 'DETECTED' | 'RUNNING' | 'VERIFIED' | 'RESOLVED' | 'ESCALATED';
   correlationId: string;
   relatedEntity: string;
   createdAt: string;
   updatedAt: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
-interface ReconciliationEntry {
-  id: string;
-  orderId: string;
-  draftId: string;
-  source: 'CLIENT_CALLBACK' | 'WEBHOOK_RECOVERY';
-  confirmedAt: string;
-  razorpayOrderId: string;
-  status: 'PROMOTED' | 'FAILED';
-}
-
-interface PendingDraft {
-  id: string;
-  orderId: string;
-  amount: number;
-  createdAt: string;
-  status: 'PENDING_PAYMENT' | 'PAYMENT_CAPTURED' | 'ABANDONED';
-}
-
-interface OutboxItem {
-  id: string;
-  channel: 'EMAIL' | 'WHATSAPP' | 'FCM';
-  recipient: string;
-  status: 'RETRY_PENDING' | 'PROCESSING' | 'DELIVERED' | 'DEAD_LETTER';
-  failureType: 'RETRYABLE' | 'NON_RETRYABLE';
-  attempts: number;
-  maxAttempts: number;
-  nextRetryAt?: string;
-  lastError: string;
-  correlationId: string;
-  relatedEntity: string;
-}
-
-const useMockSystemHealth = () => {
+function mapOpsIncident(incident: OpsIncidentRecord): SystemIncident {
   return {
-    summary: {
-      openIncidents: 2,
-      reconciliationsToday: 48,
-      pendingDrafts: 2,
-      retryingNotifications: 3,
-      deadLetterNotifications: 1,
-      deliverySuccessRate: 99.2
-    },
-    incidents: [
-      { id: 'inc_1', type: 'PAYMENT_ORPHANED', status: 'RESOLVED', correlationId: 'req-a1b2', relatedEntity: 'user_x99', createdAt: '2026-06-12T10:15:00Z', updatedAt: '2026-06-12T10:16:30Z', payload: { amount: 500, draftId: 'draft_112' } },
-      { id: 'inc_2', type: 'NOTIFICATION_FAILED', status: 'DETECTED', correlationId: 'req-b3c4', relatedEntity: 'order_555', createdAt: '2026-06-12T11:30:00Z', updatedAt: '2026-06-12T11:30:00Z', payload: { channel: 'WHATSAPP', error: 'Rate limit exceeded' } },
-      { id: 'inc_3', type: 'WEBHOOK_TIMEOUT', status: 'ESCALATED', correlationId: 'req-d5e6', relatedEntity: 'draft_888', createdAt: '2026-06-11T14:20:00Z', updatedAt: '2026-06-11T15:00:00Z', payload: { gateway: 'razorpay' } }
-    ] as SystemIncident[],
-    reconciliations: [
-      { id: 'rec_1', orderId: 'ord_1001', draftId: 'draft_1001', source: 'CLIENT_CALLBACK', confirmedAt: '2026-06-12T09:00:00Z', razorpayOrderId: 'order_abc123', status: 'PROMOTED' },
-      { id: 'rec_2', orderId: 'ord_1002', draftId: 'draft_1002', source: 'WEBHOOK_RECOVERY', confirmedAt: '2026-06-12T09:45:00Z', razorpayOrderId: 'order_def456', status: 'PROMOTED' },
-      { id: 'rec_3', orderId: 'ord_1003', draftId: 'draft_1003', source: 'CLIENT_CALLBACK', confirmedAt: '2026-06-12T10:20:00Z', razorpayOrderId: 'order_ghi789', status: 'PROMOTED' },
-      { id: 'rec_4', orderId: 'ord_1004', draftId: 'draft_1004', source: 'WEBHOOK_RECOVERY', confirmedAt: '2026-06-12T11:05:00Z', razorpayOrderId: 'order_jkl012', status: 'PROMOTED' }
-    ] as ReconciliationEntry[],
-    pendingDraftsList: [
-      { id: 'draft_2001', orderId: 'ord_2001', amount: 350, createdAt: '2026-06-12T12:00:00Z', status: 'PENDING_PAYMENT' },
-      { id: 'draft_2002', orderId: 'ord_2002', amount: 800, createdAt: '2026-06-12T12:15:00Z', status: 'PAYMENT_CAPTURED' }
-    ] as PendingDraft[],
-    outbox: {
-      retrying: [
-        { id: 'out_1', channel: 'WHATSAPP', recipient: '+919876543210', status: 'RETRY_PENDING', failureType: 'RETRYABLE', attempts: 2, maxAttempts: 5, nextRetryAt: '2026-06-12T12:20:00Z', lastError: '429 Too Many Requests', correlationId: 'req-x1', relatedEntity: 'ord_1001' },
-        { id: 'out_2', channel: 'EMAIL', recipient: 'customer@example.com', status: 'RETRY_PENDING', failureType: 'RETRYABLE', attempts: 1, maxAttempts: 5, nextRetryAt: '2026-06-12T12:05:00Z', lastError: 'ETIMEDOUT', correlationId: 'req-y2', relatedEntity: 'ord_1002' },
-        { id: 'out_3', channel: 'FCM', recipient: 'user_abc', status: 'PROCESSING', failureType: 'RETRYABLE', attempts: 3, maxAttempts: 5, lastError: 'messaging/internal-error', correlationId: 'req-z3', relatedEntity: 'ord_1003' }
-      ] as OutboxItem[],
-      deadLetter: [
-        { id: 'out_4', channel: 'FCM', recipient: 'user_xyz', status: 'DEAD_LETTER', failureType: 'NON_RETRYABLE', attempts: 1, maxAttempts: 5, lastError: 'messaging/invalid-registration-token', correlationId: 'req-w4', relatedEntity: 'ord_999' },
-      ] as OutboxItem[]
-    },
-    charts: {
-      reconciliationTrend: [
-        { time: '08:00', client: 10, webhook: 0 },
-        { time: '09:00', client: 15, webhook: 2 },
-        { time: '10:00', client: 8, webhook: 1 },
-        { time: '11:00', client: 22, webhook: 4 },
-        { time: '12:00', client: 12, webhook: 0 }
-      ],
-      outboxDistribution: [
-        { time: '08:00', pending: 2, processing: 0, dead: 0 },
-        { time: '09:00', pending: 5, processing: 1, dead: 0 },
-        { time: '10:00', pending: 1, processing: 0, dead: 1 },
-        { time: '11:00', pending: 8, processing: 2, dead: 1 },
-        { time: '12:00', pending: 3, processing: 1, dead: 1 }
-      ]
-    }
+    id: incident.incidentId,
+    type: incident.type,
+    status: incident.status as SystemIncident['status'],
+    correlationId: incident.correlationId,
+    relatedEntity: incident.tenantId || incident.route || '—',
+    createdAt: incident.createdAt,
+    updatedAt: incident.updatedAt,
+    payload: incident.payload,
   };
-};
+}
+
+function formatUnavailableMetric(value: number | null | undefined): string | number {
+  return value == null ? OPS_UNAVAILABLE : value;
+}
 
 // ============================================================================
 // HELPER COMPONENTS
@@ -197,67 +127,84 @@ const MetricCard = ({ title, value, subtitle, icon: Icon, trend, colorClass = "t
   </m.div>
 );
 
-const ChannelIcon = ({ channel }: { channel: string }) => {
-  switch (channel) {
-    case 'EMAIL': return <Mail className="w-4 h-4 text-gray-500 dark:text-gray-400" />;
-    case 'WHATSAPP': return <MessageSquare className="w-4 h-4 text-green-600 dark:text-green-400" />;
-    case 'FCM': return <Bell className="w-4 h-4 text-amber-500 dark:text-amber-400" />;
-    default: return <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />;
-  }
-};
 
 // ============================================================================
-// MAIN PAGE
+// HELPER COMPONENTS
 // ============================================================================
 
 export default function SystemHealth() {
   const navigate = useNavigate();
-  const data = useMockSystemHealth();
-  const [incidents, setIncidents] = useState<SystemIncident[]>(data.incidents);
+  const [incidents, setIncidents] = useState<SystemIncident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<SystemIncident | null>(null);
+  const [openIncidentsCount, setOpenIncidentsCount] = useState<number | null>(null);
+  const [incidentTrend, setIncidentTrend] = useState<Array<{ time: string; count: number }>>([]);
+  const [systemStatus, setSystemStatus] = useState<'operational' | 'degraded' | 'unavailable'>('unavailable');
+  const [latestDeploy, setLatestDeploy] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   
   // KPI Filtering State
   const [activeKpi, setActiveKpi] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    async function fetchIncidents() {
-      try {
-        const q = query(collection(getDb(), 'client_errors'), orderBy('timestamp', 'desc'), limit(50));
-        const snapshot = await getDocs(q);
-        const fetched = snapshot.docs.map(doc => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            type: 'CLIENT_ERROR' as any,
-            status: d.resolved ? 'RESOLVED' : 'DETECTED',
-            correlationId: doc.id,
-            relatedEntity: d.tenantId || 'Tenant 0',
-            createdAt: d.timestamp?.toDate ? d.timestamp.toDate().toISOString() : new Date().toISOString(),
-            updatedAt: d.timestamp?.toDate ? d.timestamp.toDate().toISOString() : new Date().toISOString(),
-            payload: { message: d.message, context: d.contextSummary, route: d.route }
-          } as SystemIncident;
-        });
-        if (fetched.length > 0) {
-          setIncidents(fetched);
-        }
-      } catch (err) {
-        console.error("Failed to fetch incidents", err);
+  const refreshDashboard = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const snapshot = await loadOpsDashboardSnapshot();
+      setLastUpdated(snapshot.fetchedAt);
+
+      if (snapshot.incidents) {
+        setIncidents(snapshot.incidents.map(mapOpsIncident));
       }
+
+      const summary = snapshot.healthSummary;
+      if (summary?.openIncidentsCount != null) {
+        setOpenIncidentsCount(summary.openIncidentsCount);
+      } else if (snapshot.incidents) {
+        setOpenIncidentsCount(
+          snapshot.incidents.filter((i) => i.status !== 'RESOLVED' && i.status !== 'VERIFIED').length,
+        );
+      } else {
+        setOpenIncidentsCount(null);
+      }
+
+      if (summary?.incidentTrend?.length) {
+        setIncidentTrend(
+          summary.incidentTrend.map((point) => ({
+            time: new Date(point.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            count: point.count,
+          })),
+        );
+      } else {
+        setIncidentTrend([]);
+      }
+
+      const deploy = summary?.latestDeploy || snapshot.apiHealth?.platform?.build || null;
+      setLatestDeploy(deploy);
+
+      const healthStatus = summary?.apiHealth?.status || snapshot.apiHealth?.status;
+      const firestoreBackedOff = snapshot.apiHealth?.firestore?.backedOff;
+      if (healthStatus === 'ok' && !firestoreBackedOff) {
+        setSystemStatus('operational');
+      } else if (healthStatus === 'ok' || healthStatus === 'degraded') {
+        setSystemStatus('degraded');
+      } else {
+        setSystemStatus('unavailable');
+      }
+    } catch (err) {
+      console.error('Failed to load ops dashboard', err);
+      setSystemStatus('unavailable');
+    } finally {
+      setIsRefreshing(false);
     }
-    fetchIncidents();
   }, []);
 
-  const handleAcknowledgeIncident = async (incidentId: string) => {
-    try {
-      await deleteDoc(doc(getDb(), 'client_errors', incidentId));
-      setIncidents(prev => prev.filter(i => i.id !== incidentId));
-      setSelectedIncident(null);
-      toast.success('Incident acknowledged and cleared');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to clear incident');
-    }
+  useEffect(() => {
+    refreshDashboard();
+  }, [refreshDashboard]);
+
+  const handleAcknowledgeIncident = async () => {
+    toast.error('Incident resolution is managed via the ops incident pipeline');
   };
 
   useEffect(() => {
@@ -294,6 +241,12 @@ export default function SystemHealth() {
 
   const clearFilters = () => setActiveKpi(null);
 
+  const resolvedOpenCount: number | null =
+    openIncidentsCount ??
+    (incidents.length
+      ? incidents.filter((i) => !['RESOLVED', 'VERIFIED'].includes(i.status)).length
+      : null);
+
   const renderMobileDrawerContent = () => {
     switch (activeKpi) {
       case 'OPEN_INCIDENTS':
@@ -312,73 +265,13 @@ export default function SystemHealth() {
           </div>
         );
       case 'RECONCILED_TODAY':
-        return (
-          <div className="space-y-4">
-            {data.reconciliations.map(rec => (
-              <div key={rec.id} className="p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-white/5 flex justify-between items-center">
-                <div>
-                  <div className="font-medium text-sm dark:text-white">{rec.orderId}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{rec.source.replace(/_/g, ' ')}</div>
-                </div>
-                <StatusBadge status={rec.status} />
-              </div>
-            ))}
-          </div>
-        );
       case 'PENDING_DRAFTS':
-        return (
-          <div className="space-y-4">
-             {data.pendingDraftsList.map(draft => (
-              <div key={draft.id} className="p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-white/5 flex justify-between items-center">
-                <div>
-                  <div className="font-medium text-sm dark:text-white">{draft.orderId}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">₹{draft.amount}</div>
-                </div>
-                <StatusBadge status={draft.status} />
-              </div>
-            ))}
-          </div>
-        );
       case 'NOTIFICATION_RETRIES':
-        return (
-          <div className="space-y-4">
-            {data.outbox.retrying.map(item => (
-               <div key={item.id} className="p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-white/5">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <ChannelIcon channel={item.channel} />
-                      <span className="font-medium text-sm dark:text-white">{item.recipient}</span>
-                    </div>
-                    <StatusBadge status={item.status} />
-                  </div>
-                  <p className="text-xs text-red-500 dark:text-red-400 truncate">{item.lastError}</p>
-               </div>
-            ))}
-          </div>
-        );
       case 'DEAD_LETTER':
-        return (
-          <div className="space-y-4">
-            {data.outbox.deadLetter.map(item => (
-               <div key={item.id} className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <ChannelIcon channel={item.channel} />
-                      <span className="font-medium text-sm dark:text-white">{item.recipient}</span>
-                    </div>
-                    <StatusBadge status={item.status} />
-                  </div>
-                  <p className="text-xs text-red-600 dark:text-red-400 truncate">{item.lastError}</p>
-               </div>
-            ))}
-          </div>
-        );
       case 'DELIVERY_RATE':
         return (
           <div className="p-4 bg-gray-50 dark:bg-[#111111] rounded-lg border border-gray-200 dark:border-white/5">
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Focusing on chart delivery metrics is best viewed on desktop.</p>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{data.summary.deliverySuccessRate}%</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Success rate over 24h</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{OPS_UNAVAILABLE} — production API not yet wired for this metric.</p>
           </div>
         );
       default:
@@ -410,13 +303,39 @@ export default function SystemHealth() {
           </div>
           <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10">
             <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              {systemStatus === 'operational' && (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </>
+              )}
+              {systemStatus === 'degraded' && (
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              )}
+              {systemStatus === 'unavailable' && (
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+              )}
             </span>
-            System Operational
+            {systemStatus === 'operational' && 'System Operational'}
+            {systemStatus === 'degraded' && 'System Degraded'}
+            {systemStatus === 'unavailable' && OPS_UNAVAILABLE}
+            {latestDeploy && (
+              <>
+                <span className="mx-2 text-gray-300 dark:text-gray-600">|</span>
+                <span>Build {latestDeploy}</span>
+              </>
+            )}
             <span className="mx-2 text-gray-300 dark:text-gray-600">|</span>
             <Clock className="w-4 h-4" />
-            Last updated: Just now
+            {isRefreshing ? 'Refreshing…' : lastUpdated ? `Updated ${formatDate(lastUpdated)}` : 'Not loaded'}
+            <button
+              onClick={refreshDashboard}
+              disabled={isRefreshing}
+              className="ml-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-50"
+              aria-label="Refresh dashboard"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
       </header>
@@ -451,37 +370,37 @@ export default function SystemHealth() {
         {/* 2. SUMMARY KPI ROW */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <MetricCard 
-            title="Open Incidents" value={incidents.filter(i => !['RESOLVED', 'VERIFIED'].includes(i.status)).length} subtitle="Requires attention" 
-            icon={AlertTriangle} colorClass={incidents.filter(i => !['RESOLVED', 'VERIFIED'].includes(i.status)).length > 0 ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : "text-gray-500 dark:text-gray-400"} 
+            title="Open Incidents" value={formatUnavailableMetric(resolvedOpenCount)} subtitle="Requires attention" 
+            icon={AlertTriangle} colorClass={(resolvedOpenCount ?? 0) > 0 ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : "text-gray-500 dark:text-gray-400"} 
             isActive={activeKpi === 'OPEN_INCIDENTS'}
             onClick={() => handleKpiClick('OPEN_INCIDENTS', 'section-incidents')}
           />
           <MetricCard 
-            title="Reconciled Today" value={data.summary.reconciliationsToday} subtitle="Successful payments" 
-            icon={CheckCircle} colorClass="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20" trend={12}
+            title="Reconciled Today" value={OPS_UNAVAILABLE} subtitle="Successful payments" 
+            icon={CheckCircle} colorClass="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
             isActive={activeKpi === 'RECONCILED_TODAY'}
             onClick={() => handleKpiClick('RECONCILED_TODAY', 'section-reconciliation')}
           />
           <MetricCard 
-            title="Pending Drafts" value={data.summary.pendingDrafts} subtitle="Awaiting webhook/client" 
+            title="Pending Drafts" value={OPS_UNAVAILABLE} subtitle="Awaiting webhook/client" 
             icon={Clock} colorClass="text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" 
             isActive={activeKpi === 'PENDING_DRAFTS'}
             onClick={() => handleKpiClick('PENDING_DRAFTS', 'section-reconciliation')}
           />
           <MetricCard 
-            title="Notification Retries" value={data.summary.retryingNotifications} subtitle="In outbox queue" 
+            title="Notification Retries" value={OPS_UNAVAILABLE} subtitle="In outbox queue" 
             icon={RefreshCcw} colorClass="text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20" 
             isActive={activeKpi === 'NOTIFICATION_RETRIES'}
             onClick={() => handleKpiClick('NOTIFICATION_RETRIES', 'section-outbox')}
           />
           <MetricCard 
-            title="Dead-Letter Items" value={data.summary.deadLetterNotifications} subtitle="Permanent failures" 
-            icon={FileWarning} colorClass={data.summary.deadLetterNotifications > 0 ? "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20" : "text-gray-500 dark:text-gray-400"} 
+            title="Dead-Letter Items" value={OPS_UNAVAILABLE} subtitle="Permanent failures" 
+            icon={FileWarning} colorClass="text-gray-500 dark:text-gray-400" 
             isActive={activeKpi === 'DEAD_LETTER'}
             onClick={() => handleKpiClick('DEAD_LETTER', 'section-outbox')}
           />
           <MetricCard 
-            title="Delivery Rate" value={`${data.summary.deliverySuccessRate}%`} subtitle="Last 24 hours" 
+            title="Delivery Rate" value={OPS_UNAVAILABLE} subtitle="Last 24 hours" 
             icon={Activity} colorClass="text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" 
             isActive={activeKpi === 'DELIVERY_RATE'}
             onClick={() => handleKpiClick('DELIVERY_RATE', 'section-outbox')}
@@ -563,80 +482,32 @@ export default function SystemHealth() {
             
             <div className="p-6 border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
               <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.charts.reconciliationTrend} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                    <RechartsTooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: '#111', color: '#fff' }}
-                      cursor={{ stroke: '#333', strokeWidth: 2 }}
-                    />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px', color: '#9CA3AF' }} />
-                    <Line type="monotone" name="Client Callback" dataKey="client" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" name="Webhook Recovery" dataKey="webhook" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {incidentTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={incidentTrend} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
+                      <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} allowDecimals={false} />
+                      <RechartsTooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: '#111', color: '#fff' }}
+                        cursor={{ stroke: '#333', strokeWidth: 2 }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px', color: '#9CA3AF' }} />
+                      <Line type="monotone" name="Incidents (24h)" dataKey="count" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                    {OPS_UNAVAILABLE} — reconciliation metrics not yet wired to production APIs.
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="overflow-x-auto flex-1">
-              {activeKpi === 'PENDING_DRAFTS' && !isMobile ? (
-                <>
-                  <div className="px-6 py-2 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800 text-xs font-semibold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
-                    Filtered: Pending Drafts
-                  </div>
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-gray-50 dark:bg-[#0A0A0A] text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">
-                      <tr>
-                        <th className="px-6 py-3 font-medium">Draft ID</th>
-                        <th className="px-6 py-3 font-medium">Created</th>
-                        <th className="px-6 py-3 font-medium">Amount</th>
-                        <th className="px-6 py-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {data.pendingDraftsList.map((draft) => (
-                        <tr key={draft.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
-                          <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{draft.orderId}</td>
-                          <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{formatDate(draft.createdAt)}</td>
-                          <td className="px-6 py-3 font-mono text-gray-600 dark:text-gray-300">₹{draft.amount}</td>
-                          <td className="px-6 py-3"><StatusBadge status={draft.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              ) : (
-                <>
-                  {activeKpi === 'RECONCILED_TODAY' && !isMobile && (
-                    <div className="px-6 py-2 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800 text-xs font-semibold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
-                      Filtered: Today's Reconciliations
-                    </div>
-                  )}
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-gray-50 dark:bg-[#0A0A0A] text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">
-                      <tr>
-                        <th className="px-6 py-3 font-medium">Order / Draft</th>
-                        <th className="px-6 py-3 font-medium">Source</th>
-                        <th className="px-6 py-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {data.reconciliations.map((rec) => (
-                        <tr key={rec.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
-                          <td className="px-6 py-3">
-                            <div className="font-medium text-gray-900 dark:text-white">{rec.orderId}</div>
-                            <div className="text-xs text-gray-400 dark:text-gray-500">{rec.draftId}</div>
-                          </td>
-                          <td className="px-6 py-3"><StatusBadge status={rec.source} /></td>
-                          <td className="px-6 py-3"><StatusBadge status={rec.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
+              <div className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                Payment recovery detail tables are {OPS_UNAVAILABLE.toLowerCase()} until ops payment APIs ship.
+              </div>
             </div>
           </section>
 
@@ -652,83 +523,15 @@ export default function SystemHealth() {
             </div>
 
             <div className="p-6 border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
-              <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.charts.outboxDistribution} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                    <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: '#111', color: '#fff' }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px', color: '#9CA3AF' }} />
-                    <Area type="monotone" name="Retrying" dataKey="pending" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.2} />
-                    <Area type="monotone" name="Processing" dataKey="processing" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.2} />
-                    <Area type="monotone" name="Dead Letter" dataKey="dead" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.2} />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="h-48 w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                Notification outbox metrics are {OPS_UNAVAILABLE.toLowerCase()} until ops outbox APIs ship.
               </div>
             </div>
 
             <div className="overflow-x-auto flex-1">
-              {activeKpi === 'DEAD_LETTER' && !isMobile ? null : (
-                <>
-                  <div className={`px-6 py-2 border-b border-gray-200 dark:border-white/5 text-xs font-semibold uppercase tracking-wider ${activeKpi === 'NOTIFICATION_RETRIES' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300' : 'bg-gray-50 dark:bg-[#0A0A0A] text-gray-500 dark:text-gray-400'}`}>
-                    Active Retries {activeKpi === 'NOTIFICATION_RETRIES' && '(Filtered)'}
-                  </div>
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {data.outbox.retrying.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
-                          <td className="px-6 py-3">
-                            <div className="flex items-center gap-2">
-                              <ChannelIcon channel={item.channel} />
-                              <span className="font-medium text-gray-900 dark:text-white">{item.recipient}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
-                              {item.lastError}
-                            </div>
-                          </td>
-                          <td className="px-6 py-3">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Attempt {item.attempts}/{item.maxAttempts}</div>
-                            <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">Next: {item.nextRetryAt ? formatDate(item.nextRetryAt) : 'Now'}</div>
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <StatusBadge status={item.status} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-
-              {data.outbox.deadLetter.length > 0 && activeKpi !== 'NOTIFICATION_RETRIES' && (
-                <>
-                  <div className={`px-6 py-2 border-y text-xs font-semibold uppercase tracking-wider flex justify-between ${activeKpi === 'DEAD_LETTER' ? 'bg-red-100 dark:bg-red-900/40 border-red-200 dark:border-red-800 text-red-900 dark:text-red-300' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/50 text-red-800 dark:text-red-400'}`}>
-                    <span>Dead Letters {activeKpi === 'DEAD_LETTER' && '(Filtered)'}</span>
-                    <span className="bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-200 px-2 py-0.5 rounded-full">{data.outbox.deadLetter.length}</span>
-                  </div>
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {data.outbox.deadLetter.map((item) => (
-                         <tr key={item.id} className="hover:bg-red-50/50 dark:hover:bg-red-900/40">
-                         <td className="px-6 py-3">
-                           <div className="flex items-center gap-2">
-                             <ChannelIcon channel={item.channel} />
-                             <span className="font-medium text-gray-900 dark:text-white">{item.recipient}</span>
-                           </div>
-                           <div className="text-xs text-red-500 dark:text-red-400 mt-0.5 truncate max-w-[200px]" title={item.lastError}>
-                             {item.lastError}
-                           </div>
-                         </td>
-                         <td className="px-6 py-3 text-right">
-                           <StatusBadge status={item.status} />
-                         </td>
-                       </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
+              <div className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                Outbox retry and dead-letter tables are {OPS_UNAVAILABLE.toLowerCase()} until ops notification APIs ship.
+              </div>
             </div>
           </section>
         </div>
@@ -842,7 +645,7 @@ export default function SystemHealth() {
 
               <div className="p-6 border-t border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-[#0A0A0A]">
                 <button 
-                  onClick={() => handleAcknowledgeIncident(selectedIncident.id)}
+                  onClick={handleAcknowledgeIncident}
                   className="w-full bg-white dark:bg-[#111111] border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors shadow-sm"
                 >
                   Acknowledge Incident

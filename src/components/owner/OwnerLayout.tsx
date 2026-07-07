@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Store, ShoppingBag, LogOut, Copy, ExternalLink, CheckCircle2, ChevronRight, X, Menu as MenuIcon, AlertCircle, Volume2, VolumeX, ClipboardList, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { m, AnimatePresence } from 'framer-motion';
+import { DashboardRealtimeProvider } from '../../context/DashboardRealtimeProvider';
 import { OrderAlertProvider, useOrderAlerts } from '../../hooks/useOrderAlerts';
 import { NotificationBell } from '../../modules/notifications/NotificationBell';
 import { useEntitlements } from '../../hooks/useEntitlements';
@@ -17,9 +18,12 @@ import { StoreSetupGuide } from './StoreSetupGuide';
 import { OwnerHomeScreenBanner } from './OwnerHomeScreenBanner';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
+import { syncOwnerTenantsViaApi } from '../../lib/ownerProvisioning';
+import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
+import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../../config/founder';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, userProfile, logout } = useAuth();
+  const { currentUser, userProfile, logout, refreshProfile } = useAuth();
   const { tenantInfo, tenantSlug, tenantId: contextTenantId } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount, soundEnabled, showSoundPrompt, setSoundEnabled, enableSoundAlerts } = useOrderAlerts();
@@ -74,7 +78,12 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const mobileBarItems = navItemsWithSetup.filter((item) => item.mobileBar);
 
-  const tenantId = contextTenantId || userProfile?.ownedTenantIds?.[0];
+  const ownedIds = (userProfile?.ownedTenantIds ?? []).filter(
+    (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(currentUser?.email)),
+  );
+  const tenantId = contextTenantId && contextTenantId !== FOUNDER_TENANT_ID
+    ? contextTenantId
+    : ownedIds[0] || (isFounderOwnerEmail(currentUser?.email) ? contextTenantId : null);
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
   const customerPreviewUrl = storeUrl ? buildCustomerPreviewStoreUrl(storeUrl) : '';
@@ -83,6 +92,34 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const previewRaw = sessionStorage.getItem('tenant_preview');
+      if (previewRaw) {
+        const preview = JSON.parse(previewRaw) as { id?: string };
+        const previewId = preview?.id || '';
+        const ownsPreview = ownedIds.includes(previewId);
+        if (
+          previewId === FOUNDER_TENANT_ID && !isFounderOwnerEmail(currentUser.email) ||
+          (previewId && !ownsPreview)
+        ) {
+          sessionStorage.removeItem('tenant_preview');
+        }
+      }
+    } catch {
+      sessionStorage.removeItem('tenant_preview');
+    }
+    void syncOwnerTenantsViaApi()
+      .then((ids) => {
+        if (ids.length > 0) cacheOwnerTenantIds(ids);
+        return refreshProfile();
+      })
+      .catch((error) => {
+        console.warn('Owner tenant sync on layout mount failed:', error);
+      });
+  }, [currentUser?.uid, refreshProfile]);
 
   const copyStoreLink = () => {
     if (!storeUrl) return;
@@ -489,9 +526,11 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
 };
 
 const OwnerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <OrderAlertProvider>
-    <OwnerLayoutShell>{children}</OwnerLayoutShell>
-  </OrderAlertProvider>
+  <DashboardRealtimeProvider>
+    <OrderAlertProvider>
+      <OwnerLayoutShell>{children}</OwnerLayoutShell>
+    </OrderAlertProvider>
+  </DashboardRealtimeProvider>
 );
 
 export default OwnerLayout;

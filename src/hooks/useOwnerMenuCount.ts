@@ -1,50 +1,57 @@
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { getDb } from '../lib/firebase-db';
+import { useCallback, useEffect, useState } from 'react';
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
-import { getMenuTenantQueryKeys } from '../lib/menuTenantKeys';
+import { useOwnerTenantId } from '../hooks/useOwnerTenantId';
+import { fetchOwnerMenuItems } from '../lib/ownerMenuApi';
+import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
+import { useDashboardMenu, useIsDashboardRealtimeActive } from '../context/DashboardRealtimeProvider';
 
-/** Live menu item count for owner setup progress (matches slug + doc id). */
+const MENU_COUNT_POLL_MS = 8_000;
+
+/** Menu item count for owner setup progress — shared dashboard poll when inside owner layout. */
 export function useOwnerMenuCount(): number {
+  const dashboardActive = useIsDashboardRealtimeActive();
+  const dashboardMenu = useDashboardMenu();
   const { tenantInfo, tenantId, tenantSlug } = useTenant();
   const { userProfile } = useAuth();
-  const [menuCount, setMenuCount] = useState(0);
+  const resolvedTenantId = useOwnerTenantId();
+  const [fallbackMenuCount, setFallbackMenuCount] = useState(0);
 
-  const keys = getMenuTenantQueryKeys(
-    tenantInfo,
-    tenantId || tenantSlug || userProfile?.ownedTenantIds?.[0],
+  const ownedFallback = (userProfile?.ownedTenantIds ?? []).find(
+    (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(userProfile?.email)),
   );
+  const activeTenantId =
+    resolvedTenantId || tenantId || tenantInfo?.id || tenantSlug || ownedFallback || null;
+
+  const refresh = useCallback(async () => {
+    if (!activeTenantId) {
+      setFallbackMenuCount(0);
+      return;
+    }
+    try {
+      const response = await fetchOwnerMenuItems(activeTenantId);
+      setFallbackMenuCount(response.items?.length ?? 0);
+    } catch (error) {
+      console.error('useOwnerMenuCount failed:', error);
+    }
+  }, [activeTenantId]);
 
   useEffect(() => {
-    if (keys.length === 0) {
-      setMenuCount(0);
+    if (dashboardActive || !activeTenantId) {
+      if (!activeTenantId) setFallbackMenuCount(0);
       return;
     }
 
-    const db = getDb();
-    const docIdsByKey = new Map<string, Set<string>>();
+    void refresh();
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, MENU_COUNT_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [activeTenantId, dashboardActive, refresh]);
 
-    const recompute = () => {
-      const merged = new Set<string>();
-      docIdsByKey.forEach((ids) => ids.forEach((id) => merged.add(id)));
-      setMenuCount(merged.size);
-    };
+  if (dashboardActive) {
+    return dashboardMenu.menuCount;
+  }
 
-    const unsubs = keys.map((key) => {
-      const menuQuery = query(collection(db, 'menu'), where('tenantId', '==', key));
-      return onSnapshot(
-        menuQuery,
-        (snap) => {
-          docIdsByKey.set(key, new Set(snap.docs.map((d) => d.id)));
-          recompute();
-        },
-        (err) => console.error('useOwnerMenuCount listener failed:', key, err),
-      );
-    });
-
-    return () => unsubs.forEach((u) => u());
-  }, [keys.join('|')]);
-
-  return menuCount;
+  return fallbackMenuCount;
 }

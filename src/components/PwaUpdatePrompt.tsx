@@ -4,12 +4,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 // @ts-ignore - provided by vite-plugin-pwa
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { checkServiceWorkerForUpdate, shouldAutoApplyPwaUpdate } from '../lib/pwaUpdateUtils';
+import {
+  checkServiceWorkerForUpdate,
+  isPwaUpdateReloadBlocked,
+} from '../lib/pwaUpdateUtils';
 
 export const PwaUpdatePrompt: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const autoUpdateStarted = useRef(false);
+  const [reloadBlocked, setReloadBlocked] = useState(false);
+  const pendingReload = useRef(false);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -57,17 +61,39 @@ export const PwaUpdatePrompt: React.FC = () => {
     void checkServiceWorkerForUpdate();
   }, []);
 
+  useEffect(() => {
+    if (!needRefresh) {
+      setReloadBlocked(false);
+      pendingReload.current = false;
+    }
+  }, [needRefresh]);
+
   const close = useCallback(() => {
     setNeedRefresh(false);
+    setReloadBlocked(false);
   }, [setNeedRefresh]);
 
   const handleUpdateNow = useCallback(async () => {
     if (updating) return;
+
+    if (isPwaUpdateReloadBlocked()) {
+      setReloadBlocked(true);
+      pendingReload.current = true;
+      return;
+    }
+
     setUpdating(true);
+    setReloadBlocked(false);
 
     let reloaded = false;
     const forceReload = () => {
       if (reloaded) return;
+      if (isPwaUpdateReloadBlocked()) {
+        setReloadBlocked(true);
+        pendingReload.current = true;
+        setUpdating(false);
+        return;
+      }
       reloaded = true;
       window.location.reload();
     };
@@ -89,21 +115,26 @@ export const PwaUpdatePrompt: React.FC = () => {
     }
   }, [updateServiceWorker, updating]);
 
-  // Installed mobile PWAs: apply updates automatically (users rarely tap "Update Now")
   useEffect(() => {
-    if (!needRefresh || updating || autoUpdateStarted.current) return;
-    if (!shouldAutoApplyPwaUpdate()) return;
+    if (!pendingReload.current || !needRefresh) return;
 
-    autoUpdateStarted.current = true;
-    console.log('[PWA] Auto-applying update on mobile/installed PWA');
-    const timer = window.setTimeout(() => {
-      void handleUpdateNow();
-    }, 1200);
+    const tryDeferredReload = () => {
+      if (!pendingReload.current || isPwaUpdateReloadBlocked()) return;
+      pendingReload.current = false;
+      setReloadBlocked(false);
+      window.location.reload();
+    };
 
-    return () => window.clearTimeout(timer);
-  }, [needRefresh, updating, handleUpdateNow]);
+    window.addEventListener('popstate', tryDeferredReload);
+    document.addEventListener('visibilitychange', tryDeferredReload);
 
-  const showBanner = mounted && needRefresh && !shouldAutoApplyPwaUpdate();
+    return () => {
+      window.removeEventListener('popstate', tryDeferredReload);
+      document.removeEventListener('visibilitychange', tryDeferredReload);
+    };
+  }, [needRefresh]);
+
+  const showBanner = mounted && needRefresh;
 
   if (!showBanner) {
     return null;
@@ -132,7 +163,9 @@ export const PwaUpdatePrompt: React.FC = () => {
                 Update Available
               </h3>
               <p className="text-xs leading-relaxed text-[#b9ada1]">
-                A new version of BhojanOS is ready. Get a faster experience and new improvements!
+                {reloadBlocked
+                  ? 'Finish checkout or save your work, then tap Update Now. Reload is blocked on this screen.'
+                  : 'A new version of BhojanOS is ready. Tap Update Now when you are ready to reload.'}
               </p>
             </div>
             <button
@@ -163,7 +196,7 @@ export const PwaUpdatePrompt: React.FC = () => {
               onClick={handleUpdateNow}
               onPointerDown={(event) => event.stopPropagation()}
             >
-              {updating ? 'Updating…' : 'Update Now'}
+              {updating ? 'Updating…' : reloadBlocked ? 'Update When Ready' : 'Update Now'}
             </button>
           </div>
         </div>

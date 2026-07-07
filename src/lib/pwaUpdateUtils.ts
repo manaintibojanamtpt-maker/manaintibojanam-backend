@@ -7,11 +7,38 @@ export function isInstalledPwa(): boolean {
   );
 }
 
-/** Phone/tablet browsers and installed PWAs — auto-apply updates (no "Later" tap). */
-export function shouldAutoApplyPwaUpdate(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (isInstalledPwa()) return true;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent);
+const SENSITIVE_ROUTE_PREFIXES = [
+  '/checkout',
+  '/owner/orders',
+  '/owner/recipes',
+  '/owner/menu',
+  '/owner/inventory',
+] as const;
+
+function normalizePwaRoutePath(pathname: string): string {
+  const storefrontMatch = pathname.match(/^\/k\/[^/]+(\/.*)?$/);
+  if (storefrontMatch) {
+    return storefrontMatch[1] || '/';
+  }
+  return pathname;
+}
+
+/** Routes and forms where an automatic reload would discard in-progress user work. */
+export function isSensitivePwaUpdateRoute(pathname?: string): boolean {
+  if (typeof window === 'undefined' && !pathname) return false;
+  const path = normalizePwaRoutePath(pathname ?? window.location.pathname);
+  return SENSITIVE_ROUTE_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
+export function hasBlockingSwUpdateForm(): boolean {
+  if (typeof document === 'undefined') return false;
+  return Boolean(document.querySelector('[data-blocking-sw-update]'));
+}
+
+export function isPwaUpdateReloadBlocked(pathname?: string): boolean {
+  return isSensitivePwaUpdateRoute(pathname) || hasBlockingSwUpdateForm();
 }
 
 export async function checkServiceWorkerForUpdate(): Promise<void> {
