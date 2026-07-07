@@ -2,7 +2,7 @@
 
 **Milestone:** M0  
 **Version:** 0.1.0-m0  
-**Status:** Complete — awaiting M0 exit ARB review  
+**Status:** Complete — see `M0-ARB-EXIT-REVIEW.md`  
 **BhojanOS modified:** No
 
 ---

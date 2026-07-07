@@ -1,9 +1,11 @@
 # BAEO v1.1 — Operational Framework
 
 **Version:** 1.1.0  
-**Status:** ACTIVE  
+**Status:** ARTIFACTS COMPLETE · **OPERATIONS SUSPENDED** (Founder Beta freeze, June 2026)  
 **Effective:** 2026-06-26  
 **Supersedes:** BAEO v1.0 (documentation-only phase)
+
+> **Founder Beta override:** [.agents/AGENTS.md](../.agents/AGENTS.md) prohibits new AI agent workflows during PMF validation. This operating model is **reference documentation only** until the freeze lifts. See [docs/PROGRAM-STATUS.md](../docs/PROGRAM-STATUS.md).
 
 ---
 
@@ -226,11 +228,13 @@ STOP after gate pass.
 
 ## Activation Status
 
-**BAEO v1.1 is ACTIVE.**
+**BAEO v1.1 governance artifacts:** COMPLETE (matrices, checklists, agents on disk).
+
+**Operational activation:** **SUSPENDED** during Founder Beta feature freeze — do not run milestone pipelines or declare `BAEO ACTIVE` for new implementation until CEO lifts [.agents/AGENTS.md](../.agents/AGENTS.md) restrictions.
 
 - v1.0 infrastructure preserved — not regenerated.
-- Application code unchanged by this activation milestone.
-- Next work must use department/agent activation, not monolithic implementation.
+- Application code unchanged by the BAEO-ACTIVATION milestone.
+- When resumed: department/agent activation only — not monolithic implementation.
 
 ---
 

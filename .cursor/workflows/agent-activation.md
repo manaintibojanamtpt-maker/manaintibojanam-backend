@@ -2,6 +2,20 @@
 
 **BAEO v1.1** — How to invoke AI teams for a milestone
 
+> **Suspended during Founder Beta freeze (June 2026).** Do not use this workflow for new feature work until [.agents/AGENTS.md](../../.agents/AGENTS.md) restrictions are lifted. Allowed now: bug fixes, stability, and PMF-focused BhojanOS work per [docs/PROGRAM-STATUS.md](../../docs/PROGRAM-STATUS.md).
+
+---
+
+## Step 0 — Verify freeze & CEO waiver (required when resuming)
+
+Before `BAEO ACTIVE`:
+
+1. Confirm [.agents/AGENTS.md](../../.agents/AGENTS.md) feature freeze does **not** block the milestone.
+2. Obtain written CEO GO for any OrderBhojan milestone, new product module, or net-new agent workflow.
+3. Read [docs/PROGRAM-STATUS.md](../../docs/PROGRAM-STATUS.md) for current milestone truth.
+
+If freeze applies → **STOP**. Use [.cursor/playbooks/bug-fix.md](../playbooks/bug-fix.md) or hotfix checklist instead.
+
 ---
 
 ## Rule

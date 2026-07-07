@@ -4,7 +4,7 @@
 **Date:** 2026-06-26  
 **Repository inclusion:** 2026-07-07 (governance artifacts committed at listed paths)  
 **Type:** Organizational only — no application code modified  
-**Status:** COMPLETE
+**Status:** COMPLETE (artifacts) · **OPERATIONS SUSPENDED** (Founder Beta freeze)
 
 ---
 
@@ -43,11 +43,17 @@ All paths above are version-controlled in this repository. A clone without these
 
 **None.** OrderBhojan, BhojanOS, Marketplace API, Firebase, and authentication code unchanged.
 
+## Founder Beta freeze (June 2026)
+
+Per [.agents/AGENTS.md](../../.agents/AGENTS.md), **BAEO agent activation is suspended** during the Founder Beta PMF validation phase. Governance artifacts remain in the repo for when the freeze lifts; do not run milestone pipelines or activate department agents for new feature work until CEO lifts the freeze.
+
+See [docs/PROGRAM-STATUS.md](../PROGRAM-STATUS.md) for OrderBhojan milestone truth and allowed work.
+
 ## STOP
 
-BAEO v1.1 is **ACTIVE**. Next work must use agent activation per [agent-activation workflow](../.cursor/workflows/agent-activation.md).
+BAEO v1.1 artifacts are **COMPLETE**; operational activation is **SUSPENDED** until the feature freeze ends.
 
-Next product milestone (e.g., M2 Location) requires separate CEO + ARB/DRB approval before agent activation.
+When resumed: use [agent-activation workflow](../.cursor/workflows/agent-activation.md). Next product milestone requires CEO waiver + ARB/DRB approval.
 
 ---
 

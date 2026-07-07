@@ -1,6 +1,8 @@
 # BAEO Governance Index
 
-**Version:** 1.1.0 · **Status:** ACTIVE
+**Version:** 1.1.0 · **Status:** ARTIFACTS COMPLETE · **OPERATIONS SUSPENDED** (Founder Beta freeze)
+
+Binding work rules: [.agents/AGENTS.md](../../.agents/AGENTS.md) · Program status: [PROGRAM-STATUS.md](../PROGRAM-STATUS.md)
 
 Central index for Bhojan AI Engineering Organization operational documents.
 

@@ -25,3 +25,10 @@ Every action taken during this phase must directly answer at least one of these 
 4. Does this reduce the load on the support team?
 
 If a user request violates the feature freeze, remind the user of the Founder Beta Phase and suggest focusing on the core PMF metrics instead.
+
+## Governance & program status (June 2026)
+
+- **Single source of truth:** [docs/PROGRAM-STATUS.md](../docs/PROGRAM-STATUS.md)
+- **BAEO v1.1** governance files exist under `.cursor/` and `docs/baeo/` but **agent activation is SUSPENDED** during this freeze (new AI workflows are prohibited).
+- **OrderBhojan** implementation lives in `orderbhojan/` (M0–M6.5 complete on `main`). Do **not** treat `docs/orderbhojan/` as current status — it is an archived pre-implementation ARB draft pack.
+- **No new OrderBhojan milestones** (M7+, PX sprints, production launch) without CEO waiver and freeze lift.
