@@ -73,24 +73,24 @@ export const PwaUpdatePrompt: React.FC = () => {
     setReloadBlocked(false);
   }, [setNeedRefresh]);
 
-  const handleUpdateNow = useCallback(async () => {
-    if (updating) return;
+  const deferUpdateForBlockedScreen = useCallback(() => {
+    setReloadBlocked(true);
+    pendingReload.current = true;
+  }, []);
 
+  const handleUpdateNow = useCallback(async () => {
     if (isPwaUpdateReloadBlocked()) {
-      setReloadBlocked(true);
-      pendingReload.current = true;
+      deferUpdateForBlockedScreen();
       return;
     }
 
-    setUpdating(true);
-    setReloadBlocked(false);
+    if (updating) return;
 
     let reloaded = false;
     const forceReload = () => {
       if (reloaded) return;
       if (isPwaUpdateReloadBlocked()) {
-        setReloadBlocked(true);
-        pendingReload.current = true;
+        deferUpdateForBlockedScreen();
         setUpdating(false);
         return;
       }
@@ -100,6 +100,15 @@ export const PwaUpdatePrompt: React.FC = () => {
 
     try {
       const registration = await navigator.serviceWorker?.getRegistration();
+
+      if (isPwaUpdateReloadBlocked()) {
+        deferUpdateForBlockedScreen();
+        return;
+      }
+
+      setUpdating(true);
+      setReloadBlocked(false);
+
       if (registration?.waiting) {
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       }
@@ -111,9 +120,10 @@ export const PwaUpdatePrompt: React.FC = () => {
       window.setTimeout(forceReload, 1500);
     } catch (error) {
       console.error('[PWA] Update failed, forcing reload:', error);
+      setUpdating(false);
       forceReload();
     }
-  }, [updateServiceWorker, updating]);
+  }, [deferUpdateForBlockedScreen, updateServiceWorker, updating]);
 
   useEffect(() => {
     if (!pendingReload.current || !needRefresh) return;

@@ -84,7 +84,8 @@ describe('DashboardRealtimeProvider consolidation', () => {
       'utf8',
     );
 
-    assert.match(providerSource, /setInterval/);
+    assert.match(providerSource, /DashboardOrdersContext\.Provider/);
+    assert.match(providerSource, /DashboardPendingOrdersContext\.Provider/);
     assert.doesNotMatch(orderAlertSource, /fetchOwnerOrdersFromApi/);
     assert.doesNotMatch(orderAlertSource, /setInterval/);
     assert.doesNotMatch(dashboardSource, /subscribeOwnerOrders/);

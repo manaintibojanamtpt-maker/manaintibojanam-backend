@@ -102,7 +102,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         const previewId = preview?.id || '';
         const ownsPreview = ownedIds.includes(previewId);
         if (
-          previewId === FOUNDER_TENANT_ID && !isFounderOwnerEmail(currentUser.email) ||
+          (previewId === FOUNDER_TENANT_ID && !isFounderOwnerEmail(currentUser.email)) ||
           (previewId && !ownsPreview)
         ) {
           sessionStorage.removeItem('tenant_preview');

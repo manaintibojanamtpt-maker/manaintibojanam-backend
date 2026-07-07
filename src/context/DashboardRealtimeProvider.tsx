@@ -59,17 +59,17 @@ interface DashboardPendingOrdersSlice {
   pendingOrders: OwnerOrder[];
 }
 
-interface DashboardRealtimeContextValue {
+interface DashboardMetaContextValue {
   tenantId: string | null;
   pollMs: number;
-  orders: DashboardOrdersSlice;
-  menu: DashboardMenuSlice;
-  storeStatus: DashboardStoreStatusSlice;
-  pending: DashboardPendingOrdersSlice;
   refreshNow: () => Promise<void>;
 }
 
-const DashboardRealtimeContext = createContext<DashboardRealtimeContextValue | null>(null);
+const DashboardOrdersContext = createContext<DashboardOrdersSlice | null>(null);
+const DashboardMenuContext = createContext<DashboardMenuSlice | null>(null);
+const DashboardStoreStatusContext = createContext<DashboardStoreStatusSlice | null>(null);
+const DashboardPendingOrdersContext = createContext<DashboardPendingOrdersSlice | null>(null);
+const DashboardMetaContext = createContext<DashboardMetaContextValue | null>(null);
 
 const EMPTY_ORDERS: DashboardOrdersSlice = {
   orders: [],
@@ -212,96 +212,94 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
     [storeSettings, currentTime],
   );
 
-  const value = useMemo<DashboardRealtimeContextValue>(
+  const ordersValue = useMemo<DashboardOrdersSlice>(
     () => ({
-      tenantId,
-      pollMs: DASHBOARD_REALTIME_POLL_MS,
-      orders: {
-        orders,
-        activeOrders,
-        loading: ordersLoading,
-        error: ordersError,
-      },
-      menu: {
-        items: menuItems,
-        menuCount: menuItems.length,
-        lowStockAlerts,
-        loading: menuLoading,
-        error: menuError,
-      },
-      storeStatus: {
-        settings: storeSettings,
-        loading: storeLoading,
-        error: storeError,
-        isOpen,
-        closedReason,
-        closedMessage,
-        isStoreOpenNow,
-      },
-      pending: {
-        pendingCount,
-        pendingOrders,
-      },
-      refreshNow,
-    }),
-    [
-      tenantId,
       orders,
       activeOrders,
-      ordersLoading,
-      ordersError,
-      menuItems,
+      loading: ordersLoading,
+      error: ordersError,
+    }),
+    [orders, activeOrders, ordersLoading, ordersError],
+  );
+
+  const menuValue = useMemo<DashboardMenuSlice>(
+    () => ({
+      items: menuItems,
+      menuCount: menuItems.length,
       lowStockAlerts,
-      menuLoading,
-      menuError,
-      storeSettings,
-      storeLoading,
-      storeError,
+      loading: menuLoading,
+      error: menuError,
+    }),
+    [menuItems, lowStockAlerts, menuLoading, menuError],
+  );
+
+  const storeStatusValue = useMemo<DashboardStoreStatusSlice>(
+    () => ({
+      settings: storeSettings,
+      loading: storeLoading,
+      error: storeError,
       isOpen,
       closedReason,
       closedMessage,
       isStoreOpenNow,
+    }),
+    [storeSettings, storeLoading, storeError, isOpen, closedReason, closedMessage, isStoreOpenNow],
+  );
+
+  const pendingValue = useMemo<DashboardPendingOrdersSlice>(
+    () => ({
       pendingCount,
       pendingOrders,
+    }),
+    [pendingCount, pendingOrders],
+  );
+
+  const metaValue = useMemo<DashboardMetaContextValue>(
+    () => ({
+      tenantId,
+      pollMs: DASHBOARD_REALTIME_POLL_MS,
       refreshNow,
-    ],
+    }),
+    [tenantId, refreshNow],
   );
 
   return (
-    <DashboardRealtimeContext.Provider value={value}>{children}</DashboardRealtimeContext.Provider>
+    <DashboardMetaContext.Provider value={metaValue}>
+      <DashboardOrdersContext.Provider value={ordersValue}>
+        <DashboardMenuContext.Provider value={menuValue}>
+          <DashboardStoreStatusContext.Provider value={storeStatusValue}>
+            <DashboardPendingOrdersContext.Provider value={pendingValue}>
+              {children}
+            </DashboardPendingOrdersContext.Provider>
+          </DashboardStoreStatusContext.Provider>
+        </DashboardMenuContext.Provider>
+      </DashboardOrdersContext.Provider>
+    </DashboardMetaContext.Provider>
   );
 };
 
-function useDashboardRealtimeContext(): DashboardRealtimeContextValue | null {
-  return useContext(DashboardRealtimeContext);
-}
-
 export function useDashboardOrders(): DashboardOrdersSlice {
-  const ctx = useDashboardRealtimeContext();
-  return ctx?.orders ?? EMPTY_ORDERS;
+  return useContext(DashboardOrdersContext) ?? EMPTY_ORDERS;
 }
 
 export function useDashboardMenu(): DashboardMenuSlice {
-  const ctx = useDashboardRealtimeContext();
-  return ctx?.menu ?? EMPTY_MENU;
+  return useContext(DashboardMenuContext) ?? EMPTY_MENU;
 }
 
 export function useDashboardStoreStatus(): DashboardStoreStatusSlice {
-  const ctx = useDashboardRealtimeContext();
-  return ctx?.storeStatus ?? EMPTY_STORE;
+  return useContext(DashboardStoreStatusContext) ?? EMPTY_STORE;
 }
 
 export function useDashboardPendingOrders(): DashboardPendingOrdersSlice {
-  const ctx = useDashboardRealtimeContext();
-  return ctx?.pending ?? { pendingCount: 0, pendingOrders: [] };
+  return useContext(DashboardPendingOrdersContext) ?? { pendingCount: 0, pendingOrders: [] };
 }
 
 export function useDashboardRealtimePollMs(): number {
-  return useDashboardRealtimeContext()?.pollMs ?? DASHBOARD_REALTIME_POLL_MS;
+  return useContext(DashboardMetaContext)?.pollMs ?? DASHBOARD_REALTIME_POLL_MS;
 }
 
 export function useIsDashboardRealtimeActive(): boolean {
-  return useDashboardRealtimeContext() !== null;
+  return useContext(DashboardMetaContext) !== null;
 }
 
 export { DASHBOARD_REALTIME_POLL_MS, DASHBOARD_ORDERS_LIMIT };

@@ -265,7 +265,26 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTenantError(null);
 
     try {
-      await ensureFirestoreNetwork();
+      const networkReady = await ensureFirestoreNetwork();
+      if (!networkReady) {
+        const cacheKey = storefrontSlug || (isOwnerPanel ? ownerTenantId : '');
+        const validatedCache = cacheKey ? readValidatedCachedTenant(cacheKey) : null;
+
+        if (validatedCache) {
+          applyTenantState(validatedCache, { setTenantId, setTenantSlug, setTenantInfo });
+          setTenantError(null);
+        } else {
+          setTenantError(
+            'Unable to connect to the store directory. Check your network and try again.',
+          );
+          if (!storefrontSlug && isOwnerPanel) {
+            setTenantInfo(null);
+            setTenantId('');
+            setTenantSlug('');
+          }
+        }
+        return;
+      }
 
       const loadTenant = async (): Promise<TenantInfo | null> => {
         const docRef = doc(getDb(), 'tenants', lookupKey);
