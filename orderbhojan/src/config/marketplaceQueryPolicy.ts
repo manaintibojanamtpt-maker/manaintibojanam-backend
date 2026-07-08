@@ -8,7 +8,7 @@ export const MARKETPLACE_MOCK_GC_TIME_MS = 10 * 60_000;
  * Live Firestore storefront sync — owner edits must reach customers quickly.
  * staleTime 0 + interval polling + focus/reconnect refetch.
  */
-export const MARKETPLACE_LIVE_STALE_TIME_MS = 0;
+export const MARKETPLACE_LIVE_STALE_TIME_MS = 30_000;
 export const MARKETPLACE_LIVE_GC_TIME_MS = 2 * 60_000;
 export const MARKETPLACE_LIVE_REFETCH_INTERVAL_MS = 5_000;
 

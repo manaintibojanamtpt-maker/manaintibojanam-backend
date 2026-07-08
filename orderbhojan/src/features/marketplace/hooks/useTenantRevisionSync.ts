@@ -5,7 +5,7 @@ import { fetchTenantSyncRevision } from '../infrastructure/marketplaceSyncClient
 import { restaurantKeys } from '@/features/restaurant/hooks/restaurantQueryKeys';
 import { foodKeys } from '@/features/food/hooks/foodQueryKeys';
 
-const TENANT_REVISION_POLL_MS = import.meta.env.DEV ? 15_000 : 3_000;
+const TENANT_REVISION_POLL_MS = 15_000;
 
 function queryKeyIncludesSlug(queryKey: readonly unknown[], slug: string): boolean {
   return queryKey.includes(slug);

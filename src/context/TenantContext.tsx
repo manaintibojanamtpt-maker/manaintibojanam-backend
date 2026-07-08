@@ -12,6 +12,7 @@ import {
 } from '../lib/tenantPath';
 import { applyTenantPwaManifest } from '../lib/tenantPwaManifest';
 import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
+import { resolvePreferredOwnerTenantId } from '../lib/ownerActiveTenant';
 
 export interface TenantInfo {
   id: string;
@@ -161,14 +162,12 @@ export const useTenant = () => useContext(TenantContext);
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userProfile, loading: authLoading } = useAuth();
-  const rawOwnerTenantId = userProfile?.ownedTenantIds?.[0];
+  const rawOwnerTenantId = resolvePreferredOwnerTenantId(userProfile?.ownedTenantIds, userProfile?.email);
   const ownerTenantId =
     rawOwnerTenantId &&
     (rawOwnerTenantId !== FOUNDER_TENANT_ID || isFounderOwnerEmail(userProfile?.email))
       ? rawOwnerTenantId
-      : userProfile?.ownedTenantIds?.find(
-          (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(userProfile?.email)),
-        );
+      : resolvePreferredOwnerTenantId(userProfile?.ownedTenantIds, userProfile?.email);
 
   const initialPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const initialStoreSlug = parseStorefrontSlug(initialPath);

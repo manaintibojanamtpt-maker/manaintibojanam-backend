@@ -34,7 +34,16 @@ export function FoodCardItem({ food, onCustomize, priority = false }: FoodCardIt
   const labelBadges = resolveFoodLabelBadges(food);
   const hasOptions = food.variants.length > 0 || food.addons.length > 0;
   const unitPrice = food.offerPrice ?? food.price;
-  const photo = resolveFoodItemPhoto(food.foodId, 480, '8.5rem', 82);
+  const photo = food.image?.trim()
+    ? {
+        src: food.image.trim(),
+        srcSet: '',
+        sizes: '8.5rem',
+        blurDataURL: '',
+        sources: [{ srcSet: food.image.trim(), type: 'image/jpeg' as const }],
+        preloadHref: food.image.trim(),
+      }
+    : resolveFoodItemPhoto(food.foodId, 480, '8.5rem', 82);
 
   const triggerFly = () => {
     setFly(true);

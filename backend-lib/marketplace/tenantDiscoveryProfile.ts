@@ -4,7 +4,7 @@ import {
   isStoreOpenNow,
   resolveStoreTiming,
 } from './tenantProjectionHelpers.js';
-import { isMarketplaceVisibleTenant } from './marketplaceVisibility.js';
+import { isConsumerListedTenant } from './marketplaceVisibility.js';
 
 export const TENANT_DISCOVERY_PROFILE_VERSION = '1.0' as const;
 
@@ -53,7 +53,7 @@ export function projectTenantDiscoveryProfile(input: {
   const tenant = parseFirestoreTenant(input.tenantId, input.raw);
   const timing = resolveStoreTiming(tenant, input.raw);
   const mp = tenant.marketplace;
-  const visible = isMarketplaceVisibleTenant(input.raw);
+  const visible = isConsumerListedTenant(input.raw);
 
   let location: TenantDiscoveryProfile['location'];
   if (tenant.location && tenant.location.lat && tenant.location.lng) {

@@ -1,24 +1,17 @@
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
-import { isFounderOwnerEmail } from '../config/founder';
-import { FOUNDER_TENANT_ID } from '../config/founder';
+import { resolvePreferredOwnerTenantId } from '../lib/ownerActiveTenant';
 
 /** Resolve tenant for owner portal pages — prefers TenantContext (synced with Firestore). */
 export const useOwnerTenantId = (): string | null => {
   const { tenantId, loading } = useTenant();
   const { userProfile } = useAuth();
 
-  const pickOwned = (): string | null => {
-    const owned = userProfile?.ownedTenantIds ?? [];
-    const email = userProfile?.email;
-    const filtered = owned.filter(
-      (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(email)),
-    );
-    return filtered[0] ?? null;
-  };
+  const preferred = resolvePreferredOwnerTenantId(userProfile?.ownedTenantIds, userProfile?.email);
 
-  if (tenantId && tenantId !== FOUNDER_TENANT_ID) return tenantId;
-  if (tenantId && isFounderOwnerEmail(userProfile?.email)) return tenantId;
+  if (tenantId && preferred && tenantId === preferred) return tenantId;
+  if (tenantId && preferred && tenantId !== preferred) return preferred;
+  if (tenantId) return tenantId;
   if (loading) return null;
-  return pickOwned();
+  return preferred;
 };

@@ -1,4 +1,4 @@
-import type { RestaurantPublic } from './marketplace';
+import type { KitchenFormat, RestaurantPublic } from './marketplace';
 
 export type DiscoveryCollectionId =
   | 'nearby'
@@ -36,6 +36,7 @@ export interface DiscoveryFilters {
   readonly maxDeliveryFee?: number;
   readonly vegOnly?: boolean;
   readonly cloudKitchenOnly?: boolean;
+  readonly kitchenFormat?: KitchenFormat;
   readonly offersOnly?: boolean;
   readonly openNowOnly?: boolean;
   readonly cuisines?: readonly string[];

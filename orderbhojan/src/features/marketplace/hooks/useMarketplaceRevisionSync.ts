@@ -7,7 +7,7 @@ import { restaurantKeys } from '@/features/restaurant/hooks/restaurantQueryKeys'
 import { foodKeys } from '@/features/food/hooks/foodQueryKeys';
 import { searchKeys } from '@/features/search/hooks/searchQueryKeys';
 
-const REVISION_POLL_MS = import.meta.env.DEV ? 15_000 : 3_000;
+const REVISION_POLL_MS = 15_000;
 
 export function useMarketplaceRevisionSync(enabled = isLiveStorefrontSyncEnabled()): void {
   const queryClient = useQueryClient();

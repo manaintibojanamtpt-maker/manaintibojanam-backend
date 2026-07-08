@@ -1,6 +1,7 @@
 import type { RestaurantPublic } from '@/types/marketplace';
+import { withKitchenFormat } from './restaurantMockHelpers';
 
-export const DISCOVERY_MOCK_POOL: RestaurantPublic[] = [
+const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = [
   {
     restaurantId: 'obr_mana_inti_001',
     restaurantSlug: 'mana-inti-kitchen',
@@ -194,6 +195,10 @@ export const DISCOVERY_MOCK_POOL: RestaurantPublic[] = [
     badges: ['cloud_kitchen', 'new'],
   },
 ];
+
+export const DISCOVERY_MOCK_POOL: RestaurantPublic[] = RAW_DISCOVERY_MOCK_POOL.map((restaurant) =>
+  withKitchenFormat(restaurant),
+);
 
 export const DISCOVERY_COLLECTION_META: Record<
   string,

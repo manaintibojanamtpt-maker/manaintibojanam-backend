@@ -20,7 +20,7 @@ describe('marketplaceQueryPolicy', () => {
   });
 
   it('documents revision-driven sync interval target', () => {
-    assert.equal(MARKETPLACE_LIVE_STALE_TIME_MS, 0);
+    assert.equal(MARKETPLACE_LIVE_STALE_TIME_MS, 30_000);
     assert.equal(MARKETPLACE_LIVE_REFETCH_INTERVAL_MS, 5_000);
   });
 });

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Loader2, Rocket, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Rocket, AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTenant } from '../../context/TenantContext';
 import { publishOwnerStorefrontViaApi } from '../../lib/ownerProvisioning';
@@ -10,11 +10,16 @@ export const PublishStorefrontPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
+  const slug = tenantInfo?.slug || tenantId || '';
   const isPublished = tenantInfo?.storeStatus === 'published';
-  const storeUrl = useMemo(() => {
-    const slug = tenantInfo?.slug || tenantId;
-    return slug ? EnvironmentConfig.getStorefrontUrl(slug) : '';
-  }, [tenantInfo?.slug, tenantId]);
+  const orderBhojanUrl = useMemo(
+    () => (slug ? EnvironmentConfig.getOrderBhojanRestaurantUrl(slug) : ''),
+    [slug],
+  );
+  const legacyStoreUrl = useMemo(
+    () => (slug ? EnvironmentConfig.getStorefrontUrl(slug) : ''),
+    [slug],
+  );
 
   const handlePublish = async () => {
     if (!tenantId) {
@@ -30,7 +35,7 @@ export const PublishStorefrontPanel: React.FC = () => {
         toast.error('Kitchen is not ready to publish on OrderBhojan.');
         return;
       }
-      toast.success('Published on OrderBhojan — customers can discover your kitchen.');
+      toast.success(`Published on OrderBhojan as "${slug}"`);
       await refreshTenant();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Publish failed';
@@ -49,16 +54,28 @@ export const PublishStorefrontPanel: React.FC = () => {
           <div>
             <p className="text-sm font-bold text-emerald-300">Live on OrderBhojan</p>
             <p className="mt-1 text-xs text-emerald-100/80">
-              Your kitchen is published. Edits sync to customers automatically within seconds.
+              Kitchen <span className="font-mono text-emerald-200">{slug}</span> is published.
+              Customers discover it on OrderBhojan home and nearby search when your location is set.
             </p>
-            {storeUrl ? (
+            {orderBhojanUrl ? (
               <a
-                href={storeUrl}
+                href={orderBhojanUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-block text-xs font-bold text-emerald-300 underline"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-300 underline"
               >
-                View customer storefront
+                View on OrderBhojan
+                <ExternalLink size={12} />
+              </a>
+            ) : null}
+            {legacyStoreUrl ? (
+              <a
+                href={legacyStoreUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 block text-xs text-emerald-100/60 underline"
+              >
+                Legacy BhojanOS storefront (/k/{slug})
               </a>
             ) : null}
           </div>
@@ -74,8 +91,8 @@ export const PublishStorefrontPanel: React.FC = () => {
           <p className="text-xs font-bold uppercase tracking-widest text-orange-300/80">OrderBhojan</p>
           <h3 className="text-lg font-black text-white mt-1">Publish to marketplace</h3>
           <p className="mt-1 text-sm text-white/60 max-w-xl">
-            Make your kitchen discoverable on OrderBhojan home, nearby, and restaurant pages.
-            Requires location, store hours, menu items, and delivery fees.
+            Make <span className="font-mono text-white/80">{slug || 'your kitchen'}</span> discoverable on
+            OrderBhojan home, nearby, and restaurant pages. Requires location, store hours, menu items, and delivery fees.
           </p>
         </div>
         <button

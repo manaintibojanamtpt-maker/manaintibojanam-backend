@@ -9,6 +9,7 @@ import {
   Toast,
 } from '@bhojan/design-system';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { formatAuthError } from '@/lib/authErrors';
 import { PhoneOtpForm } from './PhoneOtpForm';
 
 type AuthTab = 'google' | 'phone' | 'guest';
@@ -34,7 +35,7 @@ export function AuthShellPage() {
       await signInWithGoogle();
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed.');
+      setError(formatAuthError(err));
     } finally {
       setPending(false);
     }

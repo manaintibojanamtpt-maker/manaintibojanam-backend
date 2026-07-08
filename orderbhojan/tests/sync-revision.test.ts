@@ -16,6 +16,6 @@ describe('marketplace revision sync', () => {
     );
     assert.match(source, /fetchMarketplacePoolRevision/);
     assert.match(source, /invalidateQueries/);
-    assert.match(source, /3_000/);
+    assert.match(source, /15_000/);
   });
 });

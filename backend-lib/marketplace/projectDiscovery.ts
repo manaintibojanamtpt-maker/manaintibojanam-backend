@@ -11,7 +11,13 @@ import {
   extractTenantSyncRevision,
   mergeSyncRevisions,
 } from './tenantProjectionHelpers.js';
-import { isMarketplaceVisibleTenant } from './marketplaceVisibility.js';
+import { isConsumerListedTenant, isMarketplaceVisibleTenant } from './marketplaceVisibility.js';
+import {
+  isWithinConsumerDiscoveryRadius,
+  kitchenFormatLabel,
+  resolveKitchenFormat,
+  type KitchenFormat,
+} from './kitchenFormat.js';
 import {
   loadVisibleDiscoveryProfiles,
 } from './discoveryProfileWriter.js';
@@ -19,6 +25,9 @@ import { isMarketplaceGeoIndexEnabled } from './marketplaceGeoIndexPolicy.js';
 import { resolveNearbyTenantIds } from './geoIndexFirestore.js';
 
 export type RestaurantBadge = 'veg' | 'pure_veg' | 'cloud_kitchen' | 'new' | 'offer';
+
+export type { KitchenFormat } from './kitchenFormat.js';
+export { MARKETPLACE_CONSUMER_MAX_DISTANCE_KM, resolveKitchenFormat, kitchenFormatLabel } from './kitchenFormat.js';
 
 export interface RestaurantPublic {
   readonly restaurantId: string;
@@ -35,6 +44,7 @@ export interface RestaurantPublic {
   readonly deliveryFee?: number | null;
   readonly isOpen: boolean;
   readonly badges: readonly RestaurantBadge[];
+  readonly kitchenFormat: KitchenFormat;
 }
 
 export type DiscoveryCollectionId =
@@ -65,6 +75,7 @@ export interface DiscoveryFilters {
   readonly maxDeliveryFee?: number;
   readonly vegOnly?: boolean;
   readonly cloudKitchenOnly?: boolean;
+  readonly kitchenFormat?: KitchenFormat;
   readonly offersOnly?: boolean;
   readonly openNowOnly?: boolean;
   readonly cuisines?: readonly string[];
@@ -130,7 +141,11 @@ const HOME_COLLECTION_IDS = Object.entries(COLLECTION_META)
   .sort(([, a], [, b]) => a.homeOrder - b.homeOrder)
   .map(([id]) => id as DiscoveryCollectionId);
 
-export { isMarketplaceVisibleTenant, isMarketplaceEligibleTenant } from './marketplaceVisibility.js';
+export {
+  isConsumerListedTenant,
+  isMarketplaceVisibleTenant,
+  isMarketplaceEligibleTenant,
+} from './marketplaceVisibility.js';
 
 export function projectRestaurantPublic(
   tenant: FirestoreTenantRecord,
@@ -149,6 +164,8 @@ export function projectRestaurantPublic(
       ? 'pure_veg'
       : 'unknown';
   const badges: RestaurantBadge[] = [...kitchenDietaryToBadges(kitchenDietary)];
+  const kitchenFormat = resolveKitchenFormat(tenant.businessType);
+  if (kitchenFormat === 'cloud_kitchen') badges.push('cloud_kitchen');
   if ((mp?.offers?.length ?? 0) > 0) badges.push('offer');
 
   let distanceKm: number | undefined;
@@ -185,25 +202,43 @@ export function projectRestaurantPublic(
     deliveryFee: deliveryFee ?? undefined,
     isOpen: storeOpen,
     badges,
+    kitchenFormat,
   };
+}
+
+function filterPoolByConsumerRadius(
+  restaurants: readonly RestaurantPublic[],
+): RestaurantPublic[] {
+  return restaurants.filter((r) => isWithinConsumerDiscoveryRadius(r.distanceKm));
 }
 
 export async function loadMarketplaceRestaurants(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
+  let loaded: { restaurants: RestaurantPublic[]; poolSyncRevision?: string };
+
   if (isMarketplaceGeoIndexEnabled()) {
     const geoIndexed = await loadMarketplaceRestaurantsFromGeoIndex(db, coords);
     if (geoIndexed.restaurants.length > 0) {
-      return geoIndexed;
+      loaded = geoIndexed;
+    } else {
+      const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
+      loaded = indexed.restaurants.length > 0
+        ? indexed
+        : await loadMarketplaceRestaurantsFromTenantsScan(db, coords);
     }
+  } else {
+    const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
+    loaded = indexed.restaurants.length > 0
+      ? indexed
+      : await loadMarketplaceRestaurantsFromTenantsScan(db, coords);
   }
 
-  const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
-  if (indexed.restaurants.length > 0) {
-    return indexed;
-  }
-  return loadMarketplaceRestaurantsFromTenantsScan(db, coords);
+  return {
+    ...loaded,
+    restaurants: filterPoolByConsumerRadius(loaded.restaurants),
+  };
 }
 
 async function loadMarketplaceRestaurantsFromGeoIndex(
@@ -223,7 +258,7 @@ async function loadMarketplaceRestaurantsFromGeoIndex(
   for (const tenantDoc of tenantDocs) {
     if (!tenantDoc.exists) continue;
     const raw = tenantDoc.data() as Record<string, unknown>;
-    if (!isMarketplaceVisibleTenant(raw)) continue;
+    if (!isConsumerListedTenant(raw)) continue;
     poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
     const tenant = parseFirestoreTenant(tenantDoc.id, raw);
     restaurants.push(projectRestaurantPublic(tenant, raw, coords));
@@ -252,7 +287,7 @@ async function loadMarketplaceRestaurantsFromProfiles(
   for (const tenantDoc of tenantDocs) {
     if (!tenantDoc.exists) continue;
     const raw = tenantDoc.data() as Record<string, unknown>;
-    if (!isMarketplaceVisibleTenant(raw)) continue;
+    if (!isConsumerListedTenant(raw)) continue;
     poolSyncRevision = mergeSyncRevisions(
       poolSyncRevision,
       extractTenantSyncRevision(raw),
@@ -269,10 +304,7 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
-  const [publishedSnap, sandboxSnap] = await Promise.all([
-    db.collection('tenants').where('storeStatus', '==', 'published').get(),
-    db.collection('tenants').where('sandboxMode', '==', true).get(),
-  ]);
+  const publishedSnap = await db.collection('tenants').where('storeStatus', '==', 'published').get();
 
   const seen = new Set<string>();
   const restaurants: RestaurantPublic[] = [];
@@ -282,14 +314,13 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
     if (seen.has(doc.id)) return;
     seen.add(doc.id);
     const raw = doc.data() as Record<string, unknown>;
-    if (!isMarketplaceVisibleTenant(raw)) return;
+    if (!isConsumerListedTenant(raw)) return;
     poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
     const tenant = parseFirestoreTenant(doc.id, raw);
     restaurants.push(projectRestaurantPublic(tenant, raw, coords));
   };
 
   for (const doc of publishedSnap.docs) ingest(doc);
-  for (const doc of sandboxSnap.docs) ingest(doc);
 
   return { restaurants, poolSyncRevision };
 }
@@ -313,7 +344,10 @@ function applyDiscoveryFilters(
     result = result.filter((r) => r.badges.includes('veg') || r.badges.includes('pure_veg'));
   }
   if (filters.cloudKitchenOnly) {
-    result = result.filter((r) => r.badges.includes('cloud_kitchen'));
+    result = result.filter((r) => r.badges.includes('cloud_kitchen') || r.kitchenFormat === 'cloud_kitchen');
+  }
+  if (filters.kitchenFormat) {
+    result = result.filter((r) => r.kitchenFormat === filters.kitchenFormat);
   }
   if (filters.offersOnly) {
     result = result.filter((r) => r.badges.includes('offer'));
@@ -360,7 +394,7 @@ function selectForCollection(id: DiscoveryCollectionId, pool: readonly Restauran
     case 'fast-delivery':
       return pool.filter((r) => (r.etaMinutes?.max ?? 99) <= 30);
     case 'cloud-kitchens':
-      return pool.filter((r) => r.badges.includes('cloud_kitchen'));
+      return pool.filter((r) => r.kitchenFormat === 'cloud_kitchen' || r.badges.includes('cloud_kitchen'));
     case 'offers':
       return pool.filter((r) => r.badges.includes('offer'));
     case 'trending':
@@ -393,8 +427,22 @@ function paginate(
   };
 }
 
+function filtersForCollection(
+  collectionId: DiscoveryCollectionId,
+  filters: DiscoveryFilters = {},
+): DiscoveryFilters {
+  if (collectionId === 'cloud-kitchens') {
+    const { cloudKitchenOnly: _c, kitchenFormat: _k, ...rest } = filters;
+    return rest;
+  }
+  return filters;
+}
+
 function locationLabel(lat: number, lng: number): string {
+  if (lat > 18.4 && lat < 18.7 && lng > 73.7 && lng < 74.05) return 'Pune';
   if (lat > 17 && lat < 18 && lng > 78 && lng < 79) return 'Hyderabad';
+  if (lat > 12.8 && lat < 13.2 && lng > 77.4 && lng < 77.8) return 'Bengaluru';
+  if (lat > 18.9 && lat < 19.3 && lng > 72.7 && lng < 73.1) return 'Mumbai';
   return 'Your area';
 }
 
@@ -406,7 +454,8 @@ export function buildDiscoveryCollection(
   const page = params.page ?? 1;
   const limit = params.limit ?? 6;
   const meta = COLLECTION_META[id] ?? COLLECTION_META.featured;
-  let filtered = applyDiscoveryFilters([...pool], params.filters);
+  const scopedFilters = filtersForCollection(id, params.filters);
+  let filtered = applyDiscoveryFilters([...pool], scopedFilters);
   filtered = selectForCollection(id, filtered);
   const { items, pagination } = paginate(filtered, page, limit);
 
@@ -449,6 +498,8 @@ export function parseDiscoveryRequest(url: URL): DiscoveryRequestParams {
   if (maxDeliveryFee) filters.maxDeliveryFee = Number(maxDeliveryFee);
   if (url.searchParams.get('vegOnly') === 'true') filters.vegOnly = true;
   if (url.searchParams.get('cloudKitchenOnly') === 'true') filters.cloudKitchenOnly = true;
+  const kitchenFormat = url.searchParams.get('kitchenFormat');
+  if (kitchenFormat) filters.kitchenFormat = kitchenFormat as KitchenFormat;
   if (url.searchParams.get('offersOnly') === 'true') filters.offersOnly = true;
   if (url.searchParams.get('openNowOnly') === 'true') filters.openNowOnly = true;
   const cuisines = url.searchParams.get('cuisines');

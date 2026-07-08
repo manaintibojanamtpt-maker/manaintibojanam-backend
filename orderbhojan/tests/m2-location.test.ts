@@ -121,4 +121,30 @@ describe('M2 reference data', () => {
     assert.ok(listStates().length >= 4);
     assert.equal(validatePincodeForArea('gachibowli', '500032'), true);
   });
+
+  it('cascades district, city, area, and pincode when state changes', async () => {
+    const {
+      cascadeFromState,
+      cascadeFromDistrict,
+      inferCascadeFromDisplayLabel,
+      DEFAULT_ADDRESS_CASCADE,
+    } = await import('../src/features/location/data/india/reference.ts');
+
+    const mh = cascadeFromState('MH');
+    assert.equal(mh.stateCode, 'MH');
+    assert.equal(mh.districtCode, 'MH-PUN');
+    assert.equal(mh.cityCode, 'pune');
+    assert.equal(mh.areaCode, 'koregaon-park');
+    assert.equal(mh.pincode, '411001');
+
+    const puneBaner = cascadeFromDistrict('MH', 'MH-PUN');
+    assert.equal(puneBaner.cityCode, 'pune');
+    assert.notEqual(puneBaner.areaCode, 'gachibowli');
+
+    const inferred = inferCascadeFromDisplayLabel('Koregaon Park, Pune');
+    assert.equal(inferred?.areaCode, 'koregaon-park');
+    assert.equal(inferred?.stateCode, 'MH');
+
+    assert.equal(DEFAULT_ADDRESS_CASCADE.cityCode, 'pune');
+  });
 });

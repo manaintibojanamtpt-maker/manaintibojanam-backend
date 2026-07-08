@@ -1,5 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Icon, NavIsland, SideNav, Text } from '@bhojan/design-system';
+import { Icon, NavIsland, SideNav } from '@bhojan/design-system';
+import { OrderBhojanBrand } from '@/shared/ui/OrderBhojanBrand';
+import { useDiscoveryFilterStore } from '@/features/discovery/store/discoveryFilterStore';
+import { useCategoryStore } from '@/features/experience/store/categoryStore';
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: <Icon size={20} aria-hidden><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></Icon> },
@@ -33,11 +36,15 @@ export function ExperienceBottomNav() {
   return (
     <>
       <SideNav
-        brand={<Text variant="subtitle" style={{ fontWeight: 900, color: 'var(--bds-color-primary)' }}>OrderBhojan</Text>}
+        brand={<OrderBhojanBrand variant="nav" linkToHome={false} />}
         items={[...NAV_ITEMS]}
         activeId={activeId}
         onChange={(id) => {
           const path = NAV_PATHS[id];
+          if (id === 'home') {
+            useDiscoveryFilterStore.getState().resetFilters();
+            useCategoryStore.getState().clear();
+          }
           if (path) navigate(path);
         }}
       />
@@ -46,6 +53,10 @@ export function ExperienceBottomNav() {
         activeId={activeId}
         onChange={(id) => {
           const path = NAV_PATHS[id];
+          if (id === 'home') {
+            useDiscoveryFilterStore.getState().resetFilters();
+            useCategoryStore.getState().clear();
+          }
           if (path) navigate(path);
         }}
       />

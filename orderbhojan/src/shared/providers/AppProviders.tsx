@@ -12,6 +12,7 @@ import { FeatureFlagProvider } from '@/featureFlags';
 import { MarketplaceRevisionSync } from '@/features/marketplace/MarketplaceRevisionSync';
 import { FavoritesSyncBootstrap } from '@/features/favorites/hooks/FavoritesSyncBootstrap';
 import { TelemetryProvider } from '@/telemetry';
+import { sanitizeLiveRestaurantContext } from '@/lib/sanitizeLiveRestaurantContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,10 @@ function ToastRegistration({ children }: { children: React.ReactNode }) {
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    sanitizeLiveRestaurantContext();
+  }, []);
+
   return (
     <DesignSystemProvider theme="food">
       <TelemetryProvider>

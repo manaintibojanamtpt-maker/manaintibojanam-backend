@@ -21,10 +21,14 @@ import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 import { syncOwnerTenantsViaApi } from '../../lib/ownerProvisioning';
 import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
 import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../../config/founder';
+import {
+  resolvePreferredOwnerTenantId,
+  writeOwnerActiveTenantId,
+} from '../../lib/ownerActiveTenant';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout, refreshProfile } = useAuth();
-  const { tenantInfo, tenantSlug, tenantId: contextTenantId } = useTenant();
+  const { tenantInfo, tenantSlug, tenantId: contextTenantId, refreshTenant } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount, soundEnabled, showSoundPrompt, setSoundEnabled, enableSoundAlerts } = useOrderAlerts();
   const navigate = useNavigate();
@@ -81,10 +85,9 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
   const ownedIds = (userProfile?.ownedTenantIds ?? []).filter(
     (id) => id && (id !== FOUNDER_TENANT_ID || isFounderOwnerEmail(currentUser?.email)),
   );
-  const tenantId = contextTenantId && contextTenantId !== FOUNDER_TENANT_ID
-    ? contextTenantId
-    : ownedIds[0] || (isFounderOwnerEmail(currentUser?.email) ? contextTenantId : null);
+  const tenantId = resolvePreferredOwnerTenantId(ownedIds, currentUser?.email) || contextTenantId;
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
+  const orderBhojanUrl = storeSlug ? EnvironmentConfig.getOrderBhojanRestaurantUrl(storeSlug) : '';
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
   const customerPreviewUrl = storeUrl ? buildCustomerPreviewStoreUrl(storeUrl) : '';
   const currentPage = getOwnerPageTitle(location.pathname);
@@ -122,10 +125,19 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
   }, [currentUser?.uid, refreshProfile]);
 
   const copyStoreLink = () => {
-    if (!storeUrl) return;
-    navigator.clipboard.writeText(storeUrl);
+    const link = orderBhojanUrl || storeUrl;
+    if (!link) return;
+    navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleKitchenSwitch = (nextTenantId: string) => {
+    if (!nextTenantId || nextTenantId === tenantId) return;
+    writeOwnerActiveTenantId(nextTenantId);
+    void refreshTenant().then(() => {
+      window.location.reload();
+    });
   };
 
   const goTo = (path: string) => {
@@ -163,6 +175,24 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold truncate text-white">{userProfile?.name || 'Owner'}</p>
               <p className="text-xs text-white/50 truncate">{userProfile?.email || 'Admin'}</p>
+              {ownedIds.length > 1 ? (
+                <label className="mt-2 block">
+                  <span className="sr-only">Active kitchen</span>
+                  <select
+                    value={tenantId || ''}
+                    onChange={(e) => handleKitchenSwitch(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0a0a0a] px-2 py-1.5 text-[11px] font-semibold text-white/80"
+                  >
+                    {ownedIds.map((id) => (
+                      <option key={id} value={id}>
+                        {id === FOUNDER_TENANT_ID ? 'mana-inti (founder)' : id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : tenantInfo?.name ? (
+                <p className="text-[11px] text-orange-300/80 truncate mt-1">{tenantInfo.name}</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -229,7 +259,8 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         <div className="p-4 border-t border-white/5 space-y-3">
           {tenantId && (
             <div className="bg-[#151515] border border-white/10 rounded-xl p-3">
-              <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Store Link</p>
+              <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">OrderBhojan link</p>
+              <p className="text-[10px] text-white/40 mb-2 truncate font-mono">{storeSlug}</p>
               <div className="flex items-center space-x-2">
                 <button 
                   onClick={copyStoreLink}
@@ -239,7 +270,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <a 
-                  href={customerPreviewUrl}
+                  href={orderBhojanUrl || customerPreviewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center bg-red-600/10 hover:bg-red-600/20 text-red-500 py-2 px-3 rounded-lg text-xs font-bold transition-colors"

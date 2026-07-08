@@ -112,13 +112,37 @@ function formatTaxLabel(gstPercent: number, packagingFee: number): string {
 }
 
 async function loadTenantByRestaurantId(db: Firestore, restaurantId: string) {
-  const direct = await db.collection('tenants').doc(restaurantId).get();
+  const trimmed = restaurantId.trim();
+  if (!trimmed) return null;
+
+  const direct = await db.collection('tenants').doc(trimmed).get();
   if (direct.exists) return { id: direct.id, raw: direct.data() as TenantRaw };
 
-  const query = await db.collection('tenants').where('slug', '==', restaurantId).limit(1).get();
-  if (query.empty) return null;
-  const doc = query.docs[0];
-  return { id: doc.id, raw: doc.data() as TenantRaw };
+  const bySlug = await db.collection('tenants').where('slug', '==', trimmed).limit(1).get();
+  if (!bySlug.empty) {
+    const doc = bySlug.docs[0];
+    return { id: doc.id, raw: doc.data() as TenantRaw };
+  }
+
+  if (trimmed.startsWith('obr_')) {
+    const slug = trimmed.slice(4);
+    const byObr = await db.collection('tenants').where('slug', '==', slug).limit(1).get();
+    if (!byObr.empty) {
+      const doc = byObr.docs[0];
+      return { id: doc.id, raw: doc.data() as TenantRaw };
+    }
+  }
+
+  if (trimmed.startsWith('rest_')) {
+    const slug = trimmed.slice(5).replace(/_/g, '-');
+    const byLegacy = await db.collection('tenants').where('slug', '==', slug).limit(1).get();
+    if (!byLegacy.empty) {
+      const doc = byLegacy.docs[0];
+      return { id: doc.id, raw: doc.data() as TenantRaw };
+    }
+  }
+
+  return null;
 }
 
 async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<Map<string, { price: number; name: string }>> {

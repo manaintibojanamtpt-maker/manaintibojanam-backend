@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  isConsumerListedTenant,
   isMarketplaceEligibleTenant,
   isMarketplaceVisibleTenant,
 } from '../marketplaceVisibility.js';
@@ -26,6 +27,14 @@ describe('marketplaceVisibility', () => {
       isMarketplaceEligibleTenant({ storeStatus: 'published', status: 'suspended' }),
       false,
     );
+  });
+});
+
+describe('consumerListedTenant', () => {
+  it('excludes sandbox and draft tenants from consumer storefront', () => {
+    assert.equal(isConsumerListedTenant({ storeStatus: 'published', status: 'active' }), true);
+    assert.equal(isConsumerListedTenant({ sandboxMode: true, status: 'active' }), false);
+    assert.equal(isConsumerListedTenant({ storeStatus: 'draft', status: 'active' }), false);
   });
 });
 

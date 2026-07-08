@@ -27,6 +27,7 @@ import { useHeroPreload } from '../../hooks/useHeroPreload';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { FeaturedRestaurantsSection } from './FeaturedRestaurantsSection';
 import { TrendingFoodsSection } from './TrendingFoodsSection';
+import { AiDiningGuide } from './AiDiningGuide';
 
 const TRUST_ITEMS = [
   { id: 'fresh', label: 'Fresh', icon: <TrustClockIcon /> },
@@ -108,6 +109,7 @@ export function HomeExperiencePage() {
         </section>
 
         <MotionReveal delay={0.05}>
+          <AiDiningGuide />
           {discoveryEnabled ? (
             <DiscoveryHomeFeed />
           ) : (

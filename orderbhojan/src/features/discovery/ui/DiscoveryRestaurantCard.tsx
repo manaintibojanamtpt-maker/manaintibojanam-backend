@@ -17,8 +17,9 @@ import {
   formatDistance,
   formatEta,
   hasOffer,
-  isCloudKitchen,
   kitchenBadgeLabel,
+  kitchenFormatBadgeVariant,
+  kitchenFormatLabel,
   shouldShowKitchenBadge,
 } from '../utils/restaurantDisplay';
 
@@ -64,8 +65,10 @@ export function DiscoveryRestaurantCard({
         />
         <div className="ob-restaurant-tile__badges">
           {!restaurant.isOpen ? <Badge variant="status">Closed</Badge> : null}
+          <Badge variant={kitchenFormatBadgeVariant(restaurant.kitchenFormat)}>
+            {kitchenFormatLabel(restaurant.kitchenFormat)}
+          </Badge>
           {hasOffer(restaurant) ? <Badge variant="offer">Offer</Badge> : null}
-          {isCloudKitchen(restaurant) ? <Badge variant="cloudKitchen">Cloud</Badge> : null}
         </div>
         <Button
           variant="ghost"

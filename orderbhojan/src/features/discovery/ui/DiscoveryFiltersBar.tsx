@@ -1,14 +1,22 @@
 import { Button, Chip, Text } from '@bhojan/design-system';
 import type { DiscoverySort } from '@/types/marketplace-discovery';
+import type { KitchenFormat } from '@/types/marketplace';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
+import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
 
 const SORT_OPTIONS: { id: DiscoverySort; label: string }[] = [
+  { id: 'distance', label: 'Nearest' },
   { id: 'popularity', label: 'Popular' },
   { id: 'eta', label: 'Fastest' },
-  { id: 'distance', label: 'Nearest' },
   { id: 'rating', label: 'Top rated' },
   { id: 'newest', label: 'Newest' },
-  { id: 'alphabetical', label: 'A–Z' },
+];
+
+const KITCHEN_FORMAT_OPTIONS: { id: KitchenFormat; label: string }[] = [
+  { id: 'restaurant', label: 'Restaurant' },
+  { id: 'cloud_kitchen', label: 'Cloud kitchen' },
+  { id: 'chef_kitchen', label: 'Chef kitchen' },
+  { id: 'home_kitchen', label: 'Home kitchen' },
 ];
 
 export function DiscoveryFiltersBar() {
@@ -18,11 +26,11 @@ export function DiscoveryFiltersBar() {
 
   const activeCount = [
     filters.vegOnly,
-    filters.cloudKitchenOnly,
+    filters.kitchenFormat,
     filters.offersOnly,
     filters.openNowOnly,
     filters.minRating != null,
-    filters.maxDistanceKm != null,
+    filters.maxDistanceKm != null && filters.maxDistanceKm < CONSUMER_MAX_DISCOVERY_DISTANCE_KM,
   ].filter(Boolean).length;
 
   return (
@@ -32,14 +40,36 @@ export function DiscoveryFiltersBar() {
     >
       <div className="ob-discovery-filters__row">
         <Text variant="caption" className="ob-discovery-filters__label">
-          Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+          Within {CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km
+          {activeCount > 0 ? ` · ${activeCount} filter${activeCount === 1 ? '' : 's'}` : ''}
         </Text>
         {activeCount > 0 ? (
           <Button variant="ghost" size="compact" onClick={resetFilters}>
-            Clear
+            Clear all
           </Button>
         ) : null}
       </div>
+
+      <div className="ob-discovery-filters__chips" role="group" aria-label="Kitchen type">
+        <Text variant="caption" className="ob-discovery-filters__sort-label">
+          Kitchen
+        </Text>
+        {KITCHEN_FORMAT_OPTIONS.map((option) => (
+          <Chip
+            key={option.id}
+            selected={filters.kitchenFormat === option.id}
+            onClick={() =>
+              setFilters({
+                kitchenFormat: filters.kitchenFormat === option.id ? undefined : option.id,
+                cloudKitchenOnly: false,
+              })
+            }
+          >
+            {option.label}
+          </Chip>
+        ))}
+      </div>
+
       <div className="ob-discovery-filters__chips" role="group" aria-label="Quick filters">
         <Chip
           selected={Boolean(filters.openNowOnly)}
@@ -52,12 +82,6 @@ export function DiscoveryFiltersBar() {
           onClick={() => setFilters({ vegOnly: !filters.vegOnly })}
         >
           Veg
-        </Chip>
-        <Chip
-          selected={Boolean(filters.cloudKitchenOnly)}
-          onClick={() => setFilters({ cloudKitchenOnly: !filters.cloudKitchenOnly })}
-        >
-          Cloud kitchen
         </Chip>
         <Chip
           selected={Boolean(filters.offersOnly)}
@@ -73,25 +97,8 @@ export function DiscoveryFiltersBar() {
         >
           4.5+
         </Chip>
-        <Chip
-          selected={filters.maxDistanceKm === 3}
-          onClick={() =>
-            setFilters({ maxDistanceKm: filters.maxDistanceKm === 3 ? undefined : 3 })
-          }
-        >
-          Within 3 km
-        </Chip>
-        <Chip
-          selected={filters.maxDeliveryFee === 20}
-          onClick={() =>
-            setFilters({
-              maxDeliveryFee: filters.maxDeliveryFee === 20 ? undefined : 20,
-            })
-          }
-        >
-          Low delivery fee
-        </Chip>
       </div>
+
       <div className="ob-discovery-filters__chips" role="group" aria-label="Sort by">
         <Text variant="caption" className="ob-discovery-filters__sort-label">
           Sort

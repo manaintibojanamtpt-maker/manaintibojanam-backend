@@ -1,10 +1,7 @@
 import { getFoodApiClient } from '../infrastructure/foodApiClient';
 import { isContractMenuPathEnabled } from '../hooks/useContractV1Feature';
 import { mapFoodMenuDTOToFoodMenuResponse } from '@/marketplace-api/mappers/v1/foodMenuV1ToLegacy';
-import {
-  fallbackRestaurantId,
-  useRestaurantContextStore,
-} from '@/features/restaurant/store/restaurantContextStore';
+import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
@@ -26,7 +23,7 @@ function persistMenuContext(
 }
 
 function restaurantIdFromEnvelope(envelope: FoodMenuApiEnvelopeDTO, slug: string): string {
-  return envelope.items[0]?.restaurantId ?? fallbackRestaurantId(slug);
+  return envelope.items[0]?.restaurantId ?? slug;
 }
 
 export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMenuResponse> {
@@ -42,7 +39,7 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
   }
 
   const payload = await getFoodApiClient().fetchMenu(params);
-  persistMenuContext(params.slug, payload.contextToken, fallbackRestaurantId(params.slug));
+  persistMenuContext(params.slug, payload.contextToken, params.slug);
   return enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload)));
 }
 

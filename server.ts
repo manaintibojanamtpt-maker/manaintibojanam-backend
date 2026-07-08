@@ -2704,7 +2704,9 @@ async function linkFounderTenantIfNeeded(userId: string, email?: string | null):
   const userRef = db.collection("users").doc(userId);
   const userDoc = await userRef.get();
   const existingOwned: string[] = userDoc.exists ? userDoc.data()?.ownedTenantIds || [] : [];
-  const tenantIds = Array.from(new Set([...existingOwned.filter(Boolean), FOUNDER_TENANT_ID]));
+  const tenantIds = Array.from(
+    new Set([FOUNDER_TENANT_ID, ...existingOwned.filter(Boolean).filter((id) => id !== FOUNDER_TENANT_ID)]),
+  );
 
   await db.collection("tenants").doc(FOUNDER_TENANT_ID).set({ ownerId: userId }, { merge: true });
 

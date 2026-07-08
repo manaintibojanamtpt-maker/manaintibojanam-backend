@@ -180,7 +180,9 @@ export function CartExperiencePage() {
 
         {error ? (
           <Text variant="body" role="alert" className="ob-cart-px2__alert-text">
-            {error}
+            {error === 'Restaurant not found'
+              ? 'This kitchen is not available for checkout. Clear your cart, pick a live restaurant from home, and add items again.'
+              : error}
           </Text>
         ) : null}
 

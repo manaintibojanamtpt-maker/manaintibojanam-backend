@@ -14,7 +14,7 @@ describe('owner → OrderBhojan sync E2E contract', () => {
       path.join(process.cwd(), 'src/features/marketplace/hooks/useMarketplaceRevisionSync.ts'),
       'utf8',
     );
-    assert.match(revisionHook, /3_000/);
+    assert.match(revisionHook, /15_000/);
   });
 
   it('ships Playwright runner and harness CLI actions', () => {

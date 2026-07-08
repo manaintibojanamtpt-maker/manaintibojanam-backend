@@ -3,8 +3,9 @@ import {
   restaurantCoverBaseUrl,
   restaurantLogoBaseUrl,
 } from '@/features/restaurant/data/restaurant-photo-manifest';
+import { withKitchenFormat } from './restaurantMockHelpers';
 
-export const MOCK_RESTAURANTS: RestaurantPublic[] = [
+const RAW_MOCK_RESTAURANTS: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = [
   {
     restaurantId: 'obr_mana_inti_001',
     restaurantSlug: 'mana-inti-kitchen',
@@ -70,6 +71,10 @@ export const MOCK_RESTAURANTS: RestaurantPublic[] = [
     badges: ['cloud_kitchen', 'new'],
   },
 ];
+
+export const MOCK_RESTAURANTS: RestaurantPublic[] = RAW_MOCK_RESTAURANTS.map((restaurant) =>
+  withKitchenFormat(restaurant),
+);
 
 export const MOCK_CONTEXT_TOKEN = 'mock-ctx-token-m0-demo';
 

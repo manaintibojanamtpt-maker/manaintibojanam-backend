@@ -86,6 +86,23 @@ export const EnvironmentConfig = {
     return `${this.getBaseUrl()}/k/${slug}`;
   },
 
+  /** OrderBhojan consumer marketplace (Firebase hosting). */
+  getOrderBhojanBaseUrl(): string {
+    const fromEnv = import.meta.env.VITE_ORDERBHOJAN_URL;
+    if (typeof fromEnv === 'string' && fromEnv.trim()) {
+      return fromEnv.trim().replace(/\/$/, '');
+    }
+    return 'https://orderbhojan.web.app';
+  },
+
+  getOrderBhojanRestaurantUrl(slug: string): string {
+    return `${this.getOrderBhojanBaseUrl()}/restaurant/${slug}`;
+  },
+
+  getOrderBhojanHomeUrl(): string {
+    return this.getOrderBhojanBaseUrl();
+  },
+
   getOwnerUrl(): string {
     return `${this.getBaseUrl()}/owner`;
   },

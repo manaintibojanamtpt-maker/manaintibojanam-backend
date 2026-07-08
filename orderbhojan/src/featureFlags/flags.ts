@@ -51,6 +51,10 @@ export function loadFeatureFlags(): FeatureFlagMap {
       flags[key] = envValue;
     }
   }
+  // Production builds default to live Firestore/API unless explicitly disabled.
+  if (import.meta.env?.PROD && readEnvFlag('FF_OB_FIRESTORE') === undefined) {
+    flags.FF_OB_FIRESTORE = true;
+  }
   if (flags.FF_OB_FIRESTORE) {
     flags.FF_OB_DISCOVERY = true;
     flags.FF_OB_RESTAURANT = true;

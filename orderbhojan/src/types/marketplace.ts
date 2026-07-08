@@ -5,6 +5,8 @@ export type RestaurantBadge =
   | 'new'
   | 'offer';
 
+export type KitchenFormat = 'cloud_kitchen' | 'restaurant' | 'chef_kitchen' | 'home_kitchen';
+
 export interface RestaurantPublic {
   readonly restaurantId: string;
   readonly restaurantSlug: string;
@@ -20,6 +22,7 @@ export interface RestaurantPublic {
   readonly deliveryFee?: number | null;
   readonly isOpen: boolean;
   readonly badges: readonly RestaurantBadge[];
+  readonly kitchenFormat: KitchenFormat;
 }
 
 export interface BillQuote {

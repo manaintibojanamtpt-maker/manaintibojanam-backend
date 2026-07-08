@@ -1,4 +1,32 @@
-import type { RestaurantPublic } from '@/types/marketplace';
+import type { KitchenFormat, RestaurantPublic } from '@/types/marketplace';
+
+export function kitchenFormatLabel(format: KitchenFormat): string {
+  switch (format) {
+    case 'cloud_kitchen':
+      return 'Cloud kitchen';
+    case 'chef_kitchen':
+      return 'Chef kitchen';
+    case 'home_kitchen':
+      return 'Home kitchen';
+    default:
+      return 'Restaurant';
+  }
+}
+
+export function kitchenFormatBadgeVariant(
+  format: KitchenFormat,
+): 'cloudKitchen' | 'offer' | 'veg' | 'default' {
+  switch (format) {
+    case 'cloud_kitchen':
+      return 'cloudKitchen';
+    case 'chef_kitchen':
+      return 'offer';
+    case 'home_kitchen':
+      return 'veg';
+    default:
+      return 'default';
+  }
+}
 
 export function formatEta(restaurant: RestaurantPublic): string {
   if (!restaurant.etaMinutes) return '—';

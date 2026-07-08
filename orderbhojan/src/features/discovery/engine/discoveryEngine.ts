@@ -5,6 +5,7 @@ import type {
   DiscoveryQueryParams,
 } from '@/types/marketplace-discovery';
 import { applyDiscoveryFilters } from '../domain/filters';
+import { filtersForDiscoveryCollection } from '../domain/discoveryPolicy';
 import { getDiscoveryApiClient } from '../infrastructure/discoveryApiClient';
 
 /** Default Hyderabad coordinates when M2 location is unavailable. */
@@ -54,7 +55,10 @@ function postProcessHome(
     ...response,
     collections: response.collections.map((collection) => ({
       ...collection,
-      restaurants: applyDiscoveryFilters(collection.restaurants, filters),
+      restaurants: applyDiscoveryFilters(
+        collection.restaurants,
+        filtersForDiscoveryCollection(collection.id, filters),
+      ),
     })),
   };
 }

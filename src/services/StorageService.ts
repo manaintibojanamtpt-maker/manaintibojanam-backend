@@ -192,6 +192,43 @@ class StorageService {
   }
 
   /**
+   * Upload storefront cover or gallery image for OrderBhojan marketplace projection.
+   */
+  async uploadStorefrontImage(
+    file: File,
+    tenantId: string,
+    kind: 'cover' | 'gallery' | 'logo',
+  ): Promise<string> {
+    const validationError = this.validateFile(file);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Please sign in again to upload images.');
+    }
+
+    await user.getIdToken(true);
+
+    const compressedBlob = await this.compressImage(file);
+    const timestamp = Date.now();
+    const fileName = `${kind}-${timestamp}.jpg`;
+    const storageRef = ref(this.storage, `storefront/${tenantId}/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, compressedBlob, {
+      contentType: 'image/jpeg',
+      customMetadata: {
+        tenantId,
+        kind,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
+    return getDownloadURL(snapshot.ref);
+  }
+
+  /**
    * Upload KYC document (Private, secure path)
    */
   async uploadKYCDocument(

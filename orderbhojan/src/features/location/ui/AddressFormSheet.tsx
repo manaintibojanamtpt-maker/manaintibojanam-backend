@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BottomSheet,
   Button,
@@ -7,7 +7,21 @@ import {
 } from '@bhojan/design-system';
 import type { IndiaAddress } from '../domain/location.types';
 import { savedAddressInputSchema, type SavedAddressInput } from '../domain/location.schema';
-import { listAreas, listCities, listDistricts, listStates, validatePincodeForArea } from '../data/india/reference';
+import {
+  DEFAULT_ADDRESS_CASCADE,
+  cascadeFromArea,
+  cascadeFromCity,
+  cascadeFromDistrict,
+  cascadeFromState,
+  ensureValidCascade,
+  inferCascadeFromDisplayLabel,
+  listAreas,
+  listCities,
+  listDistricts,
+  listStates,
+  type AddressCascadeSelection,
+  validatePincodeForArea,
+} from '../data/india/reference';
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useActiveLocation } from '../hooks/useActiveLocation';
 import { MapPinPicker } from './MapPinPicker';
@@ -17,28 +31,48 @@ interface AddressFormSheetProps {
   readonly onClose: () => void;
 }
 
-const defaultCoords = { lat: 17.4401, lng: 78.3489, source: 'map_pin' as const, capturedAt: new Date().toISOString() };
+const PUNE_COORDS = { lat: 18.5362, lng: 73.8958, source: 'map_pin' as const, capturedAt: new Date().toISOString() };
+
+function resolveInitialCascade(displayLabel?: string): AddressCascadeSelection {
+  if (displayLabel) {
+    const inferred = inferCascadeFromDisplayLabel(displayLabel);
+    if (inferred) return ensureValidCascade(inferred);
+  }
+  return DEFAULT_ADDRESS_CASCADE;
+}
 
 export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
   const { saveNewAddress } = useLocationActions();
   const active = useActiveLocation();
   const [label, setLabel] = useState<SavedAddressInput['label']>('home');
   const [customLabel, setCustomLabel] = useState('');
-  const [stateCode, setStateCode] = useState('TS');
-  const [districtCode, setDistrictCode] = useState('TS-HYD');
-  const [cityCode, setCityCode] = useState('hyderabad');
-  const [areaCode, setAreaCode] = useState('gachibowli');
-  const [pincode, setPincode] = useState('500032');
+  const [selection, setSelection] = useState<AddressCascadeSelection>(() =>
+    resolveInitialCascade(active?.displayLabel),
+  );
   const [street, setStreet] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [coordinates, setCoordinates] = useState(() => active?.coordinates ?? defaultCoords);
+  const [coordinates, setCoordinates] = useState(() => active?.coordinates ?? PUNE_COORDS);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const states = listStates();
-  const districts = listDistricts(stateCode);
-  const cities = listCities(districtCode);
-  const areas = listAreas(cityCode);
+  const { stateCode, districtCode, cityCode, areaCode, pincode } = selection;
+
+  useEffect(() => {
+    if (!open) return;
+    const next = resolveInitialCascade(active?.displayLabel);
+    setSelection(next);
+    setStreet('');
+    setLandmark('');
+    setError(null);
+    if (active?.coordinates) {
+      setCoordinates(active.coordinates);
+    }
+  }, [open, active?.displayLabel, active?.coordinates]);
+
+  const states = useMemo(() => listStates(), []);
+  const districts = useMemo(() => listDistricts(stateCode), [stateCode]);
+  const cities = useMemo(() => listCities(districtCode), [districtCode]);
+  const areas = useMemo(() => listAreas(cityCode), [cityCode]);
 
   const buildAddress = (): IndiaAddress => {
     const state = states.find((s) => s.code === stateCode)!;
@@ -66,6 +100,10 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
 
   const handleSave = async () => {
     setError(null);
+    if (!street.trim()) {
+      setError('Street / house is required');
+      return;
+    }
     if (!validatePincodeForArea(areaCode, pincode)) {
       setError('Pincode does not match selected area');
       return;
@@ -113,8 +151,13 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
         ) : null}
 
         <label className="ob-address-form__field">
-          <Text variant="caption">State</Text>
-          <select value={stateCode} onChange={(e) => setStateCode(e.target.value)} aria-label="State">
+          <Text variant="caption" className="ob-address-form__label">State</Text>
+          <select
+            className="ob-address-form__select"
+            value={stateCode}
+            onChange={(e) => setSelection(cascadeFromState(e.target.value))}
+            aria-label="State"
+          >
             {states.map((s) => (
               <option key={s.code} value={s.code}>{s.name}</option>
             ))}
@@ -122,8 +165,13 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
         </label>
 
         <label className="ob-address-form__field">
-          <Text variant="caption">District</Text>
-          <select value={districtCode} onChange={(e) => setDistrictCode(e.target.value)} aria-label="District">
+          <Text variant="caption" className="ob-address-form__label">District</Text>
+          <select
+            className="ob-address-form__select"
+            value={districtCode}
+            onChange={(e) => setSelection(cascadeFromDistrict(stateCode, e.target.value))}
+            aria-label="District"
+          >
             {districts.map((d) => (
               <option key={d.code} value={d.code}>{d.name}</option>
             ))}
@@ -131,8 +179,13 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
         </label>
 
         <label className="ob-address-form__field">
-          <Text variant="caption">City</Text>
-          <select value={cityCode} onChange={(e) => setCityCode(e.target.value)} aria-label="City">
+          <Text variant="caption" className="ob-address-form__label">City</Text>
+          <select
+            className="ob-address-form__select"
+            value={cityCode}
+            onChange={(e) => setSelection(cascadeFromCity(stateCode, districtCode, e.target.value))}
+            aria-label="City"
+          >
             {cities.map((c) => (
               <option key={c.code} value={c.code}>{c.name}</option>
             ))}
@@ -140,15 +193,20 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
         </label>
 
         <label className="ob-address-form__field">
-          <Text variant="caption">Area</Text>
-          <select value={areaCode} onChange={(e) => setAreaCode(e.target.value)} aria-label="Area">
+          <Text variant="caption" className="ob-address-form__label">Area</Text>
+          <select
+            className="ob-address-form__select"
+            value={areaCode}
+            onChange={(e) => setSelection(cascadeFromArea(stateCode, districtCode, cityCode, e.target.value))}
+            aria-label="Area"
+          >
             {areas.map((a) => (
               <option key={a.code} value={a.code}>{a.name}</option>
             ))}
           </select>
         </label>
 
-        <Input label="Pincode" inputMode="numeric" value={pincode} onChange={(e) => setPincode(e.target.value)} />
+        <Input label="Pincode" inputMode="numeric" value={pincode} onChange={(e) => setSelection((prev) => ({ ...prev, pincode: e.target.value }))} />
         <Input label="Street / House" value={street} onChange={(e) => setStreet(e.target.value)} />
         <Input label="Landmark (optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} />
 

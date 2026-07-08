@@ -14,3 +14,12 @@ export function isActiveTenantStatus(data: Record<string, unknown>): boolean {
 export function isMarketplaceEligibleTenant(data: Record<string, unknown>): boolean {
   return isActiveTenantStatus(data) && isMarketplaceVisibleTenant(data);
 }
+
+/** Consumer storefront — published, active tenants only (no sandbox/demo kitchens). */
+export function isConsumerListedTenant(data: Record<string, unknown>): boolean {
+  if (!isActiveTenantStatus(data)) return false;
+  const status = typeof data.status === 'string' ? data.status.toLowerCase() : '';
+  if (status === 'suspended' || status === 'rejected') return false;
+  if (data.sandboxMode === true) return false;
+  return data.storeStatus === 'published';
+}

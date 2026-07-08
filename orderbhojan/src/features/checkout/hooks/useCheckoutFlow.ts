@@ -6,6 +6,7 @@ import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import type { BillQuote } from '@/types/marketplace';
 
 export interface CheckoutPlaceResponse {
@@ -61,9 +62,12 @@ function buildCheckoutPayload(
 export function useCheckoutFlow(): CheckoutFlowState {
   const lines = useCartStore((s) => s.lines);
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
+  const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
   const activeLocation = useActiveLocation();
   const { sessionUser } = useAuth();
+
+  const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
 
   const [quote, setQuote] = useState<BillQuote | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<readonly string[]>([]);
@@ -73,18 +77,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
-    itemCount > 0 && Boolean(restaurantId) && Boolean(contextToken);
+    itemCount > 0 && Boolean(resolvedRestaurantId) && Boolean(contextToken);
 
   const getPayload = useCallback(() => {
-    if (!restaurantId || !contextToken) {
+    if (!resolvedRestaurantId || !contextToken) {
       throw new Error('Restaurant context is missing. Re-open the menu and try again.');
     }
     if (lines.length === 0) {
       throw new Error('Your cart is empty.');
     }
     const coords = resolveRestaurantCoords(activeLocation ?? null);
-    return buildCheckoutPayload(lines, restaurantId, contextToken, coords);
-  }, [activeLocation, contextToken, lines, restaurantId]);
+    return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, coords);
+  }, [activeLocation, contextToken, lines, resolvedRestaurantId]);
 
   const refreshQuote = useCallback(async () => {
     setStatus('quoting');

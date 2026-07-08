@@ -9,6 +9,10 @@ import { publishTenantDomainEvent } from './tenantDomainEventBus.js';
 import { inferStorefrontEventType } from '../domain/TenantDomainEventTypes.js';
 import { parseFirestoreTenant } from './projectFoodMenuV1.js';
 import { isStoreOpenNow, resolveStoreTiming } from './tenantProjectionHelpers.js';
+import {
+  MarketplaceMediaValidationError,
+  sanitizeMarketplacePayload,
+} from './marketplaceMediaSanitizer.js';
 
 type OwnerAccessFn = (
   userId: string,
@@ -87,7 +91,10 @@ export function registerOwnerStorefrontRoutes(
       if (body.pricingConfig) mergeObject('pricingConfig', body.pricingConfig);
       if (body.paymentConfig) mergeObject('paymentConfig', body.paymentConfig);
       if (body.features) mergeObject('features', body.features);
-      if (body.marketplace) mergeObject('marketplace', body.marketplace);
+      if (body.marketplace) {
+        const sanitizedMarketplace = sanitizeMarketplacePayload(body.marketplace);
+        if (sanitizedMarketplace) mergeObject('marketplace', sanitizedMarketplace);
+      }
       if (body.branding) mergeObject('branding', body.branding);
       if (body.storeOperations && typeof body.storeOperations === 'object') {
         updates.storeOperations = {
@@ -112,7 +119,10 @@ export function registerOwnerStorefrontRoutes(
         poolSyncRevision: sync.poolSyncRevision,
       });
     } catch (error: unknown) {
-      const status = (error as { statusCode?: number }).statusCode ?? 500;
+      const status =
+        error instanceof MarketplaceMediaValidationError
+          ? error.statusCode
+          : (error as { statusCode?: number }).statusCode ?? 500;
       res.status(status).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update storefront',
@@ -130,6 +140,7 @@ export function registerOwnerStorefrontRoutes(
       }
 
       const raw = doc.data() as Record<string, unknown>;
+      const slug = typeof raw.slug === 'string' ? raw.slug : tenantId;
       const menuCount = await countTenantMenuItems(db, tenantId);
       const validation = validateTenantPublishable(raw, menuCount);
       if (!validation.ok) {
@@ -158,8 +169,10 @@ export function registerOwnerStorefrontRoutes(
       res.json({
         success: true,
         tenantId,
+        slug,
         storeStatus: 'published',
         menuItemCount: menuCount,
+        orderBhojanUrl: `https://orderbhojan.web.app/restaurant/${slug}`,
         tenantSyncRevision: sync.tenantSyncRevision,
         poolSyncRevision: sync.poolSyncRevision,
       });

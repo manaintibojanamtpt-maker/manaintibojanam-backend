@@ -35,5 +35,13 @@ service firebase.storage {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    match /storefront/{tenantId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (
+        isAdmin() ||
+        firestore.get(/databases/(default)/documents/tenants/$(tenantId)).data.ownerId == request.auth.uid
+      );
+    }
   }
 }

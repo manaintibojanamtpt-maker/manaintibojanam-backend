@@ -3,6 +3,7 @@ import { Image as ImageIcon, Loader2, Palette, Plus, Save, Trash2, Upload } from
 import toast from 'react-hot-toast';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
+import storageService from '../../services/StorageService';
 
 interface GalleryItem {
   galleryId: string;
@@ -29,33 +30,16 @@ const DEFAULT_THEME: ThemeForm = {
   description: '',
 };
 
-function compressImage(file: File, maxWidth = 800, maxHeight = 600): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new window.Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > height && width > maxWidth) {
-          height *= maxWidth / width;
-          width = maxWidth;
-        } else if (height > maxHeight) {
-          width *= maxHeight / height;
-          height = maxHeight;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
-      };
-      img.onerror = reject;
-    };
-    reader.onerror = reject;
-  });
+async function migrateDataUrlToStorage(
+  url: string,
+  tenantId: string,
+  kind: 'cover' | 'gallery',
+): Promise<string> {
+  if (!url.startsWith('data:')) return url;
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const file = new File([blob], `${kind}.jpg`, { type: blob.type || 'image/jpeg' });
+  return storageService.uploadStorefrontImage(file, tenantId, kind);
 }
 
 export const OwnerGalleryThemePanel: React.FC = () => {
@@ -114,33 +98,31 @@ export const OwnerGalleryThemePanel: React.FC = () => {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
+    if (!file || !tenantId) return;
+    const validationError = storageService.validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
     setUploading(true);
-    const toastId = toast.loading('Processing image...');
+    const toastId = toast.loading('Uploading photo…');
     try {
-      const base64Image = await compressImage(file);
+      const downloadUrl = await storageService.uploadStorefrontImage(file, tenantId, 'gallery');
       setGallery((prev) => [
         ...prev,
         {
           galleryId: `gallery_${Date.now()}`,
-          url: base64Image,
+          url: downloadUrl,
           caption: '',
           sortOrder: prev.length,
         },
       ]);
-      toast.success('Image added — save to publish on OrderBhojan', { id: toastId });
+      toast.success('Photo uploaded — save to sync on OrderBhojan', { id: toastId });
     } catch (error) {
       console.error('Image upload failed:', error);
-      toast.error('Failed to process image', { id: toastId });
+      const message = error instanceof Error ? error.message : 'Failed to upload image';
+      toast.error(message, { id: toastId });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -149,14 +131,22 @@ export const OwnerGalleryThemePanel: React.FC = () => {
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !tenantId) return;
+    const validationError = storageService.validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setUploading(true);
+    const toastId = toast.loading('Uploading cover…');
     try {
-      const base64Image = await compressImage(file, 1200, 675);
-      setTheme((prev) => ({ ...prev, coverUrl: base64Image }));
-      toast.success('Cover image attached');
-    } catch {
-      toast.error('Failed to process cover image');
+      const downloadUrl = await storageService.uploadStorefrontImage(file, tenantId, 'cover');
+      setTheme((prev) => ({ ...prev, coverUrl: downloadUrl }));
+      toast.success('Cover uploaded', { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload cover image';
+      toast.error(message, { id: toastId });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -166,29 +156,53 @@ export const OwnerGalleryThemePanel: React.FC = () => {
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
+    const toastId = toast.loading('Saving gallery and theme…');
     try {
-      await updateOwnerStorefront(tenantId, {
-        marketplace: {
-          gallery: gallery.map((item, index) => ({
+      let coverUrl = theme.coverUrl;
+      if (coverUrl.startsWith('data:')) {
+        coverUrl = await migrateDataUrlToStorage(coverUrl, tenantId, 'cover');
+      }
+
+      const galleryPayload = await Promise.all(
+        gallery.map(async (item, index) => {
+          let url = item.url;
+          if (url.startsWith('data:')) {
+            url = await migrateDataUrlToStorage(url, tenantId, 'gallery');
+          }
+          return {
             galleryId: item.galleryId,
-            url: item.url,
+            url,
             caption: item.caption.trim() || undefined,
             sortOrder: index,
-          })),
+          };
+        }),
+      );
+
+      await updateOwnerStorefront(tenantId, {
+        marketplace: {
+          gallery: galleryPayload,
           theme: {
             primaryColor: theme.primaryColor,
             secondaryColor: theme.secondaryColor,
             highlightColor: theme.highlightColor,
-            coverUrl: theme.coverUrl || undefined,
+            coverUrl: coverUrl || undefined,
           },
           tagline: theme.tagline.trim() || undefined,
           description: theme.description.trim() || undefined,
         },
       });
-      toast.success('Gallery and theme saved — syncing to OrderBhojan');
+      setTheme((prev) => ({ ...prev, coverUrl }));
+      setGallery((prev) =>
+        prev.map((item, index) => ({
+          ...item,
+          url: galleryPayload[index]?.url ?? item.url,
+        })),
+      );
+      toast.success('Gallery and theme saved — syncing to OrderBhojan', { id: toastId });
     } catch (error) {
       console.error('Failed to save gallery/theme:', error);
-      toast.error('Failed to save gallery and theme');
+      const message = error instanceof Error ? error.message : 'Failed to save gallery and theme';
+      toast.error(message, { id: toastId });
     } finally {
       setSaving(false);
     }
@@ -314,7 +328,7 @@ export const OwnerGalleryThemePanel: React.FC = () => {
 
       <button
         type="button"
-        disabled={saving || !tenantId}
+        disabled={saving || uploading || !tenantId}
         onClick={handleSave}
         className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-orange-500 px-6 py-3 text-base font-bold text-white disabled:opacity-50"
       >

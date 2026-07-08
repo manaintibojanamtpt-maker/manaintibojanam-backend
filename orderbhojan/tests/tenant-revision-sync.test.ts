@@ -16,7 +16,7 @@ describe('tenant revision sync', () => {
     );
     assert.match(hookSource, /fetchTenantSyncRevision/);
     assert.match(hookSource, /invalidateQueries/);
-    assert.match(hookSource, /3_000/);
+    assert.match(hookSource, /15_000/);
 
     const clientSource = fs.readFileSync(
       path.join(root, 'src/features/marketplace/infrastructure/marketplaceSyncClient.ts'),

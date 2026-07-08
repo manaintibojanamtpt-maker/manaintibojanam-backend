@@ -1,9 +1,8 @@
 import type { RestaurantPublic } from '@/types/marketplace';
 import type { DiscoveryFilters, DiscoverySort } from '@/types/marketplace-discovery';
+import { DEFAULT_DISCOVERY_FILTERS } from './discoveryPolicy';
 
-export const DEFAULT_DISCOVERY_FILTERS: DiscoveryFilters = {
-  sort: 'popularity',
-};
+export { DEFAULT_DISCOVERY_FILTERS } from './discoveryPolicy';
 
 export function applyDiscoveryFilters(
   restaurants: readonly RestaurantPublic[],
@@ -29,7 +28,10 @@ export function applyDiscoveryFilters(
     );
   }
   if (filters.cloudKitchenOnly) {
-    result = result.filter((r) => r.badges.includes('cloud_kitchen'));
+    result = result.filter((r) => r.badges.includes('cloud_kitchen') || r.kitchenFormat === 'cloud_kitchen');
+  }
+  if (filters.kitchenFormat) {
+    result = result.filter((r) => r.kitchenFormat === filters.kitchenFormat);
   }
   if (filters.offersOnly) {
     result = result.filter((r) => r.badges.includes('offer'));
@@ -83,6 +85,7 @@ export function serializeDiscoveryFilters(filters: DiscoveryFilters): Record<str
   if (filters.maxDeliveryFee != null) query.maxDeliveryFee = filters.maxDeliveryFee;
   if (filters.vegOnly) query.vegOnly = true;
   if (filters.cloudKitchenOnly) query.cloudKitchenOnly = true;
+  if (filters.kitchenFormat) query.kitchenFormat = filters.kitchenFormat;
   if (filters.offersOnly) query.offersOnly = true;
   if (filters.openNowOnly) query.openNowOnly = true;
   if (filters.cuisines?.length) query.cuisines = filters.cuisines.join(',');

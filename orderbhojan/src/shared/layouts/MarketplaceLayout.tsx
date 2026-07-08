@@ -1,7 +1,7 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Icon, Text } from '@bhojan/design-system';
-import { ExperienceBottomNav, MarketplaceFloatingCart } from '@/features/experience';
+import { Outlet, useLocation } from 'react-router-dom';
 import { LocationChip, LocationSelectorSheet, useLocationFeatureEnabled } from '@/features/location';
+import { ExperienceBottomNav, MarketplaceFloatingCart } from '@/features/experience';
+import { OrderBhojanBrand } from '@/shared/ui/OrderBhojanBrand';
 
 function isHomeRoute(pathname: string): boolean {
   return pathname === '/';
@@ -20,15 +20,7 @@ export function MarketplaceLayout() {
           className={`ob-px2-compact-header bds-glass-surface${onHome ? ' ob-px2-compact-header--home' : ''}`}
         >
           {!onHome ? (
-            <Link to="/" aria-label="OrderBhojan home" className="ob-px2-compact-header__brand-link">
-              <Icon size={18} label="">
-                <path d="M12 3v18" />
-                <path d="M3 12h18" />
-              </Icon>
-              <Text variant="subtitle" as="span" className="ob-px2-compact-header__brand">
-                OrderBhojan
-              </Text>
-            </Link>
+            <OrderBhojanBrand variant="compact" />
           ) : null}
           {locationEnabled ? (
             <LocationChip

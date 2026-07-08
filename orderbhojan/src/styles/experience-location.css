@@ -79,7 +79,21 @@
   flex-wrap: wrap;
 }
 
-.ob-address-form__field select {
+.ob-address-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-1);
+  width: 100%;
+  margin: 0;
+}
+
+.ob-address-form__label {
+  display: block;
+  color: var(--bds-color-text-secondary);
+}
+
+.ob-address-form__field select,
+.ob-address-form__select {
   width: 100%;
   min-height: 44px;
   padding: var(--bds-space-2) var(--bds-space-3);
@@ -87,6 +101,8 @@
   border: 1px solid var(--bds-color-border);
   background: var(--bds-color-surface);
   color: var(--bds-color-text-primary);
+  font: inherit;
+  box-sizing: border-box;
 }
 
 .ob-map-pin-picker {
