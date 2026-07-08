@@ -30,6 +30,7 @@ import type {
   SearchSuggestionsResponse,
   SearchTrendingResponse,
 } from '@/types/marketplace-search';
+import type { FoodMenuApiEnvelopeDTO } from '@bhojan/marketplace-contracts';
 import type {
   FoodCategoriesResponse,
   FoodCollectionResponse,
@@ -254,6 +255,16 @@ export class MarketplaceApiClient {
     });
   }
 
+  foodMenuContractV1(
+    restaurantSlug: string,
+    params?: { lat?: number; lng?: number },
+  ): Promise<FoodMenuApiEnvelopeDTO> {
+    return this.http.request<FoodMenuApiEnvelopeDTO>({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/menu`,
+      query: { ...params, schemaVersion: '1.0' },
+    });
+  }
+
   foodCategories(restaurantSlug: string): Promise<FoodCategoriesResponse> {
     return this.http.request<FoodCategoriesResponse>({
       path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(restaurantSlug)}/categories`,
@@ -305,7 +316,7 @@ export class MarketplaceApiClient {
     });
   }
 
-  checkoutPlace(body: Record<string, unknown>): Promise<{ orderId: string }> {
+  checkoutPlace(body: Record<string, unknown>): Promise<{ orderId?: string; draftId?: string }> {
     return this.http.request({
       method: 'POST',
       path: `${MARKETPLACE_PREFIX}/checkout/place`,
@@ -328,6 +339,32 @@ export class MarketplaceApiClient {
   getTracking(orderId: string): Promise<OrderTrackingResponse> {
     return this.http.request({
       path: `${MARKETPLACE_PREFIX}/orders/${encodeURIComponent(orderId)}/tracking`,
+    });
+  }
+
+  getGuestTracking(orderId: string, phone: string): Promise<OrderTrackingResponse> {
+    return this.http.request({
+      path: `${MARKETPLACE_PREFIX}/orders/${encodeURIComponent(orderId)}/guest-tracking`,
+      query: { phone },
+    });
+  }
+
+  validateCart(body: {
+    restaurantId: string;
+    contextToken: string;
+    orderType: 'delivery' | 'pickup';
+    lines: { itemId: string; quantity: number; unitPrice?: number }[];
+    deliveryAddress?: { lat: number; lng: number };
+    couponCode?: string;
+  }): Promise<{
+    valid: boolean;
+    quote: BillQuote;
+    issues: { itemId: string; code: string; message: string }[];
+  }> {
+    return this.http.request({
+      method: 'POST',
+      path: `${MARKETPLACE_PREFIX}/cart/validate`,
+      body,
     });
   }
 

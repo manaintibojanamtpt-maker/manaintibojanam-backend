@@ -1,39 +1,26 @@
-import { Button, FloatingCart, Text } from '@bhojan/design-system';
-import {
-  foodPreviewCount,
-  foodPreviewTotal,
-  useFoodPreviewStore,
-} from '../store/foodPreviewStore';
+import { useNavigate } from 'react-router-dom';
+import { FloatingCart } from '@bhojan/design-system';
+import { cartItemCount, cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
 
 export function FoodFloatingPreview() {
-  const lines = useFoodPreviewStore((s) => s.lines);
-  const visible = useFoodPreviewStore((s) => s.visible);
+  const navigate = useNavigate();
+  const lines = useCartStore((s) => s.lines);
+  const visible = useCartStore((s) => s.visible);
+  const count = cartItemCount(lines);
+  const total = cartSubtotal(lines);
 
   if (!visible || lines.length === 0) return null;
 
-  const count = foodPreviewCount(lines);
-  const total = foodPreviewTotal(lines);
-
   return (
-    <div className="ob-food-preview" role="status" aria-live="polite">
+    <div className="ob-food-preview ob-food-px6__preview" role="status" aria-live="polite">
       <FloatingCart
+        key={count}
         itemCount={count}
         total={`₹${total}`}
-        label="Cart preview"
-        onCheckout={() => undefined}
-        className="ob-food-preview__bar"
+        label="View cart"
+        onCheckout={() => navigate('/cart')}
+        className="ob-food-preview__bar ob-food-px6__preview-bar ob-food-px6__preview-bar--enter"
       />
-      <Text variant="caption" className="ob-food-preview__hint">
-        Preview only — checkout arrives in M7
-      </Text>
-      <Button
-        variant="secondary"
-        size="compact"
-        className="ob-food-preview__clear"
-        onClick={() => useFoodPreviewStore.getState().clear()}
-      >
-        Clear preview
-      </Button>
     </div>
   );
 }

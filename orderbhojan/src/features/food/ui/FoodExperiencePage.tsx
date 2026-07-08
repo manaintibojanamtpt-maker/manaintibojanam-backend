@@ -1,33 +1,37 @@
 import {
   Button,
-  Card,
-  Icon,
   Rail,
   Skeleton,
   Text,
 } from '@bhojan/design-system';
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useScrollChrome } from '@/features/experience/hooks/useScrollChrome';
-import { MotionPage, MotionReveal } from '@/features/experience/motion/premiumMotion';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { MotionPage, MotionReveal } from '@bhojan/design-system';
+import { useHeroPreload } from '@/features/experience/hooks/useHeroPreload';
 import type { FoodPublic } from '@/types/marketplace-food';
+import { resolveFoodItemPhoto } from '../data/food-item-photo-manifest';
 import { groupItemsByCategory } from '../domain/formatters';
+import { hasBestsellerLabel } from '../domain/contractPresentation';
 import { useCategoryScrollSpy } from '../hooks/useCategoryScrollSpy';
 import { useFoodMenu } from '../hooks/useFoodMenu';
+import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
 import { FoodCardItem } from './FoodCardItem';
 import { FoodCategoryRail } from './FoodCategoryRail';
 import { FoodCustomizeSheet } from './FoodCustomizeSheet';
+import { FoodFeaturedPoster } from './FoodFeaturedPoster';
 import { FoodFloatingPreview } from './FoodFloatingPreview';
+import { FoodRestaurantStrip } from './FoodRestaurantStrip';
 
 function FoodExperienceSkeleton() {
   return (
-    <div className="ob-food-page ob-food-page--loading ob-m65-menu ob-m65-skeleton" aria-busy="true">
-      <Skeleton height="3rem" />
+    <div className="ob-food-page ob-food-px6 ob-food-page--loading ob-menu-px2" aria-busy="true">
+      <Skeleton height="3.5rem" />
       <Skeleton height="2.5rem" />
-      <div className="ob-food-page__grid">
-        <Skeleton height="18rem" />
-        <Skeleton height="18rem" />
-        <Skeleton height="18rem" />
+      <Skeleton height="14rem" />
+      <div className="ob-food-px6__list">
+        <Skeleton height="8.5rem" />
+        <Skeleton height="8.5rem" />
+        <Skeleton height="8.5rem" />
       </div>
     </div>
   );
@@ -47,12 +51,12 @@ function FoodSection({
   if (items.length === 0) return null;
 
   return (
-    <section id={id} className="ob-food-section" aria-labelledby={`${id}-title`}>
+    <section id={id} className="ob-food-section ob-food-px6__section" aria-labelledby={`${id}-title`}>
       <MotionReveal>
         <Text variant="subtitle" as="h2" id={`${id}-title`} className="ob-food-section__title">
           {title}
         </Text>
-        <div className="ob-food-page__grid">
+        <div className="ob-food-px6__list">
           {items.map((food) => (
             <FoodCardItem key={food.foodId} food={food} onCustomize={onCustomize} />
           ))}
@@ -62,27 +66,28 @@ function FoodSection({
   );
 }
 
-function FeaturedRail({
-  title,
+function SignatureDishesRail({
   items,
   onCustomize,
 }: {
-  readonly title: string;
   readonly items: readonly FoodPublic[];
   readonly onCustomize: (food: FoodPublic) => void;
 }) {
   if (items.length === 0) return null;
 
   return (
-    <section className="ob-food-section" aria-label={title}>
+    <section className="ob-food-px6__signatures" aria-label="Signature dishes">
       <Text variant="subtitle" as="h2" className="ob-food-section__title">
-        {title}
+        Signature dishes
       </Text>
-      <Rail aria-label={title}>
-        {items.map((food) => (
-          <div key={food.foodId} className="ob-food-rail-card">
-            <FoodCardItem food={food} onCustomize={onCustomize} />
-          </div>
+      <Rail aria-label="Signature dishes" className="ob-food-px6__signature-rail">
+        {items.map((food, index) => (
+          <FoodFeaturedPoster
+            key={food.foodId}
+            food={food}
+            onCustomize={onCustomize}
+            priority={index === 0}
+          />
         ))}
       </Rail>
     </section>
@@ -91,12 +96,15 @@ function FeaturedRail({
 
 function FoodExperienceContent({ restaurantSlug }: { readonly restaurantSlug: string }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const query = useFoodMenu(restaurantSlug);
-  const scrolled = useScrollChrome();
   const [customizeFood, setCustomizeFood] = useState<FoodPublic | null>(null);
+  const enterFromRestaurant = Boolean(
+    (location.state as { fromRestaurant?: boolean } | null)?.fromRestaurant,
+  );
 
   const menu = query.data;
-  const restaurantName = menu?.restaurantName;
+  const restaurantName = menu?.restaurantName ?? 'Menu';
   const items = useMemo(() => menu?.items ?? [], [menu?.items]);
   const categories = useMemo(() => menu?.categories ?? [], [menu?.categories]);
 
@@ -109,21 +117,30 @@ function FoodExperienceContent({ restaurantSlug }: { readonly restaurantSlug: st
   const byCategory = useMemo(() => groupItemsByCategory(items), [items]);
   const itemMap = useMemo(() => new Map(items.map((item) => [item.foodId, item])), [items]);
 
-  const featured = (menu?.featuredIds ?? [])
-    .map((id) => itemMap.get(id))
-    .filter((item): item is FoodPublic => Boolean(item));
-  const todaysSpecials = (menu?.todaysSpecialIds ?? [])
-    .map((id) => itemMap.get(id))
-    .filter((item): item is FoodPublic => Boolean(item));
-  const recommended = items.filter((item) => item.recommended);
-  const bestsellers = items.filter((item) => item.bestSeller);
-  const chefSpecials = items.filter((item) => item.chefSpecial);
+  const signatureItems = useMemo(() => {
+    const featured = (menu?.featuredIds ?? [])
+      .map((id) => itemMap.get(id))
+      .filter((item): item is FoodPublic => Boolean(item));
+    const bestsellers = items.filter((item) => hasBestsellerLabel(item));
+    const seen = new Set<string>();
+    const merged: FoodPublic[] = [];
+    for (const item of [...featured, ...bestsellers]) {
+      if (seen.has(item.foodId)) continue;
+      seen.add(item.foodId);
+      merged.push(item);
+    }
+    return merged.slice(0, 6);
+  }, [menu?.featuredIds, itemMap, items]);
+
+  const heroFood = signatureItems[0];
+  const heroPhoto = heroFood ? resolveFoodItemPhoto(heroFood.foodId, 960, '100vw', 88) : null;
+  useHeroPreload(heroPhoto?.preloadHref ?? '', heroPhoto?.srcSet);
 
   if (query.isLoading) return <FoodExperienceSkeleton />;
 
   if (query.isError || !menu) {
     return (
-      <section className="ob-food-page ob-food-page--error" role="alert">
+      <section className="ob-food-page ob-food-px6 ob-food-page--error" role="alert">
         <Text variant="subtitle" as="h1">
           Menu unavailable
         </Text>
@@ -138,43 +155,19 @@ function FoodExperienceContent({ restaurantSlug }: { readonly restaurantSlug: st
   }
 
   return (
-    <MotionPage className="ob-food-page ob-m65-menu">
-      <header className={`ob-food-page__header${scrolled ? ' ob-food-page__header--collapsed' : ''}`}>
-        <Button
-          variant="secondary"
-          size="compact"
-          className="ob-food-page__back"
-          aria-label="Back to restaurant"
-          onClick={() => navigate(`/restaurant/${restaurantSlug}`)}
-        >
-          <Icon size={18} label="Back">
-            <path d="M15 18l-6-6 6-6" />
-          </Icon>
-        </Button>
-        <Text variant="subtitle" as="p" className="ob-food-page__header-title">
-          {restaurantName ?? 'Menu'}
-        </Text>
-      </header>
-
-      <div className="ob-food-page__intro">
-        <Text variant="display" as="h1" className="ob-food-page__title">
-          {restaurantName ?? 'Explore the menu'}
-        </Text>
-        <Text variant="bodySm" className="ob-food-page__subtitle">
-          Discover, customize, and preview dishes — ordering arrives in M7.
-        </Text>
-      </div>
+    <MotionPage
+      className={`ob-food-page ob-food-px6 ob-menu-px2${enterFromRestaurant ? ' ob-food-px6--enter' : ''}`}
+    >
+      <FoodRestaurantStrip
+        slug={restaurantSlug}
+        name={restaurantName}
+        onBack={() => navigate(`/restaurant/${restaurantSlug}`)}
+        onHome={() => navigate('/')}
+      />
 
       <FoodCategoryRail categories={categories} activeId={activeId} onSelect={scrollTo} />
 
-      <FeaturedRail title="Featured dishes" items={featured} onCustomize={setCustomizeFood} />
-
-      <FoodSection
-        id="food-todays-specials"
-        title="Today's specials"
-        items={todaysSpecials}
-        onCustomize={setCustomizeFood}
-      />
+      <SignatureDishesRail items={signatureItems} onCustomize={setCustomizeFood} />
 
       {categories.map((category) => (
         <FoodSection
@@ -185,41 +178,6 @@ function FoodExperienceContent({ restaurantSlug }: { readonly restaurantSlug: st
           onCustomize={setCustomizeFood}
         />
       ))}
-
-      <FoodSection
-        id="food-recommended"
-        title="Recommended for you"
-        items={recommended}
-        onCustomize={setCustomizeFood}
-      />
-
-      <FoodSection
-        id="food-bestsellers"
-        title="Best sellers"
-        items={bestsellers}
-        onCustomize={setCustomizeFood}
-      />
-
-      <FoodSection
-        id="food-chef-specials"
-        title="Chef specials"
-        items={chefSpecials}
-        onCustomize={setCustomizeFood}
-      />
-
-      <section className="ob-food-section" aria-label="Recently viewed">
-        <Text variant="subtitle" as="h2" className="ob-food-section__title">
-          Recently viewed
-        </Text>
-        <Card className="ob-food-placeholder">
-          <Text variant="bodySm" style={{ fontWeight: 700 }}>
-            Coming soon
-          </Text>
-          <Text variant="caption" style={{ color: 'var(--bds-color-text-secondary)' }}>
-            Your browsing history will appear here in a future release.
-          </Text>
-        </Card>
-      </section>
 
       <div className="ob-food-page__sticky-spacer" aria-hidden />
 
@@ -236,6 +194,7 @@ function FoodExperienceContent({ restaurantSlug }: { readonly restaurantSlug: st
 
 export function FoodExperiencePage() {
   const { restaurantSlug } = useParams<{ restaurantSlug: string }>();
+  useTenantRevisionSync(restaurantSlug);
 
   return <FoodExperienceContent restaurantSlug={restaurantSlug ?? ''} />;
 }

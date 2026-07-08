@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { executeSearch, resolveSearchCoords } from '../engine/searchPlatform';
 import {
   searchKeys,
   SEARCH_DEBOUNCE_MS,
-  SEARCH_GC_TIME_MS,
-  SEARCH_STALE_TIME_MS,
 } from './searchQueryKeys';
 import { useDebouncedValue } from './useDebouncedValue';
 import { useSearchFeatureEnabled } from './useSearchFeature';
@@ -18,6 +17,7 @@ export function useSearchResults(rawQuery: string) {
   const coords = resolveSearchCoords(activeLocation);
   const query = useDebouncedValue(rawQuery.trim(), SEARCH_DEBOUNCE_MS);
   const hasQuery = query.length > 0;
+  const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
     queryKey: searchKeys.results(query, coords.lat, coords.lng, filters),
@@ -29,8 +29,7 @@ export function useSearchResults(rawQuery: string) {
         filters,
       }),
     enabled: enabled && hasQuery,
-    staleTime: SEARCH_STALE_TIME_MS,
-    gcTime: SEARCH_GC_TIME_MS,
+    ...liveQuery,
     retry: 2,
     placeholderData: (previous) => previous,
   });

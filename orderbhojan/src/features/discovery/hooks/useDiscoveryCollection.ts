@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { DiscoveryCollectionId } from '@/types/marketplace-discovery';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { loadDiscoveryCollection, resolveDiscoveryCoords } from '../engine/discoveryEngine';
-import { discoveryKeys, DISCOVERY_GC_TIME_MS, DISCOVERY_STALE_TIME_MS } from './discoveryQueryKeys';
+import { discoveryKeys } from './discoveryQueryKeys';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { useDiscoveryFeatureEnabled } from './useDiscoveryFeature';
 
@@ -14,6 +15,7 @@ export function useDiscoveryCollection(
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
   const coords = resolveDiscoveryCoords(activeLocation);
+  const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
     queryKey: discoveryKeys.collection(collectionId, coords.lat, coords.lng, page, filters),
@@ -26,8 +28,7 @@ export function useDiscoveryCollection(
         filters,
       }),
     enabled,
-    staleTime: DISCOVERY_STALE_TIME_MS,
-    gcTime: DISCOVERY_GC_TIME_MS,
+    ...liveQuery,
     retry: 2,
   });
 }

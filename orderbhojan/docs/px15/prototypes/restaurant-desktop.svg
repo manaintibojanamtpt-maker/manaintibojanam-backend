@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Restaurant  Desktop  PX1.5</title>
+  <desc id="desc">1440x900 Airbnb-style split. SideNav. Hero gallery left. Info panel sticky right.</desc>
+  <rect width="1440" height="900" fill="#070504"/>
+  <!-- SideNav -->
+  <rect x="0" y="0" width="240" height="900" fill="#120D0A"/>
+  <text x="32" y="48" font-family="Outfit,sans-serif" font-size="20" font-weight="900" fill="#FF7A00">OrderBhojan</text>
+  <rect x="24" y="80" width="192" height="40" rx="12" fill="rgba(255,122,0,0.12)"/>
+  <text x="48" y="105" font-size="14" fill="#FF7A00">Home</text>
+  <text x="48" y="150" font-size="14" fill="#D0C4B5">Search</text>
+  <text x="48" y="190" font-size="14" fill="#D0C4B5">Cart</text>
+  <!-- Hero gallery left 58% -->
+  <rect x="240" y="0" width="696" height="520" fill="#FF6B35"/>
+  <rect x="240" y="400" width="696" height="120" fill="url(#scrim)"/>
+  <defs><linearGradient id="scrim" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#070504" stop-opacity="0.9"/><stop offset="100%" stop-color="#070504" stop-opacity="0"/></linearGradient></defs>
+  <rect x="264" y="440" width="120" height="80" rx="12" fill="#8B4513"/>
+  <rect x="396" y="440" width="120" height="80" rx="12" fill="#C2410C"/>
+  <rect x="528" y="440" width="120" height="80" rx="12" fill="#FF9F43"/>
+  <!-- Info panel right 42% -->
+  <rect x="936" y="0" width="504" height="900" fill="#0E0A08"/>
+  <circle cx="992" cy="80" r="36" fill="#120D0A" stroke="#FF7A00" stroke-width="2"/>
+  <text x="1040" y="72" font-family="Outfit,sans-serif" font-size="32" font-weight="900" fill="#FFFAF3">Demo Biryani House</text>
+  <text x="1040" y="100" font-size="14" fill="#D0C4B5">Andhra � Biryani �  4.8 � 25 min</text>
+  <rect x="960" y="130" width="200" height="64" rx="12" fill="rgba(255,122,0,0.12)"/>
+  <text x="976" y="168" font-size="14" font-weight="700" fill="#FF7A00">50% OFF first order</text>
+  <rect x="960" y="220" width="456" height="52" rx="26" fill="#FF7A00"/>
+  <text x="1188" y="252" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFAF3">Open Menu</text>
+  <text x="960" y="300" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">FROM THE MENU</text>
+  <rect x="960" y="316" width="456" height="72" rx="12" fill="#120D0A"/>
+  <text x="976" y="348" font-size="14" font-weight="700" fill="#FFFAF3">Chicken Dum Biryani</text>
+  <text x="976" y="372" font-size="14" font-weight="800" fill="#FF7A00">�299</text>
+  <rect x="1360" y="332" width="40" height="40" rx="20" fill="#FFFAF3"/>
+  <text x="1380" y="357" text-anchor="middle" font-size="11" font-weight="800" fill="#FF7A00">ADD</text>
+</svg>

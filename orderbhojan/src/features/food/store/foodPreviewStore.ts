@@ -1,11 +1,26 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { useCartStore } from '@/features/cart/store/cartStore';
+import type { CartLineAddon } from '@/features/cart/store/cartStore';
 
 export interface FoodPreviewLine {
+  readonly lineId: string;
   readonly foodId: string;
   readonly name: string;
   readonly quantity: number;
   readonly unitPrice: number;
+  readonly variantId?: string;
+  readonly variantLabel?: string;
+  readonly addons?: readonly CartLineAddon[];
+  readonly instructions?: string;
+}
+
+export interface FoodPreviewLineInput {
+  readonly foodId: string;
+  readonly name: string;
+  readonly unitPrice: number;
+  readonly variantId?: string;
+  readonly variantLabel?: string;
+  readonly addons?: readonly CartLineAddon[];
+  readonly instructions?: string;
 }
 
 interface FoodPreviewState {
@@ -13,57 +28,57 @@ interface FoodPreviewState {
   readonly lines: readonly FoodPreviewLine[];
   readonly visible: boolean;
   setRestaurant: (slug: string) => void;
-  addItem: (line: Omit<FoodPreviewLine, 'quantity'>, quantity?: number) => void;
-  setQuantity: (foodId: string, quantity: number) => void;
+  addItem: (line: FoodPreviewLineInput, quantity?: number) => void;
+  setQuantity: (lineId: string, quantity: number) => void;
   clear: () => void;
 }
 
-export const useFoodPreviewStore = create<FoodPreviewState>()(
-  persist(
-    (set, get) => ({
-      restaurantSlug: null,
-      lines: [],
-      visible: false,
-      setRestaurant: (slug) => {
-        if (get().restaurantSlug !== slug) {
-          set({ restaurantSlug: slug, lines: [], visible: false });
-        }
+const bridgeActions = {
+  setRestaurant: (slug: string) => useCartStore.getState().setRestaurant(slug),
+  addItem: (line: FoodPreviewLineInput, quantity = 1) =>
+    useCartStore.getState().addItem(
+      {
+        foodId: line.foodId,
+        name: line.name,
+        price: line.unitPrice,
+        variantId: line.variantId,
+        variantLabel: line.variantLabel,
+        addons: line.addons,
+        instructions: line.instructions,
       },
-      addItem: (line, quantity = 1) => {
-        const current = get().lines;
-        const existing = current.find((l) => l.foodId === line.foodId);
-        if (existing) {
-          set({
-            lines: current.map((l) =>
-              l.foodId === line.foodId
-                ? { ...l, quantity: l.quantity + quantity }
-                : l,
-            ),
-            visible: true,
-          });
-          return;
-        }
-        set({
-          lines: [...current, { ...line, quantity }],
-          visible: true,
-        });
-      },
-      setQuantity: (foodId, quantity) => {
-        if (quantity <= 0) {
-          const next = get().lines.filter((l) => l.foodId !== foodId);
-          set({ lines: next, visible: next.length > 0 });
-          return;
-        }
-        set({
-          lines: get().lines.map((l) => (l.foodId === foodId ? { ...l, quantity } : l)),
-          visible: true,
-        });
-      },
-      clear: () => set({ lines: [], visible: false }),
-    }),
-    { name: 'ob-food-preview-m6' },
-  ),
-);
+      quantity,
+    ),
+  setQuantity: (lineId: string, quantity: number) =>
+    useCartStore.getState().setQuantity(lineId, quantity),
+  clear: () => useCartStore.getState().clear(),
+};
+
+function toPreviewState(
+  cart: ReturnType<typeof useCartStore.getState>,
+): FoodPreviewState {
+  return {
+    restaurantSlug: cart.restaurantSlug,
+    lines: cart.lines.map((line) => ({
+      lineId: line.lineId,
+      foodId: line.foodId,
+      name: line.name,
+      quantity: line.quantity,
+      unitPrice: line.price,
+      variantId: line.variantId,
+      variantLabel: line.variantLabel,
+      addons: line.addons,
+      instructions: line.instructions,
+    })),
+    visible: cart.visible,
+    ...bridgeActions,
+  };
+}
+
+/** @deprecated Prefer useCartStore — bridged to cartStore for M6 food UI compatibility. */
+export function useFoodPreviewStore<T>(selector: (state: FoodPreviewState) => T): T {
+  // Never select `lines` here — toPreviewState maps a new array every snapshot and loops React 19.
+  return useCartStore((cart) => selector(toPreviewState(cart)));
+}
 
 export function foodPreviewTotal(lines: readonly FoodPreviewLine[]): number {
   return lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);

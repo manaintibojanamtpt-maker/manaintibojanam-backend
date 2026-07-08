@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Restaurant  Mobile  PX1.5</title>
+  <desc id="desc">Cinematic hero 45vh. Logo overlap. Offers. Highlights. Menu preview. FloatingCTA. MiniNavIsland.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <defs>
+    <linearGradient id="cover" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#FF9F43"/>
+      <stop offset="100%" stop-color="#4A2010"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#070504" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#070504" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#120D0A" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#120D0A" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+  <!-- Header -->
+  <rect x="0" y="0" width="375" height="56" fill="url(#glass)"/>
+  <circle cx="32" cy="36" r="14" fill="#1A1410" stroke="rgba(255,255,255,0.1)"/>
+  <path d="M38 36 L28 36 M28 36 L32 32 M28 36 L32 40" stroke="#FFFAF3" stroke-width="1.5" fill="none"/>
+  <!-- Hero 45vh H 365px -->
+  <rect x="0" y="56" width="375" height="309" fill="url(#cover)"/>
+  <rect x="0" y="56" width="375" height="309" fill="url(#scrim)"/>
+  <!-- Logo overlap -->
+  <circle cx="48" cy="340" r="40" fill="#120D0A" stroke="#FF7A00" stroke-width="2"/>
+  <text x="48" y="345" text-anchor="middle" font-size="20" fill="#FF7A00"><[</text>
+  <!-- Identity -->
+  <text x="16" y="400" font-family="Outfit,sans-serif" font-size="28" font-weight="900" fill="#FFFAF3">Demo Biryani House</text>
+  <text x="16" y="424" font-size="12" fill="#D0C4B5">Andhra � Biryani � Hyderabadi</text>
+  <text x="16" y="444" font-size="11" fill="#D0C4B5"> 4.8 � 25 min � 2.1 km � �40 delivery</text>
+  <!-- Offers -->
+  <rect x="16" y="460" width="120" height="72" rx="16" fill="rgba(255,122,0,0.12)" stroke="rgba(255,122,0,0.3)"/>
+  <text x="28" y="488" font-size="10" font-weight="900" fill="#FF7A00">50% OFF</text>
+  <text x="28" y="508" font-size="11" fill="#FFFAF3">First order</text>
+  <rect x="144" y="460" width="120" height="72" rx="16" fill="rgba(255,122,0,0.08)"/>
+  <text x="156" y="488" font-size="10" font-weight="900" fill="#FF7A00">FREE DEL</text>
+  <!-- Quick actions -->
+  <rect x="16" y="548" width="80" height="40" rx="20" fill="url(#glass)" stroke="rgba(255,170,95,0.12)"/>
+  <text x="56" y="572" text-anchor="middle" font-size="11" fill="#FFFAF3">e Save</text>
+  <rect x="104" y="548" width="80" height="40" rx="20" fill="url(#glass)" stroke="rgba(255,170,95,0.12)"/>
+  <text x="144" y="572" text-anchor="middle" font-size="11" fill="#FFFAF3">Share</text>
+  <!-- Menu preview -->
+  <text x="16" y="616" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">FROM THE MENU</text>
+  <rect x="16" y="628" width="343" height="72" rx="16" fill="#120D0A"/>
+  <rect x="263" y="640" width="80" height="48" rx="12" fill="#FF6B35"/>
+  <text x="303" y="670" text-anchor="middle" font-size="11" fill="#FFFAF3">ADD</text>
+  <text x="28" y="658" font-size="14" font-weight="700" fill="#FFFAF3">Chicken Dum Biryani</text>
+  <text x="28" y="678" font-size="13" font-weight="800" fill="#FF7A00">�299</text>
+  <!-- FloatingCTA -->
+  <rect x="16" y="716" width="343" height="52" rx="26" fill="#FF7A00"/>
+  <text x="187" y="747" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFAF3">Open Menu</text>
+  <!-- MiniNavIsland -->
+  <rect x="100" y="776" width="175" height="36" rx="18" fill="url(#glass)" stroke="rgba(255,170,95,0.12)"/>
+  <text x="130" y="798" font-size="10" fill="#FFFAF3">� Back</text>
+  <text x="187" y="798" text-anchor="middle" font-size="10" fill="#FF7A00">Home</text>
+  <text x="244" y="798" font-size="10" fill="#FFFAF3">Cart</text>
+</svg>

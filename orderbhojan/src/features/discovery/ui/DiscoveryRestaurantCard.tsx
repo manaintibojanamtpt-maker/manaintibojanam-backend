@@ -18,7 +18,8 @@ import {
   formatEta,
   hasOffer,
   isCloudKitchen,
-  isVegRestaurant,
+  kitchenBadgeLabel,
+  shouldShowKitchenBadge,
 } from '../utils/restaurantDisplay';
 
 export interface DiscoveryRestaurantCardProps {
@@ -32,7 +33,8 @@ export function DiscoveryRestaurantCard({
 }: DiscoveryRestaurantCardProps) {
   const navigate = useNavigate();
   const restaurantEnabled = useRestaurantFeatureEnabled();
-  const { isFavorite, toggle } = useFavoritesStore();
+  const isFavorite = useFavoritesStore((s) => s.isFavorite);
+  const toggle = useFavoritesStore((s) => s.toggle);
   const favorite = isFavorite(restaurant.restaurantId);
   const cover = useBlurUpImage();
   const coverUrl =
@@ -103,9 +105,11 @@ export function DiscoveryRestaurantCard({
               {cuisineLabel(restaurant)}
             </Text>
           </div>
-          <Badge variant={isVegRestaurant(restaurant) ? 'veg' : 'nonVeg'}>
-            {isVegRestaurant(restaurant) ? 'Veg' : 'Non-Veg'}
-          </Badge>
+          {shouldShowKitchenBadge(restaurant) ? (
+            <Badge variant={restaurant.badges.includes('pure_veg') ? 'veg' : 'nonVeg'}>
+              {kitchenBadgeLabel(restaurant)}
+            </Badge>
+          ) : null}
         </div>
         <div style={{ display: 'flex', gap: 'var(--bds-space-2)', flexWrap: 'wrap' }}>
           {restaurant.rating != null ? (

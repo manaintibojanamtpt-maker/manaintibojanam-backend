@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface FavoritesState {
   readonly ids: readonly string[];
+  setIds: (ids: readonly string[]) => void;
   toggle: (restaurantId: string) => void;
   isFavorite: (restaurantId: string) => boolean;
 }
@@ -10,7 +11,8 @@ interface FavoritesState {
 export const useFavoritesStore = create<FavoritesState>()(
   persist(
     (set, get) => ({
-      ids: ['r1'],
+      ids: [],
+      setIds: (ids) => set({ ids }),
       toggle: (restaurantId) => {
         const current = get().ids;
         set({

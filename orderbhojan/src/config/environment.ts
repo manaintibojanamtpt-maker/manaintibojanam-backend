@@ -41,13 +41,20 @@ function resolveEnvironment(): AppEnvironment {
 
 export function loadAppConfig(): AppConfig {
   const explicitApiUrl = readEnv('VITE_MARKETPLACE_API_URL');
+  const firestoreSync = readEnv('VITE_FF_OB_FIRESTORE') === 'true';
   const marketplaceApiBaseUrl = explicitApiUrl
     ? explicitApiUrl.replace(/\/$/, '')
-    : import.meta.env?.DEV
+    : firestoreSync && import.meta.env?.DEV
       ? typeof window !== 'undefined'
         ? window.location.origin
-        : 'http://localhost:5174'
-      : 'https://manaintibojanam-backend.onrender.com';
+        : readEnv('VITE_MARKETPLACE_API_PROXY', 'http://localhost:8080')
+      : firestoreSync
+        ? readEnv('VITE_MARKETPLACE_API_PROXY', 'https://manaintibojanam-backend.onrender.com')
+        : import.meta.env?.DEV
+          ? typeof window !== 'undefined'
+            ? window.location.origin
+            : 'http://localhost:5174'
+          : 'https://manaintibojanam-backend.onrender.com';
 
   return {
     environment: resolveEnvironment(),
@@ -56,7 +63,10 @@ export function loadAppConfig(): AppConfig {
     firebase: {
       apiKey: readEnv('VITE_FIREBASE_API_KEY'),
       authDomain: readEnv('VITE_FIREBASE_AUTH_DOMAIN'),
-      projectId: readEnv('VITE_FIREBASE_PROJECT_ID', 'orderbhojan'),
+      projectId: readEnv(
+        'VITE_FIREBASE_PROJECT_ID',
+        firestoreSync ? 'bhojanos-prod' : 'orderbhojan',
+      ),
       storageBucket: readEnv('VITE_FIREBASE_STORAGE_BUCKET'),
       messagingSenderId: readEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
       appId: readEnv('VITE_FIREBASE_APP_ID'),
@@ -64,7 +74,9 @@ export function loadAppConfig(): AppConfig {
     },
     features: {
       mswEnabled:
-        readEnv('VITE_MSW_ENABLED', (import.meta.env?.DEV ? 'true' : 'false')) === 'true',
+        firestoreSync
+          ? false
+          : readEnv('VITE_MSW_ENABLED', (import.meta.env?.DEV ? 'true' : 'false')) === 'true',
       appCheckEnabled: readEnv('VITE_APP_CHECK_ENABLED', 'false') === 'true',
       analyticsEnabled: readEnv('VITE_ANALYTICS_ENABLED', 'true') === 'true',
     },

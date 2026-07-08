@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Floating Cart  PX1.5</title>
+  <desc id="desc">Cart page with line items and BillSummary. Proceed locked elegant.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <text x="16" y="56" font-family="Outfit,sans-serif" font-size="24" font-weight="800" fill="#FFFAF3">Cart</text>
+  <rect x="16" y="72" width="343" height="48" rx="12" fill="#120D0A"/>
+  <circle cx="44" cy="96" r="16" fill="#FF6B35"/>
+  <text x="72" y="100" font-size="14" font-weight="700" fill="#FFFAF3">Demo Biryani House</text>
+  <!-- Line 1 -->
+  <rect x="16" y="136" width="343" height="88" rx="16" fill="#120D0A"/>
+  <rect x="263" y="148" width="72" height="64" rx="12" fill="#FF6B35"/>
+  <text x="28" y="168" font-size="14" font-weight="700" fill="#FFFAF3">Chicken Dum Biryani</text>
+  <text x="28" y="188" font-size="13" font-weight="800" fill="#FF7A00">�299</text>
+  <rect x="180" y="176" width="72" height="28" rx="14" fill="#1A1410"/>
+  <text x="216" y="194" text-anchor="middle" font-size="12" fill="#FFFAF3"> 2 +</text>
+  <!-- BillSummary -->
+  <rect x="16" y="400" width="343" height="120" rx="16" fill="#120D0A"/>
+  <text x="32" y="432" font-size="13" fill="#D0C4B5">Subtotal</text>
+  <text x="320" y="432" text-anchor="end" font-size="13" fill="#FFFAF3">�598</text>
+  <text x="32" y="456" font-size="13" fill="#D0C4B5">Delivery</text>
+  <text x="320" y="456" text-anchor="end" font-size="13" fill="#FFFAF3">�40</text>
+  <line x1="32" y1="472" x2="343" y2="472" stroke="rgba(255,255,255,0.06)"/>
+  <text x="32" y="500" font-size="15" font-weight="800" fill="#FFFAF3">Total</text>
+  <text x="320" y="500" text-anchor="end" font-size="15" font-weight="800" fill="#FF7A00">�638</text>
+  <!-- Proceed locked -->
+  <rect x="16" y="540" width="343" height="52" rx="26" fill="#FF7A00" opacity="0.65"/>
+  <text x="175" y="572" font-size="14" fill="#FFFAF3">=</text>
+  <text x="195" y="572" font-size="15" font-weight="700" fill="#FFFAF3">Proceed</text>
+</svg>

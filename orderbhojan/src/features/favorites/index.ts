@@ -1,2 +1,3 @@
-/** M10 — Favorites feature module (not implemented in M0) */
-export const FAVORITES_FEATURE = 'favorites' as const;
+export { FAVORITES_FEATURE } from './constants';
+export { FavoritesPage } from './ui/FavoritesPage';
+export { useFavoritesSync, useFavoriteToggle, favoritesQueryKeys } from './hooks/useFavoritesSync';

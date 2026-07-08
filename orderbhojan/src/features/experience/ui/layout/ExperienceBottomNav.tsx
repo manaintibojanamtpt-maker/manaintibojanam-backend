@@ -1,60 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BottomNavigation, Icon, useReducedMotion } from '@bhojan/design-system';
-import { m } from 'framer-motion';
-import { PREMIUM_SPRING } from '@/features/experience/motion/premiumMotion';
+import { Icon, NavIsland, SideNav, Text } from '@bhojan/design-system';
 
 const NAV_ITEMS = [
-  {
-    id: 'home',
-    label: 'Home',
-    icon: (
-      <Icon size={20} aria-hidden>
-        <path d="M3 10.5 12 3l9 7.5" />
-        <path d="M5 9.5V20h14V9.5" />
-      </Icon>
-    ),
-  },
-  {
-    id: 'search',
-    label: 'Search',
-    icon: (
-      <Icon size={20} aria-hidden>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-      </Icon>
-    ),
-  },
-  {
-    id: 'cart',
-    label: 'Cart',
-    icon: (
-      <Icon size={20} aria-hidden>
-        <circle cx="9" cy="20" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="18" cy="20" r="1.5" fill="currentColor" stroke="none" />
-        <path d="M2 2h2l2.5 13h11l2-8H6" />
-      </Icon>
-    ),
-  },
-  {
-    id: 'orders',
-    label: 'Orders',
-    icon: (
-      <Icon size={20} aria-hidden>
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-        <path d="M3 6h18" />
-      </Icon>
-    ),
-  },
-  {
-    id: 'profile',
-    label: 'Profile',
-    icon: (
-      <Icon size={20} aria-hidden>
-        <circle cx="12" cy="8" r="3.5" />
-        <path d="M5 20a7 7 0 0 1 14 0" />
-      </Icon>
-    ),
-  },
+  { id: 'home', label: 'Home', icon: <Icon size={20} aria-hidden><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></Icon> },
+  { id: 'search', label: 'Search', icon: <Icon size={20} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></Icon> },
+  { id: 'cart', label: 'Cart', icon: <Icon size={20} aria-hidden><circle cx="9" cy="20" r="1.5" fill="currentColor" stroke="none" /><circle cx="18" cy="20" r="1.5" fill="currentColor" stroke="none" /><path d="M2 2h2l2.5 13h11l2-8H6" /></Icon> },
+  { id: 'orders', label: 'Orders', icon: <Icon size={20} aria-hidden><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /></Icon> },
+  { id: 'profile', label: 'Profile', icon: <Icon size={20} aria-hidden><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></Icon> },
 ] as const;
 
 const NAV_PATHS: Record<string, string> = {
@@ -77,23 +29,11 @@ export function ExperienceBottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const activeId = resolveActiveId(pathname);
-  const reduceMotion = useReducedMotion();
 
   return (
-    <div className="ob-bottom-nav-shell">
-      {reduceMotion ? (
-        <div className="ob-bottom-nav-indicator" data-active={activeId} aria-hidden />
-      ) : (
-        <m.div
-          className="ob-bottom-nav-indicator"
-          layout
-          transition={PREMIUM_SPRING}
-          data-active={activeId}
-          aria-hidden
-        />
-      )}
-      <BottomNavigation
-        className="ob-bottom-nav"
+    <>
+      <SideNav
+        brand={<Text variant="subtitle" style={{ fontWeight: 900, color: 'var(--bds-color-primary)' }}>OrderBhojan</Text>}
         items={[...NAV_ITEMS]}
         activeId={activeId}
         onChange={(id) => {
@@ -101,6 +41,14 @@ export function ExperienceBottomNav() {
           if (path) navigate(path);
         }}
       />
-    </div>
+      <NavIsland
+        items={[...NAV_ITEMS]}
+        activeId={activeId}
+        onChange={(id) => {
+          const path = NAV_PATHS[id];
+          if (path) navigate(path);
+        }}
+      />
+    </>
   );
 }

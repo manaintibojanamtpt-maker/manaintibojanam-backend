@@ -7,7 +7,7 @@ import {
   CardTitle,
   ErrorState,
 } from '@bhojan/design-system';
-import { logger } from '@/telemetry';
+import { logger, trackError } from '@/telemetry';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -30,6 +30,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     logger.error('React error boundary caught error', {
       message: error.message,
       componentStack: info.componentStack,
+    });
+    trackError(error, {
+      route: typeof window !== 'undefined' ? window.location.pathname : '',
+      componentStack: info.componentStack ?? '',
     });
   }
 

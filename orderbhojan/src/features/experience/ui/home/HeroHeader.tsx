@@ -62,7 +62,7 @@ export function HeroHeader() {
             <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
             <circle cx="12" cy="10" r="2.5" />
           </Icon>
-          <Text variant="bodySm" style={{ flex: 1, textAlign: 'left', fontWeight: 600 }}>
+          <Text variant="bodySm" className="ob-hero-header__address-label">
             {DELIVERY_ADDRESS_PLACEHOLDER}
           </Text>
           <Icon size={16} aria-hidden>

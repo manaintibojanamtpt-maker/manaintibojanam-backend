@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Empty State  PX1.5</title>
+  <desc id="desc">PremiumEmpty  empty cart. Warm illustration. Single CTA.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <ellipse cx="187" cy="320" rx="80" ry="40" fill="#1A1410"/>
+  <ellipse cx="187" cy="300" rx="60" ry="30" fill="#120D0A" stroke="rgba(255,170,95,0.12)"/>
+  <text x="187" y="310" text-anchor="middle" font-size="48"><}</text>
+  <text x="187" y="400" text-anchor="middle" font-family="Outfit,sans-serif" font-size="22" font-weight="800" fill="#FFFAF3">Your cart is empty</text>
+  <text x="187" y="430" text-anchor="middle" font-size="14" fill="#D0C4B5">Discover dishes from restaurants near you</text>
+  <rect x="67" y="460" width="241" height="52" rx="26" fill="#FF7A00"/>
+  <text x="187" y="492" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFAF3">Explore restaurants</text>
+</svg>

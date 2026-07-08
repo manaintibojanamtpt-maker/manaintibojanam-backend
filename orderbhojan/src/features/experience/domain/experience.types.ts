@@ -35,6 +35,7 @@ export interface MockRestaurant {
   readonly distance: string;
   readonly imageUrl: string;
   readonly logoUrl: string;
+  readonly categoryIds: readonly FoodCategoryId[];
   readonly offer?: string;
   readonly isVeg: boolean;
   readonly isCloudKitchen: boolean;
@@ -50,6 +51,9 @@ export interface MockFoodItem {
   readonly oldPrice?: number;
   readonly isVeg: boolean;
   readonly imageUrl: string;
+  readonly categoryIds: readonly FoodCategoryId[];
+  readonly restaurantSlug: string;
+  readonly restaurantId?: string;
 }
 
 export interface MockSearchTerm {

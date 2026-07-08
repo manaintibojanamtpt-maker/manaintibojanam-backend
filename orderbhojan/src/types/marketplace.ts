@@ -38,6 +38,7 @@ export interface BillQuote {
 export interface ApiMeta {
   readonly correlationId: string;
   readonly cached?: boolean;
+  readonly tenantSyncRevision?: string;
 }
 
 export interface ApiSuccess<T> {

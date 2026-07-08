@@ -1,20 +1,23 @@
 import { useNavigate } from 'react-router-dom';
 import { FloatingCart } from '@bhojan/design-system';
-import { formatCartTotal, useCartPreviewStore } from '../../store/cartPreviewStore';
+import { cartItemCount, cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
 
 export function MarketplaceFloatingCart() {
   const navigate = useNavigate();
-  const { itemCount, totalPaise, visible } = useCartPreviewStore();
+  const lines = useCartStore((s) => s.lines);
+  const visible = useCartStore((s) => s.visible);
+  const count = cartItemCount(lines);
+  const total = cartSubtotal(lines);
 
-  if (!visible || itemCount <= 0) {
+  if (!visible || count <= 0) {
     return null;
   }
 
   return (
     <div className="ob-floating-cart-wrap ob-floating-cart-wrap--enter">
       <FloatingCart
-        itemCount={itemCount}
-        total={formatCartTotal(totalPaise)}
+        itemCount={count}
+        total={`₹${total}`}
         label="View Cart"
         onCheckout={() => navigate('/cart')}
       />

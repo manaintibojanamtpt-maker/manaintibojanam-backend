@@ -14,3 +14,7 @@ export {
   resolveRestaurantCoords,
   DEFAULT_RESTAURANT_COORDS,
 } from './engine/restaurantExperienceLayer';
+export {
+  useRestaurantContextStore,
+  fallbackRestaurantId,
+} from './store/restaurantContextStore';

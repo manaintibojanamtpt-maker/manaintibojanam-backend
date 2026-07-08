@@ -1,121 +1,117 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
   Button,
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  ErrorState,
-  Loader,
+  GlassSurface,
+  MotionPage,
+  PremiumEmpty,
   Text,
 } from '@bhojan/design-system';
+import { useLocationActions, useLocationFeatureEnabled } from '@/features/location';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCustomerProfile } from '../hooks/useCustomerProfile';
 
+const SUPPORT_MAILTO = 'mailto:support@orderbhojan.com?subject=OrderBhojan%20Support';
+
 export function ProfilePage() {
+  const navigate = useNavigate();
   const { sessionUser, status, signOut } = useAuth();
   const profileQuery = useCustomerProfile();
+  const locationEnabled = useLocationFeatureEnabled();
+  const { openSelector } = useLocationActions();
 
-  const display = profileQuery.data ?? (sessionUser
-    ? {
-        uid: sessionUser.uid,
-        displayName: sessionUser.displayName,
-        email: sessionUser.email,
-        phoneNumber: sessionUser.phoneNumber,
-        authProviders: [sessionUser.provider],
-      }
-    : null);
+  const handleQuickTile = (tile: 'Orders' | 'Addresses' | 'Favorites') => {
+    if (tile === 'Orders') {
+      navigate('/orders');
+      return;
+    }
+    if (tile === 'Favorites') {
+      navigate('/favorites');
+      return;
+    }
+    if (locationEnabled) {
+      openSelector();
+    }
+  };
 
-  const initials =
-    display?.displayName?.slice(0, 2).toUpperCase()
-    ?? display?.email?.slice(0, 2).toUpperCase()
-    ?? 'OB';
+  const displayName = profileQuery.data?.displayName ?? sessionUser?.displayName ?? 'Guest';
+  const isGuest = !sessionUser || status === 'guest';
 
-  return (
-    <div className="ob-profile-page ob-page-enter">
-      <Card glass className="ob-profile-hero">
-        <div className="ob-profile-hero__row">
-          <Avatar
-            src={sessionUser?.photoURL ?? undefined}
-            initials={initials}
-            size="lg"
-          />
-          <div>
-            <Text variant="title" as="h1">{display?.displayName ?? 'Guest'}</Text>
-            <Text variant="bodySm" style={{ color: 'var(--bds-color-text-secondary)' }}>
-              {display?.email ?? display?.phoneNumber ?? 'Browse as guest'}
-            </Text>
-            {status === 'guest' ? (
-              <Text variant="caption" style={{ color: 'var(--bds-color-primary)', marginTop: 'var(--bds-space-1)' }}>
-                Guest mode — sign in to save favorites and orders
-              </Text>
-            ) : null}
+  if (isGuest) {
+    return (
+      <MotionPage className="ob-profile-px2">
+        <GlassSurface className="ob-profile-px2__hero">
+          <Avatar size="lg" initials="OB" />
+          <Text variant="heading" as="h1" style={{ marginTop: 'var(--bds-space-4)' }}>Welcome</Text>
+          <Text variant="body" style={{ color: 'var(--bds-color-text-secondary)', marginTop: 'var(--bds-space-2)' }}>
+            Sign in for a personal experience
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--bds-space-3)', marginTop: 'var(--bds-space-6)' }}>
+            <Button fullWidth onClick={() => navigate('/auth')}>Sign In</Button>
+            <Button variant="secondary" fullWidth onClick={() => navigate('/')}>Continue Browsing</Button>
           </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Firestore customer profile (M1). Marketplace sync deferred.</CardDescription>
-        </CardHeader>
-        {profileQuery.isLoading ? (
-          <Loader label="Loading profile" />
-        ) : profileQuery.isError ? (
-          <ErrorState
-            title="Profile unavailable"
-            description="Could not load your Firestore customer profile."
-            retryLabel="Retry"
-            onRetry={() => profileQuery.refetch()}
-          />
-        ) : (
-          <dl className="ob-profile-details">
-            {[
-              ['UID', display?.uid ?? '—'],
-              ['Name', display?.displayName ?? '—'],
-              ['Email', display?.email ?? '—'],
-              ['Phone', display?.phoneNumber ?? '—'],
-              ['Providers', display?.authProviders?.join(', ') ?? sessionUser?.provider ?? '—'],
-            ].map(([label, value]) => (
-              <div key={label} className="ob-profile-details__row">
-                <Text variant="bodySm" as="dt">{label}</Text>
-                <Text variant="bodySm" as="dd">{value}</Text>
-              </div>
-            ))}
-          </dl>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>Placeholders for upcoming milestones</CardDescription>
-        </CardHeader>
-        <div className="ob-profile-settings">
-          {['Addresses', 'Notifications', 'Payments', 'Help & Support'].map((item) => (
-            <Button key={item} variant="ghost" fullWidth aria-label={`${item} — coming soon`} disabled>
-              {item}
-            </Button>
+        </GlassSurface>
+        <Text variant="microLabel" style={{ color: 'var(--bds-color-primary)', marginBottom: 'var(--bds-space-3)' }}>WHY SIGN IN</Text>
+        <div className="ob-profile-px2__benefits">
+          {['Save favorite restaurants', 'Saved addresses', 'Faster reorder'].map((item) => (
+            <div key={item} className="ob-profile-px2__benefit-row bds-glass-surface">
+              <Text variant="body">{item}</Text>
+            </div>
           ))}
         </div>
-      </Card>
+      </MotionPage>
+    );
+  }
 
-      <div className="ob-profile-actions">
-        {!sessionUser || status === 'guest' ? (
-          <Link to="/auth" style={{ textDecoration: 'none' }}>
-            <Button fullWidth>Sign In</Button>
-          </Link>
-        ) : null}
-        <Link to="/" style={{ textDecoration: 'none' }}>
-          <Button variant="secondary" fullWidth>Continue Browsing</Button>
-        </Link>
-        {sessionUser && status !== 'guest' ? (
-          <Button variant="ghost" fullWidth onClick={() => signOut()} aria-label="Sign out">
-            Sign out
-          </Button>
-        ) : null}
+  const initials = displayName.slice(0, 2).toUpperCase();
+
+  return (
+    <MotionPage className="ob-profile-px2">
+      <GlassSurface className="ob-profile-px2__hero">
+        <Avatar src={sessionUser?.photoURL ?? undefined} initials={initials} size="lg" />
+        <Text variant="title" as="h1" style={{ marginTop: 'var(--bds-space-4)' }}>{displayName}</Text>
+        <Text variant="caption" style={{ color: 'var(--bds-color-text-secondary)' }}>
+          {sessionUser?.email ?? sessionUser?.phoneNumber ?? 'Member'}
+        </Text>
+      </GlassSurface>
+      <div className="ob-profile-px2__tiles">
+        {(['Orders', 'Addresses', 'Favorites'] as const).map((tile) => (
+          <button
+            key={tile}
+            type="button"
+            className="ob-profile-px2__tile bds-glass-surface"
+            onClick={() => handleQuickTile(tile)}
+          >
+            <Text variant="caption">{tile}</Text>
+          </button>
+        ))}
       </div>
-    </div>
+      <div className="ob-profile-px2__menu">
+        <Button
+          variant="ghost"
+          fullWidth
+          className="ob-profile-px2__menu-item"
+          onClick={() => navigate('/notifications')}
+        >
+          Notifications
+        </Button>
+        <Button
+          variant="ghost"
+          fullWidth
+          className="ob-profile-px2__menu-item"
+          onClick={() => {
+            window.location.href = SUPPORT_MAILTO;
+          }}
+        >
+          Help & Support
+        </Button>
+        <Button variant="ghost" fullWidth className="ob-profile-px2__menu-item" onClick={() => signOut()}>
+          Sign out
+        </Button>
+      </div>
+      {profileQuery.isError ? (
+        <PremiumEmpty title="Could not refresh profile" actionLabel="Retry" onAction={() => profileQuery.refetch()} />
+      ) : null}
+    </MotionPage>
   );
 }

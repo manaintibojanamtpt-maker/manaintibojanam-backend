@@ -91,13 +91,14 @@ describe('M6 food module structure', () => {
     assert.match(client, /foodBestsellers/);
   });
 
-  it('experience layer strips contextToken from UI path', () => {
+  it('experience layer strips contextToken from menu response', () => {
     const layer = readFileSync(
       join(root, 'src/features/food/engine/foodExperienceLayer.ts'),
       'utf8',
     );
     assert.match(layer, /stripInternal/);
-    assert.doesNotMatch(layer, /contextToken/);
+    assert.match(layer, /useRestaurantContextStore/);
+    assert.doesNotMatch(layer, /stripInternal[\s\S]*contextToken/);
   });
 
   it('food UI does not import marketplace client directly', () => {

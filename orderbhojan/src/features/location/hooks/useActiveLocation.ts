@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useLocationSessionStore } from '../store/locationSessionStore';
 
 export function useActiveLocation() {
@@ -5,11 +6,13 @@ export function useActiveLocation() {
 }
 
 export function useLocationUiState() {
-  return useLocationSessionStore((s) => ({
-    uiStatus: s.uiStatus,
-    uiError: s.uiError,
-    permissionState: s.permissionState,
-  }));
+  return useLocationSessionStore(
+    useShallow((s) => ({
+      uiStatus: s.uiStatus,
+      uiError: s.uiError,
+      permissionState: s.permissionState,
+    })),
+  );
 }
 
 export function useSavedAddressesList() {

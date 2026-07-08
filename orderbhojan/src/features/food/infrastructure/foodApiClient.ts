@@ -1,4 +1,5 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
+import type { FoodMenuApiEnvelopeDTO } from '@bhojan/marketplace-contracts';
 import type {
   FoodCategoriesResponse,
   FoodCollectionResponse,
@@ -9,6 +10,13 @@ import type {
 export class FoodApiClient {
   fetchMenu(params: FoodMenuQueryParams): Promise<FoodMenuApiPayload> {
     return getMarketplaceApiClient().foodMenu(params.slug, {
+      lat: params.lat,
+      lng: params.lng,
+    });
+  }
+
+  fetchMenuContractV1(params: FoodMenuQueryParams): Promise<FoodMenuApiEnvelopeDTO> {
+    return getMarketplaceApiClient().foodMenuContractV1(params.slug, {
       lat: params.lat,
       lng: params.lng,
     });

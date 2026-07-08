@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import {
   loadRestaurantExperience,
@@ -7,8 +8,6 @@ import {
 } from '../engine/restaurantExperienceLayer';
 import {
   restaurantKeys,
-  RESTAURANT_GC_TIME_MS,
-  RESTAURANT_STALE_TIME_MS,
 } from './restaurantQueryKeys';
 import { useRestaurantFeatureEnabled } from './useRestaurantFeature';
 
@@ -16,6 +15,7 @@ export function useRestaurantExperience(slug: string | undefined) {
   const enabled = useRestaurantFeatureEnabled();
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
+  const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
     queryKey: restaurantKeys.experience(slug ?? '', coords.lat, coords.lng),
@@ -26,10 +26,8 @@ export function useRestaurantExperience(slug: string | undefined) {
         lng: coords.lng,
       }),
     enabled: enabled && Boolean(slug),
-    staleTime: RESTAURANT_STALE_TIME_MS,
-    gcTime: RESTAURANT_GC_TIME_MS,
+    ...liveQuery,
     retry: 2,
-    placeholderData: (previous) => previous,
   });
 }
 

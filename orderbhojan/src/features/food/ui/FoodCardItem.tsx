@@ -1,32 +1,45 @@
-import { Badge, Button, QuantityStepper, Text } from '@bhojan/design-system';
-import { useBlurUpImage } from '@/features/experience/hooks/useBlurUpImage';
-import { MotionPress } from '@/features/experience/motion/premiumMotion';
+import { Badge, QuantityStepper, Text, FoodRow, FoodRowAddButton, MotionPress } from '@bhojan/design-system';
+import { useState } from 'react';
 import type { FoodPublic } from '@/types/marketplace-food';
+import { useCartStore, buildCartLineId } from '@/features/cart/store/cartStore';
+import { resolveFoodItemPhoto } from '../data/food-item-photo-manifest';
+import {
+  resolveFoodLabelBadges,
+  resolveOfferDisplayText,
+} from '../domain/contractPresentation';
 import {
   dietaryLabel,
   formatFoodPrice,
-  formatOfferLabel,
   isVegFood,
   preparationLabel,
+  ratingLabel,
+  spiceLabel,
 } from '../domain/formatters';
-import { useFoodPreviewStore } from '../store/foodPreviewStore';
 
 interface FoodCardItemProps {
   readonly food: FoodPublic;
   readonly onCustomize: (food: FoodPublic) => void;
+  readonly priority?: boolean;
 }
 
-export function FoodCardItem({ food, onCustomize }: FoodCardItemProps) {
-  const lines = useFoodPreviewStore((s) => s.lines);
-  const addItem = useFoodPreviewStore((s) => s.addItem);
-  const setQuantity = useFoodPreviewStore((s) => s.setQuantity);
-  const line = lines.find((l) => l.foodId === food.foodId);
-  const quantity = line?.quantity ?? 0;
-  const offerLabel = formatOfferLabel(food);
+export function FoodCardItem({ food, onCustomize, priority = false }: FoodCardItemProps) {
+  const lineId = buildCartLineId({ foodId: food.foodId });
+  const quantity = useCartStore(
+    (s) => s.lines.find((l) => l.lineId === lineId)?.quantity ?? 0,
+  );
+  const addItem = useCartStore((s) => s.addItem);
+  const setQuantity = useCartStore((s) => s.setQuantity);
+  const [fly, setFly] = useState(false);
+  const offerLabel = resolveOfferDisplayText(food);
+  const labelBadges = resolveFoodLabelBadges(food);
   const hasOptions = food.variants.length > 0 || food.addons.length > 0;
-
   const unitPrice = food.offerPrice ?? food.price;
-  const blur = useBlurUpImage();
+  const photo = resolveFoodItemPhoto(food.foodId, 480, '8.5rem', 82);
+
+  const triggerFly = () => {
+    setFly(true);
+    window.setTimeout(() => setFly(false), 520);
+  };
 
   const handleAdd = () => {
     if (!food.availability) return;
@@ -34,100 +47,77 @@ export function FoodCardItem({ food, onCustomize }: FoodCardItemProps) {
       onCustomize(food);
       return;
     }
-    addItem({ foodId: food.foodId, name: food.name, unitPrice }, 1);
+    triggerFly();
+    addItem({ foodId: food.foodId, name: food.name, price: unitPrice }, 1);
   };
 
+  const badge = (
+    <>
+      {labelBadges.map((label) => (
+        <Badge key={label.displayText} variant="offer">
+          {label.displayText}
+        </Badge>
+      ))}
+      {offerLabel ? <Badge variant="offer">{offerLabel}</Badge> : null}
+      <Badge variant={isVegFood(food) ? 'veg' : food.dietary === 'egg' ? 'default' : 'nonVeg'}>
+        {dietaryLabel(food.dietary)}
+      </Badge>
+    </>
+  );
+
+  const meta = (
+    <>
+      {ratingLabel(food.rating) ? <span>{ratingLabel(food.rating)}</span> : null}
+      {spiceLabel(food.spiceLevel) ? <span>{spiceLabel(food.spiceLevel)}</span> : null}
+      {preparationLabel(food.preparationTime) ? <span>{preparationLabel(food.preparationTime)}</span> : null}
+      {!food.availability ? (
+        <Text variant="caption" style={{ color: 'var(--bds-color-danger, #c0392b)' }}>
+          Sold out
+        </Text>
+      ) : null}
+    </>
+  );
+
+  const action =
+    quantity > 0 ? (
+      <QuantityStepper
+        value={quantity}
+        onChange={(next) => setQuantity(lineId, next)}
+        label={`Quantity for ${food.name}`}
+      />
+    ) : (
+      <MotionPress>
+        <FoodRowAddButton
+          label="Add"
+          disabled={!food.availability}
+          className={fly ? 'ob-food-px6__add--fly' : undefined}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAdd();
+          }}
+          aria-label={`Add ${food.name}`}
+        />
+      </MotionPress>
+    );
+
   return (
-    <article className={`ob-food-card${!food.availability ? ' ob-food-card--unavailable' : ''}`}>
-      <div className="ob-food-card__media">
-        {food.bestSeller ? <span className="ob-food-card__ribbon">Best Seller</span> : null}
-        {!food.bestSeller && food.chefSpecial ? (
-          <span className="ob-food-card__ribbon">Chef Pick</span>
-        ) : null}
-        {food.image ? (
-          <img
-            src={food.image}
-            alt=""
-            className={`ob-food-card__image ${blur.className}`}
-            loading="lazy"
-            onLoad={blur.onLoad}
-          />
-        ) : (
-          <div className="ob-food-card__image ob-food-card__image--placeholder" aria-hidden />
-        )}
-        <div className="ob-food-card__badges">
-          {food.bestSeller ? <Badge variant="offer">Best Seller</Badge> : null}
-          {food.chefSpecial ? <Badge variant="offer">Chef Special</Badge> : null}
-          {food.newItem ? <Badge variant="default">New</Badge> : null}
-          {offerLabel ? <Badge variant="offer">{offerLabel}</Badge> : null}
-          <Badge variant="default" className="ob-food-card__ai-badge">
-            AI
-          </Badge>
-        </div>
-      </div>
-
-      <div className="ob-food-card__body">
-        <div className="ob-food-card__title-row">
-          <Badge variant={isVegFood(food) ? 'veg' : food.dietary === 'egg' ? 'default' : 'nonVeg'}>
-            {dietaryLabel(food.dietary)}
-          </Badge>
-          <Text variant="subtitle" as="h3" className="ob-food-card__name">
-            {food.name}
-          </Text>
-        </div>
-
-        {food.description ? (
-          <Text variant="bodySm" className="ob-food-card__description">
-            {food.description}
-          </Text>
-        ) : null}
-
-        <div className="ob-food-card__meta">
-          {food.rating != null ? (
-            <Text variant="caption">★ {food.rating.toFixed(1)}</Text>
-          ) : null}
-          {preparationLabel(food.preparationTime) ? (
-            <Text variant="caption">{preparationLabel(food.preparationTime)}</Text>
-          ) : null}
-          {!food.availability ? (
-            <Text variant="caption" className="ob-food-card__sold-out">
-              Unavailable
-            </Text>
-          ) : null}
-        </div>
-
-        <div className="ob-food-card__footer">
-          <div className="ob-food-card__price">
-            <Text variant="price">{formatFoodPrice(food)}</Text>
-            {food.offerPrice && food.offerPrice < food.price ? (
-              <Text variant="caption" className="ob-food-card__strike">
-                ₹{food.price}
-              </Text>
-            ) : null}
-          </div>
-
-          {quantity > 0 ? (
-            <QuantityStepper
-              value={quantity}
-              onChange={(next) => setQuantity(food.foodId, next)}
-              label={`Quantity for ${food.name}`}
-            />
-          ) : (
-            <MotionPress>
-              <Button
-                variant="primary"
-                size="compact"
-                className="ob-food-card__add"
-                disabled={!food.availability}
-                aria-label={`Add ${food.name}`}
-                onClick={handleAdd}
-              >
-                Add
-              </Button>
-            </MotionPress>
-          )}
-        </div>
-      </div>
-    </article>
+    <FoodRow
+      name={food.name}
+      description={food.description}
+      price={formatFoodPrice(food)}
+      imageUrl={photo.src}
+      imageSrcSet={photo.srcSet}
+      imageSizes={photo.sizes}
+      imageBlurDataURL={photo.blurDataURL}
+      imageSources={photo.sources}
+      imagePriority={priority}
+      imageAlt={food.name}
+      badge={badge}
+      meta={meta}
+      action={action}
+      density="editorial"
+      className="ob-food-px6__row"
+      onPress={hasOptions ? () => onCustomize(food) : undefined}
+    />
   );
 }

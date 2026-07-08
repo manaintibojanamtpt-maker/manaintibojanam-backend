@@ -17,7 +17,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['@bhojan/design-system'],
+    // Local file: package — pre-bundling caches stale exports when BDS is rebuilt.
+    exclude: ['@bhojan/design-system'],
   },
   plugins: [
     tailwindcss(),
@@ -49,8 +50,35 @@ export default defineConfig({
   ],
   server: {
     port: 5174,
+    host: true,
     fs: {
       allow: ['..'],
+    },
+    proxy: {
+      '/api/marketplace': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/create-razorpay-order': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/verify-razorpay-payment': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/server-time': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/health': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/client-config': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 });

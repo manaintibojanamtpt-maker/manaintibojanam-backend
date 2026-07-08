@@ -1,90 +1,51 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-
 import { Icon, Text } from '@bhojan/design-system';
-
-import { ExperienceBottomNav } from '@/features/experience';
-
+import { ExperienceBottomNav, MarketplaceFloatingCart } from '@/features/experience';
 import { LocationChip, LocationSelectorSheet, useLocationFeatureEnabled } from '@/features/location';
 
-
-
 function isHomeRoute(pathname: string): boolean {
-
   return pathname === '/';
-
 }
-
-
 
 export function MarketplaceLayout() {
-
   const { pathname } = useLocation();
-
-  const showCompactHeader = !isHomeRoute(pathname);
-
+  const onHome = isHomeRoute(pathname);
   const locationEnabled = useLocationFeatureEnabled();
-
-
+  const showCompactHeader = !onHome || locationEnabled;
 
   return (
-
-    <div className="ob-marketplace-shell ob-m65-app">
-
+    <div className="ob-px2-marketplace bds-marketplace-with-sidenav">
       {showCompactHeader ? (
-
-        <header className="ob-compact-header">
-
-          <Link to="/" aria-label="OrderBhojan home" className="ob-compact-header__brand">
-
-            <span className="ob-compact-header__logo">
-
-              <Icon size={18} label="OrderBhojan">
-
+        <header
+          className={`ob-px2-compact-header bds-glass-surface${onHome ? ' ob-px2-compact-header--home' : ''}`}
+        >
+          {!onHome ? (
+            <Link to="/" aria-label="OrderBhojan home" className="ob-px2-compact-header__brand-link">
+              <Icon size={18} label="">
                 <path d="M12 3v18" />
-
                 <path d="M3 12h18" />
-
               </Icon>
-
-            </span>
-
-            <Text variant="subtitle" as="span" style={{ fontWeight: 800, letterSpacing: '-0.02em' }}>OrderBhojan</Text>
-
-          </Link>
-
-          {locationEnabled ? (
-
-            <LocationChip variant="compact" className="ob-compact-header__location" />
-
+              <Text variant="subtitle" as="span" className="ob-px2-compact-header__brand">
+                OrderBhojan
+              </Text>
+            </Link>
           ) : null}
-
+          {locationEnabled ? (
+            <LocationChip
+              variant="compact"
+              className={onHome ? 'ob-px2-compact-header__location--home' : 'ob-compact-header__location'}
+            />
+          ) : null}
         </header>
-
       ) : null}
 
-
-
-      <main className="ob-marketplace-main" data-bds-layout="marketplace">
-
+      <main className="ob-px2-main">
         <Outlet />
-
       </main>
 
-
-
-      <div className="ob-bottom-nav-fixed ob-m65-nav" aria-label="Primary navigation">
-
-        <ExperienceBottomNav />
-
-      </div>
-
-
-
+      <ExperienceBottomNav />
+      <MarketplaceFloatingCart />
       {locationEnabled ? <LocationSelectorSheet /> : null}
-
     </div>
-
   );
-
 }
-

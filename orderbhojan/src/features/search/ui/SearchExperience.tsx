@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Button, Icon, SearchBar, Text } from '@bhojan/design-system';
+import { Button, MotionPage, PremiumSearch, Text } from '@bhojan/design-system';
 import { useNavigate } from 'react-router-dom';
 import { useSearchBrowse } from '../hooks/useSearchBrowse';
 import { useSearchResults } from '../hooks/useSearchResults';
@@ -54,79 +54,41 @@ export function SearchExperience() {
   };
 
   return (
-    <div className="ob-page-enter ob-search-page ob-search-platform ob-m65-search">
-      <header className="ob-search-platform__header">
-        <Button
-          variant="ghost"
-          size="compact"
-          aria-label="Go back"
-          onClick={() => navigate(-1)}
-        >
-          <Icon size={20} label="Back">
-            <path d="M15 18l-6-6 6-6" />
-          </Icon>
-        </Button>
-        <Text variant="caption" className="bds-sr-only" as="h1">
-          Search OrderBhojan
-        </Text>
-        <div
-          ref={fieldRef}
-          className={`ob-search-platform__field${isFocused ? ' ob-search-platform__field--focused' : ''}`}
-        >
-          <SearchBar
-            value={query}
-            placeholder="Search food, restaurants, cuisines..."
-            aria-label="Search marketplace"
-            className="ob-search-platform__input"
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                handleSubmit();
-              }
-              if (event.key === 'Escape') {
-                setQuery('');
-                trackSearchEvent('search_clear');
-              }
-            }}
-          />
-          <div className="ob-search-platform__actions">
-            <Button variant="ghost" size="compact" aria-label="Voice search coming soon" disabled>
-              <Icon size={18} label="Voice search">
-                <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-              </Icon>
-            </Button>
-            <Button variant="ghost" size="compact" aria-label="Camera search coming soon" disabled>
-              <Icon size={18} label="Camera search">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </Icon>
-            </Button>
-            <Button variant="ghost" size="compact" aria-label="AI search coming soon" disabled>
-              <Icon size={18} label="AI search">
-                <path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 17l-6.3 4 2.3-7-6-4.6h7.6z" />
-              </Icon>
-            </Button>
-            {trimmed ? (
-              <Button
-                variant="ghost"
-                size="compact"
-                aria-label="Clear search"
-                onClick={() => {
+    <MotionPage className="ob-search-px2">
+      <Text variant="caption" className="bds-sr-only" as="h1">
+        Search OrderBhojan
+      </Text>
+
+      <div ref={fieldRef}>
+        <PremiumSearch
+          variant="sticky"
+          value={query}
+          placeholder="Search food, restaurants, cuisines..."
+          aria-label="Search marketplace"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              handleSubmit();
+            }
+            if (event.key === 'Escape') {
+              setQuery('');
+              trackSearchEvent('search_clear');
+            }
+          }}
+          onClear={
+            trimmed
+              ? () => {
                   setQuery('');
                   trackSearchEvent('search_clear');
                   focusInput();
-                }}
-              >
-                ×
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </header>
+                }
+              : undefined
+          }
+        />
+      </div>
 
       {showSuggestions ? (
         <div className="ob-search-suggestions" role="listbox" aria-label="Search suggestions">
@@ -194,6 +156,10 @@ export function SearchExperience() {
           />
         )}
       </main>
-    </div>
+
+      <Button variant="ghost" size="compact" onClick={() => navigate(-1)} aria-label="Go back">
+        ← Back
+      </Button>
+    </MotionPage>
   );
 }

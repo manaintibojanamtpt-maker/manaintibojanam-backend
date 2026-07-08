@@ -9,6 +9,9 @@ interface CategoryState {
 
 export const useCategoryStore = create<CategoryState>((set) => ({
   selectedId: null,
-  select: (id) => set({ selectedId: id }),
+  select: (id) =>
+    set((state) => ({
+      selectedId: state.selectedId === id ? null : id,
+    })),
   clear: () => set({ selectedId: null }),
 }));

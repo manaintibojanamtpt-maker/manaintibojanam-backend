@@ -1,12 +1,32 @@
 import type { RestaurantPublic } from '@/types/marketplace';
+import {
+  restaurantCoverBaseUrl,
+  restaurantLogoBaseUrl,
+} from '@/features/restaurant/data/restaurant-photo-manifest';
 
 export const MOCK_RESTAURANTS: RestaurantPublic[] = [
+  {
+    restaurantId: 'obr_mana_inti_001',
+    restaurantSlug: 'mana-inti-kitchen',
+    displayName: 'Mana Inti Kitchen',
+    logoUrl: restaurantLogoBaseUrl('mana-inti-kitchen'),
+    coverUrl: restaurantCoverBaseUrl('mana-inti-kitchen'),
+    rating: 4.8,
+    ratingCount: 2140,
+    cuisines: ['Andhra', 'Biryani', 'Meals'],
+    priceForTwo: 449,
+    distanceKm: 2.1,
+    etaMinutes: { min: 25, max: 35 },
+    deliveryFee: 20,
+    isOpen: true,
+    badges: ['offer', 'new'],
+  },
   {
     restaurantId: 'obr_demo_biryani_001',
     restaurantSlug: 'demo-biryani-house',
     displayName: 'Demo Biryani House',
-    logoUrl: 'https://placehold.co/96x96/orange/white?text=B',
-    coverUrl: 'https://placehold.co/800x400/orange/white?text=Biryani',
+    logoUrl: restaurantLogoBaseUrl('demo-biryani-house'),
+    coverUrl: restaurantCoverBaseUrl('demo-biryani-house'),
     rating: 4.6,
     ratingCount: 1280,
     cuisines: ['Hyderabadi', 'Biryani'],
@@ -15,14 +35,14 @@ export const MOCK_RESTAURANTS: RestaurantPublic[] = [
     etaMinutes: { min: 28, max: 38 },
     deliveryFee: 20,
     isOpen: true,
-    badges: ['offer', 'veg'],
+    badges: ['offer', 'veg', 'new'],
   },
   {
     restaurantId: 'obr_demo_dosa_002',
     restaurantSlug: 'demo-dosa-corner',
     displayName: 'Demo Dosa Corner',
-    logoUrl: 'https://placehold.co/96x96/green/white?text=D',
-    coverUrl: 'https://placehold.co/800x400/green/white?text=Dosa',
+    logoUrl: restaurantLogoBaseUrl('demo-dosa-corner'),
+    coverUrl: restaurantCoverBaseUrl('demo-dosa-corner'),
     rating: 4.4,
     ratingCount: 890,
     cuisines: ['South Indian', 'Pure Veg'],
@@ -37,7 +57,8 @@ export const MOCK_RESTAURANTS: RestaurantPublic[] = [
     restaurantId: 'obr_demo_cloud_003',
     restaurantSlug: 'demo-cloud-kitchen',
     displayName: 'Demo Cloud Kitchen',
-    logoUrl: 'https://placehold.co/96x96/gray/white?text=C',
+    logoUrl: restaurantLogoBaseUrl('demo-cloud-kitchen'),
+    coverUrl: restaurantCoverBaseUrl('demo-cloud-kitchen'),
     rating: 4.2,
     ratingCount: 456,
     cuisines: ['North Indian', 'Chinese'],
@@ -46,7 +67,7 @@ export const MOCK_RESTAURANTS: RestaurantPublic[] = [
     etaMinutes: { min: 35, max: 45 },
     deliveryFee: 25,
     isOpen: false,
-    badges: ['cloud_kitchen'],
+    badges: ['cloud_kitchen', 'new'],
   },
 ];
 

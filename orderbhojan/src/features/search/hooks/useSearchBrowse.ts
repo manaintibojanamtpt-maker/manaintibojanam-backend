@@ -1,21 +1,22 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { loadSearchBrowse, resolveSearchCoords } from '../engine/searchPlatform';
-import { searchKeys, SEARCH_GC_TIME_MS, SEARCH_STALE_TIME_MS } from './searchQueryKeys';
+import { searchKeys } from './searchQueryKeys';
 import { useSearchFeatureEnabled } from './useSearchFeature';
 
 export function useSearchBrowse() {
   const enabled = useSearchFeatureEnabled();
   const activeLocation = useActiveLocation();
   const coords = resolveSearchCoords(activeLocation);
+  const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
     queryKey: searchKeys.browse(coords.lat, coords.lng),
     queryFn: () => loadSearchBrowse(coords),
     enabled,
-    staleTime: SEARCH_STALE_TIME_MS,
-    gcTime: SEARCH_GC_TIME_MS,
+    ...liveQuery,
     retry: 2,
     placeholderData: (previous) => previous,
   });

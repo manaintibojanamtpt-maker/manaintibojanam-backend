@@ -17,21 +17,26 @@ import {
 import { useLocationSessionStore } from '../store/locationSessionStore';
 import { useLocationGeocodeEnabled } from './useLocationFeature';
 
+function locationStore() {
+  return useLocationSessionStore.getState();
+}
+
 export function useLocationActions() {
   const geocodeEnabled = useLocationGeocodeEnabled();
   const { sessionUser, isAuthenticated } = useAuth();
-  const store = useLocationSessionStore();
 
   const refreshSavedAddresses = useCallback(async () => {
+    const { setSavedAddresses } = locationStore();
     if (!sessionUser?.uid || sessionUser.provider === 'guest') {
-      store.setSavedAddresses([]);
+      setSavedAddresses([]);
       return;
     }
     const addresses = await fetchSavedAddresses(sessionUser.uid);
-    store.setSavedAddresses(addresses);
-  }, [sessionUser, store]);
+    setSavedAddresses(addresses);
+  }, [sessionUser]);
 
   const requestCurrentLocation = useCallback(async () => {
+    const store = locationStore();
     store.setUiStatus('loading');
     store.setUiError(null);
     store.setPermissionState('prompting');
@@ -52,34 +57,30 @@ export function useLocationActions() {
       store.setUiError(mapped);
       store.setUiStatus('error');
     }
-  }, [geocodeEnabled, store]);
+  }, [geocodeEnabled]);
 
-  const selectSavedAddress = useCallback(
-    async (addressId: string) => {
-      const saved = store.savedAddresses.find((a) => a.id === addressId);
-      if (!saved) return;
-      const location: CustomerLocation = {
-        kind: 'saved',
-        coordinates: saved.address.coordinates,
-        displayLabel: saved.customLabel ?? saved.label,
-        savedAddressId: saved.id,
-      };
-      store.setActiveLocation(location);
-      store.setSelectorOpen(false);
-    },
-    [store],
-  );
+  const selectSavedAddress = useCallback(async (addressId: string) => {
+    const store = locationStore();
+    const saved = store.savedAddresses.find((a) => a.id === addressId);
+    if (!saved) return;
+    const location: CustomerLocation = {
+      kind: 'saved',
+      coordinates: saved.address.coordinates,
+      displayLabel: saved.customLabel ?? saved.label,
+      savedAddressId: saved.id,
+    };
+    store.setActiveLocation(location);
+    store.setSelectorOpen(false);
+  }, []);
 
-  const selectRecentLocation = useCallback(
-    async (entryId: string) => {
-      const entry = store.recentLocations.find((e) => e.id === entryId);
-      if (!entry) return;
-      const applied = await applySessionLocation(entry.coordinates, entry.displayLabel, { geocodeEnabled });
-      store.setActiveLocation(applied);
-      store.setSelectorOpen(false);
-    },
-    [geocodeEnabled, store],
-  );
+  const selectRecentLocation = useCallback(async (entryId: string) => {
+    const store = locationStore();
+    const entry = store.recentLocations.find((e) => e.id === entryId);
+    if (!entry) return;
+    const applied = await applySessionLocation(entry.coordinates, entry.displayLabel, { geocodeEnabled });
+    store.setActiveLocation(applied);
+    store.setSelectorOpen(false);
+  }, [geocodeEnabled]);
 
   const saveNewAddress = useCallback(
     async (input: SavedAddressInput) => {
@@ -88,15 +89,15 @@ export function useLocationActions() {
       }
       const saved = await createSavedAddress(sessionUser.uid, input);
       await refreshSavedAddresses();
-      store.setActiveLocation({
+      locationStore().setActiveLocation({
         kind: 'saved',
         coordinates: saved.address.coordinates,
         displayLabel: saved.customLabel ?? saved.label,
         savedAddressId: saved.id,
       });
-      store.setSelectorOpen(false);
+      locationStore().setSelectorOpen(false);
     },
-    [isAuthenticated, refreshSavedAddresses, sessionUser, store],
+    [isAuthenticated, refreshSavedAddresses, sessionUser],
   );
 
   const deleteAddress = useCallback(
@@ -119,21 +120,31 @@ export function useLocationActions() {
 
   const hydrate = useCallback(() => {
     const guest = hydrateGuestSessionLocation();
-    if (guest && !store.activeLocation) {
-      store.setActiveLocation(guest);
+    const { activeLocation, setActiveLocation, setRecentLocations } = locationStore();
+    if (guest && !activeLocation) {
+      setActiveLocation(guest);
     }
-    store.setRecentLocations(loadRecentLocationEntries());
-  }, [store]);
+    setRecentLocations(loadRecentLocationEntries());
+  }, []);
 
   const setManualSession = useCallback(
     async (coordinates: GeoCoordinates, label: string) => {
+      const store = locationStore();
       const applied = await applySessionLocation(coordinates, label, { geocodeEnabled });
       store.setActiveLocation(applied);
       store.setRecentLocations(loadRecentLocationEntries());
       store.setSelectorOpen(false);
     },
-    [geocodeEnabled, store],
+    [geocodeEnabled],
   );
+
+  const openSelector = useCallback(() => {
+    locationStore().setSelectorOpen(true);
+  }, []);
+
+  const closeSelector = useCallback(() => {
+    locationStore().setSelectorOpen(false);
+  }, []);
 
   return {
     requestCurrentLocation,
@@ -145,7 +156,7 @@ export function useLocationActions() {
     refreshSavedAddresses,
     hydrate,
     setManualSession,
-    openSelector: () => store.setSelectorOpen(true),
-    closeSelector: () => store.setSelectorOpen(false),
+    openSelector,
+    closeSelector,
   };
 }

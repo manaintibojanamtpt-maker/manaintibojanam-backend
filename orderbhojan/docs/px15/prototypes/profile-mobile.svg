@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Profile  Mobile  PX1.5</title>
+  <desc id="desc">Guest state. No UID. No Firestore. Consumer-first.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <defs>
+    <linearGradient id="heroP" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A1410"/>
+      <stop offset="100%" stop-color="#120D0A"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="375" height="220" fill="url(#heroP)"/>
+  <circle cx="187" cy="120" r="48" fill="#1A1410" stroke="#FF7A00" stroke-width="2"/>
+  <text x="187" y="128" text-anchor="middle" font-size="28" fill="#FF7A00">=d</text>
+  <text x="187" y="188" text-anchor="middle" font-family="Outfit,sans-serif" font-size="22" font-weight="800" fill="#FFFAF3">Welcome</text>
+  <text x="187" y="210" text-anchor="middle" font-size="13" fill="#D0C4B5">Sign in for a personal experience</text>
+  <rect x="16" y="240" width="343" height="52" rx="26" fill="#FF7A00"/>
+  <text x="187" y="272" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFAF3">Sign In</text>
+  <rect x="16" y="304" width="343" height="52" rx="26" fill="transparent" stroke="rgba(255,170,95,0.2)"/>
+  <text x="187" y="336" text-anchor="middle" font-size="15" fill="#FFFAF3">Continue Browsing</text>
+  <!-- Benefits -->
+  <text x="16" y="392" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">WHY SIGN IN</text>
+  <rect x="16" y="408" width="343" height="56" rx="16" fill="#120D0A"/>
+  <text x="56" y="442" font-size="14" fill="#FFFAF3">e Save favorite restaurants</text>
+  <rect x="16" y="472" width="343" height="56" rx="16" fill="#120D0A"/>
+  <text x="56" y="506" font-size="14" fill="#FFFAF3">=� Saved addresses</text>
+  <rect x="16" y="536" width="343" height="56" rx="16" fill="#120D0A"/>
+  <text x="56" y="570" font-size="14" fill="#FFFAF3">� Faster reorder</text>
+  <!-- Logged-in variant note -->
+  <text x="16" y="640" font-size="10" fill="#6B635C">Logged-in: Avatar + name + Orders/Addresses/Favorites tiles</text>
+</svg>

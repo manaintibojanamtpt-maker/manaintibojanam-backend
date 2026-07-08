@@ -6,6 +6,36 @@ import type {
   MockSearchTerm,
 } from '../domain/experience.types';
 
+/** Licensed food photography — Unsplash (see docs/photography/ATTRIBUTION.md) */
+const FOOD = {
+  heroBiryani:
+    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
+  kitchenWarm:
+    'https://images.unsplash.com/photo-1585937421612-70a008356fbe',
+  biryaniSpread:
+    'https://images.unsplash.com/photo-1596797038530-2c107229654b',
+  dosaTawa:
+    'https://images.unsplash.com/photo-1601050690597-df0568f70950',
+  thaliMeals:
+    'https://images.unsplash.com/photo-1546833999-b9f581a1996d',
+  paneer:
+    'https://images.unsplash.com/photo-1574484284002-952d92456975',
+  pizza:
+    'https://images.unsplash.com/photo-1513104890138-7c749659a591',
+  northIndian:
+    'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398',
+  chinese:
+    'https://images.unsplash.com/photo-1585034275571-047884d08626',
+  logoBiryani:
+    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
+  logoDosa:
+    'https://images.unsplash.com/photo-1601050690597-df0568f70950',
+  logoThali:
+    'https://images.unsplash.com/photo-1546833999-b9f581a1996d',
+  logoKitchen:
+    'https://images.unsplash.com/photo-1585937421612-70a008356fbe',
+} as const;
+
 export const FOOD_CATEGORIES: readonly FoodCategory[] = [
   { id: 'pizza', label: 'Pizza', emoji: '🍕' },
   { id: 'biryani', label: 'Biryani', emoji: '🍛' },
@@ -18,14 +48,15 @@ export const FOOD_CATEGORIES: readonly FoodCategory[] = [
   { id: 'juices', label: 'Juices', emoji: '🥤' },
 ];
 
+/** Home hero — first banner only in v1 */
 export const HERO_BANNERS: readonly HeroBannerSlide[] = [
   {
     id: 'banner-1',
-    title: '50% OFF First Order',
-    subtitle: 'Hyderabadi biryani from top kitchens near you',
+    title: 'Hyderabadi Dum Biryani',
+    subtitle: 'Slow-cooked comfort, Andhra spice',
     cta: 'Order now',
     gradient: 'linear-gradient(135deg, #ff6b35 0%, #ff7a00 45%, #ffb347 100%)',
-    imageUrl: 'https://placehold.co/640x320/orange/white?text=Biryani',
+    imageUrl: FOOD.heroBiryani,
   },
   {
     id: 'banner-2',
@@ -33,7 +64,7 @@ export const HERO_BANNERS: readonly HeroBannerSlide[] = [
     subtitle: 'On orders above ₹299 from cloud kitchens',
     cta: 'Explore',
     gradient: 'linear-gradient(135deg, #2d5016 0%, #4caf50 50%, #81c784 100%)',
-    imageUrl: 'https://placehold.co/640x320/green/white?text=Meals',
+    imageUrl: FOOD.thaliMeals,
   },
   {
     id: 'banner-3',
@@ -41,7 +72,7 @@ export const HERO_BANNERS: readonly HeroBannerSlide[] = [
     subtitle: 'Crisp dosas & filter coffee until midnight',
     cta: 'Browse',
     gradient: 'linear-gradient(135deg, #5d4037 0%, #8d6e63 50%, #ffab91 100%)',
-    imageUrl: 'https://placehold.co/640x320/brown/white?text=Dosa',
+    imageUrl: FOOD.dosaTawa,
   },
 ];
 
@@ -55,8 +86,9 @@ export const FEATURED_RESTAURANTS: readonly MockRestaurant[] = [
     eta: '25–35 min',
     deliveryFee: '₹20',
     distance: '2.1 km',
-    imageUrl: 'https://placehold.co/480x300/orange/white?text=Mana+Inti',
-    logoUrl: 'https://placehold.co/64x64/orange/white?text=MI',
+    imageUrl: FOOD.kitchenWarm,
+    logoUrl: FOOD.logoKitchen,
+    categoryIds: ['biryani', 'meals', 'north-indian'],
     offer: '50% OFF',
     isVeg: false,
     isCloudKitchen: false,
@@ -72,8 +104,9 @@ export const FEATURED_RESTAURANTS: readonly MockRestaurant[] = [
     eta: '28–38 min',
     deliveryFee: '₹20',
     distance: '2.4 km',
-    imageUrl: 'https://placehold.co/480x300/orange/white?text=Biryani',
-    logoUrl: 'https://placehold.co/64x64/orange/white?text=BH',
+    imageUrl: FOOD.biryaniSpread,
+    logoUrl: FOOD.logoBiryani,
+    categoryIds: ['biryani'],
     offer: 'Flat ₹75 OFF',
     isVeg: false,
     isCloudKitchen: false,
@@ -89,8 +122,9 @@ export const FEATURED_RESTAURANTS: readonly MockRestaurant[] = [
     eta: '22–32 min',
     deliveryFee: '₹15',
     distance: '3.1 km',
-    imageUrl: 'https://placehold.co/480x300/green/white?text=Dosa',
-    logoUrl: 'https://placehold.co/64x64/green/white?text=DC',
+    imageUrl: FOOD.dosaTawa,
+    logoUrl: FOOD.logoDosa,
+    categoryIds: ['south-indian', 'meals'],
     isVeg: true,
     isCloudKitchen: false,
     isOpen: true,
@@ -105,8 +139,9 @@ export const FEATURED_RESTAURANTS: readonly MockRestaurant[] = [
     eta: '35–45 min',
     deliveryFee: '₹25',
     distance: '4.5 km',
-    imageUrl: 'https://placehold.co/480x300/gray/white?text=Cloud',
-    logoUrl: 'https://placehold.co/64x64/gray/white?text=CK',
+    imageUrl: FOOD.thaliMeals,
+    logoUrl: FOOD.logoThali,
+    categoryIds: ['north-indian', 'chinese', 'meals'],
     isVeg: false,
     isCloudKitchen: true,
     isOpen: false,
@@ -122,7 +157,10 @@ export const TRENDING_FOODS: readonly MockFoodItem[] = [
     price: 249,
     oldPrice: 349,
     isVeg: false,
-    imageUrl: 'https://placehold.co/120x120/orange/white?text=Biryani',
+    imageUrl: FOOD.heroBiryani,
+    categoryIds: ['biryani'],
+    restaurantSlug: 'demo-biryani-house',
+    restaurantId: 'r2',
   },
   {
     id: 'f2',
@@ -131,7 +169,10 @@ export const TRENDING_FOODS: readonly MockFoodItem[] = [
     price: 199,
     oldPrice: 249,
     isVeg: true,
-    imageUrl: 'https://placehold.co/120x120/green/white?text=Paneer',
+    imageUrl: FOOD.paneer,
+    categoryIds: ['north-indian', 'meals'],
+    restaurantSlug: 'mana-inti-kitchen',
+    restaurantId: 'r1',
   },
   {
     id: 'f3',
@@ -139,7 +180,21 @@ export const TRENDING_FOODS: readonly MockFoodItem[] = [
     description: 'Crisp dosa with potato masala',
     price: 89,
     isVeg: true,
-    imageUrl: 'https://placehold.co/120x120/green/white?text=Dosa',
+    imageUrl: FOOD.dosaTawa,
+    categoryIds: ['south-indian'],
+    restaurantSlug: 'demo-dosa-corner',
+    restaurantId: 'r3',
+  },
+  {
+    id: 'f4',
+    name: 'Margherita Pizza',
+    description: 'Wood-fired crust with fresh mozzarella',
+    price: 299,
+    isVeg: true,
+    imageUrl: FOOD.pizza,
+    categoryIds: ['pizza', 'fast-food'],
+    restaurantSlug: 'demo-cloud-kitchen',
+    restaurantId: 'r4',
   },
 ];
 
@@ -157,3 +212,22 @@ export const POPULAR_SEARCHES: readonly MockSearchTerm[] = [
 ];
 
 export const DELIVERY_ADDRESS_PLACEHOLDER = 'Add delivery address — Hyderabad';
+
+export const HOME_CRAVING_LINES = [
+  'Slow-cooked comfort, Andhra spice',
+  'Freshly prepared after your order',
+  'Hyderabadi biryani near you',
+] as const;
+
+export interface HomeCategoryChip {
+  readonly id: 'pizza' | 'biryani' | 'meals' | 'south-indian' | 'north-indian';
+  readonly label: string;
+}
+
+export const HOME_CATEGORY_CHIPS: readonly HomeCategoryChip[] = [
+  { id: 'pizza', label: 'Pizza' },
+  { id: 'biryani', label: 'Biryani' },
+  { id: 'meals', label: 'Meals' },
+  { id: 'south-indian', label: 'South Indian' },
+  { id: 'north-indian', label: 'North Indian' },
+];

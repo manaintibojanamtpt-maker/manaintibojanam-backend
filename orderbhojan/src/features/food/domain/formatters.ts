@@ -32,6 +32,26 @@ export function preparationLabel(minutes?: number): string | undefined {
   return `${minutes} min`;
 }
 
+export function ratingLabel(rating?: number): string | undefined {
+  if (rating == null) return undefined;
+  return `★ ${rating.toFixed(1)}`;
+}
+
+export function spiceLabel(level?: FoodPublic['spiceLevel']): string | undefined {
+  switch (level) {
+    case 'mild':
+      return 'Mild';
+    case 'medium':
+      return 'Medium spice';
+    case 'hot':
+      return 'Hot';
+    case 'extraHot':
+      return 'Extra hot';
+    default:
+      return undefined;
+  }
+}
+
 export function groupItemsByCategory(
   items: readonly FoodPublic[],
 ): Map<string, FoodPublic[]> {

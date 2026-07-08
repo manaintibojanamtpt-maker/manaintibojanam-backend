@@ -1,2 +1,4 @@
-/** M8 — Checkout feature module (not implemented in M0) */
 export const CHECKOUT_FEATURE = 'checkout' as const;
+
+export { CheckoutPage } from './ui/CheckoutPage';
+export { useCheckoutFlow, type CheckoutFlowState, type CheckoutFlowStatus } from './hooks/useCheckoutFlow';

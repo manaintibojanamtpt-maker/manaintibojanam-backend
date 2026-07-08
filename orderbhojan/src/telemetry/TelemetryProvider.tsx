@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { generateCorrelationId } from '@/utils';
 import { trackEvent } from './analytics';
+import { registerClientErrorTelemetrySink } from './clientErrorSink';
 import { logger } from './logger';
 
 export interface TelemetryContextValue {
@@ -21,6 +22,8 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
       track: trackEvent,
     };
   }, []);
+
+  useEffect(() => registerClientErrorTelemetrySink(), []);
 
   return (
     <TelemetryContext.Provider value={value}>{children}</TelemetryContext.Provider>

@@ -12,9 +12,19 @@ export function formatDistance(restaurant: RestaurantPublic): string {
 }
 
 export function formatDeliveryFee(restaurant: RestaurantPublic): string {
-  if (restaurant.deliveryFee == null) return 'Free';
+  if (restaurant.deliveryFee == null) return '—';
   if (restaurant.deliveryFee === 0) return 'Free';
   return `₹${restaurant.deliveryFee}`;
+}
+
+export function kitchenBadgeLabel(restaurant: RestaurantPublic): string | null {
+  if (restaurant.badges.includes('pure_veg')) return 'Pure Veg';
+  if (restaurant.badges.includes('veg')) return 'Veg';
+  return null;
+}
+
+export function shouldShowKitchenBadge(restaurant: RestaurantPublic): boolean {
+  return kitchenBadgeLabel(restaurant) != null;
 }
 
 export function formatPriceRange(restaurant: RestaurantPublic): string | undefined {

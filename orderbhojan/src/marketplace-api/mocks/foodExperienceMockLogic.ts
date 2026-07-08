@@ -1,5 +1,7 @@
 import { MOCK_CONTEXT_TOKEN } from './fixtures';
 import { MOCK_RESTAURANTS } from './fixtures';
+import { buildFoodMenuContractPayload as mapLegacyMenuToContract } from '../mappers/v1/legacyToFoodMenuV1';
+import { foodItemManifestBaseUrl } from '@/features/food/data/food-item-photo-manifest';
 import type {
   FoodCategoriesResponse,
   FoodCollectionResponse,
@@ -37,7 +39,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'hyderabadi-chicken-biryani',
       name: 'Hyderabadi Chicken Biryani',
       description: 'Slow-cooked dum biryani with raita and salan',
-      image: 'https://placehold.co/320x240/orange/white?text=Biryani',
+      image: foodItemManifestBaseUrl('food_biryani_chicken'),
       price: 299,
       offerPrice: 249,
       category: 'Biryani',
@@ -46,8 +48,18 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       dietary: 'nonVeg',
       preparationTime: 25,
       availability: true,
-      bestSeller: true,
-      chefSpecial: true,
+      ownerLabels: [
+        { kind: 'BESTSELLER', displayText: 'Bestseller' },
+        { kind: 'CHEF_PICK', displayText: 'Chef recommended' },
+      ],
+      ownerOfferDisplayText: '₹50 off this weekend',
+      spiceLevel: 'medium',
+      chefNote: 'Sealed dum for 45 minutes — basmati stays fluffy, chicken falls off the bone.',
+      ingredients: ['Basmati rice', 'Chicken', 'Saffron', 'Fried onions', 'Mint'],
+      cookingStyle: 'Hyderabadi dum',
+      servingSize: 'Serves 1–2',
+      popularPairing: 'Special Raita + Mirchi ka Salan',
+      dietaryLabels: ['High protein'],
       variants: [
         { id: 'v-half', kind: 'half', label: 'Half', price: 199, offerPrice: 169 },
         { id: 'v-full', kind: 'full', label: 'Full', price: 299, offerPrice: 249 },
@@ -62,7 +74,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'paneer-biryani',
       name: 'Paneer Biryani',
       description: 'Fragrant basmati with soft paneer cubes',
-      image: 'https://placehold.co/320x240/green/white?text=Paneer',
+      image: foodItemManifestBaseUrl('food_biryani_paneer'),
       price: 219,
       offerPrice: 199,
       category: 'Biryani',
@@ -72,6 +84,9 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       preparationTime: 22,
       availability: true,
       recommended: true,
+      spiceLevel: 'mild',
+      servingSize: 'Serves 1',
+      cookingStyle: 'Layered dum biryani',
       variants: [
         { id: 'v-sm', kind: 'small', label: 'Small', price: 169 },
         { id: 'v-md', kind: 'medium', label: 'Medium', price: 219, offerPrice: 199 },
@@ -83,7 +98,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'chicken-kebab-platter',
       name: 'Chicken Kebab Platter',
       description: 'Chargrilled kebabs with mint chutney',
-      image: 'https://placehold.co/320x240/red/white?text=Kebab',
+      image: foodItemManifestBaseUrl('food_kebab'),
       price: 279,
       category: 'Starters',
       categoryId: 'cat-starters',
@@ -92,13 +107,16 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       preparationTime: 18,
       availability: true,
       newItem: true,
+      spiceLevel: 'hot',
+      cookingStyle: 'Charcoal grill',
+      servingSize: '6 pieces',
     }),
     item({
       foodId: 'food_raita',
       slug: 'special-raita',
       name: 'Special Raita',
       description: 'Cooling onion-tomato raita',
-      image: 'https://placehold.co/320x240/blue/white?text=Raita',
+      image: foodItemManifestBaseUrl('food_raita'),
       price: 49,
       category: 'Sides',
       categoryId: 'cat-sides',
@@ -111,7 +129,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'mirchi-ka-salan',
       name: 'Mirchi ka Salan',
       description: 'Hyderabadi classic salan',
-      image: 'https://placehold.co/320x240/brown/white?text=Salan',
+      image: foodItemManifestBaseUrl('food_salan'),
       price: 69,
       category: 'Sides',
       categoryId: 'cat-sides',
@@ -125,7 +143,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'double-ka-meetha',
       name: 'Double ka Meetha',
       description: 'Hyderabadi bread pudding dessert',
-      image: 'https://placehold.co/320x240/pink/white?text=Dessert',
+      image: foodItemManifestBaseUrl('food_dessert'),
       price: 99,
       offerPrice: 79,
       category: 'Desserts',
@@ -134,6 +152,8 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       preparationTime: 10,
       availability: true,
       chefSpecial: true,
+      chefNote: 'Crisp fried bread soaked in saffron milk — Hyderabad’s celebration dessert.',
+      servingSize: '2 portions',
     }),
   ],
   'demo-dosa-corner': [
@@ -142,7 +162,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'masala-dosa',
       name: 'Masala Dosa',
       description: 'Crisp dosa with potato masala',
-      image: 'https://placehold.co/320x240/green/white?text=Dosa',
+      image: foodItemManifestBaseUrl('food_masala_dosa'),
       price: 89,
       category: 'Dosas',
       categoryId: 'cat-dosas',
@@ -151,6 +171,10 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       preparationTime: 12,
       availability: true,
       bestSeller: true,
+      chefNote: 'Fermented overnight — paper-thin, golden, stuffed with spiced potato.',
+      cookingStyle: 'Stone tawa',
+      servingSize: '1 dosa',
+      spiceLevel: 'mild',
       variants: [
         { id: 'v-sm', kind: 'small', label: 'Small', price: 69 },
         { id: 'v-md', kind: 'medium', label: 'Regular', price: 89 },
@@ -162,6 +186,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'idli-sambar',
       name: 'Idli Sambar (2 pcs)',
       description: 'Steamed idlis with sambar and chutney',
+      image: foodItemManifestBaseUrl('food_idli'),
       price: 59,
       category: 'Breakfast',
       categoryId: 'cat-breakfast',
@@ -175,6 +200,7 @@ const MENU_BY_SLUG: Record<string, FoodPublic[]> = {
       slug: 'filter-coffee',
       name: 'Filter Coffee',
       description: 'South Indian filter kaapi',
+      image: foodItemManifestBaseUrl('food_filter_coffee'),
       price: 45,
       category: 'Beverages',
       categoryId: 'cat-beverages',
@@ -204,10 +230,22 @@ function buildCategories(items: readonly FoodPublic[]) {
   }));
 }
 
+function isFeaturedItem(item: FoodPublic): boolean {
+  if (item.ownerLabels?.some((l) => l.kind === 'CHEF_PICK' || l.kind === 'BESTSELLER')) {
+    return true;
+  }
+  return Boolean(item.chefSpecial || item.bestSeller);
+}
+
+function isBestsellerItem(item: FoodPublic): boolean {
+  if (item.ownerLabels?.some((l) => l.kind === 'BESTSELLER')) return true;
+  return item.bestSeller === true;
+}
+
 export function buildFoodMenu(slug: string): FoodMenuResponse {
   const items = getItems(slug);
   const restaurant = MOCK_RESTAURANTS.find((r) => r.restaurantSlug === slug);
-  const featuredIds = items.filter((i) => i.chefSpecial || i.bestSeller).map((i) => i.foodId);
+  const featuredIds = items.filter((i) => isFeaturedItem(i)).map((i) => i.foodId);
   const todaysSpecialIds = items.filter((i) => i.offerPrice).map((i) => i.foodId).slice(0, 3);
 
   return {
@@ -227,6 +265,11 @@ export function buildFoodMenuPayload(slug: string) {
   };
 }
 
+export function buildFoodMenuContractPayload(slug: string) {
+  const menu = buildFoodMenu(slug);
+  return mapLegacyMenuToContract(menu.slug, menu, MOCK_CONTEXT_TOKEN);
+}
+
 export function buildFoodCategories(slug: string): FoodCategoriesResponse {
   const menu = buildFoodMenu(slug);
   return { slug, categories: menu.categories };
@@ -238,7 +281,7 @@ export function buildFoodRecommended(slug: string): FoodCollectionResponse {
 }
 
 export function buildFoodBestsellers(slug: string): FoodCollectionResponse {
-  const items = getItems(slug).filter((i) => i.bestSeller);
+  const items = getItems(slug).filter((i) => isBestsellerItem(i));
   return { slug, items };
 }
 

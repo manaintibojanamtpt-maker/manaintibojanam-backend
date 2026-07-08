@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Skeleton State  PX1.5</title>
+  <desc id="desc">Home skeleton  hero-food shape + restaurant-tile rail. Shimmer.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <defs>
+    <linearGradient id="shimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#120D0A"/>
+      <stop offset="50%" stop-color="#2A2623"/>
+      <stop offset="100%" stop-color="#120D0A"/>
+      <animate attributeName="x1" values="-1;1" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="0;2" dur="1.5s" repeatCount="indefinite"/>
+    </linearGradient>
+  </defs>
+  <!-- Hero skeleton -->
+  <rect x="0" y="0" width="375" height="325" fill="url(#shimmer)"/>
+  <ellipse cx="187" cy="280" rx="80" ry="40" fill="#1A1410" opacity="0.5"/>
+  <!-- Search skeleton -->
+  <rect x="16" y="340" width="343" height="48" rx="24" fill="url(#shimmer)"/>
+  <!-- Category skeletons -->
+  <circle cx="52" cy="420" r="36" fill="url(#shimmer)"/>
+  <circle cx="128" cy="420" r="36" fill="url(#shimmer)"/>
+  <circle cx="204" cy="420" r="36" fill="url(#shimmer)"/>
+  <!-- Rail skeleton -->
+  <rect x="16" y="480" width="120" height="12" rx="6" fill="url(#shimmer)"/>
+  <rect x="16" y="504" width="260" height="168" rx="28" fill="url(#shimmer)"/>
+  <rect x="288" y="504" width="260" height="168" rx="28" fill="url(#shimmer)" opacity="0.5"/>
+  <text x="187" y="720" text-anchor="middle" font-size="10" fill="#4A4540">Max 2s � content or empty</text>
+</svg>

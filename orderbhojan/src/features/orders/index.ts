@@ -1,2 +1,4 @@
-/** M10 — Orders feature module (not implemented in M0) */
-export const ORDERS_FEATURE = 'orders' as const;
+export { ORDERS_FEATURE } from './constants';
+export { useOrdersList } from './hooks/useOrdersList';
+export { ordersQueryKeys } from './hooks/ordersQueryKeys';
+export { OrderSummaryCard } from './ui/OrderSummaryCard';

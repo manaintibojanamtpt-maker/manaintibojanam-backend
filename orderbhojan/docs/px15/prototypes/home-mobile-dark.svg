@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Home  Mobile Dark (food theme)  PX1.5</title>
+  <desc id="desc">375x812 warm dark #070504. MIB luxury dark. Same layout as light prototype.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <defs>
+    <linearGradient id="heroFoodD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B4513"/>
+      <stop offset="50%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#4A2010"/>
+    </linearGradient>
+    <linearGradient id="scrimD" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#070504" stop-opacity="0.92"/>
+      <stop offset="55%" stop-color="#070504" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glassD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#120D0A" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#120D0A" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="375" height="325" fill="url(#heroFoodD)"/>
+  <rect x="0" y="0" width="375" height="325" fill="url(#scrimD)"/>
+  <rect x="16" y="52" width="130" height="32" rx="16" fill="url(#glassD)" stroke="rgba(255,170,95,0.12)"/>
+  <circle cx="32" cy="68" r="6" fill="#FF7A00"/>
+  <text x="44" y="72" font-family="Plus Jakarta Sans,sans-serif" font-size="11" font-weight="600" fill="#FFFAF3">Kondapur, Hyderabad</text>
+  <text x="16" y="200" font-size="10" font-weight="900" letter-spacing="2.5" fill="#FF7A00">NEAR YOU</text>
+  <text x="16" y="248" font-family="Outfit,sans-serif" font-size="36" font-weight="900" fill="#FFFAF3">Hyderabadi</text>
+  <text x="16" y="288" font-family="Outfit,sans-serif" font-size="36" font-weight="900" fill="#FFFAF3">Dum Biryani</text>
+  <text x="16" y="312" font-size="14" fill="#D0C4B5">Slow-cooked comfort, Andhra spice</text>
+  <rect x="16" y="332" width="343" height="48" rx="24" fill="url(#glassD)" stroke="rgba(255,170,95,0.12)"/>
+  <text x="60" y="360" font-size="14" fill="#B9ADA1">Search restaurants, dishes...</text>
+  <text x="16" y="420" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">CRAVE</text>
+  <g transform="translate(16,432)">
+    <circle cx="36" cy="36" r="36" fill="#1A1410" stroke="#FF7A00" stroke-width="2"/>
+    <circle cx="100" cy="36" r="36" fill="#1A1410"/>
+    <circle cx="164" cy="36" r="36" fill="#1A1410"/>
+  </g>
+  <text x="16" y="548" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">RESTAURANTS</text>
+  <text x="16" y="572" font-family="Outfit,sans-serif" font-size="22" font-weight="800" fill="#FFFAF3">Near you</text>
+  <rect x="16" y="588" width="260" height="168" rx="28" fill="#120D0A"/>
+  <rect x="16" y="588" width="260" height="130" rx="28" fill="#FF6B35" opacity="0.85"/>
+  <text x="32" y="692" font-size="15" font-weight="700" fill="#FFFAF3">Demo Biryani House</text>
+  <text x="32" y="710" font-size="11" fill="#D0C4B5"> 4.8 � 25 min � �40 delivery</text>
+  <rect x="28" y="732" width="319" height="64" rx="32" fill="url(#glassD)" stroke="rgba(255,170,95,0.12)"/>
+  <circle cx="75" cy="764" r="4" fill="#FF7A00"/>
+  <text x="75" y="782" text-anchor="middle" font-size="9" fill="#FF7A00">Home</text>
+</svg>

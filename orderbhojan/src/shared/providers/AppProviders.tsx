@@ -8,8 +8,9 @@ import { FoodProvider } from '@/features/food/ui/FoodProvider';
 import { LocationProvider } from '@/features/location';
 import { AuthProvider } from './AuthProvider';
 import { BdsToastProvider, registerToastHandler, useBdsToast } from './BdsToastProvider';
-import { PremiumMotionRoot } from '@/features/experience/motion/premiumMotion';
 import { FeatureFlagProvider } from '@/featureFlags';
+import { MarketplaceRevisionSync } from '@/features/marketplace/MarketplaceRevisionSync';
+import { FavoritesSyncBootstrap } from '@/features/favorites/hooks/FavoritesSyncBootstrap';
 import { TelemetryProvider } from '@/telemetry';
 
 const queryClient = new QueryClient({
@@ -32,13 +33,14 @@ function ToastRegistration({ children }: { children: React.ReactNode }) {
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <DesignSystemProvider theme="system">
+    <DesignSystemProvider theme="food">
       <TelemetryProvider>
         <FeatureFlagProvider>
-          <PremiumMotionRoot>
             <AuthProvider>
             <LocationProvider>
               <QueryClientProvider client={queryClient}>
+                <MarketplaceRevisionSync />
+                <FavoritesSyncBootstrap />
                 <DiscoveryProvider>
                   <SearchProvider>
                     <RestaurantProvider>
@@ -53,7 +55,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </QueryClientProvider>
             </LocationProvider>
             </AuthProvider>
-          </PremiumMotionRoot>
         </FeatureFlagProvider>
       </TelemetryProvider>
     </DesignSystemProvider>

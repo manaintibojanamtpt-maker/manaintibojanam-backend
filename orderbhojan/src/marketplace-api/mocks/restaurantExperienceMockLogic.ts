@@ -3,54 +3,18 @@ import type { RestaurantPublic } from '@/types/marketplace';
 import type {
   RestaurantExperienceApiPayload,
   RestaurantExperiencePublic,
-  RestaurantGalleryImage,
   RestaurantGalleryResponse,
   RestaurantHighlightsResponse,
   RestaurantOffer,
   RestaurantOffersResponse,
 } from '@/types/marketplace-restaurant';
 import { formatPriceRange, mapRestaurantPublicToExperience } from '@/types/marketplace-restaurant';
-
-const GALLERY_BY_SLUG: Record<string, RestaurantGalleryImage[]> = {
-  'demo-biryani-house': [
-    {
-      id: 'g1',
-      url: 'https://placehold.co/800x500/orange/white?text=Kitchen',
-      caption: 'Live kitchen',
-    },
-    {
-      id: 'g2',
-      url: 'https://placehold.co/800x500/orange/white?text=Biryani+Pot',
-      caption: 'Dum biryani',
-    },
-    {
-      id: 'g3',
-      url: 'https://placehold.co/800x500/orange/white?text=Dining',
-      caption: 'Packaging area',
-    },
-  ],
-  'demo-dosa-corner': [
-    {
-      id: 'g1',
-      url: 'https://placehold.co/800x500/green/white?text=Tawa',
-      caption: 'Crisp dosas',
-    },
-    {
-      id: 'g2',
-      url: 'https://placehold.co/800x500/green/white?text=Filter+Coffee',
-      caption: 'Filter coffee',
-    },
-  ],
-  'demo-cloud-kitchen': [
-    {
-      id: 'g1',
-      url: 'https://placehold.co/800x500/gray/white?text=Cloud+Kitchen',
-      caption: 'Delivery-only kitchen',
-    },
-  ],
-};
+import { buildRestaurantGalleryFromManifest } from '@/features/restaurant/data/restaurant-photo-manifest';
 
 const OFFERS_BY_SLUG: Record<string, RestaurantOffer[]> = {
+  'mana-inti-kitchen': [
+    { id: 'o1', title: '50% OFF up to ₹100', description: 'On orders above ₹299', badge: 'Best deal' },
+  ],
   'demo-biryani-house': [
     { id: 'o1', title: '50% OFF up to ₹100', description: 'On orders above ₹299', badge: 'Best deal' },
     { id: 'o2', title: 'Free delivery', description: 'Weekend special', badge: 'Free delivery' },
@@ -67,14 +31,12 @@ function findRestaurant(slug: string): RestaurantPublic {
   return MOCK_RESTAURANTS.find((r) => r.restaurantSlug === slug) ?? MOCK_RESTAURANTS[0];
 }
 
-function defaultGallery(restaurant: RestaurantPublic): RestaurantGalleryImage[] {
-  return GALLERY_BY_SLUG[restaurant.restaurantSlug] ?? [
-    {
-      id: 'g-default',
-      url: restaurant.coverUrl ?? 'https://placehold.co/800x400/orange/white?text=Restaurant',
-      caption: restaurant.displayName,
-    },
-  ];
+function defaultGallery(slug: string) {
+  return buildRestaurantGalleryFromManifest(slug).map(({ id, url, caption }) => ({
+    id,
+    url,
+    caption,
+  }));
 }
 
 function defaultOffers(restaurant: RestaurantPublic): RestaurantOffer[] {
@@ -89,7 +51,7 @@ function defaultOffers(restaurant: RestaurantPublic): RestaurantOffer[] {
 export function buildRestaurantExperiencePayload(slug: string): RestaurantExperienceApiPayload {
   const restaurant = findRestaurant(slug);
   const base = mapRestaurantPublicToExperience(restaurant);
-  const gallery = defaultGallery(restaurant);
+  const gallery = defaultGallery(slug);
   const offers = defaultOffers(restaurant);
 
   const experience: RestaurantExperiencePublic = {
@@ -126,7 +88,7 @@ export function buildRestaurantExperiencePayload(slug: string): RestaurantExperi
       },
     ],
     highlights: [
-      { id: 'h1', title: 'Hygiene rated kitchen', subtitle: 'FSSAI compliant' },
+      { id: 'h1', title: 'Verified kitchen', subtitle: 'FSSAI compliant' },
       { id: 'h2', title: 'Popular for biryani', subtitle: `${restaurant.ratingCount ?? 0}+ ratings` },
       { id: 'h3', title: 'Fast prep', subtitle: `${restaurant.etaMinutes?.min ?? 25} min avg` },
     ],
@@ -134,8 +96,7 @@ export function buildRestaurantExperiencePayload(slug: string): RestaurantExperi
 }
 
 export function buildRestaurantGallery(slug: string): RestaurantGalleryResponse {
-  const restaurant = findRestaurant(slug);
-  return { slug, images: defaultGallery(restaurant) };
+  return { slug, images: defaultGallery(slug) };
 }
 
 export function buildRestaurantOffers(slug: string): RestaurantOffersResponse {

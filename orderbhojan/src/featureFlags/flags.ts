@@ -3,6 +3,8 @@ export const FEATURE_FLAG_KEYS = [
   'FF_OB_SEARCH',
   'FF_OB_RESTAURANT',
   'FF_OB_MENU',
+  'FF_OB_CONTRACT_V1',
+  'FF_OB_FIRESTORE',
   'FF_OB_TRACKING',
   'FF_OB_NOTIFICATIONS',
   'FF_OB_PAYMENTS',
@@ -21,6 +23,8 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_SEARCH: false,
   FF_OB_RESTAURANT: false,
   FF_OB_MENU: false,
+  FF_OB_CONTRACT_V1: false,
+  FF_OB_FIRESTORE: false,
   FF_OB_TRACKING: false,
   FF_OB_NOTIFICATIONS: false,
   FF_OB_PAYMENTS: false,
@@ -46,6 +50,17 @@ export function loadFeatureFlags(): FeatureFlagMap {
     if (envValue !== undefined) {
       flags[key] = envValue;
     }
+  }
+  if (flags.FF_OB_FIRESTORE) {
+    flags.FF_OB_DISCOVERY = true;
+    flags.FF_OB_RESTAURANT = true;
+    flags.FF_OB_MENU = true;
+    flags.FF_OB_SEARCH = true;
+    flags.FF_OB_TRACKING = true;
+    flags.FF_OB_NOTIFICATIONS = true;
+    flags.FF_OB_PAYMENTS = true;
+    flags.FF_LOCATION_ENABLED = true;
+    flags.FF_LOCATION_GEOCODE_API = true;
   }
   return flags;
 }

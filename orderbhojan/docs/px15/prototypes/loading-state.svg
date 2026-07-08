@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Loading State  PX1.5</title>
+  <desc id="desc">App loading  food plate silhouette pulse. Warm dark bg.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <ellipse cx="187" cy="380" rx="100" ry="50" fill="#1A1410" opacity="0.6">
+    <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1.2s" repeatCount="indefinite"/>
+  </ellipse>
+  <ellipse cx="187" cy="360" rx="70" ry="35" fill="#120D0A" stroke="rgba(255,170,95,0.08)"/>
+  <text x="187" y="368" text-anchor="middle" font-size="36" opacity="0.7"><[</text>
+  <text x="187" y="480" text-anchor="middle" font-size="13" fill="#D0C4B5">Finding food near you...</text>
+</svg>

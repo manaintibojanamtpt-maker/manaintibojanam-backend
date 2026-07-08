@@ -1,2 +1,5 @@
-/** M11 — Tracking feature module (not implemented in M0) */
-export const TRACKING_FEATURE = 'tracking' as const;
+export { TRACKING_FEATURE } from './constants';
+export { useOrderTracking } from './hooks/useOrderTracking';
+export { trackingQueryKeys } from './hooks/trackingQueryKeys';
+export { TrackingPage } from './ui/TrackingPage';
+export { OrderTimeline } from './ui/OrderTimeline';

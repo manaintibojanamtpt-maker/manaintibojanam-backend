@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Discovery  Mobile  PX1.5</title>
+  <desc id="desc">Discovery feed with filters and collection rails. Same visual language as home.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <rect x="16" y="52" width="130" height="32" rx="16" fill="#120D0A" stroke="rgba(255,170,95,0.12)"/>
+  <text x="44" y="72" font-size="11" fill="#FFFAF3">Kondapur</text>
+  <rect x="16" y="96" width="343" height="48" rx="24" fill="#120D0A" stroke="rgba(255,170,95,0.12)"/>
+  <text x="60" y="124" font-size="14" fill="#B9ADA1">Search...</text>
+  <!-- SegmentedControl filters -->
+  <rect x="16" y="160" width="110" height="36" rx="18" fill="#FF7A00"/>
+  <text x="71" y="183" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFAF3">All</text>
+  <rect x="134" y="160" width="110" height="36" rx="18" fill="#1A1410"/>
+  <text x="189" y="183" text-anchor="middle" font-size="12" fill="#D0C4B5">Fastest</text>
+  <rect x="252" y="160" width="110" height="36" rx="18" fill="#1A1410"/>
+  <text x="307" y="183" text-anchor="middle" font-size="12" fill="#D0C4B5">Offers</text>
+  <text x="16" y="224" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">COLLECTIONS</text>
+  <rect x="16" y="236" width="140" height="88" rx="16" fill="#FF6B35"/>
+  <text x="28" y="308" font-size="12" font-weight="700" fill="#FFFAF3">Top Rated</text>
+  <rect x="164" y="236" width="140" height="88" rx="16" fill="#8B4513"/>
+  <text x="176" y="308" font-size="12" font-weight="700" fill="#FFFAF3">Under �200</text>
+  <text x="16" y="352" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">NEAR YOU</text>
+  <rect x="16" y="364" width="343" height="120" rx="28" fill="#120D0A"/>
+  <rect x="16" y="364" width="343" height="80" rx="28" fill="#FF6B35"/>
+  <text x="32" y="468" font-size="15" font-weight="700" fill="#FFFAF3">Demo Biryani House</text>
+  <rect x="16" y="496" width="343" height="120" rx="28" fill="#120D0A"/>
+  <rect x="16" y="496" width="343" height="80" rx="28" fill="#C2410C"/>
+  <text x="32" y="600" font-size="15" font-weight="700" fill="#FFFAF3">Spice Route Kitchen</text>
+</svg>

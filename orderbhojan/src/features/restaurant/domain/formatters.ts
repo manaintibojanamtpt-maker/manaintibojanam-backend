@@ -10,8 +10,13 @@ export function formatDistanceLabel(km?: number): string {
   return `${km.toFixed(1)} km`;
 }
 
-export function formatDeliveryFeeLabel(fee?: number | null): string {
-  if (fee == null || fee === 0) return 'Free delivery';
+export function formatDeliveryFeeLabel(
+  fee?: number | null,
+  options?: { readonly known?: boolean },
+): string {
+  if (options?.known === false) return '—';
+  if (fee == null) return '—';
+  if (fee === 0) return 'Free delivery';
   return `₹${fee} delivery`;
 }
 
@@ -28,5 +33,19 @@ export function formatOpenStatusLabel(status: RestaurantExperiencePublic['openSt
 }
 
 export function cuisineHeadline(cuisines: readonly string[]): string {
+  if (cuisines.length === 0) return 'Home-style kitchen';
   return cuisines.slice(0, 3).join(' · ');
+}
+
+export function kitchenDietaryLabel(
+  profile?: RestaurantExperiencePublic['kitchenDietary'],
+): string | null {
+  switch (profile) {
+    case 'pure_veg':
+      return 'Pure Veg';
+    case 'non_veg':
+      return 'Non-Veg';
+    default:
+      return null;
+  }
 }

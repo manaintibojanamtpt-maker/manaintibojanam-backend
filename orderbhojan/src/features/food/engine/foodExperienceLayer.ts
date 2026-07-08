@@ -1,13 +1,48 @@
 import { getFoodApiClient } from '../infrastructure/foodApiClient';
+import { isContractMenuPathEnabled } from '../hooks/useContractV1Feature';
+import { mapFoodMenuDTOToFoodMenuResponse } from '@/marketplace-api/mappers/v1/foodMenuV1ToLegacy';
+import {
+  fallbackRestaurantId,
+  useRestaurantContextStore,
+} from '@/features/restaurant/store/restaurantContextStore';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
   FoodMenuQueryParams,
   FoodMenuResponse,
 } from '@/types/marketplace-food';
+import type { FoodMenuApiEnvelopeDTO } from '@bhojan/marketplace-contracts';
+
+function persistMenuContext(
+  slug: string,
+  contextToken: string,
+  restaurantId: string,
+): void {
+  useRestaurantContextStore.getState().setContext({
+    restaurantSlug: slug,
+    contextToken,
+    restaurantId,
+  });
+}
+
+function restaurantIdFromEnvelope(envelope: FoodMenuApiEnvelopeDTO, slug: string): string {
+  return envelope.items[0]?.restaurantId ?? fallbackRestaurantId(slug);
+}
 
 export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMenuResponse> {
+  if (isContractMenuPathEnabled()) {
+    const envelope = await getFoodApiClient().fetchMenuContractV1(params);
+    persistMenuContext(
+      params.slug,
+      envelope.contextToken,
+      restaurantIdFromEnvelope(envelope, params.slug),
+    );
+    const menu = mapFoodMenuDTOToFoodMenuResponse(envelope);
+    return enrichWithRecommendations(enrichWithAiBadges(menu));
+  }
+
   const payload = await getFoodApiClient().fetchMenu(params);
+  persistMenuContext(params.slug, payload.contextToken, fallbackRestaurantId(params.slug));
   return enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload)));
 }
 

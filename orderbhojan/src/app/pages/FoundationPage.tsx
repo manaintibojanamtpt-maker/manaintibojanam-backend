@@ -19,12 +19,11 @@ export function FoundationPage() {
   const { flags } = useFeatureFlags();
 
   const discoverQuery = useQuery({
-    queryKey: ['marketplace', 'discover', 'foundation'],
+    queryKey: ['marketplace', 'discovery', 'foundation'],
     queryFn: () =>
-      getMarketplaceApiClient().discover({
+      getMarketplaceApiClient().discoveryHome({
         lat: 17.385,
         lng: 78.4867,
-        rails: 'nearby,featured',
         limit: 3,
       }),
   });
@@ -91,11 +90,11 @@ export function FoundationPage() {
             <Text variant="bodySm" style={{ color: 'var(--bds-color-text-secondary)' }}>
               {discoverQuery.data?.locationLabel}
             </Text>
-            {discoverQuery.data?.rails.map((rail) => (
-              <div key={rail.id}>
-                <Text variant="label" as="h3" style={{ marginBottom: 'var(--bds-space-2)' }}>{rail.title}</Text>
+            {discoverQuery.data?.collections.map((collection) => (
+              <div key={collection.id}>
+                <Text variant="label" as="h3" style={{ marginBottom: 'var(--bds-space-2)' }}>{collection.title}</Text>
                 <div style={{ display: 'grid', gap: 'var(--bds-space-3)', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))' }}>
-                  {rail.restaurants.map((restaurant) => (
+                  {collection.restaurants.map((restaurant) => (
                     <RestaurantCard
                       key={restaurant.restaurantId}
                       name={restaurant.displayName}

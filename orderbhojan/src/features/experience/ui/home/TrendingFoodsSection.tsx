@@ -1,26 +1,37 @@
 import { Rail, Text } from '@bhojan/design-system';
+import type { FoodCategoryId } from '../../domain/experience.types';
 import { useTrendingFoods } from '../../hooks/useMockExperienceQuery';
-import { MarketplaceFoodTile } from '../shared/MarketplaceFoodTile';
+import { matchesHomeCategory } from '../../utils/homeCategoryFilter';
+import { HomeDishPoster } from './HomeDishPoster';
 import { MenuSkeleton } from '../shared/ExperienceSkeletons';
 
-export function TrendingFoodsSection() {
+export interface TrendingFoodsSectionProps {
+  readonly categoryId?: FoodCategoryId | null;
+}
+
+export function TrendingFoodsSection({ categoryId = null }: TrendingFoodsSectionProps) {
   const query = useTrendingFoods();
 
   return (
-    <section className="ob-section ob-food-rail" aria-label="Trending foods">
-      <div className="ob-section__header">
-        <Text variant="subtitle" as="h2" className="ob-section__title">Trending Now</Text>
-        <Text variant="caption" className="ob-section__hint">Hot picks</Text>
-      </div>
+    <section className="ob-home-dishes" aria-label="Popular dishes">
+      <Text variant="titleSm" as="h2" className="ob-home-dishes__title">
+        Popular dishes
+      </Text>
       {query.isLoading ? (
         <MenuSkeleton />
       ) : (
-        <Rail>
-          {query.data?.map((item) => (
-            <div key={item.id} style={{ width: '19rem', flexShrink: 0 }}>
-              <MarketplaceFoodTile item={item} />
-            </div>
-          ))}
+        <Rail className="ob-home-dishes__rail">
+          {query.data?.map((item) => {
+            const matches = matchesHomeCategory(item.categoryIds, categoryId);
+            return (
+              <div
+                key={item.id}
+                className={matches ? 'ob-home-feed__item' : 'ob-home-feed__item ob-home-feed__item--dimmed'}
+              >
+                <HomeDishPoster item={item} />
+              </div>
+            );
+          })}
         </Rail>
       )}
     </section>

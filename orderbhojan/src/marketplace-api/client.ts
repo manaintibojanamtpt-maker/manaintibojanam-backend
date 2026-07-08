@@ -1,4 +1,5 @@
 import { getAppConfig } from '@/config';
+import { shouldBypassMarketplaceHttpCache } from '@/config/marketplaceQueryPolicy';
 import { generateCorrelationId } from '@/utils';
 import type { ApiResult } from '@/types/marketplace';
 import {
@@ -88,6 +89,9 @@ export class MarketplaceHttpClient {
       'Content-Type': 'application/json',
       'X-Correlation-Id': correlationId,
       'X-Marketplace-API-Version': this.config.apiVersion,
+      ...(shouldBypassMarketplaceHttpCache()
+        ? { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
+        : {}),
       ...options.headers,
     };
 

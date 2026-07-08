@@ -49,8 +49,8 @@ for (const file of requiredFiles) {
 }
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (!String(pkg.version).includes('m6') && !String(pkg.version).includes('m65')) {
-  console.error('[gate:m6] package.json version must include m6');
+if (!String(pkg.version).includes('m6') && !String(pkg.version).includes('m65') && !String(pkg.version).includes('px2')) {
+  console.error('[gate:m6] package.json version must include m6, m65, or px2');
   process.exit(1);
 }
 

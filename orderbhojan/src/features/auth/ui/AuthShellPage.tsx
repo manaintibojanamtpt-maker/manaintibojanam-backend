@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Button,
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  GlassSurface,
   Loader,
   SegmentedControl,
   Text,
@@ -15,6 +12,10 @@ import { useAuth } from '@/shared/providers/AuthProvider';
 import { PhoneOtpForm } from './PhoneOtpForm';
 
 type AuthTab = 'google' | 'phone' | 'guest';
+
+function sessionLabel(displayName?: string | null, phone?: string | null, email?: string | null) {
+  return displayName ?? phone ?? email ?? 'your account';
+}
 
 export function AuthShellPage() {
   const navigate = useNavigate();
@@ -54,82 +55,86 @@ export function AuthShellPage() {
 
   if (status === 'loading') {
     return (
-      <Card>
+      <GlassSurface className="ob-auth-px2__panel">
         <Loader label="Loading authentication" />
-      </Card>
-    );
-  }
-
-  if (status === 'unconfigured') {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign in to OrderBhojan</CardTitle>
-          <CardDescription>Firebase is not configured. Guest browsing is available.</CardDescription>
-        </CardHeader>
-        <Button fullWidth variant="secondary" onClick={handleGuest} loading={pending} aria-label="Continue as guest">
-          Continue as Guest
-        </Button>
-      </Card>
+      </GlassSurface>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sign in to OrderBhojan</CardTitle>
-        <CardDescription>
-          Google, phone OTP, or guest. Your session persists across visits.
-        </CardDescription>
-      </CardHeader>
-
-      {isAuthenticated ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--bds-space-3)' }}>
-          <Text variant="body">
-            Signed in as {sessionUser?.displayName ?? sessionUser?.phoneNumber ?? sessionUser?.email ?? sessionUser?.uid}
+    <div className="ob-auth-px2">
+      <GlassSurface className="ob-auth-px2__panel">
+        <div className="ob-auth-px2__brand">
+          <Text variant="microLabel" style={{ color: 'var(--bds-color-primary)' }}>ORDERBHOJAN</Text>
+          <Text variant="display" as="h1" style={{ letterSpacing: '-0.03em', marginTop: 'var(--bds-space-2)' }}>
+            Welcome back
           </Text>
-          <Button variant="secondary" onClick={() => navigate(redirectTo, { replace: true })}>
-            Continue
-          </Button>
-          <Button variant="ghost" onClick={() => signOut()} aria-label="Sign out">
-            Sign out
-          </Button>
+          <Text variant="body" style={{ color: 'var(--bds-color-text-secondary)', marginTop: 'var(--bds-space-2)' }}>
+            Sign in to save favorites, track orders, and reorder in one tap.
+          </Text>
         </div>
-      ) : (
-        <>
-          <SegmentedControl
-            items={[
-              { id: 'google', label: 'Google' },
-              { id: 'phone', label: 'Phone' },
-              { id: 'guest', label: 'Guest' },
-            ]}
-            activeId={tab}
-            onChange={(id) => { setTab(id as AuthTab); setError(null); }}
-            ariaLabel="Authentication method"
-          />
 
-          <div style={{ marginTop: 'var(--bds-space-4)' }}>
-            {tab === 'google' ? (
-              <Button fullWidth onClick={handleGoogle} loading={pending} aria-label="Continue with Google">
-                Continue with Google
-              </Button>
-            ) : null}
-            {tab === 'phone' ? <PhoneOtpForm /> : null}
-            {tab === 'guest' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--bds-space-3)' }}>
-                <Text variant="bodySm" style={{ color: 'var(--bds-color-text-secondary)' }}>
-                  Browse without a full account. Sign in later to save favorites and view orders.
-                </Text>
-                <Button fullWidth variant="secondary" onClick={handleGuest} loading={pending} aria-label="Continue as guest">
-                  Continue as Guest
-                </Button>
-              </div>
-            ) : null}
+        {status === 'unconfigured' ? (
+          <div className="ob-auth-px2__body">
+            <Text variant="bodySm" style={{ color: 'var(--bds-color-text-secondary)' }}>
+              Firebase is not configured in this environment. Guest browsing is available.
+            </Text>
+            <Button fullWidth variant="secondary" onClick={handleGuest} loading={pending} aria-label="Continue as guest">
+              Continue as Guest
+            </Button>
           </div>
-        </>
-      )}
+        ) : isAuthenticated ? (
+          <div className="ob-auth-px2__body">
+            <Text variant="body">
+              Signed in as {sessionLabel(sessionUser?.displayName, sessionUser?.phoneNumber, sessionUser?.email)}
+            </Text>
+            <Button variant="primary" fullWidth onClick={() => navigate(redirectTo, { replace: true })}>
+              Continue
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => signOut()} aria-label="Sign out">
+              Sign out
+            </Button>
+          </div>
+        ) : (
+          <div className="ob-auth-px2__body">
+            <SegmentedControl
+              fullWidth
+              items={[
+                { id: 'google', label: 'Google' },
+                { id: 'phone', label: 'Phone' },
+                { id: 'guest', label: 'Guest' },
+              ]}
+              activeId={tab}
+              onChange={(id) => {
+                setTab(id as AuthTab);
+                setError(null);
+              }}
+              ariaLabel="Authentication method"
+            />
 
-      {error ? <Toast message={error} variant="danger" onDismiss={() => setError(null)} /> : null}
-    </Card>
+            <div className="ob-auth-px2__tab-panel">
+              {tab === 'google' ? (
+                <Button fullWidth onClick={handleGoogle} loading={pending} aria-label="Continue with Google">
+                  Continue with Google
+                </Button>
+              ) : null}
+              {tab === 'phone' ? <PhoneOtpForm /> : null}
+              {tab === 'guest' ? (
+                <>
+                  <Text variant="bodySm" style={{ color: 'var(--bds-color-text-secondary)' }}>
+                    Browse restaurants and menus without signing in. You can create an account anytime.
+                  </Text>
+                  <Button fullWidth variant="secondary" onClick={handleGuest} loading={pending} aria-label="Continue as guest">
+                    Continue as Guest
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {error ? <Toast message={error} variant="danger" onDismiss={() => setError(null)} /> : null}
+      </GlassSurface>
+    </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   buildFoodBestsellers,
   buildFoodCategories,
   buildFoodMenuPayload,
+  buildFoodMenuContractPayload,
   buildFoodRecommended,
   buildLegacyMenuResponse,
 } from './foodExperienceMockLogic';
@@ -166,8 +167,13 @@ export const marketplaceHandlers = [
     return success(buildRestaurantHighlights(String(params.slug)));
   }),
 
-  http.get(`${prefix}/restaurants/:slug/menu`, ({ params }) => {
-    return success(buildFoodMenuPayload(String(params.slug)));
+  http.get(`${prefix}/restaurants/:slug/menu`, ({ request, params }) => {
+    const slug = String(params.slug);
+    const url = new URL(request.url);
+    if (url.searchParams.get('schemaVersion') === '1.0') {
+      return success(buildFoodMenuContractPayload(slug));
+    }
+    return success(buildFoodMenuPayload(slug));
   }),
 
   http.get(`${prefix}/restaurants/:slug/categories`, ({ params }) => {
@@ -199,9 +205,35 @@ export const marketplaceHandlers = [
     }),
   ),
 
-  http.post(`${prefix}/checkout/place`, () =>
-    success({ orderId: 'ob_ord_mock_001' }),
+  http.post(`${prefix}/checkout/place`, async ({ request }) => {
+    const body = (await request.json()) as { paymentMethod?: string };
+    if (body.paymentMethod === 'razorpay') {
+      return success({ draftId: 'ob_draft_mock_001' });
+    }
+    return success({ orderId: 'ob_ord_mock_001' });
+  }),
+
+  http.post('/api/create-razorpay-order', async () =>
+    HttpResponse.json({
+      success: true,
+      isMock: true,
+      order: {
+        id: `mock_order_${Date.now()}`,
+        amount: MOCK_QUOTE.grandTotal * 100,
+        currency: 'INR',
+      },
+      key: 'rzp_test_mock',
+    }),
   ),
+
+  http.post('/api/verify-razorpay-payment', async ({ request }) => {
+    const body = (await request.json()) as { draftId?: string };
+    return HttpResponse.json({
+      success: true,
+      verified: true,
+      orderId: body.draftId ?? 'ob_draft_mock_001',
+    });
+  }),
 
   http.get(`${prefix}/orders`, ({ request }) => {
     if (!hasBearer(request)) return unauthorized();
@@ -241,6 +273,53 @@ export const marketplaceHandlers = [
         { status: 'PREPARING', at: new Date().toISOString(), message: 'Kitchen is preparing your order' },
       ],
       etaMinutes: { min: 25, max: 35 },
+    });
+  }),
+
+  http.get(`${prefix}/orders/:orderId/guest-tracking`, ({ params, request }) => {
+    const url = new URL(request.url);
+    const phone = url.searchParams.get('phone') ?? '';
+    if (phone.replace(/\D/g, '').length < 4) {
+      return HttpResponse.json(
+        { ok: false, error: { code: 'INVALID', message: 'phone required' } },
+        { status: 400 },
+      );
+    }
+    return success({
+      orderId: String(params.orderId),
+      status: 'OUT_FOR_DELIVERY',
+      timeline: [
+        { status: 'PLACED', at: new Date(Date.now() - 900_000).toISOString() },
+        { status: 'OUT_FOR_DELIVERY', at: new Date().toISOString(), message: 'Rider is on the way' },
+      ],
+      etaMinutes: { min: 10, max: 20 },
+    });
+  }),
+
+  http.post(`${prefix}/cart/validate`, async ({ request }) => {
+    const body = (await request.json()) as { lines?: { itemId: string }[] };
+    const issues = (body.lines ?? [])
+      .filter((line) => line.itemId === 'unavailable-item')
+      .map((line) => ({
+        itemId: line.itemId,
+        code: 'UNAVAILABLE',
+        message: 'Item is currently unavailable',
+      }));
+    return success({
+      valid: issues.length === 0,
+      quote: {
+        subtotal: 199,
+        gstAmount: 10,
+        gstPercent: 5,
+        packagingFee: 10,
+        deliveryFee: 29,
+        deliveryPending: false,
+        discountAmount: 0,
+        grandTotal: 248,
+        taxLabel: 'GST',
+        lineItems: [{ label: 'Subtotal', amount: 199 }],
+      },
+      issues,
     });
   }),
 

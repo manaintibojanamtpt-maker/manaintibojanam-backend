@@ -21,6 +21,9 @@ interface ImportMetaEnv {
   readonly VITE_FF_OB_SEARCH?: string;
   readonly VITE_FF_OB_RESTAURANT?: string;
   readonly VITE_FF_OB_MENU?: string;
+  readonly VITE_FF_OB_CONTRACT_V1?: string;
+  readonly VITE_FF_OB_FIRESTORE?: string;
+  readonly VITE_MARKETPLACE_API_PROXY?: string;
   readonly VITE_FF_OB_TRACKING?: string;
   readonly VITE_FF_OB_NOTIFICATIONS?: string;
   readonly VITE_FF_OB_PAYMENTS?: string;

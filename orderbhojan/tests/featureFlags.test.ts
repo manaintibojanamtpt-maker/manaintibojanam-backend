@@ -9,6 +9,8 @@ describe('featureFlags', () => {
     assert.equal(isFeatureEnabled(flags, 'FF_OB_SEARCH'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_RESTAURANT'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_MENU'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_CONTRACT_V1'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_FIRESTORE'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_TRACKING'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_NOTIFICATIONS'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_PAYMENTS'), false);

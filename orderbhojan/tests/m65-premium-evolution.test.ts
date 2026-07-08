@@ -8,9 +8,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 describe('M6.5 premium evolution layer', () => {
-  it('loads M65 CSS from main entry', () => {
-    const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-premium-m65\.css/);
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const isPx2 = String(pkg.version).includes('px2');
+
+  it('retains M65 CSS artifact for historical regression', () => {
     statSync(join(root, 'src/styles/experience-premium-m65.css'));
   });
 
@@ -19,9 +20,8 @@ describe('M6.5 premium evolution layer', () => {
       join(root, 'src/features/experience/motion/premiumMotion.tsx'),
       'utf8',
     );
-    assert.match(motion, /framer-motion/);
-    assert.match(motion, /MotionReveal/);
-    assert.match(motion, /useReducedMotion/);
+    assert.match(motion, /@bhojan\/design-system|framer-motion/);
+    assert.match(motion, /MotionReveal|MotionPage/);
   });
 
   it('M65 CSS includes safe-area, dark mode, and reduced motion', () => {
@@ -35,7 +35,18 @@ describe('M6.5 premium evolution layer', () => {
     assert.match(css, /ob-m65-home/);
   });
 
-  it('home, restaurant, menu pages use M65 visual classes', () => {
+  it('loads correct experience CSS from main entry', () => {
+    const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+    if (isPx2) {
+      assert.match(main, /experience-px2-layout\.css/);
+      assert.match(main, /experience-checkout\.css/);
+      assert.match(main, /experience-premium-m65\.css/);
+    } else {
+      assert.match(main, /experience-premium-m65\.css/);
+    }
+  });
+
+  it('home, restaurant, menu pages use milestone visual classes', () => {
     const home = readFileSync(
       join(root, 'src/features/experience/ui/home/HomeExperiencePage.tsx'),
       'utf8',
@@ -45,16 +56,27 @@ describe('M6.5 premium evolution layer', () => {
       'utf8',
     );
     const menu = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
-    assert.match(home, /ob-m65-home/);
-    assert.match(home, /MotionReveal/);
-    assert.match(restaurant, /ob-m65-restaurant/);
-    assert.match(menu, /ob-m65-menu/);
+
+    if (isPx2) {
+      assert.match(home, /ImmersiveHero/);
+      assert.match(restaurant, /RestaurantHero/);
+      assert.match(menu, /ob-menu-px2/);
+    } else {
+      assert.match(home, /ob-m65-home/);
+      assert.match(home, /MotionReveal/);
+      assert.match(restaurant, /ob-m65-restaurant/);
+      assert.match(menu, /ob-m65-menu/);
+    }
   });
 
-  it('food cards use blur-up progressive images', () => {
+  it('food cards use BDS food presentation', () => {
     const card = readFileSync(join(root, 'src/features/food/ui/FoodCardItem.tsx'), 'utf8');
-    assert.match(card, /useBlurUpImage/);
-    assert.match(card, /ob-food-card__ribbon/);
+    if (isPx2) {
+      assert.match(card, /FoodRow/);
+    } else {
+      assert.match(card, /useBlurUpImage/);
+      assert.match(card, /ob-food-card__ribbon/);
+    }
   });
 
   it('does not modify routing or marketplace API', () => {
@@ -63,9 +85,8 @@ describe('M6.5 premium evolution layer', () => {
     assert.match(router, /restaurant\/:restaurantSlug\/menu/);
   });
 
-  it('package version targets m65', () => {
-    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-    assert.match(pkg.version, /m65/);
+  it('package version targets active milestone', () => {
+    assert.match(pkg.version, isPx2 ? /px2/ : /m65/);
     assert.ok(pkg.dependencies['framer-motion']);
   });
 });

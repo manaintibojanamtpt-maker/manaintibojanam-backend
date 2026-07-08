@@ -50,11 +50,13 @@ export interface RestaurantExperiencePublic {
   readonly rating?: number;
   readonly ratingCount?: number;
   readonly deliveryFee?: number | null;
+  readonly deliveryFeeKnown?: boolean;
   readonly distance?: number;
   readonly eta?: { readonly min: number; readonly max: number };
   readonly cuisines: readonly string[];
   readonly priceRange?: string;
   readonly veg: boolean;
+  readonly kitchenDietary?: 'pure_veg' | 'veg_friendly' | 'non_veg' | 'unknown';
   readonly cloudKitchen: boolean;
   readonly openStatus: RestaurantOpenStatus;
   readonly todayHours?: string;

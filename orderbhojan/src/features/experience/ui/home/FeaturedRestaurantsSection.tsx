@@ -1,13 +1,19 @@
 import { Rail, Text } from '@bhojan/design-system';
+import type { FoodCategoryId } from '../../domain/experience.types';
 import { useFeaturedRestaurants } from '../../hooks/useMockExperienceQuery';
-import { MarketplaceRestaurantTile } from '../shared/MarketplaceRestaurantTile';
+import { matchesHomeCategory } from '../../utils/homeCategoryFilter';
+import { HomeRestaurantPoster } from './HomeRestaurantPoster';
 import { RestaurantRailSkeleton } from '../shared/ExperienceSkeletons';
 
-export function FeaturedRestaurantsSection() {
+export interface FeaturedRestaurantsSectionProps {
+  readonly categoryId?: FoodCategoryId | null;
+}
+
+export function FeaturedRestaurantsSection({ categoryId = null }: FeaturedRestaurantsSectionProps) {
   const query = useFeaturedRestaurants();
 
   if (query.isLoading) {
-    return <RestaurantRailSkeleton title="Featured Restaurants" />;
+    return <RestaurantRailSkeleton title="Near you" />;
   }
 
   if (query.isError) {
@@ -15,15 +21,22 @@ export function FeaturedRestaurantsSection() {
   }
 
   return (
-    <section className="ob-section ob-section--full ob-restaurant-rail" aria-label="Featured restaurants">
-      <div className="ob-section__header">
-        <Text variant="subtitle" as="h2" className="ob-section__title">Featured Restaurants</Text>
-        <Text variant="caption" className="ob-section__hint">Curated for you</Text>
-      </div>
-      <Rail>
-        {query.data?.map((restaurant) => (
-          <MarketplaceRestaurantTile key={restaurant.id} restaurant={restaurant} />
-        ))}
+    <section className="ob-home-restaurants" aria-label="Restaurants near you">
+      <Text variant="titleSm" as="h2" className="ob-home-restaurants__title">
+        Near you
+      </Text>
+      <Rail className="ob-home-restaurants__rail">
+        {query.data?.map((restaurant) => {
+          const matches = matchesHomeCategory(restaurant.categoryIds, categoryId);
+          return (
+            <div
+              key={restaurant.id}
+              className={matches ? 'ob-home-feed__item' : 'ob-home-feed__item ob-home-feed__item--dimmed'}
+            >
+              <HomeRestaurantPoster restaurant={restaurant} />
+            </div>
+          );
+        })}
       </Rail>
     </section>
   );

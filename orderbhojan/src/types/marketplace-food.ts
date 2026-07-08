@@ -1,5 +1,7 @@
 export type DietaryType = 'veg' | 'nonVeg' | 'egg';
 
+export type SpiceLevel = 'mild' | 'medium' | 'hot' | 'extraHot';
+
 export type FoodVariantKind =
   | 'small'
   | 'medium'
@@ -26,6 +28,25 @@ export interface FoodAddon {
   readonly maxQuantity?: number;
 }
 
+export type FoodLabelKind =
+  | 'BESTSELLER'
+  | 'CHEF_PICK'
+  | 'NEW'
+  | 'LIMITED'
+  | 'FESTIVAL'
+  | 'HEALTHY'
+  | 'KIDS'
+  | 'POPULAR'
+  | 'SPICY'
+  | 'PROTEIN'
+  | 'SEASONAL'
+  | 'CUSTOM';
+
+export interface FoodOwnerLabel {
+  readonly kind: FoodLabelKind;
+  readonly displayText: string;
+}
+
 export interface FoodPublic {
   readonly foodId: string;
   readonly slug: string;
@@ -41,14 +62,31 @@ export interface FoodPublic {
   readonly dietary: DietaryType;
   readonly preparationTime?: number;
   readonly availability: boolean;
+  /** @deprecated Use ownerLabels from contract v1 */
   readonly bestSeller?: boolean;
+  /** @deprecated Use ownerLabels from contract v1 */
   readonly recommended?: boolean;
+  /** @deprecated Use ownerLabels from contract v1 */
   readonly chefSpecial?: boolean;
+  /** @deprecated Use ownerLabels from contract v1 */
   readonly newItem?: boolean;
+  /** Owner-authored labels (Marketplace v1 projection) */
+  readonly ownerLabels?: readonly FoodOwnerLabel[];
+  /** Owner-authored offer copy — never renderer-computed */
+  readonly ownerOfferDisplayText?: string;
+  /** True when item was adapted from FoodDTO v1 */
+  readonly contractSource?: boolean;
   readonly variants: readonly FoodVariant[];
   readonly addons: readonly FoodAddon[];
   readonly nutritionSummary?: string;
   readonly allergenSummary?: string;
+  readonly chefNote?: string;
+  readonly ingredients?: readonly string[];
+  readonly cookingStyle?: string;
+  readonly servingSize?: string;
+  readonly popularPairing?: string;
+  readonly spiceLevel?: SpiceLevel;
+  readonly dietaryLabels?: readonly string[];
 }
 
 export interface FoodCategoryPublic {

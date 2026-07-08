@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { loadFoodMenu } from '../engine/foodExperienceLayer';
-import { foodKeys, FOOD_GC_TIME_MS, FOOD_STALE_TIME_MS } from './foodQueryKeys';
+import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
-import { useFoodPreviewStore } from '../store/foodPreviewStore';
+import { useCartStore } from '@/features/cart/store/cartStore';
 
 export function useFoodMenu(slug: string | undefined) {
   const enabled = useFoodFeatureEnabled();
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
-  const setRestaurant = useFoodPreviewStore((s) => s.setRestaurant);
+  const setRestaurant = useCartStore((s) => s.setRestaurant);
+  const liveQuery = getMarketplaceQueryBehavior();
 
   useEffect(() => {
     if (slug) setRestaurant(slug);
@@ -26,9 +28,7 @@ export function useFoodMenu(slug: string | undefined) {
         lng: coords.lng,
       }),
     enabled: enabled && Boolean(slug),
-    staleTime: FOOD_STALE_TIME_MS,
-    gcTime: FOOD_GC_TIME_MS,
+    ...liveQuery,
     retry: 2,
-    placeholderData: (previous) => previous,
   });
 }

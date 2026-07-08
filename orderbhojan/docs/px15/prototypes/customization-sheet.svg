@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-labelledby="title desc">
+  <title id="title">OrderBhojan Customization Sheet  PX1.5</title>
+  <desc id="desc">BottomSheet warm-glass 45% snap. Variants. Add-ons. Stepper. Add to cart.</desc>
+  <rect width="375" height="812" fill="#070504"/>
+  <rect x="0" y="0" width="375" height="812" fill="#000" opacity="0.5"/>
+  <rect x="0" y="380" width="375" height="432" rx="24" fill="#120D0A" stroke="rgba(255,170,95,0.12)"/>
+  <rect x="168" y="392" width="40" height="4" rx="2" fill="#4A4540"/>
+  <!-- Header FoodRow -->
+  <rect x="259" y="416" width="96" height="96" rx="16" fill="#FF6B35"/>
+  <text x="20" y="448" font-size="16" font-weight="700" fill="#FFFAF3">Chicken Dum Biryani</text>
+  <text x="20" y="472" font-size="16" font-weight="800" fill="#FF7A00">�299</text>
+  <text x="20" y="520" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">SIZE</text>
+  <rect x="20" y="532" width="80" height="36" rx="18" fill="#FF7A00"/>
+  <text x="60" y="555" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFAF3">Regular</text>
+  <rect x="108" y="532" width="80" height="36" rx="18" fill="#1A1410"/>
+  <text x="148" y="555" text-anchor="middle" font-size="12" fill="#D0C4B5">Large</text>
+  <text x="20" y="592" font-size="10" font-weight="900" letter-spacing="2" fill="#FF7A00">ADD-ONS</text>
+  <rect x="20" y="604" width="100" height="32" rx="16" fill="rgba(255,122,0,0.2)" stroke="#FF7A00"/>
+  <text x="70" y="624" text-anchor="middle" font-size="11" fill="#FF7A00">Extra raita</text>
+  <rect x="20" y="660" width="120" height="36" rx="18" fill="#1A1410"/>
+  <text x="80" y="683" text-anchor="middle" font-size="14" fill="#FFFAF3">  1  +</text>
+  <rect x="20" y="720" width="335" height="52" rx="26" fill="#FF7A00"/>
+  <text x="187" y="752" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFAF3">Add to cart � �299</text>
+</svg>
