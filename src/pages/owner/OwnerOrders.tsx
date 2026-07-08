@@ -15,6 +15,7 @@ import { recordOrderCompletion } from '../../services/AnalyticsService';
 import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../../services/api';
 import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
+import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
 
 interface Order extends OwnerOrder {}
 
@@ -84,18 +85,21 @@ const OwnerOrders: React.FC = () => {
   }, [tenantId, tenantLoading, profileLoading, orderLimit]);
 
   useEffect(() => {
-    orders.forEach((order) => {
+    orders.forEach((order, orderIndex) => {
       if (order.status !== 'OUT_FOR_DELIVERY') return;
       if (!isThirdPartyDeliveryPartner(order.deliveryPartner)) return;
-      if (remindedDeliveriesRef.current.has(order.id)) return;
+      const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
+      if (remindedDeliveriesRef.current.has(orderKey)) return;
 
       const assignedAt = order.deliveryAssignedAt ? new Date(order.deliveryAssignedAt).getTime() : 0;
       const ageMs = assignedAt ? Date.now() - assignedAt : 0;
       if (assignedAt && ageMs < 45 * 60 * 1000) return;
 
-      remindedDeliveriesRef.current.add(order.id);
+      remindedDeliveriesRef.current.add(orderKey);
+      const shortId = orderKey.slice(-6).toUpperCase();
+      const partner = deliveryPartnerLabel(order.deliveryPartner) || 'partner';
       toast(
-        `Order #${order.id.slice(-6).toUpperCase()} is still out via ${order.deliveryPartner}. Confirm delivery in the partner app, then tap Mark Delivered.`,
+        `Order #${shortId} is still out via ${partner}. Confirm delivery in the partner app, then tap Mark Delivered.`,
         { duration: 8000, icon: '🛵' },
       );
     });
@@ -262,6 +266,16 @@ const OwnerOrders: React.FC = () => {
                 const shortOrderId = orderKey.slice(-6).toUpperCase();
                 const lineItems = Array.isArray(order.items) ? order.items : [];
                 const deliveryPartnerName = deliveryPartnerLabel(order.deliveryPartner);
+                const orderStatus = safeText(order.status, 'UNKNOWN');
+                const customerName = safeText(order.customerName, 'Guest Customer');
+                const customerPhone = safeText(order.customerPhone || order.phone, 'Phone unavailable');
+                const customerAddress = safeText(
+                  order.deliveryAddress?.addressLine1 || order.address,
+                  'No address provided',
+                );
+                const riderName = safeText(order.riderName, 'Assigned');
+                const riderPhone = safeText(order.riderPhone);
+                const orderTotal = safeNumber(order.totalAmount, 0);
 
                 return (
                 <m.div
@@ -277,14 +291,14 @@ const OwnerOrders: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                         <span className="text-sm font-mono text-white/40">#{shortOrderId}</span>
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
-                          ${order.status === 'PENDING' || order.status === 'CREATED' || order.status === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
-                          ${order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                          ${order.status === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
-                          ${order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                          ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
-                          ${order.status === 'REJECTED' || order.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
+                          ${orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                          ${orderStatus === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                          ${orderStatus === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
+                          ${orderStatus === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                          ${orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                          ${orderStatus === 'REJECTED' || orderStatus === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
                         `}>
-                          {order.status}
+                          {orderStatus}
                         </span>
                         <span className="text-sm text-gray-400 flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
@@ -293,13 +307,13 @@ const OwnerOrders: React.FC = () => {
                       </div>
                       
                       <h3 className="text-lg font-semibold text-white">
-                        {order.customerName || 'Guest Customer'}
+                        {customerName}
                       </h3>
                       <p className="text-sm text-white/50 mt-1 break-words">
-                        {order.customerPhone || order.phone || 'Phone unavailable'} • {order.deliveryAddress?.addressLine1 || order.address || 'No address provided'}
+                        {customerPhone} • {customerAddress}
                       </p>
 
-                      {order.status === 'OUT_FOR_DELIVERY' && (
+                      {orderStatus === 'OUT_FOR_DELIVERY' && (
                         <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
                           <div className="flex items-start gap-2">
                             <Truck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
@@ -307,9 +321,9 @@ const OwnerOrders: React.FC = () => {
                               <p className="text-sm font-semibold text-white">
                                 {deliveryPartnerName || 'Delivery'} • Out for delivery
                               </p>
-                              {(order.riderName || order.riderPhone) && (
+                              {(riderName || riderPhone) && (
                                 <p className="text-xs text-white/50 mt-1">
-                                  Rider: {order.riderName || 'Assigned'}{order.riderPhone ? ` • ${order.riderPhone}` : ''}
+                                  Rider: {riderName}{riderPhone ? ` • ${riderPhone}` : ''}
                                 </p>
                               )}
                               {isThirdPartyDeliveryPartner(order.deliveryPartner) && (
@@ -331,9 +345,9 @@ const OwnerOrders: React.FC = () => {
                                 <ExternalLink className="w-3.5 h-3.5" /> Open tracking
                               </a>
                             )}
-                            {order.riderPhone && (
+                            {riderPhone && (
                               <a
-                                href={`tel:${order.riderPhone}`}
+                                href={`tel:${riderPhone}`}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white/5 text-blue-300 border border-white/10 hover:bg-white/10 transition-colors"
                               >
                                 <Phone className="w-3.5 h-3.5" /> Call rider
@@ -344,16 +358,16 @@ const OwnerOrders: React.FC = () => {
                       )}
                       
                       {/* LIVE SUPPORT CONTACT BUTTONS */}
-                      {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(order.status || '') && (order.customerPhone || order.phone) && (
+                      {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(orderStatus) && phoneDigits(order.customerPhone || order.phone) && (
                         <div className="flex items-center gap-3 mt-3">
                           <a 
-                            href={`tel:${order.customerPhone || order.phone}`} 
+                            href={`tel:${phoneDigits(order.customerPhone || order.phone)}`} 
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/15 transition-colors"
                           >
                             <Phone className="w-3.5 h-3.5" /> Call Customer
                           </a>
                           <a 
-                            href={`https://wa.me/${(order.customerPhone || order.phone)?.replace(/\D/g, '')}?text=Hi%20${order.customerName || 'Customer'}!%20This%20is%20regarding%20your%20recent%20order%20%23${shortOrderId}.`}
+                            href={`https://wa.me/${phoneDigits(order.customerPhone || order.phone)}?text=Hi%20${encodeURIComponent(customerName)}!%20This%20is%20regarding%20your%20recent%20order%20%23${shortOrderId}.`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
@@ -367,23 +381,29 @@ const OwnerOrders: React.FC = () => {
                     <div className="w-full xl:w-[340px] shrink-0 flex flex-col gap-4">
                       <div className="w-full bg-black/30 rounded-xl p-4 border border-white/10 space-y-3">
                         <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest">Order Items</h4>
-                        {lineItems.map((item: any, idx: number) => (
+                        {lineItems.map((item: any, idx: number) => {
+                          const itemQty = safeNumber(item.quantity, 1);
+                          const itemName = safeText(item.name, 'Item');
+                          const itemNote = safeText(item.specialInstructions);
+                          const unitPrice = safeNumber(item.unitPrice ?? item.price, 0);
+                          return (
                           <div key={idx} className="flex justify-between items-start gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-[#FF6B00]">{item.quantity}x</span>
-                                <span className="font-medium text-white break-words">{item.name}</span>
+                                <span className="font-bold text-[#FF6B00]">{itemQty}x</span>
+                                <span className="font-medium text-white break-words">{itemName}</span>
                               </div>
-                              {item.specialInstructions && (
-                                <p className="text-sm text-yellow-500/80 mt-1">Note: {item.specialInstructions}</p>
+                              {itemNote && (
+                                <p className="text-sm text-yellow-500/80 mt-1">Note: {itemNote}</p>
                               )}
                             </div>
-                            <span className="text-white/70 shrink-0">₹{(Number(item.unitPrice ?? item.price ?? 0)) * item.quantity}</span>
+                            <span className="text-white/70 shrink-0">₹{unitPrice * itemQty}</span>
                           </div>
-                        ))}
+                          );
+                        })}
                         <div className="pt-3 border-t border-white/10 flex justify-between items-center">
                           <span className="text-sm font-semibold text-white/60">Total</span>
-                          <span className="text-lg font-bold text-white">₹{order.totalAmount}</span>
+                          <span className="text-lg font-bold text-white">₹{orderTotal}</span>
                         </div>
                       </div>
 
@@ -394,7 +414,7 @@ const OwnerOrders: React.FC = () => {
                           </div>
                         ) : (
                           <>
-                            {(order.status === 'PENDING' || order.status === 'CREATED' || order.status === 'PLACED') && (
+                            {(orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED') && (
                               <>
                                 <button 
                                   onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
@@ -413,7 +433,7 @@ const OwnerOrders: React.FC = () => {
                               </>
                             )}
                             
-                            {order.status === 'ACCEPTED' && (
+                            {orderStatus === 'ACCEPTED' && (
                               <button 
                                 onClick={() => updateOrderStatus(order.id, 'PREPARING')}
                                 disabled={updatingOrderId === order.id}
@@ -423,7 +443,7 @@ const OwnerOrders: React.FC = () => {
                               </button>
                             )}
 
-                            {order.status === 'PREPARING' && (
+                            {orderStatus === 'PREPARING' && (
                               <button 
                                 onClick={() => {
                                   setDispatchOrder(order.id);
@@ -435,7 +455,7 @@ const OwnerOrders: React.FC = () => {
                               </button>
                             )}
 
-                            {order.status === 'OUT_FOR_DELIVERY' && (
+                            {orderStatus === 'OUT_FOR_DELIVERY' && (
                               <>
                                 <button 
                                   onClick={() => updateOrderStatus(order.id, 'DELIVERED')}

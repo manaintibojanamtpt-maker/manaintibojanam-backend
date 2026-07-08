@@ -64,6 +64,7 @@ export interface RestaurantExperiencePublic {
   readonly description?: string;
   readonly offers: readonly RestaurantOffer[];
   readonly badges: readonly string[];
+  readonly subscriptionEnabled?: boolean;
 }
 
 export interface RestaurantExperienceResponse {

@@ -59,6 +59,7 @@ export function buildRestaurantExperiencePayload(slug: string): RestaurantExperi
     priceRange: formatPriceRange(restaurant.priceForTwo),
     todayHours: restaurant.isOpen ? '11:00 AM – 11:00 PM' : 'Closed today',
     gallery,
+    subscriptionEnabled: slug === 'mana-inti-kitchen' || slug === 'manaintibojanam',
     description:
       `${restaurant.displayName} serves authentic ${restaurant.cuisines.join(' & ')} flavours with care-packed delivery. A Mana Inti Bojanam partner kitchen focused on consistency, hygiene, and homestyle taste.`,
     offers,

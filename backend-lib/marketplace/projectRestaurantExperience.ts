@@ -43,6 +43,7 @@ export interface RestaurantExperiencePayload {
       readonly badge?: string;
     }[];
     readonly badges: readonly string[];
+    readonly subscriptionEnabled?: boolean;
   };
   readonly contextToken: string;
   readonly hours: readonly {
@@ -174,6 +175,11 @@ export function projectRestaurantExperience(
   }
 
   const offerBadges = offers.length > 0 ? ['offer'] : [];
+  const features =
+    typeof raw.features === 'object' && raw.features !== null && !Array.isArray(raw.features)
+      ? (raw.features as { subscriptionEnabled?: unknown })
+      : undefined;
+  const subscriptionEnabled = features?.subscriptionEnabled === true;
 
   return {
     experience: {
@@ -199,6 +205,7 @@ export function projectRestaurantExperience(
       description: mp?.description ?? mp?.tagline ?? tenant.description,
       offers,
       badges: [...dietaryBadges, ...offerBadges],
+      subscriptionEnabled,
     },
     contextToken,
     hours: weeklyHours,

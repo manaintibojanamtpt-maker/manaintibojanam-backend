@@ -6,6 +6,7 @@ import type { OrderReadModel } from '../sdk/orders/types';
 import type { ApiOrderRecord } from '../sdk/orders/mappers/mapOrderToReadModel';
 import { mapOrderToReadModel } from '../sdk/orders/mappers/mapOrderToReadModel';
 import { deliveryPartnerLabel } from './deliveryPartners';
+import { phoneDigits, safeNumber, safeText } from './safeRenderValue';
 
 export interface OwnerOrderSnapshot {
   id: string;
@@ -29,30 +30,47 @@ export interface OwnerOrderSnapshot {
   statusHistory?: unknown;
 }
 
+function normalizeLineItems(rawItems: unknown, modelItems: OrderReadModel['items']): unknown[] {
+  if (Array.isArray(rawItems)) return rawItems;
+  if (Array.isArray(modelItems)) return [...modelItems];
+  return [];
+}
+
+function normalizeDeliveryAddress(
+  value: unknown,
+): OwnerOrderSnapshot['deliveryAddress'] | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as { addressLine1?: unknown; city?: unknown };
+  const addressLine1 = safeText(record.addressLine1);
+  const city = safeText(record.city);
+  if (!addressLine1 && !city) return undefined;
+  return { addressLine1: addressLine1 || 'Address', city: city || '' };
+}
+
 export const readModelToOwnerOrder = (
   model: OrderReadModel,
   raw?: Partial<ApiOrderRecord>
 ): OwnerOrderSnapshot => ({
-  id: model.id,
-  tenantId: model.tenantId,
-  customerName: model.customerName ?? undefined,
-  customerPhone: raw?.customerPhone as string | undefined,
-  phone: model.phone,
-  address: model.address,
-  deliveryAddress: raw?.deliveryAddress as OwnerOrderSnapshot['deliveryAddress'],
-  totalAmount: model.totalAmount,
-  status: raw?.status !== undefined ? String(raw.status) : model.status,
+  id: safeText(model.id, safeText(raw?.id, 'order')),
+  tenantId: safeText(model.tenantId, safeText(raw?.tenantId)),
+  customerName: safeText(model.customerName ?? raw?.customerName, undefined) || undefined,
+  customerPhone: phoneDigits(raw?.customerPhone) || undefined,
+  phone: phoneDigits(model.phone ?? raw?.phone) || undefined,
+  address: safeText(model.address ?? raw?.address, undefined) || undefined,
+  deliveryAddress: normalizeDeliveryAddress(raw?.deliveryAddress),
+  totalAmount: safeNumber(raw?.totalAmount ?? model.totalAmount, 0),
+  status: safeText(raw?.status ?? model.status, 'UNKNOWN').toUpperCase(),
   createdAt: raw?.createdAt ?? model.createdAt,
-  items: raw?.items ?? [...model.items],
+  items: normalizeLineItems(raw?.items, model.items),
   deliveryPartner:
     deliveryPartnerLabel(model.deliveryPartner) ||
     deliveryPartnerLabel(raw?.deliveryPartner) ||
     undefined,
-  trackingUrl: model.trackingUrl,
-  trackingLink: model.trackingLink,
-  riderName: model.riderName,
-  riderPhone: model.riderPhone,
-  deliveryAssignedAt: raw?.deliveryAssignedAt as string | undefined,
+  trackingUrl: safeText(model.trackingUrl ?? raw?.trackingUrl, undefined) || undefined,
+  trackingLink: safeText(model.trackingLink ?? raw?.trackingLink, undefined) || undefined,
+  riderName: safeText(model.riderName ?? raw?.riderName, undefined) || undefined,
+  riderPhone: phoneDigits(model.riderPhone ?? raw?.riderPhone) || undefined,
+  deliveryAssignedAt: safeText(raw?.deliveryAssignedAt, undefined) || undefined,
   timeline: raw?.timeline,
   statusHistory: raw?.statusHistory,
 });

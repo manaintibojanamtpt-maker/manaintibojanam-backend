@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   FloatingCTA,
   GlassSurface,
   MotionPage,
@@ -158,6 +159,29 @@ function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
               <Text variant="body" className="ob-restaurant-px5__about">
                 {experience.description}
               </Text>
+            </section>
+          </MotionReveal>
+        ) : null}
+
+        {experience.subscriptionEnabled ? (
+          <MotionReveal delay={0.05}>
+            <section className="ob-restaurant-px5__section" aria-label="Meal subscription">
+              <GlassSurface className="ob-restaurant-px5__subscription">
+                <Text variant="titleSm" as="h2" className="ob-restaurant-px5__section-title">
+                  Monthly meal subscription
+                </Text>
+                <Text variant="body" className="ob-restaurant-px5__about">
+                  Eat like home every day. Subscribe for daily home-style meals from {experience.displayName}.
+                </Text>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    window.open(`https://bhojanos.com/k/${experience.slug}`, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  View subscription plans
+                </Button>
+              </GlassSurface>
             </section>
           </MotionReveal>
         ) : null}

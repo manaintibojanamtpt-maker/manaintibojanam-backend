@@ -23,15 +23,19 @@ const mapApiRecordsToOwnerOrders = (
   tenantId: string,
   useSdkMapping: boolean,
 ): OwnerOrder[] => {
-  if (!useSdkMapping) {
-    return sortOwnerOrdersNewestFirst(records as unknown as OwnerOrder[]);
+  if (useSdkMapping) {
+    const models = mapOrdersToReadModels(records);
+    return sortOwnerOrdersNewestFirst(
+      models
+        .filter((model) => model.tenantId === tenantId)
+        .map((model, index) => readModelToOwnerOrder(model, records[index])),
+    );
   }
 
-  const models = mapOrdersToReadModels(records);
   return sortOwnerOrdersNewestFirst(
-    models
-      .filter((model) => model.tenantId === tenantId)
-      .map((model, index) => readModelToOwnerOrder(model, records[index])),
+    records
+      .filter((record) => String(record.tenantId ?? '') === tenantId)
+      .map(apiRecordToOwnerOrder),
   );
 };
 
