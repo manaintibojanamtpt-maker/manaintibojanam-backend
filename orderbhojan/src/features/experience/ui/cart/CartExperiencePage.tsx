@@ -34,7 +34,7 @@ function CartLineRow({
   const addons = line.addons ?? [];
 
   return (
-    <li className="ob-cart-line">
+    <li className="ob-cart-line mib-glass premium-card">
       <div className="ob-cart-line__media" aria-hidden>
         <Icon size={28} label="">
           <path d="M3 11h18" />
@@ -129,7 +129,7 @@ export function CartExperiencePage() {
         </header>
 
         {restaurantLabel && slug ? (
-          <section className="ob-cart-px2__restaurant" aria-label="Restaurant">
+          <section className="ob-cart-px2__restaurant mib-glass premium-card" aria-label="Restaurant">
             <div className="ob-cart-px2__restaurant-icon" aria-hidden>
               <Icon size={22} label="">
                 <path d="M3 11h18" />
@@ -157,7 +157,7 @@ export function CartExperiencePage() {
           ))}
         </ul>
 
-        <section className="ob-cart-px2__summary" aria-label="Cart summary">
+        <section className="ob-cart-px2__summary mib-glass premium-card" aria-label="Cart summary">
           <div className="ob-cart-px2__summary-row">
             <Text variant="body">Subtotal</Text>
             <Text variant="subtitle">₹{subtotal}</Text>
@@ -187,7 +187,13 @@ export function CartExperiencePage() {
         ) : null}
 
         <div className="ob-cart-px2__actions">
-          <Button variant="primary" fullWidth disabled={isValidating} onClick={() => void handleCheckout()}>
+          <Button
+            variant="primary"
+            fullWidth
+            className="btn-orange"
+            disabled={isValidating}
+            onClick={() => void handleCheckout()}
+          >
             {isValidating ? 'Checking cart…' : 'Proceed to checkout'}
           </Button>
           <div className="ob-cart-px2__actions-row">

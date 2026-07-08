@@ -76,6 +76,10 @@ import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomain
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
 import { registerTenantDomainEventSubscribers } from "./backend-lib/marketplace/registerTenantDomainEvents.js";
 import {
+  buildCustomerOrderTrackingUrl,
+  getCustomerAppName,
+} from "./backend-lib/shared/customerOrderLinks.js";
+import {
   FirebaseAdminProvider,
   resolveFirebaseProjectId,
   resolveStorageBucket,
@@ -2324,13 +2328,14 @@ async function notifyCustomer(order: any, status: string) {
     if (order.trackingUrl || order.trackingLink) message += `\n*Track here:* ${order.trackingUrl || order.trackingLink}`;
   }
 
-  const trackingLink = `${process.env.APP_URL || 'http://localhost:3000'}/order/${order.id}`;
+  const trackingLink = buildCustomerOrderTrackingUrl(order);
+  const brandName = getCustomerAppName(order);
   const userEmail = order.userEmail || order.email;
 
   if (userEmail) {
     const emailBody = `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
-        <h2 style="color: #ea580c;">Mana Inti Bojanam</h2>
+        <h2 style="color: #ea580c;">${brandName}</h2>
         <p>Hi ${order.userName || 'Customer'},</p>
         <p>${message.replace(/\n/g, '<br>')}</p>
         
@@ -2365,7 +2370,7 @@ async function notifyCustomer(order: any, status: string) {
     if (order.deliveryTimeSlot && order.deliveryTimeSlot !== 'ASAP') {
       whatsappMsg += `*Scheduled For:* ${order.deliveryTimeSlot}\n\n`;
     }
-    whatsappMsg += `*Track your order here:* ${trackingLink}\n\nThank you for ordering from Mana Inti Bojanam!`;
+    whatsappMsg += `*Track your order here:* ${trackingLink}\n\nThank you for ordering from ${brandName}!`;
     await sendWhatsAppNotification(order.phone, whatsappMsg);
   }
 
@@ -2375,7 +2380,7 @@ async function notifyCustomer(order: any, status: string) {
       orderId: order.id || "",
       status: String(status || ""),
       type: "order_status_update",
-      url: `/order/${order.id}`
+      url: trackingLink,
     });
   }
 }

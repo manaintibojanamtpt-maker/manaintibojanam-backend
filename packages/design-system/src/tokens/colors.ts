@@ -9,8 +9,8 @@ export const palette = {
     100: '#FFEDD5',
     200: '#FED7AA',
     300: '#FDBA74',
-    400: '#FF9F43',
-    500: '#FF7A00',
+    400: '#FF9F1C',
+    500: '#FF6B35',
     600: '#FF6B35',
     700: '#E85D04',
     800: '#C2410C',
@@ -38,7 +38,7 @@ export const palette = {
   veg: { 500: '#22C55E', border: '#15803D' },
   nonVeg: { 500: '#EF4444', border: '#B91C1C' },
   rating: { 500: '#FBBF24' },
-  offer: { 500: '#FF7A00', bg: 'rgba(255, 122, 0, 0.12)' },
+  offer: { 500: '#FF6B35', bg: 'rgba(255, 107, 53, 0.12)' },
   delivery: { 500: '#38BDF8' },
   discount: { 500: '#A855F7' },
   analytics: { 500: '#818CF8', gradientEnd: '#A855F7' },
@@ -135,8 +135,11 @@ export const foodSemantic: SemanticColors = {
   ...darkSemantic,
   background: '#070504',
   surface: '#120d0a',
-  card: '#1a1410',
+  card: '#120d0a',
   primary: palette.orange[500],
+  primaryHover: palette.orange[400],
+  offer: palette.offer[500],
+  focusRing: palette.orange[500],
 };
 
 export const foodLightSemantic: SemanticColors = {

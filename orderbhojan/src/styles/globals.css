@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@bhojan/design-system/styles.css";
+@import "./mib-theme.css";
 @layer base {
   html {
     @apply antialiased;

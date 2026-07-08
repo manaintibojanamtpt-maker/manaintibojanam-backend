@@ -3,10 +3,10 @@
 :root {
   --ob-premium-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ob-premium-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ob-premium-glass: color-mix(in srgb, var(--bds-color-background) 72%, transparent);
-  --ob-premium-glass-border: color-mix(in srgb, var(--bds-color-text-primary) 8%, transparent);
+  --ob-premium-glass: rgba(18, 13, 10, 0.72);
+  --ob-premium-glass-border: rgba(255, 255, 255, 0.08);
   --ob-premium-shadow-soft: 0 12px 40px color-mix(in srgb, #000 18%, transparent);
-  --ob-premium-shadow-lift: 0 20px 50px color-mix(in srgb, var(--bds-color-primary) 22%, transparent);
+  --ob-premium-shadow-lift: 0 20px 50px rgba(255, 107, 53, 0.22);
   --ob-content-max: 90rem;
   --ob-rail-gap: var(--bds-space-4);
 }
@@ -576,7 +576,7 @@
   width: 12%;
   left: 4%;
   border-radius: var(--bds-radius-pill);
-  background: linear-gradient(90deg, var(--bds-color-primary), color-mix(in srgb, var(--bds-color-primary) 70%, #ffb347));
+  background: linear-gradient(90deg, var(--bds-color-primary), var(--mib-primary-2, #ff9f1c));
   transition: transform 0.45s var(--ob-premium-ease-spring);
   transform: translateX(calc(var(--ob-nav-index, 0) * 760%));
 }
@@ -745,7 +745,7 @@
 [data-bds-theme='dark'] .ob-hero-header__address,
 [data-bds-theme='dark'] .ob-icon-btn,
 [data-bds-theme='dark'] .ob-bottom-nav-shell {
-  --ob-premium-glass: color-mix(in srgb, var(--bds-color-card) 78%, transparent);
+  --ob-premium-glass: rgba(18, 13, 10, 0.78);
 }
 
 /* ── Responsive width tiers ── */

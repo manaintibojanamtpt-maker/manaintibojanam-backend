@@ -1,15 +1,13 @@
-/** Transactional pages — cart, checkout, orders, favorites, tracking (PX2 premium) */
+/** Transactional pages — cart, checkout, orders, favorites, tracking (MIB premium) */
 
 :root {
-  --ob-txn-glass: color-mix(in srgb, var(--bds-color-surface) 78%, transparent);
-  --ob-txn-glass-strong: color-mix(in srgb, var(--bds-color-surface) 88%, transparent);
-  --ob-txn-glass-border: color-mix(in srgb, var(--bds-color-text-primary) 6%, transparent);
-  --ob-txn-shadow-card: 0 8px 32px color-mix(in srgb, #000 10%, transparent);
-  --ob-txn-shadow-lift: 0 24px 64px color-mix(in srgb, var(--bds-color-primary) 14%, transparent);
-  --ob-txn-radius: clamp(1rem, 2.5vw, 1.25rem);
+  --ob-txn-glass-border: var(--mib-border, color-mix(in srgb, var(--bds-color-text-primary) 6%, transparent));
+  --ob-txn-shadow-card: var(--mib-shadow-card, 0 8px 32px color-mix(in srgb, #000 10%, transparent));
+  --ob-txn-shadow-lift: var(--mib-shadow-glow, 0 24px 64px color-mix(in srgb, var(--bds-color-primary) 14%, transparent));
+  --ob-txn-radius: var(--mib-radius-card, clamp(1rem, 2.5vw, 1.25rem));
 }
 
-/* ── Shared transactional shell ── */
+/* ── Shared transactional shell — warm MIB dark canvas ── */
 .ob-cart-px2,
 .ob-checkout-px2,
 .ob-orders-px2,
@@ -23,9 +21,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--bds-space-4);
+  color: var(--mib-text, var(--bds-color-text-primary));
   background:
-    radial-gradient(900px 480px at 0% -10%, color-mix(in srgb, var(--bds-color-primary) 12%, transparent), transparent 55%),
-    var(--bds-color-background-luxury, var(--bds-color-background));
+    radial-gradient(ellipse 120% 80% at 50% -18%, rgba(255, 107, 53, 0.14), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 100% 8%, rgba(255, 159, 28, 0.07), transparent 42%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(255, 107, 53, 0.05), transparent 45%),
+    var(--mib-bg, var(--bds-color-background-luxury, var(--bds-color-background)));
 }
 
 .ob-txn-page__header {
@@ -37,10 +38,80 @@
 .ob-txn-page__title {
   letter-spacing: -0.03em;
   font-weight: 800;
+  color: var(--mib-text, var(--bds-color-text-primary));
 }
 
 .ob-txn-page__subtitle {
-  color: var(--bds-color-text-secondary);
+  color: var(--mib-muted, var(--bds-color-text-secondary));
+}
+
+/* ── MIB glass + premium card composition on transactional sections ── */
+.ob-cart-px2__restaurant.mib-glass,
+.ob-cart-line.mib-glass,
+.ob-cart-px2__summary.mib-glass,
+.ob-checkout-px2__address.mib-glass,
+.ob-checkout-px2__bill.mib-glass,
+.ob-checkout-px2__phone.mib-glass,
+.ob-order-card.mib-glass,
+.ob-tracking-px2__hero.mib-glass {
+  border-radius: var(--ob-txn-radius);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    rgba(18, 13, 10, 0.9);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--mib-border, rgba(255, 255, 255, 0.05));
+  box-shadow: var(--mib-shadow-card);
+}
+
+.ob-cart-px2__summary.premium-card,
+.ob-checkout-px2__bill.premium-card {
+  box-shadow: var(--ob-txn-shadow-card), var(--ob-txn-shadow-lift);
+}
+
+/* ── Gradient CTAs (founder btn-orange on BDS buttons) ── */
+.ob-cart-px2 .bds-btn.btn-orange,
+.ob-cart-px2 .bds-btn.mib-primary-action,
+.ob-checkout-px2 .bds-btn.btn-orange,
+.ob-checkout-px2 .bds-btn.mib-primary-action {
+  background: linear-gradient(135deg, var(--mib-primary), var(--mib-primary-2)) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 12px 24px -12px rgba(255, 107, 53, 0.5) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--bds-radius-2xl) !important;
+}
+
+.ob-cart-px2 .bds-btn.btn-orange:hover:not(:disabled),
+.ob-cart-px2 .bds-btn.mib-primary-action:hover:not(:disabled),
+.ob-checkout-px2 .bds-btn.btn-orange:hover:not(:disabled),
+.ob-checkout-px2 .bds-btn.mib-primary-action:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff8a65, #ffb366) !important;
+  filter: brightness(1.02);
+}
+
+.ob-cart-px2 .bds-btn.btn-orange:active:not(:disabled),
+.ob-cart-px2 .bds-btn.mib-primary-action:active:not(:disabled),
+.ob-checkout-px2 .bds-btn.btn-orange:active:not(:disabled),
+.ob-checkout-px2 .bds-btn.mib-primary-action:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Discovery cards — warmer founder Home treatment ── */
+.ob-discovery-card.premium-card.ob-restaurant-tile {
+  background:
+    radial-gradient(circle at top left, rgba(255, 159, 28, 0.1), transparent 38%),
+    linear-gradient(145deg, rgba(32, 23, 17, 0.98), rgba(12, 9, 7, 0.98)) !important;
+  border: 1px solid var(--mib-border-strong, rgba(255, 170, 95, 0.12)) !important;
+  box-shadow: var(--mib-shadow-card) !important;
+  border-radius: var(--mib-radius-card) !important;
+}
+
+.ob-discovery-card.premium-card-hover:hover {
+  box-shadow: var(--mib-shadow-card), var(--mib-shadow-glow) !important;
+  border-color: var(--mib-border-strong, rgba(255, 170, 95, 0.12)) !important;
 }
 
 /* ── Cart ── */
@@ -49,12 +120,6 @@
   align-items: center;
   gap: var(--bds-space-3);
   padding: var(--bds-space-4);
-  border-radius: var(--ob-txn-radius);
-  background: var(--ob-txn-glass);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid var(--ob-txn-glass-border);
-  box-shadow: var(--ob-txn-shadow-card);
 }
 
 .ob-cart-px2__restaurant-icon {
@@ -103,12 +168,6 @@
   align-items: start;
   gap: var(--bds-space-3);
   padding: var(--bds-space-3);
-  border-radius: var(--ob-txn-radius);
-  background: var(--ob-txn-glass);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  border: 1px solid var(--ob-txn-glass-border);
-  box-shadow: var(--ob-txn-shadow-card);
 }
 
 .ob-cart-line__media {
@@ -175,12 +234,6 @@
 
 .ob-cart-px2__summary {
   padding: var(--bds-space-4);
-  border-radius: var(--ob-txn-radius);
-  background: var(--ob-txn-glass-strong);
-  backdrop-filter: blur(20px) saturate(170%);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
-  border: 1px solid var(--ob-txn-glass-border);
-  box-shadow: var(--ob-txn-shadow-card);
 }
 
 .ob-cart-px2__summary-row {
@@ -223,12 +276,6 @@
 .ob-checkout-px2__address {
   margin-top: 0;
   padding: var(--bds-space-4);
-  border-radius: var(--ob-txn-radius);
-  background: var(--ob-txn-glass);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid var(--ob-txn-glass-border);
-  box-shadow: var(--ob-txn-shadow-card);
 }
 
 .ob-checkout-px2__address-icon {
@@ -240,12 +287,6 @@
 .ob-checkout-px2__bill {
   margin-top: 0;
   padding: var(--bds-space-4);
-  border-radius: var(--ob-txn-radius);
-  background: var(--ob-txn-glass-strong);
-  backdrop-filter: blur(20px) saturate(170%);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
-  border: 1px solid var(--ob-txn-glass-border);
-  box-shadow: var(--ob-txn-shadow-lift);
 }
 
 .ob-checkout-px2__bill-row {
@@ -271,6 +312,7 @@
 
 .ob-checkout-px2__phone {
   margin-top: 0;
+  padding: var(--bds-space-4);
 }
 
 .ob-checkout-px2__error {
@@ -708,9 +750,10 @@
   }
 }
 
-[data-bds-theme='dark'] .ob-cart-line,
-[data-bds-theme='dark'] .ob-checkout-px2__bill,
-[data-bds-theme='dark'] .ob-order-card {
-  --ob-txn-glass: color-mix(in srgb, var(--bds-color-card) 82%, transparent);
-  --ob-txn-glass-strong: color-mix(in srgb, var(--bds-color-card) 90%, transparent);
+[data-bds-theme='dark'] .ob-cart-px2,
+[data-bds-theme='dark'] .ob-checkout-px2 {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -18%, rgba(255, 107, 53, 0.16), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 100% 8%, rgba(255, 159, 28, 0.08), transparent 42%),
+    var(--mib-bg, #070504);
 }

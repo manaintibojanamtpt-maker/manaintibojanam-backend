@@ -35,7 +35,7 @@ function CheckoutDeliveryAddress() {
       : active?.displayLabel ?? DELIVERY_ADDRESS_PLACEHOLDER;
 
   return (
-    <section className="ob-checkout-px2__address" aria-label="Delivery address">
+    <section className="ob-checkout-px2__address mib-glass premium-card" aria-label="Delivery address">
       <div className="ob-checkout-px2__address-row">
         <Icon size={20} label="Delivery address" className="ob-checkout-px2__address-icon">
           <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
@@ -67,7 +67,7 @@ function BillSummary({
   readonly quote: NonNullable<ReturnType<typeof useCheckoutFlow>['quote']>;
 }) {
   return (
-    <section className="ob-checkout-px2__bill" aria-label="Bill summary">
+    <section className="ob-checkout-px2__bill mib-glass premium-card" aria-label="Bill summary">
       {quote.lineItems.map((item) => (
         <div key={item.label} className="ob-checkout-px2__bill-row">
           <Text variant="body">{item.label}</Text>
@@ -168,7 +168,7 @@ export function CheckoutPage() {
           </Text>
         </header>
         <div className="ob-checkout-px2__success-actions">
-          <Button variant="primary" onClick={() => navigate(`/orders/${orderId}/track`)}>
+          <Button variant="primary" className="btn-orange" onClick={() => navigate(`/orders/${orderId}/track`)}>
             Track order
           </Button>
           <Button variant="secondary" onClick={() => navigate('/orders')}>
@@ -229,7 +229,7 @@ export function CheckoutPage() {
 
       {quote ? <BillSummary quote={quote} /> : null}
 
-      <div className="ob-checkout-px2__phone">
+      <section className="ob-checkout-px2__phone mib-glass premium-card" aria-label="Contact details">
         <Input
           label="Mobile number"
           inputMode="numeric"
@@ -242,7 +242,7 @@ export function CheckoutPage() {
           error={phoneError ?? undefined}
           hint="Required for order updates and delivery coordination"
         />
-      </div>
+      </section>
 
       {error ? (
         <Text variant="body" role="alert" className="ob-checkout-px2__error">
@@ -258,6 +258,7 @@ export function CheckoutPage() {
         {supportsCod ? (
           <Button
             variant={showBothPaymentOptions ? 'secondary' : 'primary'}
+            className={showBothPaymentOptions ? undefined : 'btn-orange'}
             disabled={isBusy || !quote}
             onClick={() => void handlePlaceCod()}
           >
@@ -270,6 +271,7 @@ export function CheckoutPage() {
         {supportsRazorpay ? (
           <Button
             variant="primary"
+            className="btn-orange"
             disabled={isBusy || !quote}
             onClick={() => void handlePlaceRazorpay()}
           >

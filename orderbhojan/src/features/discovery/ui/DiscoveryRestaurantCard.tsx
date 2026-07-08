@@ -46,7 +46,7 @@ export function DiscoveryRestaurantCard({
   return (
     <Card
       interactive
-      className="bds-restaurant-card ob-restaurant-tile ob-discovery-card"
+      className="bds-restaurant-card ob-restaurant-tile ob-discovery-card premium-card premium-card-hover"
       style={{ width, minWidth: width }}
       onClick={() => {
         if (restaurantEnabled) {
