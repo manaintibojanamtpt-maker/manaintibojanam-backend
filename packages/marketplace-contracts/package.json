@@ -15,9 +15,8 @@
   },
   "files": ["dist"],
   "scripts": {
-    "prepare": "npm run build",
-    "build": "tsc --project tsconfig.build.json",
-    "lint": "tsc --noEmit"
+    "build": "node scripts/build.mjs",
+    "lint": "node ../../node_modules/typescript/bin/tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

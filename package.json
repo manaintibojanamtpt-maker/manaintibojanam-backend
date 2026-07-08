@@ -42,6 +42,7 @@
     "docs:owner-guide-capture": "node scripts/capture-guide-screenshots.mjs"
   },
   "dependencies": {
+    "@bhojan/marketplace-contracts": "file:packages/marketplace-contracts",
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
@@ -73,7 +74,6 @@
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "@bhojan/marketplace-contracts": "file:packages/marketplace-contracts",
     "node-cron": "^4.5.0",
     "nodemailer": "^8.0.4",
     "qrcode.react": "^4.2.0",
@@ -110,6 +110,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-google-recaptcha": "^2.1.9",
     "autoprefixer": "^10.4.21",
+    "firebase-tools": "^14.27.0",
     "puppeteer": "^25.2.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

@@ -15,11 +15,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build marketplace contracts package
+        run: npm run build --prefix packages/marketplace-contracts
 
       - name: Verify projection flags OFF
         run: npm run verify:ga1-flags
