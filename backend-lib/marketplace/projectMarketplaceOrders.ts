@@ -115,6 +115,77 @@ function tenantDisplayName(db: Firestore, tenantId: string): Promise<string> {
     .then((doc) => (doc.exists ? String(doc.data()?.name ?? tenantId) : tenantId));
 }
 
+async function tenantMeta(
+  db: Firestore,
+  tenantId: string,
+): Promise<{ displayName: string; slug: string }> {
+  const doc = await db.collection('tenants').doc(tenantId).get();
+  if (!doc.exists) {
+    return { displayName: tenantId, slug: tenantId };
+  }
+  const data = doc.data() as Record<string, unknown>;
+  return {
+    displayName: String(data.name ?? tenantId),
+    slug: String(data.slug ?? tenantId),
+  };
+}
+
+function safeText(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as { name?: unknown; label?: unknown };
+    if (typeof record.name === 'string') return record.name.trim() || undefined;
+    if (typeof record.label === 'string') return record.label.trim() || undefined;
+  }
+  return undefined;
+}
+
+function phoneDigits(value: unknown): string | undefined {
+  const text = safeText(value);
+  if (!text) return undefined;
+  const digits = text.replace(/\D/g, '');
+  return digits || undefined;
+}
+
+function deliveryPartnerLabel(value: unknown): string | undefined {
+  return safeText(value);
+}
+
+function readTrackingUrl(data: OrderRecord): string | undefined {
+  return safeText(data.trackingUrl) ?? safeText(data.trackingLink);
+}
+
+function readOrderItems(data: OrderRecord) {
+  if (!Array.isArray(data.items)) return [];
+  return data.items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const item = raw as Record<string, unknown>;
+      const itemId = safeText(item.menuItemId ?? item.itemId ?? item.id);
+      const name = safeText(item.name) ?? 'Item';
+      const quantity = Number(item.quantity ?? 1);
+      const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
+      if (!Number.isFinite(quantity) || quantity <= 0) return null;
+      return {
+        itemId: itemId ?? name,
+        name,
+        quantity: Math.floor(quantity),
+        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+}
+
+export interface OrderTrackingMeta {
+  readonly displayName: string;
+  readonly slug: string;
+}
+
 export function projectOrderSummary(orderId: string, data: OrderRecord, displayName: string) {
   return {
     orderId,
@@ -126,9 +197,23 @@ export function projectOrderSummary(orderId: string, data: OrderRecord, displayN
   };
 }
 
-export function projectOrderTracking(orderId: string, data: OrderRecord) {
+export function projectOrderTracking(
+  orderId: string,
+  data: OrderRecord,
+  meta?: OrderTrackingMeta,
+) {
   const timeline = buildTrackingTimeline(data);
   const status = normalizeTrackingStatus(String(data.status ?? timeline[timeline.length - 1]?.status ?? 'PLACED'));
+  const items = readOrderItems(data);
+  const grandTotal = Number(data.totalAmount ?? data.total ?? 0);
+  const deliveryPartner = deliveryPartnerLabel(data.deliveryPartner);
+  const trackingUrl = readTrackingUrl(data);
+  const riderName = safeText(data.riderName);
+  const riderPhone = phoneDigits(data.riderPhone);
+  const reviewed = data.reviewed === true || data.feedbackStatus === 'SUBMITTED';
+  const hasDeliveryDetails = Boolean(deliveryPartner || trackingUrl || riderName || riderPhone);
+  const restaurantSlug = meta?.slug ?? safeText(data.tenantSlug) ?? safeText(data.tenantId);
+  const restaurantName = meta?.displayName ?? safeText(data.tenantName) ?? restaurantSlug ?? 'Kitchen';
 
   return {
     orderId,
@@ -137,6 +222,49 @@ export function projectOrderTracking(orderId: string, data: OrderRecord) {
     etaMinutes: data.eta
       ? { min: Math.max(10, Number(data.eta) - 5), max: Number(data.eta) + 5 }
       : undefined,
+    restaurant: {
+      displayName: restaurantName,
+      slug: restaurantSlug ?? 'kitchen',
+      restaurantId: String(data.tenantId ?? ''),
+    },
+    delivery: hasDeliveryDetails
+      ? {
+          partner: deliveryPartner,
+          trackingUrl,
+          riderName,
+          riderPhone,
+        }
+      : undefined,
+    invoice: {
+      orderNumber: safeText(data.orderNumber) ?? orderId.slice(-6).toUpperCase(),
+      createdAt: readTimestamp(data.createdAt),
+      kitchenName: restaurantName,
+      customerName: safeText(data.customerName),
+      phone: phoneDigits(data.phone ?? data.customerPhone),
+      address: safeText(data.address ?? (data.deliveryAddress as { addressLine1?: string } | undefined)?.addressLine1),
+      paymentMethod: safeText(data.paymentMethod),
+      paymentStatus: safeText(data.paymentStatus),
+      items,
+      subtotal: Number(data.subtotal ?? grandTotal),
+      gstAmount: Number(data.gstAmount ?? 0),
+      deliveryFee: Number(data.deliveryFee ?? 0),
+      packingFee: Number(data.packingFee ?? 0),
+      grandTotal,
+    },
+    feedback: {
+      eligible: status === 'DELIVERED',
+      submitted: reviewed,
+      rating: typeof data.rating === 'number' ? data.rating : undefined,
+      comment: safeText(data.feedback),
+    },
+    reorder:
+      items.length > 0 && restaurantSlug
+        ? {
+            restaurantSlug,
+            restaurantId: String(data.tenantId ?? ''),
+            items,
+          }
+        : undefined,
   };
 }
 
@@ -171,9 +299,10 @@ export async function getMarketplaceOrderForUser(
   const data = doc.data() as OrderRecord;
   if (String(data.userId ?? '') !== userId) return null;
   const displayName = await tenantDisplayName(db, String(data.tenantId ?? ''));
+  const meta = await tenantMeta(db, String(data.tenantId ?? ''));
   return {
     summary: projectOrderSummary(doc.id, data, displayName),
-    tracking: projectOrderTracking(doc.id, data),
+    tracking: projectOrderTracking(doc.id, data, meta),
   };
 }
 
@@ -189,5 +318,6 @@ export async function getMarketplaceTrackingForGuest(
   const inputPhone = phone.replace(/\D/g, '');
   if (!orderPhone || !inputPhone) return null;
   if (orderPhone.slice(-4) !== inputPhone.slice(-4)) return null;
-  return projectOrderTracking(doc.id, data);
+  const meta = await tenantMeta(db, String(data.tenantId ?? ''));
+  return projectOrderTracking(doc.id, data, meta);
 }

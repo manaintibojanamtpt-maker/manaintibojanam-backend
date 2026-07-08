@@ -8,12 +8,22 @@ import {
 describe('projectMarketplaceOrders guest tracking', () => {
   it('projectOrderTracking builds timeline from status', () => {
     const tracking = projectOrderTracking('ord-1', {
-      status: 'PREPARING',
+      status: 'OUT_FOR_DELIVERY',
       createdAt: '2026-01-01T10:00:00.000Z',
-    });
+      deliveryPartner: 'Rapido',
+      trackingUrl: 'https://rapido.bike/track/1',
+      riderName: 'Raju',
+      riderPhone: '9876543210',
+      items: [{ menuItemId: 'item-1', name: 'Biryani', quantity: 1, unitPrice: 249 }],
+      totalAmount: 263,
+    }, { displayName: 'Mana Inti Kitchen', slug: 'mana-inti' });
     assert.equal(tracking.orderId, 'ord-1');
-    assert.equal(tracking.status, 'PREPARING');
+    assert.equal(tracking.status, 'OUT_FOR_DELIVERY');
     assert.ok(tracking.timeline.length >= 1);
+    assert.equal(tracking.delivery?.partner, 'Rapido');
+    assert.equal(tracking.delivery?.riderName, 'Raju');
+    assert.equal(tracking.invoice?.kitchenName, 'Mana Inti Kitchen');
+    assert.equal(tracking.reorder?.items.length, 1);
   });
 
   it('getMarketplaceTrackingForGuest matches phone last four digits', async () => {

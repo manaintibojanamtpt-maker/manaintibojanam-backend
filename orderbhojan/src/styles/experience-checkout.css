@@ -454,6 +454,147 @@
   gap: var(--bds-space-3);
 }
 
+.ob-tracking-px2__hero-kitchen {
+  color: var(--bds-color-text-secondary);
+  margin-top: var(--bds-space-1);
+}
+
+.ob-tracking-px2__section-title {
+  margin-bottom: var(--bds-space-3);
+}
+
+.ob-tracking-px2__delivery,
+.ob-tracking-px2__feedback {
+  padding: var(--bds-space-4);
+  margin-bottom: var(--bds-space-4);
+}
+
+.ob-tracking-px2__delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--bds-space-3);
+  margin-bottom: var(--bds-space-4);
+}
+
+.ob-tracking-px2__label {
+  display: block;
+  margin-bottom: var(--bds-space-1);
+  color: var(--bds-color-text-tertiary);
+}
+
+.ob-tracking-px2__phone-link {
+  color: var(--bds-color-brand-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ob-tracking-px2__track-btn {
+  width: 100%;
+}
+
+.ob-tracking-px2__post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bds-space-3);
+  margin-bottom: var(--bds-space-4);
+}
+
+.ob-tracking-px2__feedback-copy {
+  margin-bottom: var(--bds-space-3);
+}
+
+.ob-tracking-px2__stars {
+  display: flex;
+  gap: var(--bds-space-2);
+  margin-bottom: var(--bds-space-3);
+}
+
+.ob-tracking-px2__star {
+  background: transparent;
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--bds-color-text-tertiary);
+  cursor: pointer;
+}
+
+.ob-tracking-px2__star--active {
+  color: #f59e0b;
+}
+
+.ob-tracking-px2__invoice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--bds-space-4);
+}
+
+.ob-tracking-px2__invoice-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.ob-tracking-px2__invoice-sheet {
+  position: relative;
+  width: min(100%, 40rem);
+  max-height: 90vh;
+  overflow: auto;
+  padding: var(--bds-space-5);
+}
+
+.ob-tracking-px2__invoice-header,
+.ob-tracking-px2__invoice-meta,
+.ob-tracking-px2__invoice-lines,
+.ob-tracking-px2__invoice-totals {
+  margin-bottom: var(--bds-space-4);
+}
+
+.ob-tracking-px2__invoice-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--bds-space-3);
+}
+
+.ob-tracking-px2__invoice-actions {
+  display: flex;
+  gap: var(--bds-space-2);
+  flex-wrap: wrap;
+}
+
+.ob-tracking-px2__invoice-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--bds-space-3);
+  padding: var(--bds-space-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ob-tracking-px2__invoice-line--total {
+  border-bottom: none;
+  padding-top: var(--bds-space-3);
+}
+
+@media print {
+  .ob-tracking-px2__invoice-overlay {
+    position: static;
+    padding: 0;
+  }
+
+  .ob-tracking-px2__invoice-backdrop,
+  .ob-tracking-px2__invoice-actions {
+    display: none;
+  }
+
+  .ob-tracking-px2__invoice-sheet {
+    max-height: none;
+    box-shadow: none;
+  }
+}
+
 /* ── Order timeline ── */
 .ob-order-timeline {
   list-style: none;

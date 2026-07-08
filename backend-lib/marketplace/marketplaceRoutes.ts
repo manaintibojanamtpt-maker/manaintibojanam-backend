@@ -715,6 +715,64 @@ export function registerMarketplaceRoutes(
         res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
       }
     });
+
+    app.post(`${prefix}/orders/:orderId/feedback`, verifyFirebaseToken, async (req: any, res: Response) => {
+      try {
+        const orderId = String(req.params.orderId ?? '').trim();
+        const rating = Number(req.body?.rating);
+        const feedback = typeof req.body?.feedback === 'string' ? req.body.feedback.trim() : '';
+        if (!orderId || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+          return res.status(400).json({
+            ok: false,
+            error: { code: 'INVALID', message: 'rating between 1 and 5 is required', retryable: false },
+          });
+        }
+
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderSnap = await orderRef.get();
+        if (!orderSnap.exists) {
+          return res.status(404).json(notFound('Order not found'));
+        }
+        const orderData = orderSnap.data() as Record<string, unknown>;
+        if (String(orderData.userId ?? '') !== req.user.uid) {
+          return res.status(403).json({
+            ok: false,
+            error: { code: 'FORBIDDEN', message: 'Not your order', retryable: false },
+          });
+        }
+        if (String(orderData.status ?? '').toUpperCase() !== 'DELIVERED') {
+          return res.status(400).json({
+            ok: false,
+            error: { code: 'INVALID', message: 'Feedback is only allowed after delivery', retryable: false },
+          });
+        }
+
+        const batch = db.batch();
+        batch.update(orderRef, {
+          rating,
+          feedback: feedback || null,
+          reviewed: true,
+          feedbackStatus: 'SUBMITTED',
+          feedbackSubmittedAt: FieldValue.serverTimestamp(),
+        });
+        batch.set(db.collection('reviews').doc(), {
+          orderId,
+          userId: req.user.uid,
+          rating,
+          feedback: feedback || null,
+          items: Array.isArray(orderData.items) ? orderData.items : [],
+          tenantId: orderData.tenantId ?? null,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        await batch.commit();
+
+        const updated = await getMarketplaceOrderForUser(db, orderId, req.user.uid);
+        sendMarketplaceJson(res, success(updated?.tracking ?? null));
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to submit feedback';
+        res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+      }
+    });
   }
 
   app.get(`${prefix}/orders/:orderId/guest-tracking`, async (req: Request, res: Response) => {

@@ -267,12 +267,58 @@ export const marketplaceHandlers = [
     if (!hasBearer(request)) return unauthorized();
     return success({
       orderId: String(params.orderId),
-      status: 'PREPARING',
+      status: 'OUT_FOR_DELIVERY',
       timeline: [
-        { status: 'PLACED', at: new Date(Date.now() - 600_000).toISOString() },
-        { status: 'PREPARING', at: new Date().toISOString(), message: 'Kitchen is preparing your order' },
+        { status: 'PLACED', at: new Date(Date.now() - 900_000).toISOString() },
+        { status: 'ACCEPTED', at: new Date(Date.now() - 700_000).toISOString() },
+        { status: 'PREPARING', at: new Date(Date.now() - 500_000).toISOString() },
+        { status: 'OUT_FOR_DELIVERY', at: new Date().toISOString(), message: 'Rider is on the way' },
       ],
-      etaMinutes: { min: 25, max: 35 },
+      etaMinutes: { min: 10, max: 20 },
+      restaurant: {
+        displayName: MOCK_RESTAURANTS[0].displayName,
+        slug: MOCK_RESTAURANTS[0].restaurantSlug,
+        restaurantId: MOCK_RESTAURANTS[0].restaurantId,
+      },
+      delivery: {
+        partner: 'Rapido',
+        trackingUrl: 'https://rapido.bike/track/demo',
+        riderName: 'Raju',
+        riderPhone: '9876543210',
+      },
+      invoice: {
+        orderNumber: 'YT00ZD',
+        createdAt: new Date().toISOString(),
+        kitchenName: MOCK_RESTAURANTS[0].displayName,
+        customerName: 'Guest',
+        phone: '8885668863',
+        items: [{ itemId: 'biryani-1', name: 'Chicken biryani', quantity: 1, unitPrice: 249 }],
+        subtotal: 249,
+        gstAmount: 0,
+        deliveryFee: 14,
+        packingFee: 0,
+        grandTotal: 263,
+      },
+      feedback: { eligible: false, submitted: false },
+      reorder: {
+        restaurantSlug: MOCK_RESTAURANTS[0].restaurantSlug,
+        restaurantId: MOCK_RESTAURANTS[0].restaurantId,
+        items: [{ itemId: 'biryani-1', name: 'Chicken biryani', quantity: 1, unitPrice: 249 }],
+      },
+    });
+  }),
+
+  http.post(`${prefix}/orders/:orderId/feedback`, async ({ params, request }) => {
+    if (!hasBearer(request)) return unauthorized();
+    const body = (await request.json()) as { rating?: number; feedback?: string };
+    return success({
+      orderId: String(params.orderId),
+      status: 'DELIVERED',
+      timeline: [
+        { status: 'PLACED', at: new Date(Date.now() - 1_800_000).toISOString() },
+        { status: 'DELIVERED', at: new Date().toISOString() },
+      ],
+      feedback: { eligible: true, submitted: true, rating: body.rating, comment: body.feedback },
     });
   }),
 

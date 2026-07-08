@@ -133,6 +133,54 @@ export interface OrderTrackingResponse {
   readonly status: string;
   readonly timeline: readonly { readonly status: string; readonly at: string; readonly message?: string }[];
   readonly etaMinutes?: { readonly min: number; readonly max: number };
+  readonly restaurant?: {
+    readonly displayName: string;
+    readonly slug: string;
+    readonly restaurantId: string;
+  };
+  readonly delivery?: {
+    readonly partner?: string;
+    readonly trackingUrl?: string;
+    readonly riderName?: string;
+    readonly riderPhone?: string;
+  };
+  readonly invoice?: {
+    readonly orderNumber: string;
+    readonly createdAt: string;
+    readonly kitchenName: string;
+    readonly customerName?: string;
+    readonly phone?: string;
+    readonly address?: string;
+    readonly paymentMethod?: string;
+    readonly paymentStatus?: string;
+    readonly items: readonly {
+      readonly itemId: string;
+      readonly name: string;
+      readonly quantity: number;
+      readonly unitPrice: number;
+    }[];
+    readonly subtotal: number;
+    readonly gstAmount: number;
+    readonly deliveryFee: number;
+    readonly packingFee: number;
+    readonly grandTotal: number;
+  };
+  readonly feedback?: {
+    readonly eligible: boolean;
+    readonly submitted: boolean;
+    readonly rating?: number;
+    readonly comment?: string;
+  };
+  readonly reorder?: {
+    readonly restaurantSlug: string;
+    readonly restaurantId: string;
+    readonly items: readonly {
+      readonly itemId: string;
+      readonly name: string;
+      readonly quantity: number;
+      readonly unitPrice: number;
+    }[];
+  };
 }
 
 export interface CustomerProfile {

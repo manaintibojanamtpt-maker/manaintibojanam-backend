@@ -10,7 +10,11 @@ import {
 } from '@bhojan/design-system';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useOrderTracking } from '../hooks/useOrderTracking';
+import { useReorderFromTracking } from '../hooks/useReorderFromTracking';
 import { OrderTimeline } from './OrderTimeline';
+import { DeliveryTrackingPanel } from './DeliveryTrackingPanel';
+import { OrderInvoiceSheet } from './OrderInvoiceSheet';
+import { OrderFeedbackPanel } from './OrderFeedbackPanel';
 import { trackingStepLabel } from '../utils/trackingSteps';
 
 export function TrackingPage() {
@@ -25,6 +29,8 @@ export function TrackingPage() {
   const needsGuestPhone = !isAuthenticated;
   const canFetch = isAuthenticated || submittedPhone.replace(/\D/g, '').length >= 4;
   const trackingQuery = useOrderTracking(orderId, needsGuestPhone ? submittedPhone : undefined);
+  const { reorder, busy: reorderBusy } = useReorderFromTracking();
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const etaLabel = useMemo(() => {
     const eta = trackingQuery.data?.etaMinutes;
@@ -93,15 +99,23 @@ export function TrackingPage() {
   }
 
   const isRefreshing = trackingQuery.isFetching && !trackingQuery.isLoading;
+  const tracking = trackingQuery.data;
+  const showDeliveryPanel =
+    tracking.status === 'OUT_FOR_DELIVERY' && Boolean(tracking.delivery);
 
   return (
     <MotionPage className="ob-tracking-px2">
       <section className="ob-tracking-px2__hero" aria-label="Order status">
         <Text variant="heading" as="p" className="ob-tracking-px2__hero-status">
-          {trackingStepLabel(trackingQuery.data.status)}
+          {trackingStepLabel(tracking.status)}
         </Text>
+        {tracking.restaurant ? (
+          <Text variant="subtitle" className="ob-tracking-px2__hero-kitchen">
+            {tracking.restaurant.displayName}
+          </Text>
+        ) : null}
         <Text variant="body" className="ob-tracking-px2__hero-order">
-          Order {trackingQuery.data.orderId}
+          Order {tracking.orderId}
         </Text>
         {etaLabel ? (
           <Text variant="subtitle" className="ob-tracking-px2__hero-eta">
@@ -117,7 +131,45 @@ export function TrackingPage() {
         </div>
       </section>
 
-      <OrderTimeline tracking={trackingQuery.data} />
+      {showDeliveryPanel && tracking.delivery ? (
+        <DeliveryTrackingPanel delivery={tracking.delivery} />
+      ) : null}
+
+      <OrderTimeline tracking={tracking} />
+
+      {tracking.invoice ? (
+        <div className="ob-tracking-px2__post-actions">
+          <Button variant="secondary" onClick={() => setInvoiceOpen(true)}>
+            View digital invoice
+          </Button>
+        </div>
+      ) : null}
+
+      {tracking.feedback ? (
+        <OrderFeedbackPanel
+          orderId={tracking.orderId}
+          feedback={tracking.feedback}
+          onSubmitted={() => void trackingQuery.refetch()}
+        />
+      ) : null}
+
+      {tracking.reorder ? (
+        <div className="ob-tracking-px2__post-actions">
+          <Button
+            variant="primary"
+            disabled={reorderBusy}
+            onClick={() => void reorder(tracking.reorder!)}
+          >
+            {reorderBusy ? 'Adding to cart…' : 'Reorder same items'}
+          </Button>
+        </div>
+      ) : null}
+
+      <OrderInvoiceSheet
+        invoice={tracking.invoice!}
+        open={invoiceOpen && Boolean(tracking.invoice)}
+        onClose={() => setInvoiceOpen(false)}
+      />
 
       <div className="ob-tracking-px2__actions">
         {isAuthenticated ? (

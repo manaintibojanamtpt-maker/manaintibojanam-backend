@@ -349,6 +349,17 @@ export class MarketplaceApiClient {
     });
   }
 
+  submitOrderFeedback(
+    orderId: string,
+    body: { rating: number; feedback?: string },
+  ): Promise<OrderTrackingResponse | null> {
+    return this.http.request({
+      method: 'POST',
+      path: `${MARKETPLACE_PREFIX}/orders/${encodeURIComponent(orderId)}/feedback`,
+      body,
+    });
+  }
+
   validateCart(body: {
     restaurantId: string;
     contextToken: string;
