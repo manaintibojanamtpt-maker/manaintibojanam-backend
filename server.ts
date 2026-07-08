@@ -52,6 +52,7 @@ import {
 import { registerMarketplaceRoutes } from "./backend-lib/marketplace/marketplaceRoutes";
 import { registerMarketplaceReferralRoutes } from "./backend-lib/marketplace/marketplaceReferralRoutes.js";
 import { registerOwnerStorefrontRoutes } from "./backend-lib/marketplace/ownerStorefrontRoutes";
+import { registerOwnerStorefrontMediaRoutes } from "./backend-lib/marketplace/ownerStorefrontMediaRoutes";
 import { registerOwnerCouponsRoutes } from "./backend-lib/marketplace/ownerCouponsRoutes.js";
 import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrdersRoutes.js";
 import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
@@ -1063,6 +1064,8 @@ app.post(
     }
   },
 );
+
+registerOwnerStorefrontMediaRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 
 app.use(bodyParser.json());
 

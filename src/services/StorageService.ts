@@ -192,7 +192,7 @@ class StorageService {
   }
 
   /**
-   * Upload storefront cover or gallery image for OrderBhojan marketplace projection.
+   * @deprecated Use uploadStorefrontMediaViaApi — avoids Firebase Storage / billing setup.
    */
   async uploadStorefrontImage(
     file: File,

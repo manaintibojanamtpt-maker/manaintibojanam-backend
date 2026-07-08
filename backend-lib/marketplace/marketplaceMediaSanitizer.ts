@@ -24,8 +24,11 @@ function assertSafeMediaUrl(url: unknown, label: string): string | undefined {
   }
   if (trimmed.startsWith('data:')) {
     throw new MarketplaceMediaValidationError(
-      `${label} must be uploaded to storage — embedded photos cannot be saved. Re-upload the image and try again.`,
+      `${label} must be uploaded through the gallery upload button. Theme colors and text can be saved without images.`,
     );
+  }
+  if (!/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/api/marketplace/media/')) {
+    throw new MarketplaceMediaValidationError(`${label} must be a public image URL.`);
   }
   return trimmed;
 }

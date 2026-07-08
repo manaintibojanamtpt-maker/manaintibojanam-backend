@@ -40,6 +40,7 @@ import {
 } from './projectMarketplaceOrders.js';
 import { registerMarketplaceCustomerRoutes } from './marketplaceCustomerRoutes.js';
 import { registerMarketplaceLocationRoutes } from './marketplaceLocationRoutes.js';
+import { registerMarketplaceMediaPublicRoute } from './ownerStorefrontMediaRoutes.js';
 import {
   projectFoodBestsellers,
   projectFoodCategories,
@@ -142,6 +143,7 @@ export function registerMarketplaceRoutes(
     verifyFirebaseToken?: (req: Request, res: Response, next: () => void) => void;
   },
 ): void {
+  registerMarketplaceMediaPublicRoute(app, db);
   const prefix = '/api/marketplace';
   const verifyFirebaseToken = deps?.verifyFirebaseToken;
 

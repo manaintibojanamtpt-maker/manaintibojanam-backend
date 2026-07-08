@@ -3,7 +3,10 @@ import { Image as ImageIcon, Loader2, Palette, Plus, Save, Trash2, Upload } from
 import toast from 'react-hot-toast';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
-import storageService from '../../services/StorageService';
+import {
+  uploadStorefrontMediaViaApi,
+  type StorefrontMediaKind,
+} from '../../lib/ownerStorefrontMediaApi';
 
 interface GalleryItem {
   galleryId: string;
@@ -29,18 +32,6 @@ const DEFAULT_THEME: ThemeForm = {
   tagline: '',
   description: '',
 };
-
-async function migrateDataUrlToStorage(
-  url: string,
-  tenantId: string,
-  kind: 'cover' | 'gallery',
-): Promise<string> {
-  if (!url.startsWith('data:')) return url;
-  const response = await fetch(url);
-  const blob = await response.blob();
-  const file = new File([blob], `${kind}.jpg`, { type: blob.type || 'image/jpeg' });
-  return storageService.uploadStorefrontImage(file, tenantId, kind);
-}
 
 export const OwnerGalleryThemePanel: React.FC = () => {
   const tenantId = useOwnerTenantId();
@@ -96,19 +87,23 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     void load();
   }, [tenantId]);
 
+  const uploadImage = async (file: File, kind: StorefrontMediaKind) => {
+    if (!tenantId) throw new Error('Kitchen not loaded yet.');
+    return uploadStorefrontMediaViaApi(file, tenantId, kind);
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !tenantId) return;
-    const validationError = storageService.validateFile(file);
-    if (validationError) {
-      toast.error(validationError);
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
       return;
     }
 
     setUploading(true);
     const toastId = toast.loading('Uploading photo…');
     try {
-      const downloadUrl = await storageService.uploadStorefrontImage(file, tenantId, 'gallery');
+      const downloadUrl = await uploadImage(file, 'gallery');
       setGallery((prev) => [
         ...prev,
         {
@@ -132,16 +127,10 @@ export const OwnerGalleryThemePanel: React.FC = () => {
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !tenantId) return;
-    const validationError = storageService.validateFile(file);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
     setUploading(true);
     const toastId = toast.loading('Uploading cover…');
     try {
-      const downloadUrl = await storageService.uploadStorefrontImage(file, tenantId, 'cover');
+      const downloadUrl = await uploadImage(file, 'cover');
       setTheme((prev) => ({ ...prev, coverUrl: downloadUrl }));
       toast.success('Cover uploaded', { id: toastId });
     } catch (error) {
@@ -158,46 +147,24 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     setSaving(true);
     const toastId = toast.loading('Saving gallery and theme…');
     try {
-      let coverUrl = theme.coverUrl;
-      if (coverUrl.startsWith('data:')) {
-        coverUrl = await migrateDataUrlToStorage(coverUrl, tenantId, 'cover');
-      }
-
-      const galleryPayload = await Promise.all(
-        gallery.map(async (item, index) => {
-          let url = item.url;
-          if (url.startsWith('data:')) {
-            url = await migrateDataUrlToStorage(url, tenantId, 'gallery');
-          }
-          return {
-            galleryId: item.galleryId,
-            url,
-            caption: item.caption.trim() || undefined,
-            sortOrder: index,
-          };
-        }),
-      );
-
       await updateOwnerStorefront(tenantId, {
         marketplace: {
-          gallery: galleryPayload,
+          gallery: gallery.map((item, index) => ({
+            galleryId: item.galleryId,
+            url: item.url,
+            caption: item.caption.trim() || undefined,
+            sortOrder: index,
+          })),
           theme: {
             primaryColor: theme.primaryColor,
             secondaryColor: theme.secondaryColor,
             highlightColor: theme.highlightColor,
-            coverUrl: coverUrl || undefined,
+            coverUrl: theme.coverUrl || undefined,
           },
           tagline: theme.tagline.trim() || undefined,
           description: theme.description.trim() || undefined,
         },
       });
-      setTheme((prev) => ({ ...prev, coverUrl }));
-      setGallery((prev) =>
-        prev.map((item, index) => ({
-          ...item,
-          url: galleryPayload[index]?.url ?? item.url,
-        })),
-      );
       toast.success('Gallery and theme saved — syncing to OrderBhojan', { id: toastId });
     } catch (error) {
       console.error('Failed to save gallery/theme:', error);
@@ -218,6 +185,9 @@ export const OwnerGalleryThemePanel: React.FC = () => {
 
   return (
     <div className="p-6 md:p-8 space-y-8">
+      <p className="text-xs text-white/50">
+        Theme colors and text save instantly. Photos upload through the API (no Firebase Storage billing required).
+      </p>
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Palette size={20} className="text-[#FF6B00]" />
