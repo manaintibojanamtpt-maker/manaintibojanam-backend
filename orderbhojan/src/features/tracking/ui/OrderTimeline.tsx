@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { Icon, Text } from '@bhojan/design-system';
 import type { OrderTrackingResponse } from '@/types/marketplace';
+import {
+  TRACKING_STEPS,
+  normalizeTrackingStatus,
+  trackingStepIndex,
+} from '../utils/trackingSteps';
 
 function formatTimelineAt(iso: string): string {
   try {
@@ -13,9 +18,9 @@ function formatTimelineAt(iso: string): string {
   }
 }
 
-function timelineIcon(status: string): ReactNode {
-  const normalized = status.toUpperCase();
-  if (normalized.includes('DELIVER') && !normalized.includes('OUT')) {
+function timelineIcon(stepId: string): ReactNode {
+  const normalized = stepId.toUpperCase();
+  if (normalized === 'DELIVERED') {
     return (
       <>
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -23,7 +28,7 @@ function timelineIcon(status: string): ReactNode {
       </>
     );
   }
-  if (normalized.includes('OUT') || normalized.includes('DISPATCH')) {
+  if (normalized === 'OUT_FOR_DELIVERY') {
     return (
       <>
         <path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11" />
@@ -33,7 +38,7 @@ function timelineIcon(status: string): ReactNode {
       </>
     );
   }
-  if (normalized.includes('PREPAR') || normalized.includes('COOK') || normalized.includes('KITCHEN')) {
+  if (normalized === 'PREPARING') {
     return (
       <>
         <path d="M3 11h18" />
@@ -42,20 +47,11 @@ function timelineIcon(status: string): ReactNode {
       </>
     );
   }
-  if (normalized.includes('CONFIRM') || normalized.includes('PLACED') || normalized.includes('ACCEPT')) {
+  if (normalized === 'ACCEPTED') {
     return (
       <>
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
         <path d="m9 11 2 2 4-4" />
-      </>
-    );
-  }
-  if (normalized.includes('CANCEL')) {
-    return (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <path d="m15 9-6 6" />
-        <path d="m9 9 6 6" />
       </>
     );
   }
@@ -68,37 +64,75 @@ function timelineIcon(status: string): ReactNode {
   );
 }
 
+function eventTimeForStep(
+  stepId: string,
+  tracking: OrderTrackingResponse,
+): string | undefined {
+  const match = [...tracking.timeline]
+    .reverse()
+    .find((entry) => normalizeTrackingStatus(entry.status) === stepId);
+  return match?.at;
+}
+
 export interface OrderTimelineProps {
   readonly tracking: OrderTrackingResponse;
 }
 
 export function OrderTimeline({ tracking }: OrderTimelineProps) {
+  const currentIndex = trackingStepIndex(tracking.status);
+  const isCancelled = normalizeTrackingStatus(tracking.status) === 'CANCELLED';
+
+  if (isCancelled) {
+    return (
+      <ol className="ob-order-timeline" aria-label="Order status timeline">
+        <li className="ob-order-timeline__step ob-order-timeline__step--active">
+          <div className="ob-order-timeline__icon" aria-hidden>
+            <Icon size={18} label="">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m15 9-6 6" />
+              <path d="m9 9 6 6" />
+            </Icon>
+          </div>
+          <div className="ob-order-timeline__content">
+            <Text variant="subtitle" as="p" className="ob-order-timeline__status">
+              Order cancelled
+            </Text>
+          </div>
+        </li>
+      </ol>
+    );
+  }
+
   return (
     <ol className="ob-order-timeline" aria-label="Order status timeline">
-      {tracking.timeline.map((entry, index) => {
-        const isActive = index === 0;
-        const isDone = index > 0;
+      {TRACKING_STEPS.map((step, index) => {
+        const isDone = currentIndex > index;
+        const isActive = currentIndex === index;
+        const isPending = currentIndex < index;
+        const timestamp = eventTimeForStep(step.id, tracking);
 
         return (
           <li
-            key={`${entry.status}-${entry.at}-${index}`}
-            className={`ob-order-timeline__step${isActive ? ' ob-order-timeline__step--active' : ''}${isDone ? ' ob-order-timeline__step--done' : ''}`}
+            key={step.id}
+            className={`ob-order-timeline__step${isActive ? ' ob-order-timeline__step--active' : ''}${isDone ? ' ob-order-timeline__step--done' : ''}${isPending ? ' ob-order-timeline__step--pending' : ''}`}
           >
             <div className="ob-order-timeline__icon" aria-hidden>
               <Icon size={18} label="">
-                {timelineIcon(entry.status)}
+                {timelineIcon(step.id)}
               </Icon>
             </div>
             <div className="ob-order-timeline__content">
               <Text variant="subtitle" as="p" className="ob-order-timeline__status">
-                {entry.status}
+                {step.label}
               </Text>
-              <Text variant="caption" className="ob-order-timeline__time">
-                {formatTimelineAt(entry.at)}
-              </Text>
-              {entry.message ? (
+              {timestamp ? (
+                <Text variant="caption" className="ob-order-timeline__time">
+                  {formatTimelineAt(timestamp)}
+                </Text>
+              ) : null}
+              {(isActive || isDone) && step.message ? (
                 <Text variant="body" className="ob-order-timeline__message">
-                  {entry.message}
+                  {step.message}
                 </Text>
               ) : null}
             </div>

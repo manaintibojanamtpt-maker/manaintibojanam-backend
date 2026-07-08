@@ -147,6 +147,7 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     setSaving(true);
     const toastId = toast.loading('Saving gallery and theme…');
     try {
+      const coverUrl = theme.coverUrl || gallery[0]?.url || undefined;
       await updateOwnerStorefront(tenantId, {
         marketplace: {
           gallery: gallery.map((item, index) => ({
@@ -159,7 +160,7 @@ export const OwnerGalleryThemePanel: React.FC = () => {
             primaryColor: theme.primaryColor,
             secondaryColor: theme.secondaryColor,
             highlightColor: theme.highlightColor,
-            coverUrl: theme.coverUrl || undefined,
+            coverUrl,
           },
           tagline: theme.tagline.trim() || undefined,
           description: theme.description.trim() || undefined,

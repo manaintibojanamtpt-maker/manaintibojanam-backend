@@ -11,9 +11,19 @@ export const DELIVERY_PARTNER_OPTIONS = [
 
 const THIRD_PARTY_KEYWORDS = ['porter', 'rapido', 'dunzo', 'shadowfax', 'shadowfox', 'uber'];
 
-export function isThirdPartyDeliveryPartner(partner?: string | null): boolean {
-  if (!partner) return false;
-  const value = partner.toLowerCase();
+export function deliveryPartnerLabel(partner: unknown): string {
+  if (typeof partner === 'string') return partner.trim();
+  if (partner && typeof partner === 'object') {
+    const record = partner as { name?: unknown; label?: unknown };
+    if (typeof record.name === 'string' && record.name.trim()) return record.name.trim();
+    if (typeof record.label === 'string' && record.label.trim()) return record.label.trim();
+  }
+  return '';
+}
+
+export function isThirdPartyDeliveryPartner(partner: unknown): boolean {
+  const value = deliveryPartnerLabel(partner).toLowerCase();
+  if (!value) return false;
   if (value.includes('self') || value.includes('manual') || value.includes('own') || value.includes('pickup')) {
     return false;
   }

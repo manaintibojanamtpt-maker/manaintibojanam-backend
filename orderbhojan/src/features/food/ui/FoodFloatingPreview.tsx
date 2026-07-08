@@ -5,11 +5,10 @@ import { cartItemCount, cartSubtotal, useCartStore } from '@/features/cart/store
 export function FoodFloatingPreview() {
   const navigate = useNavigate();
   const lines = useCartStore((s) => s.lines);
-  const visible = useCartStore((s) => s.visible);
   const count = cartItemCount(lines);
   const total = cartSubtotal(lines);
 
-  if (!visible || lines.length === 0) return null;
+  if (lines.length === 0) return null;
 
   return (
     <div className="ob-food-preview ob-food-px6__preview" role="status" aria-live="polite">

@@ -54,7 +54,7 @@ async function fetchOwnerOrders(
       .get();
 
     const hasMore = snapshot.docs.length > limit;
-    const orders = snapshot.docs.slice(0, limit).map((doc) => ({ id: doc.id, ...doc.data() }));
+    const orders = snapshot.docs.slice(0, limit).map((doc) => ({ ...doc.data(), id: doc.id }));
     return { orders, hasMore };
   } catch (error) {
     if (!isMissingIndexError(error)) throw error;
@@ -66,7 +66,7 @@ async function fetchOwnerOrders(
       .get();
 
     const sorted = snapshot.docs
-      .map((doc: QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() }))
+      .map((doc: QueryDocumentSnapshot) => ({ ...doc.data(), id: doc.id }))
       .sort((a, b) => createdAtMillis(b.createdAt) - createdAtMillis(a.createdAt));
 
     const hasMore = sorted.length > limit;

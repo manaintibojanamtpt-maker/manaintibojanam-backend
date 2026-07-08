@@ -78,7 +78,10 @@ export const useCartStore = create<CartState>()(
 
       addItem: (line, quantity = 1) => {
         const ctx = readRestaurantContext();
-        if (!ctx) return;
+        if (!ctx) {
+          notifyToast('Open a restaurant menu before adding items to cart.', 'warning');
+          return;
+        }
 
         let current = get().lines;
         if (
@@ -136,7 +139,13 @@ export const useCartStore = create<CartState>()(
 
       clear: () => set({ lines: [], visible: false }),
     }),
-    { name: 'ob-cart-m7' },
+    { name: 'ob-cart-m7',
+      onRehydrateStorage: () => (state) => {
+        if (state && state.lines.length > 0) {
+          state.visible = true;
+        }
+      },
+    },
   ),
 );
 

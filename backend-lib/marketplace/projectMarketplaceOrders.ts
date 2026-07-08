@@ -2,6 +2,14 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 type OrderRecord = Record<string, unknown>;
 
+type TrackingTimelineEntry = {
+  status: string;
+  at: string;
+  message?: string;
+};
+
+const CANONICAL_STEPS = ['PLACED', 'ACCEPTED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const;
+
 function readTimestamp(value: unknown): string {
   if (!value) return new Date().toISOString();
   if (typeof value === 'string') return value;
@@ -13,6 +21,90 @@ function readTimestamp(value: unknown): string {
     }
   }
   return new Date().toISOString();
+}
+
+function normalizeTrackingStatus(status: string): string {
+  const upper = status.trim().toUpperCase();
+  if (['PENDING', 'CREATED', 'PLACED', 'PENDING_PAYMENT', 'CONFIRMED'].includes(upper)) return 'PLACED';
+  if (upper === 'ACCEPTED') return 'ACCEPTED';
+  if (['PREPARING', 'READY'].includes(upper)) return 'PREPARING';
+  if (['OUT_FOR_DELIVERY', 'DISPATCHED', 'PICKED_UP', 'COURIER_BOOKED'].includes(upper)) {
+    return 'OUT_FOR_DELIVERY';
+  }
+  if (upper === 'DELIVERED') return 'DELIVERED';
+  if (['CANCELLED', 'REJECTED', 'EXPIRED', 'FAILED_DELIVERY'].includes(upper)) return 'CANCELLED';
+  return upper;
+}
+
+function buildTrackingTimeline(data: OrderRecord): TrackingTimelineEntry[] {
+  const events: TrackingTimelineEntry[] = [];
+
+  if (Array.isArray(data.statusHistory)) {
+    for (const entry of data.statusHistory as Array<Record<string, unknown>>) {
+      const status = normalizeTrackingStatus(String(entry.status ?? entry.newStatus ?? ''));
+      if (!status || status === 'CANCELLED') continue;
+      events.push({
+        status,
+        at: readTimestamp(entry.timestamp ?? entry.at),
+        message: typeof entry.description === 'string' ? entry.description : undefined,
+      });
+    }
+  }
+
+  if (events.length === 0 && Array.isArray(data.timeline)) {
+    for (const entry of data.timeline as Array<Record<string, unknown>>) {
+      const rawStatus = String(entry.newStatus ?? entry.status ?? '');
+      if (!rawStatus || rawStatus.includes('status_change') || rawStatus.includes('payment_verified')) {
+        continue;
+      }
+      const status = normalizeTrackingStatus(rawStatus);
+      events.push({
+        status,
+        at: readTimestamp(entry.timestamp ?? entry.at),
+        message: typeof entry.description === 'string' ? entry.description : undefined,
+      });
+    }
+  }
+
+  if (events.length === 0) {
+    events.push({
+      status: normalizeTrackingStatus(String(data.status ?? 'PLACED')),
+      at: readTimestamp(data.createdAt),
+      message: 'Order received',
+    });
+  }
+
+  const placedAt = readTimestamp(data.createdAt);
+  if (!events.some((event) => event.status === 'PLACED')) {
+    events.unshift({ status: 'PLACED', at: placedAt, message: 'Order received' });
+  }
+
+  events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+
+  const deduped: TrackingTimelineEntry[] = [];
+  for (const event of events) {
+    const last = deduped[deduped.length - 1];
+    if (!last || last.status !== event.status) {
+      deduped.push(event);
+    }
+  }
+
+  const currentStatus = normalizeTrackingStatus(String(data.status ?? deduped[deduped.length - 1]?.status ?? 'PLACED'));
+  const currentIndex = CANONICAL_STEPS.indexOf(currentStatus as (typeof CANONICAL_STEPS)[number]);
+  if (currentIndex >= 0) {
+    for (let index = 0; index <= currentIndex; index += 1) {
+      const step = CANONICAL_STEPS[index];
+      if (!deduped.some((event) => event.status === step)) {
+        deduped.push({
+          status: step,
+          at: deduped[deduped.length - 1]?.at ?? placedAt,
+        });
+      }
+    }
+    deduped.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  }
+
+  return deduped;
 }
 
 function tenantDisplayName(db: Firestore, tenantId: string): Promise<string> {
@@ -35,23 +127,12 @@ export function projectOrderSummary(orderId: string, data: OrderRecord, displayN
 }
 
 export function projectOrderTracking(orderId: string, data: OrderRecord) {
-  const timeline = Array.isArray(data.timeline)
-    ? (data.timeline as Array<Record<string, unknown>>).map((entry) => ({
-        status: String(entry.eventType ?? entry.status ?? 'update'),
-        at: readTimestamp(entry.timestamp ?? entry.at),
-        message: typeof entry.description === 'string' ? entry.description : undefined,
-      }))
-    : [
-        {
-          status: String(data.status ?? 'PLACED'),
-          at: readTimestamp(data.createdAt),
-          message: 'Order received',
-        },
-      ];
+  const timeline = buildTrackingTimeline(data);
+  const status = normalizeTrackingStatus(String(data.status ?? timeline[timeline.length - 1]?.status ?? 'PLACED'));
 
   return {
     orderId,
-    status: String(data.status ?? 'PLACED'),
+    status,
     timeline,
     etaMinutes: data.eta
       ? { min: Math.max(10, Number(data.eta) - 5), max: Number(data.eta) + 5 }

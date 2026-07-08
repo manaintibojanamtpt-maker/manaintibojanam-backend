@@ -5,11 +5,10 @@ import { cartItemCount, cartSubtotal, useCartStore } from '@/features/cart/store
 export function MarketplaceFloatingCart() {
   const navigate = useNavigate();
   const lines = useCartStore((s) => s.lines);
-  const visible = useCartStore((s) => s.visible);
   const count = cartItemCount(lines);
   const total = cartSubtotal(lines);
 
-  if (!visible || count <= 0) {
+  if (count <= 0) {
     return null;
   }
 

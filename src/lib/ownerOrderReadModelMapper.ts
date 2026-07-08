@@ -5,6 +5,7 @@
 import type { OrderReadModel } from '../sdk/orders/types';
 import type { ApiOrderRecord } from '../sdk/orders/mappers/mapOrderToReadModel';
 import { mapOrderToReadModel } from '../sdk/orders/mappers/mapOrderToReadModel';
+import { deliveryPartnerLabel } from './deliveryPartners';
 
 export interface OwnerOrderSnapshot {
   id: string;
@@ -44,9 +45,9 @@ export const readModelToOwnerOrder = (
   createdAt: raw?.createdAt ?? model.createdAt,
   items: raw?.items ?? [...model.items],
   deliveryPartner:
-    typeof model.deliveryPartner === 'string'
-      ? model.deliveryPartner
-      : (raw?.deliveryPartner as string | undefined),
+    deliveryPartnerLabel(model.deliveryPartner) ||
+    deliveryPartnerLabel(raw?.deliveryPartner) ||
+    undefined,
   trackingUrl: model.trackingUrl,
   trackingLink: model.trackingLink,
   riderName: model.riderName,

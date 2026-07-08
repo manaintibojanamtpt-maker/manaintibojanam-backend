@@ -14,7 +14,7 @@ import logo from '../../assets/bhojan-os-logo.png';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
 import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../../services/api';
 import { OrderStatus } from '../../types';
-import { DELIVERY_PARTNER_OPTIONS, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
+import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 
 interface Order extends OwnerOrder {}
 
@@ -257,9 +257,15 @@ const OwnerOrders: React.FC = () => {
         ) : (
           <div className="grid gap-4 sm:gap-6">
             <AnimatePresence>
-              {orders.map((order) => (
+              {orders.map((order, orderIndex) => {
+                const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
+                const shortOrderId = orderKey.slice(-6).toUpperCase();
+                const lineItems = Array.isArray(order.items) ? order.items : [];
+                const deliveryPartnerName = deliveryPartnerLabel(order.deliveryPartner);
+
+                return (
                 <m.div
-                  key={order.id}
+                  key={orderKey}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -269,7 +275,7 @@ const OwnerOrders: React.FC = () => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                        <span className="text-sm font-mono text-white/40">#{order.id.slice(-6).toUpperCase()}</span>
+                        <span className="text-sm font-mono text-white/40">#{shortOrderId}</span>
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
                           ${order.status === 'PENDING' || order.status === 'CREATED' || order.status === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
                           ${order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
@@ -299,7 +305,7 @@ const OwnerOrders: React.FC = () => {
                             <Truck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-white">
-                                {order.deliveryPartner || 'Delivery'} • Out for delivery
+                                {deliveryPartnerName || 'Delivery'} • Out for delivery
                               </p>
                               {(order.riderName || order.riderPhone) && (
                                 <p className="text-xs text-white/50 mt-1">
@@ -347,7 +353,7 @@ const OwnerOrders: React.FC = () => {
                             <Phone className="w-3.5 h-3.5" /> Call Customer
                           </a>
                           <a 
-                            href={`https://wa.me/${(order.customerPhone || order.phone)?.replace(/\D/g, '')}?text=Hi%20${order.customerName || 'Customer'}!%20This%20is%20regarding%20your%20recent%20order%20%23${order.id.slice(-6).toUpperCase()}.`}
+                            href={`https://wa.me/${(order.customerPhone || order.phone)?.replace(/\D/g, '')}?text=Hi%20${order.customerName || 'Customer'}!%20This%20is%20regarding%20your%20recent%20order%20%23${shortOrderId}.`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
@@ -361,7 +367,7 @@ const OwnerOrders: React.FC = () => {
                     <div className="w-full xl:w-[340px] shrink-0 flex flex-col gap-4">
                       <div className="w-full bg-black/30 rounded-xl p-4 border border-white/10 space-y-3">
                         <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest">Order Items</h4>
-                        {order.items?.map((item: any, idx: number) => (
+                        {lineItems.map((item: any, idx: number) => (
                           <div key={idx} className="flex justify-between items-start gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -453,7 +459,8 @@ const OwnerOrders: React.FC = () => {
                     </div>
                   </div>
                 </m.div>
-              ))}
+                );
+              })}
               
               {orders.length === 0 && (
                 <div className="text-center py-16 sm:py-20 px-4 bg-[#0f0f11] rounded-2xl border border-white/10">

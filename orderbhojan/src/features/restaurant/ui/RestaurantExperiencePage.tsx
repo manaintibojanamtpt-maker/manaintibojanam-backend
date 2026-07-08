@@ -90,12 +90,14 @@ function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
   const collapsed = useRestaurantScrollChrome();
   const { experience, hours, highlights, policies } = data;
   const slug = restaurantSlugFromString(experience.slug);
-  const cover = resolveRestaurantCover(slug, 88);
-  const logo = resolveRestaurantLogo(slug, 82);
+  const manifestCover = resolveRestaurantCover(slug, 88);
+  const manifestLogo = resolveRestaurantLogo(slug, 82);
+  const coverSrc = experience.coverImage || manifestCover.src;
+  const logoSrc = experience.logo || manifestLogo.src;
   const enterFromPoster = Boolean((location.state as { fromPoster?: boolean } | null)?.fromPoster);
   const primaryOffer = experience.offers[0];
 
-  useHeroPreload(cover.preloadHref, cover.webpSrcSet);
+  useHeroPreload(coverSrc, manifestCover.webpSrcSet);
 
   return (
     <MotionPage className="ob-restaurant-px5">
@@ -105,14 +107,14 @@ function RestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
         variant="immersive"
         collapsed={collapsed}
         enterFromPoster={enterFromPoster}
-        coverUrl={cover.src}
-        coverSrcSet={cover.webpSrcSet}
+        coverUrl={coverSrc}
+        coverSrcSet={experience.coverImage ? undefined : manifestCover.webpSrcSet}
         coverSizes="100vw"
-        coverBlurDataURL={cover.blurDataURL}
-        coverSources={pictureSources(cover, '100vw')}
+        coverBlurDataURL={experience.coverImage ? undefined : manifestCover.blurDataURL}
+        coverSources={experience.coverImage ? undefined : pictureSources(manifestCover, '100vw')}
         coverPriority
         coverAlt={`${experience.displayName} — cover`}
-        logoUrl={logo.src}
+        logoUrl={logoSrc}
         name={experience.displayName}
         actionsSlot={
           <RestaurantGlassActions

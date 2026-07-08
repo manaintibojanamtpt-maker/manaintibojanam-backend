@@ -40,7 +40,8 @@ export function DiscoveryRestaurantCard({
   const cover = useBlurUpImage();
   const coverUrl =
     restaurant.coverUrl ??
-    'https://placehold.co/480x300/orange/white?text=Restaurant';
+    restaurant.logoUrl ??
+    undefined;
 
   return (
     <Card
@@ -55,6 +56,7 @@ export function DiscoveryRestaurantCard({
       aria-label={`${restaurant.displayName}, ${cuisineLabel(restaurant)}, rated ${restaurant.rating ?? '—'}`}
     >
       <div className="ob-restaurant-tile__media-wrap">
+        {coverUrl ? (
         <img
           src={coverUrl}
           alt=""
@@ -63,6 +65,11 @@ export function DiscoveryRestaurantCard({
           decoding="async"
           onLoad={cover.onLoad}
         />
+        ) : (
+          <div className="bds-restaurant-card__media ob-restaurant-tile__media-fallback" aria-hidden>
+            <Text variant="subtitle">{restaurant.displayName}</Text>
+          </div>
+        )}
         <div className="ob-restaurant-tile__badges">
           {!restaurant.isOpen ? <Badge variant="status">Closed</Badge> : null}
           <Badge variant={kitchenFormatBadgeVariant(restaurant.kitchenFormat)}>

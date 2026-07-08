@@ -11,6 +11,7 @@ import {
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useOrderTracking } from '../hooks/useOrderTracking';
 import { OrderTimeline } from './OrderTimeline';
+import { trackingStepLabel } from '../utils/trackingSteps';
 
 export function TrackingPage() {
   const navigate = useNavigate();
@@ -97,7 +98,7 @@ export function TrackingPage() {
     <MotionPage className="ob-tracking-px2">
       <section className="ob-tracking-px2__hero" aria-label="Order status">
         <Text variant="heading" as="p" className="ob-tracking-px2__hero-status">
-          {trackingQuery.data.status}
+          {trackingStepLabel(trackingQuery.data.status)}
         </Text>
         <Text variant="body" className="ob-tracking-px2__hero-order">
           Order {trackingQuery.data.orderId}

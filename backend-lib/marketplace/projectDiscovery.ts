@@ -147,6 +147,17 @@ export {
   isMarketplaceEligibleTenant,
 } from './marketplaceVisibility.js';
 
+function firstGalleryImageUrl(marketplace: FirestoreTenantRecord['marketplace']): string | undefined {
+  const gallery = marketplace?.gallery;
+  if (!Array.isArray(gallery)) return undefined;
+  for (const item of gallery) {
+    if (item && typeof item === 'object' && typeof item.url === 'string' && item.url.trim()) {
+      return item.url.trim();
+    }
+  }
+  return undefined;
+}
+
 export function projectRestaurantPublic(
   tenant: FirestoreTenantRecord,
   raw: Record<string, unknown>,
@@ -187,12 +198,14 @@ export function projectRestaurantPublic(
     }
   }
 
+  const galleryCover = firstGalleryImageUrl(mp);
+
   return {
     restaurantId: mp?.publicRestaurantId ?? `obr_${tenant.slug}`,
     restaurantSlug: tenant.slug,
     displayName: tenant.name,
     logoUrl: mp?.theme?.logoUrl ?? tenant.branding?.logoUrl,
-    coverUrl: mp?.theme?.coverUrl ?? tenant.branding?.coverUrl,
+    coverUrl: mp?.theme?.coverUrl ?? tenant.branding?.coverUrl ?? galleryCover,
     rating: mp?.rating,
     ratingCount: mp?.ratingCount,
     cuisines,

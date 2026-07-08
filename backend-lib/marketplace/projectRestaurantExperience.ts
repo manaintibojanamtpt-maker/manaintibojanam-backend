@@ -180,7 +180,7 @@ export function projectRestaurantExperience(
       restaurantId,
       slug: tenant.slug,
       displayName: tenant.name,
-      coverImage: mp?.theme?.coverUrl ?? tenant.branding?.coverUrl,
+      coverImage: mp?.theme?.coverUrl ?? tenant.branding?.coverUrl ?? gallery[0]?.url,
       logo: mp?.theme?.logoUrl ?? tenant.branding?.logoUrl,
       rating: mp?.rating,
       ratingCount: mp?.ratingCount,
