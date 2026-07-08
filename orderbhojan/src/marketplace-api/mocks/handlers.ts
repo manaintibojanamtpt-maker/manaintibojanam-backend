@@ -255,6 +255,7 @@ export const marketplaceHandlers = [
     if (!hasBearer(request)) return unauthorized();
     return success({
       orderId: String(params.orderId),
+      orderNumber: '463577',
       restaurantId: MOCK_RESTAURANTS[0].restaurantId,
       displayName: MOCK_RESTAURANTS[0].displayName,
       status: 'PREPARING',
@@ -267,6 +268,7 @@ export const marketplaceHandlers = [
     if (!hasBearer(request)) return unauthorized();
     return success({
       orderId: String(params.orderId),
+      orderNumber: '463577',
       status: 'OUT_FOR_DELIVERY',
       timeline: [
         { status: 'PLACED', at: new Date(Date.now() - 900_000).toISOString() },
@@ -287,7 +289,7 @@ export const marketplaceHandlers = [
         riderPhone: '9876543210',
       },
       invoice: {
-        orderNumber: 'YT00ZD',
+        orderNumber: '463577',
         createdAt: new Date().toISOString(),
         kitchenName: MOCK_RESTAURANTS[0].displayName,
         customerName: 'Guest',

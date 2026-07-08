@@ -14,6 +14,7 @@ describe('projectMarketplaceOrders guest tracking', () => {
       trackingUrl: 'https://rapido.bike/track/1',
       riderName: 'Raju',
       riderPhone: '9876543210',
+      orderNumber: 463577,
       items: [{ menuItemId: 'item-1', name: 'Biryani', quantity: 1, unitPrice: 249 }],
       totalAmount: 263,
     }, { displayName: 'Mana Inti Kitchen', slug: 'mana-inti' });
@@ -23,6 +24,7 @@ describe('projectMarketplaceOrders guest tracking', () => {
     assert.equal(tracking.delivery?.partner, 'Rapido');
     assert.equal(tracking.delivery?.riderName, 'Raju');
     assert.equal(tracking.invoice?.kitchenName, 'Mana Inti Kitchen');
+    assert.equal(tracking.orderNumber, '463577');
     assert.equal(tracking.reorder?.items.length, 1);
   });
 

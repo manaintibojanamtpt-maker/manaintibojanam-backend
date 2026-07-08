@@ -692,7 +692,7 @@ export function registerMarketplaceRoutes(
 
     app.get(`${prefix}/orders/:orderId`, verifyFirebaseToken, async (req: any, res: Response) => {
       try {
-        const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid);
+        const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid, FieldValue);
         if (!order) {
           return res.status(404).json(notFound('Order not found'));
         }
@@ -705,7 +705,7 @@ export function registerMarketplaceRoutes(
 
     app.get(`${prefix}/orders/:orderId/tracking`, verifyFirebaseToken, async (req: any, res: Response) => {
       try {
-        const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid);
+        const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid, FieldValue);
         if (!order) {
           return res.status(404).json(notFound('Order not found'));
         }
@@ -766,7 +766,7 @@ export function registerMarketplaceRoutes(
         });
         await batch.commit();
 
-        const updated = await getMarketplaceOrderForUser(db, orderId, req.user.uid);
+        const updated = await getMarketplaceOrderForUser(db, orderId, req.user.uid, FieldValue);
         sendMarketplaceJson(res, success(updated?.tracking ?? null));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to submit feedback';
@@ -784,7 +784,7 @@ export function registerMarketplaceRoutes(
           error: { code: 'INVALID', message: 'phone query parameter is required', retryable: false },
         });
       }
-      const tracking = await getMarketplaceTrackingForGuest(db, String(req.params.orderId), phone);
+      const tracking = await getMarketplaceTrackingForGuest(db, String(req.params.orderId), phone, FieldValue);
       if (!tracking) {
         return res.status(404).json(notFound('Order not found'));
       }

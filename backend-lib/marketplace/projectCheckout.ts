@@ -1,5 +1,6 @@
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
+import { allocateMarketplaceOrderNumber } from './orderNumberAllocator.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -305,8 +306,8 @@ function buildOrderPayload(
   quote: BillQuote,
   orderItems: Awaited<ReturnType<typeof buildResolvedOrderItems>>,
   paymentMethod: 'cod' | 'razorpay',
+  orderNumber: number,
 ) {
-  const orderNumber = Math.floor(100000 + Math.random() * 900000);
   return {
     tenantId,
     orderNumber,
@@ -352,7 +353,8 @@ export async function placeMarketplaceOrder(
   if (!loaded) throw Object.assign(new Error('Restaurant not found'), { statusCode: 404 });
 
   const orderItems = await buildResolvedOrderItems(db, tenantId, request, quote);
-  const orderPayload = buildOrderPayload(tenantId, request, quote, orderItems, paymentMethod);
+  const orderNumber = await allocateMarketplaceOrderNumber(db, fieldValue);
+  const orderPayload = buildOrderPayload(tenantId, request, quote, orderItems, paymentMethod, orderNumber);
 
   if (paymentMethod === 'razorpay') {
     const draftRef = db.collection('order_drafts').doc();

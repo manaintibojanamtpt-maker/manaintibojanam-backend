@@ -54,7 +54,7 @@ export function TrackingPage() {
             Track order
           </Text>
           <Text variant="body" className="ob-txn-page__subtitle">
-            Enter the mobile number used for order {orderId}
+            Enter the mobile number used for this order
           </Text>
         </header>
         <div className="ob-tracking-px2__guest-form">
@@ -115,7 +115,7 @@ export function TrackingPage() {
           </Text>
         ) : null}
         <Text variant="body" className="ob-tracking-px2__hero-order">
-          Order {tracking.orderId}
+          Order #{tracking.orderNumber}
         </Text>
         {etaLabel ? (
           <Text variant="subtitle" className="ob-tracking-px2__hero-eta">

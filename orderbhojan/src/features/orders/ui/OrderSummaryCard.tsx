@@ -40,10 +40,13 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
           navigate(`/orders/${order.orderId}/track`);
         }
       }}
-      aria-label={`Order ${order.orderId} from ${order.displayName}`}
+      aria-label={`Order #${order.orderNumber} from ${order.displayName}`}
     >
       <div className="ob-order-card__header">
         <div className="ob-order-card__meta">
+          <Text variant="caption" className="ob-order-card__number">
+            Order #{order.orderNumber}
+          </Text>
           <Text variant="subtitle" as="p" className="ob-order-card__name">
             {order.displayName}
           </Text>

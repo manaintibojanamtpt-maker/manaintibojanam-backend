@@ -1,4 +1,10 @@
 import type { Firestore } from 'firebase-admin/firestore';
+import type { FieldValue } from 'firebase-admin/firestore';
+import {
+  ensureOrderNumberOnRecord,
+  formatOrderNumberLabel,
+  readOrderNumber,
+} from './orderNumberAllocator.js';
 
 type OrderRecord = Record<string, unknown>;
 
@@ -187,8 +193,10 @@ export interface OrderTrackingMeta {
 }
 
 export function projectOrderSummary(orderId: string, data: OrderRecord, displayName: string) {
+  const orderNumber = readOrderNumber(data);
   return {
     orderId,
+    orderNumber: formatOrderNumberLabel(orderNumber, orderId),
     restaurantId: String(data.tenantId ?? ''),
     displayName,
     status: String(data.status ?? 'PLACED'),
@@ -214,9 +222,12 @@ export function projectOrderTracking(
   const hasDeliveryDetails = Boolean(deliveryPartner || trackingUrl || riderName || riderPhone);
   const restaurantSlug = meta?.slug ?? safeText(data.tenantSlug) ?? safeText(data.tenantId);
   const restaurantName = meta?.displayName ?? safeText(data.tenantName) ?? restaurantSlug ?? 'Kitchen';
+  const orderNumberValue = readOrderNumber(data);
+  const orderNumber = formatOrderNumberLabel(orderNumberValue, orderId);
 
   return {
     orderId,
+    orderNumber,
     status,
     timeline,
     etaMinutes: data.eta
@@ -236,7 +247,7 @@ export function projectOrderTracking(
         }
       : undefined,
     invoice: {
-      orderNumber: safeText(data.orderNumber) ?? orderId.slice(-6).toUpperCase(),
+      orderNumber,
       createdAt: readTimestamp(data.createdAt),
       kitchenName: restaurantName,
       customerName: safeText(data.customerName),
@@ -293,11 +304,15 @@ export async function getMarketplaceOrderForUser(
   db: Firestore,
   orderId: string,
   userId: string,
+  fieldValue?: typeof FieldValue,
 ) {
   const doc = await db.collection('orders').doc(orderId).get();
   if (!doc.exists) return null;
-  const data = doc.data() as OrderRecord;
+  let data = doc.data() as OrderRecord;
   if (String(data.userId ?? '') !== userId) return null;
+  if (fieldValue) {
+    data = (await ensureOrderNumberOnRecord(db, fieldValue, orderId, data)) as OrderRecord;
+  }
   const displayName = await tenantDisplayName(db, String(data.tenantId ?? ''));
   const meta = await tenantMeta(db, String(data.tenantId ?? ''));
   return {
@@ -310,14 +325,18 @@ export async function getMarketplaceTrackingForGuest(
   db: Firestore,
   orderId: string,
   phone: string,
+  fieldValue?: typeof FieldValue,
 ) {
   const doc = await db.collection('orders').doc(orderId).get();
   if (!doc.exists) return null;
-  const data = doc.data() as OrderRecord;
+  let data = doc.data() as OrderRecord;
   const orderPhone = String(data.phone ?? data.customerPhone ?? '').replace(/\D/g, '');
   const inputPhone = phone.replace(/\D/g, '');
   if (!orderPhone || !inputPhone) return null;
   if (orderPhone.slice(-4) !== inputPhone.slice(-4)) return null;
+  if (fieldValue) {
+    data = (await ensureOrderNumberOnRecord(db, fieldValue, orderId, data)) as OrderRecord;
+  }
   const meta = await tenantMeta(db, String(data.tenantId ?? ''));
   return projectOrderTracking(doc.id, data, meta);
 }

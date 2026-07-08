@@ -121,6 +121,7 @@ export interface MenuResponse {
 
 export interface OrderSummary {
   readonly orderId: string;
+  readonly orderNumber: string;
   readonly restaurantId: string;
   readonly displayName: string;
   readonly status: string;
@@ -130,6 +131,7 @@ export interface OrderSummary {
 
 export interface OrderTrackingResponse {
   readonly orderId: string;
+  readonly orderNumber: string;
   readonly status: string;
   readonly timeline: readonly { readonly status: string; readonly at: string; readonly message?: string }[];
   readonly etaMinutes?: { readonly min: number; readonly max: number };
