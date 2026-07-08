@@ -14,6 +14,8 @@
     "seed:e2e-sync-lab": "tsx scripts/check-firestore-auth.ts && tsx scripts/e2e/e2eSyncLabHarness.ts prepare-draft",
     "harness:e2e-update-menu": "tsx scripts/check-firestore-auth.ts && tsx scripts/e2e/e2eSyncLabHarness.ts update-menu-options",
     "test:e2e:owner-sync": "cd orderbhojan && npm run test:e2e:owner-sync",
+    "sync:orderbhojan-repo": "node scripts/sync-orderbhojan-repo.mjs",
+    "sync:orderbhojan-repo:push": "node scripts/sync-orderbhojan-repo.mjs --push",
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin --external:vite --external:node-cron",
     "build:web": "node scripts/verify-vercel-firebase-env.mjs && node scripts/write-version-json.mjs && vite build",
     "build:server": "node scripts/build-server.mjs",
