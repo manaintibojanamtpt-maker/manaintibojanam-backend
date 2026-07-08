@@ -8,6 +8,50 @@ export type ProvisionOwnerParams = {
   mobileNumber?: string;
 };
 
+const OWNER_API_TIMEOUT_MS = 60_000;
+const OWNER_API_MAX_ATTEMPTS = 3;
+const OWNER_API_RETRY_BASE_MS = 2_000;
+
+function resolveOwnerApiBase(): string {
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
+  ) {
+    return window.location.origin;
+  }
+  return EnvironmentConfig.getApiUrl();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isRetryableOwnerApiError(error: unknown): boolean {
+  if (!(error instanceof Error)) return true;
+  if (error.name === 'AbortError') return true;
+  if (/failed to fetch|network|load failed|networkerror/i.test(error.message)) return true;
+  const status = (error as Error & { status?: number }).status;
+  return status === 502 || status === 503 || status === 504;
+}
+
+/** Best-effort wake-up for Render cold starts before owner mutations. */
+export async function warmOwnerApi(timeoutMs = 30_000): Promise<void> {
+  const apiBase = resolveOwnerApiBase();
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await fetch(`${apiBase}/api/health`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+  } catch {
+    // Cold start may still be in progress; publish request will retry.
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 async function ownerApiPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
   return ownerApiRequest<T>('POST', path, body);
 }
@@ -23,47 +67,52 @@ export async function ownerApiRequest<T>(
   }
 
   const token = await user.getIdToken();
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 12_000);
+  const apiBase = resolveOwnerApiBase();
+  let lastError: unknown;
 
-  const apiBase =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
-      ? window.location.origin
-      : EnvironmentConfig.getApiUrl();
+  for (let attempt = 1; attempt <= OWNER_API_MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), OWNER_API_TIMEOUT_MS);
 
-  try {
-    const res = await fetch(`${apiBase}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify(body ?? {}),
-      signal: controller.signal,
-    });
+    try {
+      const res = await fetch(`${apiBase}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify(body ?? {}),
+        signal: controller.signal,
+      });
 
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok || payload.success === false) {
-      const err = new Error(payload.error || payload.message || 'Request failed. Please try again.') as Error & {
-        validationErrors?: string[];
-        status?: number;
-      };
-      err.status = res.status;
-      if (Array.isArray(payload.validationErrors)) {
-        err.validationErrors = payload.validationErrors.filter(Boolean);
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload.success === false) {
+        const err = new Error(payload.error || payload.message || 'Request failed. Please try again.') as Error & {
+          validationErrors?: string[];
+          status?: number;
+        };
+        err.status = res.status;
+        if (Array.isArray(payload.validationErrors)) {
+          err.validationErrors = payload.validationErrors.filter(Boolean);
+        }
+        throw err;
       }
-      throw err;
+      return payload as T;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableOwnerApiError(error) || attempt === OWNER_API_MAX_ATTEMPTS) {
+        break;
+      }
+      await sleep(OWNER_API_RETRY_BASE_MS * attempt);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
-    return payload as T;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Server is waking up — please try again in a few seconds.');
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
   }
+
+  if (lastError instanceof Error && lastError.name === 'AbortError') {
+    throw new Error('Server is waking up — please try again in a few seconds.');
+  }
+  throw lastError;
 }
 
 /** Create kitchen + link owner profile via backend (Admin SDK). */
@@ -88,6 +137,7 @@ export async function publishOwnerStorefrontViaApi(tenantId: string): Promise<{
   success: boolean;
   validationErrors?: string[];
 }> {
+  await warmOwnerApi();
   try {
     await ownerApiPost<{ success: boolean }>(`/api/owner/storefront/${tenantId}/publish`);
     return { success: true };

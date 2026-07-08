@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, Rocket, AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTenant } from '../../context/TenantContext';
-import { publishOwnerStorefrontViaApi } from '../../lib/ownerProvisioning';
+import { publishOwnerStorefrontViaApi, warmOwnerApi } from '../../lib/ownerProvisioning';
 import { EnvironmentConfig } from '../../config/environment';
 
 export const PublishStorefrontPanel: React.FC = () => {
@@ -20,6 +20,12 @@ export const PublishStorefrontPanel: React.FC = () => {
     () => (slug ? EnvironmentConfig.getStorefrontUrl(slug) : ''),
     [slug],
   );
+
+  useEffect(() => {
+    if (!isPublished && tenantId) {
+      void warmOwnerApi();
+    }
+  }, [isPublished, tenantId]);
 
   const handlePublish = async () => {
     if (!tenantId) {
@@ -105,6 +111,11 @@ export const PublishStorefrontPanel: React.FC = () => {
           {loading ? 'Publishing…' : 'Publish Now'}
         </button>
       </div>
+      {loading ? (
+        <p className="mt-3 text-xs text-white/50">
+          Waking backend and validating your kitchen — this can take up to a minute on first publish.
+        </p>
+      ) : null}
 
       {errors.length > 0 ? (
         <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
