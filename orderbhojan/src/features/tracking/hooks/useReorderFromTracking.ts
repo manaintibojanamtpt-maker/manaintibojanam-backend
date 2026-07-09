@@ -43,7 +43,7 @@ export function useReorderFromTracking() {
       notifyToast('Items added to cart from your previous order.', 'success');
       navigate('/cart');
     } catch {
-      notifyToast('Could not reorder right now. Open the restaurant menu instead.', 'error');
+      notifyToast('Could not reorder right now. Open the restaurant menu instead.', 'danger');
       navigate(`/restaurant/${payload.restaurantSlug}/menu`);
     } finally {
       setBusy(false);

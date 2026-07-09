@@ -83,6 +83,24 @@ function notFound(message: string) {
   };
 }
 
+type FirebaseVerifyMiddleware = (req: Request, res: Response, next: () => void) => void;
+
+/** Reuses verifyFirebaseToken when Bearer is present; guests proceed without req.user. */
+function optionalFirebaseAuth(verifyFirebaseToken: FirebaseVerifyMiddleware): FirebaseVerifyMiddleware {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+    verifyFirebaseToken(req, res, next);
+  };
+}
+
+function resolveAuthenticatedUserId(req: Request): string | null {
+  const user = (req as Request & { user?: { uid?: string } }).user;
+  return typeof user?.uid === 'string' && user.uid.trim() ? user.uid.trim() : null;
+}
+
 async function loadTenantBySlug(db: Firestore, slug: string) {
   const doc = await loadTenantDocBySlug(db, slug);
   if (!doc) return null;
@@ -658,10 +676,18 @@ export function registerMarketplaceRoutes(
     }
   });
 
-  app.post(`${prefix}/checkout/place`, async (req: Request, res: Response) => {
-    try {
-      const body = (req.body ?? {}) as MarketplacePlaceRequest;
-      const result = await placeMarketplaceOrder(db, FieldValue, body);
+  app.post(
+    `${prefix}/checkout/place`,
+    verifyFirebaseToken ? optionalFirebaseAuth(verifyFirebaseToken) : (_req, _res, next) => next(),
+    async (req: Request, res: Response) => {
+      try {
+        const body = (req.body ?? {}) as MarketplacePlaceRequest;
+        const { userId: _clientUserId, ...checkoutBody } = body;
+        const placeRequest: MarketplacePlaceRequest = {
+          ...checkoutBody,
+          userId: resolveAuthenticatedUserId(req),
+        };
+        const result = await placeMarketplaceOrder(db, FieldValue, placeRequest);
       const value =
         result.kind === 'razorpay'
           ? {
@@ -671,13 +697,14 @@ export function registerMarketplaceRoutes(
               amountInPaise: result.amountInPaise,
             }
           : { orderId: result.orderId, paymentMethod: 'cod' };
-      sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
-    } catch (error: unknown) {
-      const status = (error as { statusCode?: number }).statusCode ?? 500;
-      const message = error instanceof Error ? error.message : 'Failed to place order';
-      res.status(status).json({ ok: false, error: { code: 'PLACE_FAILED', message, retryable: status >= 500 } });
-    }
-  });
+        sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
+      } catch (error: unknown) {
+        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const message = error instanceof Error ? error.message : 'Failed to place order';
+        res.status(status).json({ ok: false, error: { code: 'PLACE_FAILED', message, retryable: status >= 500 } });
+      }
+    },
+  );
 
   if (verifyFirebaseToken) {
     app.get(`${prefix}/orders`, verifyFirebaseToken, async (req: any, res: Response) => {

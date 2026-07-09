@@ -195,7 +195,19 @@ describe('assertOrderPatchAccess', () => {
 });
 
 describe('isOrderAuthEnforced', () => {
-  it('reads FF_ORDER_AUTH_ENFORCE', () => {
+  it('returns true when FF_ORDER_AUTH_ENFORCE is undefined', () => {
+    const previous = process.env.FF_ORDER_AUTH_ENFORCE;
+    delete process.env.FF_ORDER_AUTH_ENFORCE;
+    assert.strictEqual(process.env.FF_ORDER_AUTH_ENFORCE, undefined);
+    assert.equal(isOrderAuthEnforced(), true);
+    if (previous === undefined) {
+      delete process.env.FF_ORDER_AUTH_ENFORCE;
+    } else {
+      process.env.FF_ORDER_AUTH_ENFORCE = previous;
+    }
+  });
+
+  it('reads FF_ORDER_AUTH_ENFORCE explicit values', () => {
     const previous = process.env.FF_ORDER_AUTH_ENFORCE;
     process.env.FF_ORDER_AUTH_ENFORCE = 'true';
     assert.equal(isOrderAuthEnforced(), true);
@@ -269,7 +281,19 @@ describe('assertRazorpayDraftBindAccess', () => {
 });
 
 describe('isRazorpayDraftBindEnforced', () => {
-  it('reads FF_RAZORPAY_DRAFT_BIND', () => {
+  it('returns true when FF_RAZORPAY_DRAFT_BIND is undefined', () => {
+    const previous = process.env.FF_RAZORPAY_DRAFT_BIND;
+    delete process.env.FF_RAZORPAY_DRAFT_BIND;
+    assert.strictEqual(process.env.FF_RAZORPAY_DRAFT_BIND, undefined);
+    assert.equal(isRazorpayDraftBindEnforced(), true);
+    if (previous === undefined) {
+      delete process.env.FF_RAZORPAY_DRAFT_BIND;
+    } else {
+      process.env.FF_RAZORPAY_DRAFT_BIND = previous;
+    }
+  });
+
+  it('reads FF_RAZORPAY_DRAFT_BIND explicit values', () => {
     const previous = process.env.FF_RAZORPAY_DRAFT_BIND;
     process.env.FF_RAZORPAY_DRAFT_BIND = 'true';
     assert.equal(isRazorpayDraftBindEnforced(), true);

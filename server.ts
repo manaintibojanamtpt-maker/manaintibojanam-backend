@@ -4975,6 +4975,7 @@ async function startServer() {
     projectId = firebaseCtx.projectId;
     databaseId = firebaseCtx.databaseId;
     configStorageBucket = firebaseCtx.storageBucket;
+    initializeMonitoringJobs();
   } catch (error) {
     console.error("Fatal: Firebase authentication failed. Server will not start.");
     console.error(error instanceof Error ? error.message : error);
@@ -5290,11 +5291,35 @@ const runDailyFounderDigest = async () => {
 };
 
 const initializeMonitoringJobs = () => {
-  if (!_db) return;
+  if (!_db) {
+    logger.warn({
+      message: "initializeMonitoringJobs skipped: Firestore (_db) not initialized",
+    });
+    return;
+  }
 
   const registerJobs = () => {
     const freeTier = isFreeTierPlatform();
-    logger.info({ message: "Registering background cron jobs", platformTier: freeTier ? "free" : "standard" });
+    const scheduledJobs = [
+      `Heartbeat (${freeTier ? "*/30 * * * *" : "*/15 * * * *"})`,
+      `Expire Unpaid Payments (${freeTier ? "*/15 * * * *" : "*/10 * * * *"})`,
+    ];
+    if (!freeTier) {
+      scheduledJobs.push(
+        "Hourly AutoPilot Aggregator (0 * * * *)",
+        "Daily Founder Digest (0 8 * * *)",
+        "Tenant Morning Brief (0 8 * * *)",
+        "Tenant Evening Report (0 20 * * *)",
+        "Tenant Weekly Report (0 8 * * 1)",
+        "Tenant Monthly Report (0 8 1 * *)",
+        "Tenant Critical Alert Scan (*/15 * * * *)",
+      );
+    }
+    logger.info({
+      message: `Registering background cron jobs: [${scheduledJobs.join(", ")}]`,
+      platformTier: freeTier ? "free" : "standard",
+      jobs: scheduledJobs,
+    });
 
     const heartbeatCron = freeTier ? "*/30 * * * *" : "*/15 * * * *";
     cron.schedule(heartbeatCron, async () => {
@@ -5383,8 +5408,6 @@ const initializeMonitoringJobs = () => {
   setTimeout(registerJobs, startupDelayMs);
   logger.info({ message: "Cron jobs deferred after deploy", startupDelayMs });
 };
-
-initializeMonitoringJobs();
 
 startServer();
 

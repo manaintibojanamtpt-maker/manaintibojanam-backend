@@ -188,15 +188,19 @@ export const resolveGuestCredential = (
   }
 };
 
-export const isOrderAuthEnforced = (): boolean => {
-  const value = (process.env.FF_ORDER_AUTH_ENFORCE || '').trim().toLowerCase();
-  return value === 'true' || value === '1' || value === 'yes';
-};
+function isEnforcedUnlessExplicitlyDisabled(envValue: string | undefined): boolean {
+  const value = (envValue ?? '').trim().toLowerCase();
+  if (value === 'false' || value === '0' || value === 'no') {
+    return false;
+  }
+  return true;
+}
 
-export const isRazorpayDraftBindEnforced = (): boolean => {
-  const value = (process.env.FF_RAZORPAY_DRAFT_BIND || '').trim().toLowerCase();
-  return value === 'true' || value === '1' || value === 'yes';
-};
+export const isOrderAuthEnforced = (): boolean =>
+  isEnforcedUnlessExplicitlyDisabled(process.env.FF_ORDER_AUTH_ENFORCE);
+
+export const isRazorpayDraftBindEnforced = (): boolean =>
+  isEnforcedUnlessExplicitlyDisabled(process.env.FF_RAZORPAY_DRAFT_BIND);
 
 /** Resolve draft owner from top-level or nested orderPayload (M0 PR-7). */
 export const extractDraftUserId = (draftData: Record<string, unknown>): string | null => {

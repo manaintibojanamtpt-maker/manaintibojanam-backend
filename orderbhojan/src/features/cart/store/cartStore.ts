@@ -142,7 +142,7 @@ export const useCartStore = create<CartState>()(
     { name: 'ob-cart-m7',
       onRehydrateStorage: () => (state) => {
         if (state && state.lines.length > 0) {
-          state.visible = true;
+          useCartStore.setState({ visible: true });
         }
       },
     },

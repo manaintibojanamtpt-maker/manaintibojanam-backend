@@ -38,12 +38,12 @@ after(() => {
 describe('M0 API security matrix (order access)', () => {
   const order = { userId: 'customer-1', tenantId: 'tenant-1' };
 
-  it('defaults FF_ORDER_AUTH_ENFORCE to false', () => {
-    assert.equal(isOrderAuthEnforced(), false);
+  it('defaults FF_ORDER_AUTH_ENFORCE to true', () => {
+    assert.equal(isOrderAuthEnforced(), true);
   });
 
-  it('defaults FF_RAZORPAY_DRAFT_BIND to false', () => {
-    assert.equal(isRazorpayDraftBindEnforced(), false);
+  it('defaults FF_RAZORPAY_DRAFT_BIND to true', () => {
+    assert.equal(isRazorpayDraftBindEnforced(), true);
   });
 
   it('denies unauthenticated order read decisions with 401', async () => {

@@ -65,7 +65,7 @@ export function OrderFeedbackPanel({
             notifyToast('Thank you for your feedback!', 'success');
             onSubmitted();
           } catch {
-            notifyToast('Could not submit feedback. Try again.', 'error');
+            notifyToast('Could not submit feedback. Try again.', 'danger');
           } finally {
             setBusy(false);
           }
