@@ -4,7 +4,7 @@
  */
 
 const DEFAULT_ORDERBHOJAN_URL = 'https://orderbhojan.web.app';
-const DEFAULT_STOREFRONT_URL = 'https://mana-inti-bojanam-pune-492610.web.app';
+const DEFAULT_STOREFRONT_URL = 'https://www.bhojanos.com/k/mana-inti';
 const DEFAULT_BHOJANOS_URL = 'https://www.bhojanos.com';
 
 function stripTrailingSlash(url: string): string {

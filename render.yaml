@@ -10,7 +10,7 @@ services:
       - key: ORDERBHOJAN_URL
         value: https://orderbhojan.web.app
       - key: FOUNDER_STOREFRONT_URL
-        value: https://mana-inti-bojanam-pune-492610.web.app
+        value: https://www.bhojanos.com/k/mana-inti
       - key: PUBLIC_APP_URL
         value: https://www.bhojanos.com
       - key: NODE_OPTIONS
