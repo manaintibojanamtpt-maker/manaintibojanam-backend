@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-projection-worker
+  labels:
+    {{- include "menu.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: menu-projection-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: menu-projection-worker
+        tier: worker
+        prometheus.io/scrape: "true"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: worker
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - { containerPort: 8080, name: http }
+            - { containerPort: 9090, name: metrics }
+          env:
+            - { name: VITE_APP_ENV, value: {{ .Values.global.environment | quote }} }
+            - { name: GOOGLE_CLOUD_PROJECT, value: {{ .Values.global.firestore.projectId | quote }} }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: {{ .Values.global.otel.endpoint | quote }} }
+            {{- include "menu.flagEnv" . | nindent 12 }}
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /health/projection, port: 8080 }
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - { name: firebase-sa, mountPath: /var/secrets/google, readOnly: true }
+      volumes:
+        - name: firebase-sa
+          secret:
+            secretName: {{ .Values.global.secrets.firebaseSaSecret }}

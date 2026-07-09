@@ -1,0 +1,6 @@
+apiVersion: v2
+name: menu-projection-worker
+description: BhojanOS menu projection worker (M7 frozen runtime)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

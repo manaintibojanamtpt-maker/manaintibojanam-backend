@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+data:
+  alertmanager.yml: |
+    {{- .Values | toYaml | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: alertmanager }
+  template:
+    metadata:
+      labels: { app: alertmanager }
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+          ports:
+            - { containerPort: 9093, name: http }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alertmanager }
+            - { name: pagerduty, mountPath: /etc/alertmanager/pagerduty-key, subPath: key, readOnly: true }
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-config
+        - name: pagerduty
+          secret:
+            secretName: staging-pagerduty-staging-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+spec:
+  selector: { app: alertmanager }
+  ports:
+    - { port: 9093, name: http }

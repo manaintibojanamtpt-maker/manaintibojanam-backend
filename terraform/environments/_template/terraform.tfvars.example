@@ -1,0 +1,9 @@
+# Copy this directory for each template environment:
+# development, qa, integration, production, dr, sandbox
+#
+# Set enabled = true and project_id when ready to provision.
+# Staging is the only fully implemented environment.
+
+project_id = "bhojanos-ENVIRONMENT"
+region     = "asia-south1"
+enabled    = false

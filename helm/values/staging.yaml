@@ -1,0 +1,61 @@
+global:
+  environment: staging
+  projectId: bhojanos-staging
+  region: asia-south1
+  namespace: bhojanos-staging-spine
+  imageRegistry: asia-south1-docker.pkg.dev/bhojanos-staging/bhojanos-staging
+
+  # All 23 spine flags — default OFF (production-safe)
+  featureFlags:
+    FF_EVENT_PLATFORM_ENABLED: "false"
+    FF_EVENT_OUTBOX_ENABLED: "false"
+    FF_EVENT_REPLAY_ENABLED: "false"
+    FF_EVENT_SHADOW_PUBLISHING_ENABLED: "false"
+    FF_EVENT_PROJECTION_ENABLED: "false"
+    FF_ORDER_SHADOW_EVENTS_ENABLED: "false"
+    FF_EVENT_PROJECTION_RUNTIME_ENABLED: "false"
+    FF_ORDER_READ_PROJECTION_ENABLED: "false"
+    FF_ORDER_PROJECTION_PARITY_ENABLED: "false"
+    FF_ORDER_PROJECTION_SOAK_ENABLED: "false"
+    FF_EVENT_OPERATIONAL_VALIDATION_ENABLED: "false"
+    FF_ORDER_PROJECTION_ADAPTER_ENABLED: "false"
+    FF_ORDER_PROJECTION_ROLLOUT_ENABLED: "false"
+    FF_ORDER_PROJECTION_CERTIFICATION_ENABLED: "false"
+    FF_MENU_ENABLED: "false"
+    FF_MENU_SEARCH_ENABLED: "false"
+    FF_MENU_PROJECTION_ENABLED: "false"
+    FF_MENU_PROJECTION_PARITY_ENABLED: "false"
+    FF_MENU_PROJECTION_SOAK_ENABLED: "false"
+    FF_MENU_OPERATIONAL_VALIDATION_ENABLED: "false"
+    FF_MENU_PROJECTION_ADAPTER_ENABLED: "false"
+    FF_MENU_PROJECTION_ROLLOUT_ENABLED: "false"
+    FF_MENU_PROJECTION_CERTIFICATION_ENABLED: "false"
+    EMERGENCY_SPINE_DISABLE_ALL: "false"
+
+  otel:
+    endpoint: http://otel-collector:4317
+    serviceNamePrefix: bhojanos-staging
+
+  secrets:
+    firebaseSaSecret: staging-firebase-sa-json
+    launchdarklySdkSecret: staging-launchdarkly-sdk-key
+
+  firestore:
+    projectId: bhojanos-staging
+
+  gcs:
+    evidenceBucket: bhojanos-staging-evidence
+    checkpointsBucket: bhojanos-staging-checkpoints
+    snapshotsBucket: bhojanos-staging-snapshots
+
+  prometheus:
+    retention: 15d
+    scrapeInterval: 15s
+
+  grafana:
+    adminUser: admin
+    # Password from Secret Manager at deploy time
+
+  alertmanager:
+    slackChannel: "#bhojanos-staging-alerts"
+    pagerdutyServiceKeySecret: staging-pagerduty-staging-key

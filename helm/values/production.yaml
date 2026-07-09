@@ -1,0 +1,6 @@
+global:
+  environment: production
+  enabled: false
+  featureFlags:
+    FF_EVENT_PLATFORM_ENABLED: "false"
+    EMERGENCY_SPINE_DISABLE_ALL: "false"

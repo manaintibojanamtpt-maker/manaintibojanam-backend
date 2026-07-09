@@ -1,0 +1,47 @@
+replicaCount: 2
+
+image:
+  repository: bhojanos/order-projection-worker
+  tag: "staging-latest"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  name: staging-order-projection-sa
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetLagMs: 15000
+
+pdb:
+  minAvailable: 1
+
+probes:
+  liveness:
+    path: /health/live
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    path: /health/ready
+    port: 8080
+    periodSeconds: 15
+  projection:
+    path: /health/projection
+    port: 8080
+    periodSeconds: 30
+
+env:
+  WORKER_TYPE: order-projection
+  PROJECTION_NAME: order
+  FLAG_POLL_INTERVAL_SEC: "60"

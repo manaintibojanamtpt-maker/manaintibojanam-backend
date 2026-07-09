@@ -1,0 +1,5 @@
+apiVersion: v2
+name: grafana
+description: Grafana dashboards for BhojanOS staging
+version: 1.0.0
+appVersion: "10.3.0"

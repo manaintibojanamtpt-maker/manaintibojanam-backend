@@ -1,0 +1,35 @@
+adminUser: admin
+dashboards:
+  - uid: spine-overview
+    title: Spine Overview
+  - uid: order-projection
+    title: Order Projection Health
+  - uid: menu-projection
+    title: Menu Projection Health
+  - uid: parity-soak
+    title: Parity and Soak
+  - uid: replay-lag
+    title: Replay and Lag
+  - uid: errors-cert
+    title: Errors and Certification
+  - uid: sdk-telemetry
+    title: SDK Telemetry
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+  - name: Loki
+    type: loki
+    url: http://loki:3100
+
+slos:
+  - name: order-projection-availability
+    target: 99.9
+    window: 72h
+  - name: menu-projection-availability
+    target: 99.9
+    window: 72h
+  - name: parity-match-rate
+    target: 99.9
+    window: 72h

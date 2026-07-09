@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-order-projection-sa
+  namespace: bhojanos-staging-spine
+  annotations:
+    iam.gke.io/gcp-service-account: staging-order-projection-sa@bhojanos-staging.iam.gserviceaccount.com
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-menu-projection-sa
+  namespace: bhojanos-staging-spine
+  annotations:
+    iam.gke.io/gcp-service-account: staging-menu-projection-sa@bhojanos-staging.iam.gserviceaccount.com
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-outbox-sa
+  namespace: bhojanos-staging-spine
+  annotations:
+    iam.gke.io/gcp-service-account: staging-outbox-sa@bhojanos-staging.iam.gserviceaccount.com
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-replay-sa
+  namespace: bhojanos-staging-spine
+  annotations:
+    iam.gke.io/gcp-service-account: staging-replay-sa@bhojanos-staging.iam.gserviceaccount.com
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-api-sa
+  namespace: bhojanos-staging-spine
+  annotations:
+    iam.gke.io/gcp-service-account: staging-api-sa@bhojanos-staging.iam.gserviceaccount.com
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spine-worker-role
+  namespace: bhojanos-staging-spine
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["staging-firebase-sa-json", "staging-launchdarkly-sdk-key"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spine-workers-binding
+  namespace: bhojanos-staging-spine
+subjects:
+  - kind: ServiceAccount
+    name: staging-order-projection-sa
+  - kind: ServiceAccount
+    name: staging-menu-projection-sa
+  - kind: ServiceAccount
+    name: staging-outbox-sa
+  - kind: ServiceAccount
+    name: staging-replay-sa
+roleRef:
+  kind: Role
+  name: spine-worker-role
+  apiGroup: rbac.authorization.k8s.io

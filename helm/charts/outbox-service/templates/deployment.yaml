@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outbox-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: outbox-service }
+  template:
+    metadata:
+      labels: { app: outbox-service, tier: worker, prometheus.io/scrape: "true" }
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: outbox
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - { containerPort: 8080, name: http }
+            - { containerPort: 9090, name: metrics }
+          env:
+            - { name: VITE_FF_EVENT_OUTBOX_ENABLED, value: {{ index .Values.global.featureFlags "FF_EVENT_OUTBOX_ENABLED" | quote }} }
+            - { name: VITE_FF_EVENT_SHADOW_PUBLISHING_ENABLED, value: {{ index .Values.global.featureFlags "FF_EVENT_SHADOW_PUBLISHING_ENABLED" | quote }} }
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 8080 }
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

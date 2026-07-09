@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: replay-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: replay-service }
+  template:
+    metadata:
+      labels: { app: replay-service, tier: worker, prometheus.io/scrape: "true" }
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: replay
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - { containerPort: 8080, name: http }
+            - { containerPort: 9090, name: metrics }
+          env:
+            - { name: VITE_APP_ENV, value: staging }
+            - { name: REPLAY_DRY_RUN_DEFAULT, value: "true" }
+            - { name: VITE_FF_EVENT_REPLAY_ENABLED, value: {{ index .Values.global.featureFlags "FF_EVENT_REPLAY_ENABLED" | quote }} }
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 8080 }
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

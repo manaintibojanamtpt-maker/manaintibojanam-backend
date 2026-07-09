@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-config
+  labels:
+    {{- include "bhojanos.labels" . | nindent 4 }}
+data:
+  GCS_CHECKPOINTS_BUCKET: {{ .Values.global.gcs.checkpointsBucket | quote }}
+  GCS_SNAPSHOTS_BUCKET: {{ .Values.global.gcs.snapshotsBucket | quote }}
+  GCS_EVIDENCE_BUCKET: {{ .Values.global.gcs.evidenceBucket | quote }}
+  LAUNCHDARKLY_SDK_SECRET: {{ .Values.global.secrets.launchdarklySdkSecret | quote }}

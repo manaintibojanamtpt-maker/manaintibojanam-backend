@@ -1,0 +1,19 @@
+replicaCount: 2
+image:
+  repository: menu-projection-worker
+  tag: staging-latest
+serviceAccount:
+  name: staging-menu-projection-sa
+resources:
+  requests: { cpu: 500m, memory: 512Mi }
+  limits: { cpu: 1000m, memory: 1Gi }
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+pdb:
+  minAvailable: 1
+env:
+  WORKER_TYPE: menu-projection
+  PROJECTION_NAME: menu

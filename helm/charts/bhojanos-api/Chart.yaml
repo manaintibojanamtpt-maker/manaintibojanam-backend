@@ -1,0 +1,5 @@
+apiVersion: v2
+name: bhojanos-api
+description: BhojanOS staging API shell
+version: 1.0.0
+appVersion: "1.0.0"
