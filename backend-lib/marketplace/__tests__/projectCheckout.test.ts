@@ -17,10 +17,11 @@ describe('projectCheckout', () => {
     for (const route of [
       'app.post(`${prefix}/quote`',
       'app.post(`${prefix}/checkout/prepare`',
-      'app.post(`${prefix}/checkout/place`',
     ]) {
       assert.match(source, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
+    assert.match(source, /\$\{prefix\}\/checkout\/place/);
+    assert.match(source, /optionalFirebaseAuth/);
   });
 
   it('buildMarketplaceQuote rejects empty lines', async () => {
