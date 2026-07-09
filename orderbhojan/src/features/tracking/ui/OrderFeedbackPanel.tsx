@@ -21,7 +21,7 @@ export function OrderFeedbackPanel({
 
   if (feedback.submitted) {
     return (
-      <GlassSurface className="ob-tracking-px2__feedback">
+      <GlassSurface className="ob-tracking-px2__feedback ob-tracking-v3__panel">
         <Text variant="titleSm" as="h2">Thanks for your feedback</Text>
         <Text variant="body">
           You rated this order {feedback.rating ?? rating}★
@@ -32,7 +32,7 @@ export function OrderFeedbackPanel({
   }
 
   return (
-    <GlassSurface className="ob-tracking-px2__feedback">
+    <GlassSurface className="ob-tracking-px2__feedback ob-tracking-v3__panel">
       <Text variant="titleSm" as="h2">Rate your meal</Text>
       <Text variant="body" className="ob-tracking-px2__feedback-copy">
         How was the food and delivery experience?

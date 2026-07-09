@@ -4,6 +4,9 @@ import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
 import { DiscoveryFiltersBar } from './DiscoveryFiltersBar';
 import { RestaurantRailSkeleton } from '@/features/experience/ui/shared/ExperienceSkeletons';
+import { TrendingFoodsSection } from '@/features/experience/ui/home/TrendingFoodsSection';
+import { KitchenSpotlightCard } from '@/features/experience/ui/home/KitchenSpotlightCard';
+import { buildDiscoverySpotlightFeed } from '@/features/experience/utils/homeSpotlightFeed';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
 import { useLocationFeatureEnabled, LocationSelectorSheet } from '@/features/location';
@@ -69,6 +72,8 @@ export function DiscoveryHomeFeed() {
 
   const collections = query.data?.collections ?? [];
   const visibleCollections = collections.filter((c) => c.restaurants.length > 0);
+  const spotlightPlan = buildDiscoverySpotlightFeed(visibleCollections);
+  const railsToRender = spotlightPlan.kitchenCollections.filter((c) => c.restaurants.length > 0);
 
   if (visibleCollections.length === 0) {
     return (
@@ -115,9 +120,21 @@ export function DiscoveryHomeFeed() {
       ) : null}
       <DiscoveryFiltersBar />
       <DiscoveryActiveFilterBanner />
-      {visibleCollections.map((collection) => (
-        <DiscoveryCollectionRail key={collection.id} collection={collection} />
-      ))}
+      {spotlightPlan.sparseCopy ? (
+        <Text variant="bodySm" className="ob-kitchen-spotlight__sparse-copy">
+          {spotlightPlan.sparseCopy}
+        </Text>
+      ) : null}
+      {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
+        <>
+          <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
+          <TrendingFoodsSection />
+        </>
+      ) : (
+        railsToRender.map((collection) => (
+          <DiscoveryCollectionRail key={collection.id} collection={collection} />
+        ))
+      )}
     </div>
   );
 }

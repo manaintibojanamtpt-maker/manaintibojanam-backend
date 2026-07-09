@@ -10,6 +10,7 @@ import { phoneDigits, safeNumber, safeText } from './safeRenderValue';
 
 export interface OwnerOrderSnapshot {
   id: string;
+  orderNumber?: number;
   customerName?: string;
   customerPhone?: string;
   phone?: string;
@@ -40,11 +41,38 @@ function normalizeDeliveryAddress(
   value: unknown,
 ): OwnerOrderSnapshot['deliveryAddress'] | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const record = value as { addressLine1?: unknown; city?: unknown };
-  const addressLine1 = safeText(record.addressLine1);
-  const city = safeText(record.city);
+  const record = value as {
+    addressLine1?: unknown;
+    displayLabel?: unknown;
+    formattedAddress?: unknown;
+    fullAddress?: unknown;
+    city?: unknown;
+    cityName?: unknown;
+  };
+  const addressLine1 =
+    safeText(record.addressLine1) ??
+    safeText(record.displayLabel) ??
+    safeText(record.formattedAddress) ??
+    safeText(record.fullAddress);
+  const city = safeText(record.city) ?? safeText(record.cityName);
   if (!addressLine1 && !city) return undefined;
   return { addressLine1: addressLine1 || 'Address', city: city || '' };
+}
+
+function resolveOwnerOrderAddress(
+  address: unknown,
+  deliveryAddress: unknown,
+): string | undefined {
+  const normalized = normalizeDeliveryAddress(deliveryAddress);
+  if (normalized?.addressLine1) return normalized.addressLine1;
+  if (typeof address === 'string') {
+    const trimmed = address.trim();
+    if (trimmed) return trimmed;
+  }
+  if (address && typeof address === 'object' && !Array.isArray(address)) {
+    return normalizeDeliveryAddress(address)?.addressLine1;
+  }
+  return undefined;
 }
 
 export const readModelToOwnerOrder = (
@@ -52,11 +80,15 @@ export const readModelToOwnerOrder = (
   raw?: Partial<ApiOrderRecord>
 ): OwnerOrderSnapshot => ({
   id: safeText(model.id, safeText(raw?.id, 'order')),
+  orderNumber: typeof raw?.orderNumber === 'number' ? raw.orderNumber : model.orderNumber,
   tenantId: safeText(model.tenantId, safeText(raw?.tenantId)),
   customerName: safeText(model.customerName ?? raw?.customerName, undefined) || undefined,
   customerPhone: phoneDigits(raw?.customerPhone) || undefined,
   phone: phoneDigits(model.phone ?? raw?.phone) || undefined,
-  address: safeText(model.address ?? raw?.address, undefined) || undefined,
+  address:
+    resolveOwnerOrderAddress(raw?.address ?? model.address, raw?.deliveryAddress) ||
+    safeText(model.address ?? raw?.address, undefined) ||
+    undefined,
   deliveryAddress: normalizeDeliveryAddress(raw?.deliveryAddress),
   totalAmount: safeNumber(raw?.totalAmount ?? model.totalAmount, 0),
   status: safeText(raw?.status ?? model.status, 'UNKNOWN').toUpperCase(),

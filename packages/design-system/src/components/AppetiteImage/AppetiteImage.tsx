@@ -17,6 +17,7 @@ export interface AppetiteImageProps {
   sizes?: string;
   blurDataURL?: string;
   sources?: readonly AppetitePictureSource[];
+  fallbackSrc?: string;
 }
 
 export function AppetiteImage({
@@ -29,8 +30,12 @@ export function AppetiteImage({
   sizes,
   blurDataURL,
   sources,
+  fallbackSrc,
 }: AppetiteImageProps) {
   const [loaded, setLoaded] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [currentSrcSet, setCurrentSrcSet] = useState(srcSet);
+  const [usedFallback, setUsedFallback] = useState(false);
 
   const placeholderStyle = !loaded && blurDataURL
     ? {
@@ -57,8 +62,8 @@ export function AppetiteImage({
           <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
         ))}
         <img
-          src={src}
-          srcSet={srcSet}
+          src={currentSrc}
+          srcSet={currentSrcSet}
           sizes={sizes}
           alt={alt}
           className={cn('bds-appetite-image__img', !loaded && 'bds-appetite-image__img--loading')}
@@ -66,6 +71,14 @@ export function AppetiteImage({
           fetchPriority={priority ? 'high' : 'auto'}
           decoding="async"
           onLoad={() => setLoaded(true)}
+          onError={() => {
+            if (fallbackSrc && !usedFallback) {
+              setUsedFallback(true);
+              setLoaded(false);
+              setCurrentSrc(fallbackSrc);
+              setCurrentSrcSet(undefined);
+            }
+          }}
         />
       </picture>
     </div>

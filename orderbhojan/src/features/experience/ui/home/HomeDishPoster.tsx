@@ -22,7 +22,7 @@ export function HomeDishPoster({ item }: HomeDishPosterProps) {
   );
 
   return (
-    <MotionPress>
+    <MotionPress className="ob-home-dish-poster-wrap">
       <DishPoster
         name={item.name}
         price={price}

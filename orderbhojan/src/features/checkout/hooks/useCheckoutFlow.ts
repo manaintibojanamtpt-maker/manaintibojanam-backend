@@ -3,7 +3,6 @@ import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { useActiveLocation } from '@/features/location';
-import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
@@ -45,8 +44,14 @@ function buildCheckoutPayload(
   lines: ReturnType<typeof useCartStore.getState>['lines'],
   restaurantId: string,
   contextToken: string,
-  coords: { lat: number; lng: number },
+  activeLocation: ReturnType<typeof useActiveLocation>,
 ) {
+  const coords = activeLocation?.coordinates
+    ? { lat: activeLocation.coordinates.lat, lng: activeLocation.coordinates.lng }
+    : { lat: 0, lng: 0 };
+  const displayLabel = activeLocation?.displayLabel?.trim() ?? '';
+  const distanceKm = activeLocation?.serviceability?.distanceKm;
+
   return {
     restaurantId,
     contextToken,
@@ -55,7 +60,12 @@ function buildCheckoutPayload(
       itemId: line.foodId,
       quantity: line.quantity,
     })),
-    deliveryAddress: { lat: coords.lat, lng: coords.lng },
+    deliveryAddress: {
+      lat: coords.lat,
+      lng: coords.lng,
+      ...(displayLabel ? { addressLine1: displayLabel, displayLabel } : {}),
+      ...(typeof distanceKm === 'number' ? { distanceKm } : {}),
+    },
   };
 }
 
@@ -86,8 +96,11 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (lines.length === 0) {
       throw new Error('Your cart is empty.');
     }
-    const coords = resolveRestaurantCoords(activeLocation ?? null);
-    return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, coords);
+    const coords = activeLocation?.coordinates;
+    if (!coords) {
+      throw new Error('Delivery address is required. Add your address before checkout.');
+    }
+    return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
   }, [activeLocation, contextToken, lines, resolvedRestaurantId]);
 
   const refreshQuote = useCallback(async () => {

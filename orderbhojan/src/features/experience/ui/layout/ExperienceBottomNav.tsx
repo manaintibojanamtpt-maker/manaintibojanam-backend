@@ -48,18 +48,20 @@ export function ExperienceBottomNav() {
           if (path) navigate(path);
         }}
       />
-      <NavIsland
-        items={[...NAV_ITEMS]}
-        activeId={activeId}
-        onChange={(id) => {
-          const path = NAV_PATHS[id];
-          if (id === 'home') {
-            useDiscoveryFilterStore.getState().resetFilters();
-            useCategoryStore.getState().clear();
-          }
-          if (path) navigate(path);
-        }}
-      />
+      <div className="ob-fixed-bottom-nav" role="presentation">
+        <NavIsland
+          items={[...NAV_ITEMS]}
+          activeId={activeId}
+          onChange={(id) => {
+            const path = NAV_PATHS[id];
+            if (id === 'home') {
+              useDiscoveryFilterStore.getState().resetFilters();
+              useCategoryStore.getState().clear();
+            }
+            if (path) navigate(path);
+          }}
+        />
+      </div>
     </>
   );
 }

@@ -263,7 +263,9 @@ const OwnerOrders: React.FC = () => {
             <AnimatePresence>
               {orders.map((order, orderIndex) => {
                 const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
-                const shortOrderId = orderKey.slice(-6).toUpperCase();
+                const displayOrderNumber = order.orderNumber
+                  ? String(order.orderNumber)
+                  : orderKey.slice(-6).toUpperCase();
                 const lineItems = Array.isArray(order.items) ? order.items : [];
                 const deliveryPartnerName = deliveryPartnerLabel(order.deliveryPartner);
                 const orderStatus = safeText(order.status, 'UNKNOWN');
@@ -289,7 +291,7 @@ const OwnerOrders: React.FC = () => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                        <span className="text-sm font-mono text-white/40">#{shortOrderId}</span>
+                        <span className="text-sm font-mono text-white/40">#{displayOrderNumber}</span>
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
                           ${orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
                           ${orderStatus === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}

@@ -11,6 +11,7 @@ export interface PremiumChipProps extends Omit<React.ButtonHTMLAttributes<HTMLBu
   imageSizes?: string;
   imageBlurDataURL?: string;
   imageSources?: readonly AppetitePictureSource[];
+  imageFallbackSrc?: string;
   emoji?: string;
 
   selected?: boolean;
@@ -29,6 +30,7 @@ export function PremiumChip({
   imageSizes,
   imageBlurDataURL,
   imageSources,
+  imageFallbackSrc,
   emoji,
 
   selected,
@@ -65,6 +67,7 @@ export function PremiumChip({
             sizes={imageSizes}
             blurDataURL={imageBlurDataURL}
             sources={imageSources}
+            fallbackSrc={imageFallbackSrc}
           />
 
         ) : emoji ? (

@@ -37,9 +37,8 @@ export function HomeRestaurantPoster({ restaurant }: HomeRestaurantPosterProps) 
     <MotionPress>
 
       <RestaurantPoster
-
+        className="ob-kitchen-card ob-stove-glow-frame"
         name={restaurant.name}
-
         imageUrl={photo.src}
 
         imageSrcSet={photo.srcSet}

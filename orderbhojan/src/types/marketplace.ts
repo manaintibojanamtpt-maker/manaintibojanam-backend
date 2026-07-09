@@ -163,8 +163,10 @@ export interface OrderTrackingResponse {
     }[];
     readonly subtotal: number;
     readonly gstAmount: number;
+    readonly gstPercent?: number;
     readonly deliveryFee: number;
     readonly packingFee: number;
+    readonly discountAmount?: number;
     readonly grandTotal: number;
   };
   readonly feedback?: {

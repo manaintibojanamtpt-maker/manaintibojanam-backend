@@ -1,6 +1,7 @@
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { allocateMarketplaceOrderNumber } from './orderNumberAllocator.js';
+import { normalizeDeliveryAddressFields } from './deliveryAddressFields.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -308,6 +309,10 @@ function buildOrderPayload(
   paymentMethod: 'cod' | 'razorpay',
   orderNumber: number,
 ) {
+  const { address, deliveryAddress } = normalizeDeliveryAddressFields(
+    request.deliveryAddress as Record<string, unknown> | undefined,
+  );
+
   return {
     tenantId,
     orderNumber,
@@ -315,8 +320,8 @@ function buildOrderPayload(
     customerName: request.customerName ?? null,
     userEmail: request.userEmail ?? null,
     phone: request.phone.trim(),
-    address: request.deliveryAddress ?? null,
-    deliveryAddress: request.deliveryAddress ?? null,
+    address,
+    deliveryAddress,
     items: orderItems,
     subtotal: quote.subtotal,
     discountAmount: quote.discountAmount,

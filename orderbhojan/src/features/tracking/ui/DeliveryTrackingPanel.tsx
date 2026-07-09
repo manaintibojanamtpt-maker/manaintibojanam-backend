@@ -7,7 +7,7 @@ export function DeliveryTrackingPanel({
   readonly delivery: NonNullable<OrderTrackingResponse['delivery']>;
 }) {
   return (
-    <GlassSurface className="ob-tracking-px2__delivery">
+    <GlassSurface className="ob-tracking-px2__delivery ob-tracking-v3__panel">
       <Text variant="titleSm" as="h2" className="ob-tracking-px2__section-title">
         Delivery partner
       </Text>

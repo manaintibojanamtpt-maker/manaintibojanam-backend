@@ -1,7 +1,7 @@
 export const TRACKING_STEPS = [
   { id: 'PLACED', label: 'Order placed', message: 'We received your order' },
   { id: 'ACCEPTED', label: 'Restaurant accepted', message: 'Kitchen confirmed your order' },
-  { id: 'PREPARING', label: 'Preparing your food', message: 'Chef is preparing your meal' },
+  { id: 'PREPARING', label: 'Preparing your meal', message: 'Chef is preparing your meal' },
   { id: 'OUT_FOR_DELIVERY', label: 'Out for delivery', message: 'Your order is on the way' },
   { id: 'DELIVERED', label: 'Delivered', message: 'Enjoy your meal' },
 ] as const;

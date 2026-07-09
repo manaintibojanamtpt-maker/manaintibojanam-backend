@@ -30,8 +30,8 @@ export default defineConfig({
         name: 'OrderBhojan',
         short_name: 'OrderBhojan',
         description: 'India\'s next-generation food ordering marketplace',
-        theme_color: '#ff6b35',
-        background_color: '#070504',
+        theme_color: '#0a0706',
+        background_color: '#0a0706',
         display: 'standalone',
         start_url: '/',
         icons: [

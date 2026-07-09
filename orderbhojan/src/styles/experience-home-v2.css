@@ -1,0 +1,604 @@
+/**
+ * OrderBhojan Screen 1 — Evening Kitchen design tokens + hero layout
+ * Palette: Charcoal Hearth / Tamarind Depth / Turmeric Glow / Copper Vessel / Rice Flour / Smoke Ash
+ */
+
+:root {
+  --ob-charcoal-hearth: #0a0706;
+  --ob-tamarind-depth: #1c1210;
+  --ob-turmeric-glow: #e8a838;
+  --ob-copper-vessel: #c4622d;
+  --ob-rice-flour: #fff6eb;
+  --ob-smoke-ash: #a89b8e;
+
+  --bds-font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --bds-font-display: "Fraunces", "Figtree", serif;
+
+  --bds-color-background: var(--ob-charcoal-hearth);
+  --bds-color-background-luxury: var(--ob-charcoal-hearth);
+  --bds-color-surface: var(--ob-tamarind-depth);
+  --bds-color-surface-warm: var(--ob-tamarind-depth);
+  --bds-color-surface-warm-strong: #241815;
+  --bds-color-card: var(--ob-tamarind-depth);
+  --bds-color-text-primary: var(--ob-rice-flour);
+  --bds-color-text-secondary: var(--ob-smoke-ash);
+  --bds-color-primary: var(--ob-turmeric-glow);
+  --bds-color-primary-hover: #f0bc55;
+  --bds-color-glass-warm: color-mix(in srgb, var(--ob-tamarind-depth) 78%, transparent);
+  --bds-color-glass-warm-border: rgba(232, 168, 56, 0.14);
+  --bds-shadow-glow-primary: 0 0 28px -8px rgba(196, 98, 45, 0.28);
+  --bds-shadow-warm-sm: 0 4px 20px rgba(196, 98, 45, 0.12);
+  --bds-shadow-warm-md: 0 8px 32px rgba(196, 98, 45, 0.18);
+
+  --mib-bg: var(--ob-charcoal-hearth);
+  --mib-surface: var(--ob-tamarind-depth);
+  --mib-surface-strong: #241815;
+  --mib-text: var(--ob-rice-flour);
+  --mib-muted: var(--ob-smoke-ash);
+  --mib-primary: var(--ob-turmeric-glow);
+  --mib-primary-2: var(--ob-copper-vessel);
+  --mib-border-strong: rgba(232, 168, 56, 0.14);
+  --mib-shadow-glow: var(--bds-shadow-glow-primary);
+}
+
+/* Stove Glow Frame — signature food imagery treatment */
+.ob-stove-glow-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 20px 20px;
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 98, 45, 0.14),
+    var(--bds-shadow-warm-md);
+}
+
+.ob-stove-glow-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse 58% 48% at 8% 94%,
+    rgba(232, 168, 56, 0.42) 0%,
+    rgba(196, 98, 45, 0.14) 42%,
+    transparent 72%
+  );
+}
+
+/* ——— Kitchen Door Hero ——— */
+.ob-kitchen-hero {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.ob-kitchen-hero__frame {
+  min-height: min(56vh, 460px);
+  max-height: 520px;
+}
+
+.ob-kitchen-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #2a1810;
+}
+
+.ob-kitchen-hero__slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.ob-kitchen-hero__slide--active {
+  opacity: 1;
+}
+
+.ob-kitchen-hero__slide--animated.ob-kitchen-hero__slide:not(.ob-kitchen-hero__slide--active) {
+  transition: opacity 600ms ease;
+}
+
+.ob-kitchen-hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  display: block;
+  transform: scale(1);
+  transform-origin: center center;
+  filter: saturate(1.06) contrast(1.04);
+}
+
+.ob-kitchen-hero__img--ken-burns {
+  animation: ob-hero-ken-burns 8s ease-in-out forwards;
+}
+
+@keyframes ob-hero-ken-burns {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
+}
+
+.ob-kitchen-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* Professional hero has natural dark top — light scrim left + bottom for text/search */
+  background:
+    linear-gradient(
+      108deg,
+      rgba(10, 7, 6, 0.72) 0%,
+      rgba(10, 7, 6, 0.38) 26%,
+      transparent 52%
+    ),
+    linear-gradient(to bottom, rgba(10, 7, 6, 0.35) 0%, transparent 16%),
+    linear-gradient(to top, rgba(10, 7, 6, 0.88) 0%, rgba(10, 7, 6, 0.45) 34%, transparent 58%);
+}
+
+.ob-kitchen-hero__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 68% 58% at 8% 92%,
+    rgba(232, 168, 56, 0.48) 0%,
+    rgba(196, 98, 45, 0.2) 46%,
+    transparent 76%
+  );
+}
+
+.ob-kitchen-hero__stove-accent {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 32% 26% at 12% 98%, rgba(255, 210, 130, 0.55) 0%, transparent 72%),
+    radial-gradient(ellipse 18% 14% at 6% 100%, rgba(255, 235, 190, 0.35) 0%, transparent 80%);
+}
+
+.ob-kitchen-hero__content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: min(56vh, 460px);
+  max-height: 520px;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    0
+    max(16px, env(safe-area-inset-left));
+}
+
+.ob-kitchen-hero__text-well {
+  position: absolute;
+  bottom: 0;
+  left: max(8px, env(safe-area-inset-left));
+  width: min(96%, 22rem);
+  height: 72%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 105% 85% at 0% 92%,
+    rgba(10, 7, 6, 0.84) 0%,
+    rgba(10, 7, 6, 0.48) 48%,
+    transparent 80%
+  );
+}
+
+.ob-kitchen-hero__eyebrow {
+  margin: 0;
+  font-family: var(--bds-font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ob-rice-flour) 72%, var(--ob-turmeric-glow));
+}
+
+.ob-kitchen-hero__headline {
+  margin: 0;
+  max-width: 14ch;
+  font-family: var(--bds-font-display);
+  font-size: clamp(1.75rem, 7.2vw, 2rem);
+  font-weight: 650;
+  font-variation-settings: "SOFT" 50, "WONK" 0;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--ob-rice-flour);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  text-shadow:
+    0 2px 20px rgba(10, 7, 6, 0.75),
+    0 1px 3px rgba(10, 7, 6, 0.55);
+}
+
+.ob-kitchen-hero__subline {
+  margin: 0 0 4px;
+  max-width: 28ch;
+  font-family: var(--bds-font-sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ob-smoke-ash);
+  animation: ob-home-craving-fade 600ms ease both;
+}
+
+.ob-kitchen-hero__search-dock {
+  position: relative;
+  margin-top: 10px;
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left)));
+  padding:
+    8px
+    max(16px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: transparent;
+  border: none;
+}
+
+.ob-kitchen-hero__search-dock::before {
+  content: "";
+  position: absolute;
+  inset: -36px 0 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 7, 6, 0.62) 0%,
+    rgba(10, 7, 6, 0.22) 50%,
+    transparent 100%
+  );
+}
+
+.ob-kitchen-hero__search-input.bds-premium-search {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 168, 56, 0.32);
+  background: rgba(10, 7, 6, 0.14) !important;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 235, 0.1),
+    inset 0 0 0 1px rgba(255, 246, 235, 0.04);
+}
+
+.ob-kitchen-hero__search-input.bds-premium-search:focus-within {
+  outline: 2px solid var(--ob-turmeric-glow);
+  outline-offset: 2px;
+  border-color: rgba(232, 168, 56, 0.4);
+  background: rgba(10, 7, 6, 0.28) !important;
+}
+
+.ob-kitchen-hero__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ob-kitchen-hero__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(168, 155, 142, 0.45);
+  transition: width 200ms ease, background 200ms ease;
+}
+
+.ob-kitchen-hero__dot--active {
+  width: 18px;
+  background: var(--ob-turmeric-glow);
+}
+
+/* ——— Location bar below hero ——— */
+.ob-home-location-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ob-tamarind-depth) 92%, transparent);
+  border: 1px solid rgba(232, 168, 56, 0.1);
+}
+
+.ob-home-location-bar__prefix {
+  flex-shrink: 0;
+  font-family: var(--bds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ob-smoke-ash);
+}
+
+.ob-home-location-bar__chip.ob-location-chip {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 0;
+  min-height: auto;
+  background: transparent;
+  border: none;
+}
+
+.ob-home-location-bar__chip .ob-location-chip__label {
+  font-weight: 600;
+  color: var(--ob-rice-flour);
+}
+
+.ob-home-location-bar__fallback {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font-family: var(--bds-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ob-rice-flour);
+  cursor: default;
+}
+
+/* Homepage content refresh */
+.ob-home-page.bds-px2-page {
+  --ob-home-bleed: max(16px, env(safe-area-inset-left));
+}
+
+.ob-home-categories {
+  background: color-mix(in srgb, var(--ob-tamarind-depth) 86%, transparent);
+  border: 1px solid rgba(232, 168, 56, 0.1);
+  border-radius: 16px;
+}
+
+.ob-home-categories::before {
+  content: "What are you craving?";
+  display: block;
+  padding: 12px 16px 0;
+  font-family: var(--bds-font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ob-rice-flour);
+}
+
+.ob-px2-marketplace {
+  background:
+    radial-gradient(900px 480px at 0% -10%, rgba(232, 168, 56, 0.08), transparent 55%),
+    var(--ob-charcoal-hearth);
+  padding-bottom: calc(6.75rem + env(safe-area-inset-bottom));
+}
+
+/* Issue 1 — bottom nav pinned to viewport; content clears the island */
+.ob-fixed-bottom-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 400;
+  pointer-events: none;
+}
+
+.ob-fixed-bottom-nav .bds-nav-island-shell {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(max(0.5rem, env(safe-area-inset-bottom)) + var(--bds-space-2, 0.5rem));
+  z-index: 401;
+  pointer-events: auto;
+}
+
+.ob-home-page__content {
+  padding-bottom: 16px;
+}
+
+/* Issue 5 — consistent add-to-cart on dish posters */
+.ob-home-dishes__rail .ob-home-feed__item {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.ob-home-dish-poster-wrap {
+  display: block;
+  width: 10.5rem;
+  min-width: 10.5rem;
+}
+
+.ob-home-dishes__rail .bds-dish-poster {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+}
+
+.ob-home-dishes__rail .bds-dish-poster__image {
+  position: absolute;
+  inset: 0;
+}
+
+.ob-home-dishes__rail .bds-dish-poster__add {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  margin: 0;
+}
+
+.ob-home-dishes__rail .bds-dish-poster__add-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+/* ——— Screen 2: category chips + kitchen cards + spotlight ——— */
+.ob-home-categories__rail .bds-premium-chip {
+  transition: transform 120ms ease;
+}
+
+.ob-home-categories__rail .bds-premium-chip:active {
+  transform: scale(0.97);
+}
+
+.ob-home-categories__rail .bds-premium-chip--selected {
+  outline: 2px solid var(--ob-copper-vessel);
+  outline-offset: 2px;
+}
+
+.ob-kitchen-card.bds-restaurant-poster,
+.ob-discovery-card.bds-restaurant-card {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms ease;
+}
+
+.ob-kitchen-card.bds-restaurant-poster:active,
+.ob-discovery-card.bds-restaurant-card:active {
+  transform: translateY(-2px);
+  box-shadow:
+    var(--bds-shadow-food-card),
+    0 10px 28px rgba(196, 98, 45, 0.22);
+}
+
+.ob-kitchen-card.bds-restaurant-poster .bds-restaurant-poster__image,
+.ob-discovery-card .ob-kitchen-card__img {
+  filter: saturate(1.05) contrast(1.04);
+}
+
+.ob-kitchen-spotlight {
+  padding: 0 var(--bds-space-4) var(--bds-space-5);
+}
+
+.ob-kitchen-spotlight__card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  text-align: left;
+  background: var(--ob-tamarind-depth);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ob-kitchen-spotlight__card--mock {
+  cursor: default;
+}
+
+.ob-kitchen-spotlight__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #2a1810;
+}
+
+.ob-kitchen-spotlight__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ob-kitchen-spotlight__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 7, 6, 0.82) 0%,
+    rgba(10, 7, 6, 0.18) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.ob-kitchen-spotlight__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-family: var(--bds-font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ob-charcoal-hearth);
+  background: var(--ob-turmeric-glow);
+  box-shadow: 0 4px 16px rgba(232, 168, 56, 0.35);
+}
+
+.ob-kitchen-spotlight__body {
+  padding: 14px 16px 16px;
+}
+
+.ob-kitchen-spotlight__eyebrow {
+  margin: 0 0 4px;
+  color: var(--ob-smoke-ash);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+}
+
+.ob-kitchen-spotlight__name {
+  margin: 0 0 6px;
+  font-family: var(--bds-font-display);
+  color: var(--ob-rice-flour);
+}
+
+.ob-kitchen-spotlight__trust {
+  margin: 0 0 10px;
+  color: var(--ob-smoke-ash);
+}
+
+.ob-kitchen-spotlight__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ob-kitchen-spotlight__sparse-copy {
+  margin: 0 var(--bds-space-4) var(--bds-space-4);
+  color: var(--ob-smoke-ash);
+  line-height: 1.45;
+}
+
+.ob-kitchen-spotlight__mock-poster .bds-restaurant-poster {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 16 / 10;
+  border-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-kitchen-hero__slide,
+  .ob-kitchen-hero__img--ken-burns,
+  .ob-kitchen-hero__subline,
+  .ob-kitchen-hero__dot {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .ob-kitchen-hero__slide--active {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .ob-kitchen-hero__search-input.bds-premium-search {
+    background: rgba(10, 7, 6, 0.18) !important;
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
+}
+
+/* Fraunces mobile tuning — verified target: 375px @2x */
+@media (max-width: 430px) {
+  .ob-kitchen-hero__headline {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+}

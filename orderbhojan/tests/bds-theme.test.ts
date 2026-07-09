@@ -14,16 +14,17 @@ describe('BDS theme certification', () => {
     assert.equal(BDS_FROZEN, true);
   });
 
-  it('index.html uses BDS primary theme-color', () => {
+  it('index.html uses Evening Kitchen theme-color and display fonts', () => {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
-    assert.match(html, /theme-color" content="#ff6b35"/i);
-    assert.match(html, /Plus\+Jakarta\+Sans/);
+    assert.match(html, /theme-color" content="#0a0706"/i);
+    assert.match(html, /Fraunces/);
+    assert.match(html, /Figtree/);
   });
 
-  it('vite PWA manifest uses BDS colors', () => {
+  it('vite PWA manifest uses Evening Kitchen colors', () => {
     const vite = readFileSync(join(root, 'vite.config.ts'), 'utf8');
-    assert.match(vite, /theme_color: '#ff6b35'/);
-    assert.match(vite, /background_color: '#070504'/);
+    assert.match(vite, /theme_color: '#0a0706'/);
+    assert.match(vite, /background_color: '#0a0706'/);
   });
 
   it('pages use BDS CSS variables not legacy brand tokens', () => {

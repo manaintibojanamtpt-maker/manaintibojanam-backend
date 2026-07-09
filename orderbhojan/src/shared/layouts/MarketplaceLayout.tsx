@@ -11,7 +11,7 @@ export function MarketplaceLayout() {
   const { pathname } = useLocation();
   const onHome = isHomeRoute(pathname);
   const locationEnabled = useLocationFeatureEnabled();
-  const showCompactHeader = !onHome || locationEnabled;
+  const showCompactHeader = !onHome;
 
   return (
     <div className="ob-px2-marketplace bds-marketplace-with-sidenav">

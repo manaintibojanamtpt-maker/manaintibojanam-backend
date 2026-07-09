@@ -65,8 +65,9 @@ describe('PX2 design-to-code implementation', () => {
     }
 
     const home = readFileSync(join(root, px2Screens[0]), 'utf8');
-    assert.match(home, /ImmersiveHero/);
-    assert.match(home, /PremiumSearch/);
+    assert.match(home, /KitchenDoorHero/);
+    const hero = readFileSync(join(root, 'src/features/experience/ui/home/KitchenDoorHero.tsx'), 'utf8');
+    assert.match(hero, /PremiumSearch/);
 
     const restaurant = readFileSync(join(root, px2Screens[1]), 'utf8');
     assert.match(restaurant, /RestaurantHero/);

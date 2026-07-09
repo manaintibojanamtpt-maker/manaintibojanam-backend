@@ -5,6 +5,7 @@ import {
   formatOrderNumberLabel,
   readOrderNumber,
 } from './orderNumberAllocator.js';
+import { resolveOrderAddressText } from './deliveryAddressFields.js';
 
 type OrderRecord = Record<string, unknown>;
 
@@ -224,6 +225,8 @@ export function projectOrderTracking(
   const restaurantName = meta?.displayName ?? safeText(data.tenantName) ?? restaurantSlug ?? 'Kitchen';
   const orderNumberValue = readOrderNumber(data);
   const orderNumber = formatOrderNumberLabel(orderNumberValue, orderId);
+  const isTerminal = status === 'DELIVERED' || status === 'CANCELLED';
+  const resolvedAddress = resolveOrderAddressText(data.address, data.deliveryAddress);
   const invoice =
     status === 'DELIVERED'
       ? {
@@ -232,14 +235,16 @@ export function projectOrderTracking(
           kitchenName: restaurantName,
           customerName: safeText(data.customerName),
           phone: phoneDigits(data.phone ?? data.customerPhone),
-          address: safeText(data.address ?? (data.deliveryAddress as { addressLine1?: string } | undefined)?.addressLine1),
+          address: resolvedAddress,
           paymentMethod: safeText(data.paymentMethod),
           paymentStatus: safeText(data.paymentStatus),
           items,
           subtotal: Number(data.subtotal ?? grandTotal),
           gstAmount: Number(data.gstAmount ?? 0),
+          gstPercent: Number(data.gst ?? 0),
           deliveryFee: Number(data.deliveryFee ?? 0),
           packingFee: Number(data.packingFee ?? 0),
+          discountAmount: Number(data.discountAmount ?? 0),
           grandTotal,
         }
       : undefined;
@@ -249,9 +254,11 @@ export function projectOrderTracking(
     orderNumber,
     status,
     timeline,
-    etaMinutes: data.eta
-      ? { min: Math.max(10, Number(data.eta) - 5), max: Number(data.eta) + 5 }
-      : undefined,
+    etaMinutes: isTerminal
+      ? undefined
+      : data.eta
+        ? { min: Math.max(10, Number(data.eta) - 5), max: Number(data.eta) + 5 }
+        : undefined,
     restaurant: {
       displayName: restaurantName,
       slug: restaurantSlug ?? 'kitchen',

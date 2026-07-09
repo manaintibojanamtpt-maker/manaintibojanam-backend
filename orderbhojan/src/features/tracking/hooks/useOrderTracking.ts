@@ -2,6 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { trackingQueryKeys } from './trackingQueryKeys';
+import { normalizeTrackingStatus } from '../utils/trackingSteps';
+
+const TERMINAL_TRACKING_STATUSES = new Set(['DELIVERED', 'CANCELLED', 'REJECTED']);
+
+function isTerminalTrackingStatus(status?: string): boolean {
+  if (!status) return false;
+  const normalized = normalizeTrackingStatus(status);
+  return TERMINAL_TRACKING_STATUSES.has(normalized);
+}
 
 export function useOrderTracking(orderId: string, guestPhone?: string) {
   const { isAuthenticated } = useAuth();
@@ -14,7 +23,8 @@ export function useOrderTracking(orderId: string, guestPhone?: string) {
       guestMode
         ? getMarketplaceApiClient().getGuestTracking(orderId, guestPhone!)
         : getMarketplaceApiClient().getTracking(orderId),
-    refetchInterval: 5_000,
+    refetchInterval: (query) =>
+      isTerminalTrackingStatus(query.state.data?.status) ? false : 5_000,
     staleTime: 2_000,
   });
 }

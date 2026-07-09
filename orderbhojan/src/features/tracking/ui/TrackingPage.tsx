@@ -15,7 +15,7 @@ import { OrderTimeline } from './OrderTimeline';
 import { DeliveryTrackingPanel } from './DeliveryTrackingPanel';
 import { OrderInvoiceSheet } from './OrderInvoiceSheet';
 import { OrderFeedbackPanel } from './OrderFeedbackPanel';
-import { trackingStepLabel } from '../utils/trackingSteps';
+import { trackingStepLabel, normalizeTrackingStatus } from '../utils/trackingSteps';
 
 export function TrackingPage() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export function TrackingPage() {
 
   if (!orderId) {
     return (
-      <MotionPage className="ob-tracking-px2">
+      <MotionPage className="ob-tracking-px2 ob-tracking-v3">
         <PremiumEmpty title="Missing order" actionLabel="View orders" onAction={() => navigate('/orders')} />
       </MotionPage>
     );
@@ -48,7 +48,7 @@ export function TrackingPage() {
 
   if (needsGuestPhone && !canFetch) {
     return (
-      <MotionPage className="ob-tracking-px2">
+      <MotionPage className="ob-tracking-px2 ob-tracking-v3">
         <header className="ob-txn-page__header">
           <Text variant="heading" as="h1" className="ob-txn-page__title">
             Track order
@@ -78,7 +78,7 @@ export function TrackingPage() {
 
   if (trackingQuery.isLoading) {
     return (
-      <MotionPage className="ob-tracking-px2">
+      <MotionPage className="ob-tracking-px2 ob-tracking-v3">
         <Skeleton height="8rem" />
         <Skeleton height="12rem" />
       </MotionPage>
@@ -87,7 +87,7 @@ export function TrackingPage() {
 
   if (trackingQuery.isError || !trackingQuery.data) {
     return (
-      <MotionPage className="ob-tracking-px2">
+      <MotionPage className="ob-tracking-px2 ob-tracking-v3">
         <PremiumEmpty
           title="Could not load tracking"
           description="Check the order ID and phone number, then try again."
@@ -100,34 +100,43 @@ export function TrackingPage() {
 
   const isRefreshing = trackingQuery.isFetching && !trackingQuery.isLoading;
   const tracking = trackingQuery.data;
+  const trackingPhase = normalizeTrackingStatus(tracking.status);
+  const isTerminalTracking = trackingPhase === 'DELIVERED' || trackingPhase === 'CANCELLED';
   const showDeliveryPanel =
     tracking.status === 'OUT_FOR_DELIVERY' && Boolean(tracking.delivery);
 
   return (
-    <MotionPage className="ob-tracking-px2">
-      <section className="ob-tracking-px2__hero" aria-label="Order status">
-        <Text variant="heading" as="p" className="ob-tracking-px2__hero-status">
-          {trackingStepLabel(tracking.status)}
-        </Text>
-        {tracking.restaurant ? (
-          <Text variant="subtitle" className="ob-tracking-px2__hero-kitchen">
-            {tracking.restaurant.displayName}
+    <MotionPage className="ob-tracking-px2 ob-tracking-v3">
+      <section
+        className="ob-tracking-px2__hero ob-stove-glow-frame ob-tracking-v3__hero"
+        aria-label="Order status"
+      >
+        <div className="ob-tracking-v3__hero-inner">
+          <Text variant="heading" as="p" className="ob-tracking-px2__hero-status">
+            {trackingStepLabel(tracking.status)}
           </Text>
-        ) : null}
-        <Text variant="body" className="ob-tracking-px2__hero-order">
-          Order #{tracking.orderNumber}
-        </Text>
-        {etaLabel ? (
-          <Text variant="subtitle" className="ob-tracking-px2__hero-eta">
-            ETA {etaLabel}
+          {tracking.restaurant ? (
+            <Text variant="subtitle" className="ob-tracking-px2__hero-kitchen">
+              {tracking.restaurant.displayName}
+            </Text>
+          ) : null}
+          <Text variant="body" className="ob-tracking-px2__hero-order">
+            Order #{tracking.orderNumber}
           </Text>
-        ) : null}
-        <div
-          className={`ob-tracking-px2__live${isRefreshing ? ' ob-tracking-px2__live--active' : ''}`}
-          aria-live="polite"
-        >
-          <span className="ob-tracking-px2__live-dot" aria-hidden />
-          {isRefreshing ? 'Updating live status…' : 'Live updates every 5s'}
+          {etaLabel && !isTerminalTracking ? (
+            <Text variant="subtitle" className="ob-tracking-px2__hero-eta">
+              ETA {etaLabel}
+            </Text>
+          ) : null}
+          {!isTerminalTracking ? (
+            <div
+              className={`ob-tracking-px2__live${isRefreshing ? ' ob-tracking-px2__live--active' : ''}`}
+              aria-live="polite"
+            >
+              <span className="ob-tracking-px2__live-dot" aria-hidden />
+              {isRefreshing ? 'Updating live…' : 'Live updates every 5s'}
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -135,7 +144,12 @@ export function TrackingPage() {
         <DeliveryTrackingPanel delivery={tracking.delivery} />
       ) : null}
 
-      <OrderTimeline tracking={tracking} />
+      <section className="ob-tracking-v3__journey" aria-label="Meal journey">
+        <Text variant="titleSm" as="h2" className="ob-tracking-v3__journey-title">
+          Your meal journey
+        </Text>
+        <OrderTimeline tracking={tracking} />
+      </section>
 
       {tracking.status === 'DELIVERED' && tracking.invoice ? (
         <div className="ob-tracking-px2__post-actions">
@@ -157,6 +171,7 @@ export function TrackingPage() {
         <div className="ob-tracking-px2__post-actions">
           <Button
             variant="primary"
+            className="ob-tracking-v3__reorder-btn"
             disabled={reorderBusy}
             onClick={() => void reorder(tracking.reorder!)}
           >

@@ -15,6 +15,9 @@ import '@/styles/experience-food.css';
 import '@/styles/experience-px2-layout.css';
 import '@/styles/experience-premium-m65.css';
 import '@/styles/experience-checkout.css';
+import '@/styles/experience-home-v2.css';
+import '@/styles/experience-tracking-v3.css';
+import '@/styles/experience-profile-v3.css';
 
 async function bootstrap() {
   const config = await ensureAppConfig();

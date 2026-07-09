@@ -1,6 +1,8 @@
 /** Production food photography manifest — WebP / AVIF / BlurHash / responsive widths */
 export type FoodPhotoAssetId =
   | 'hero-biryani'
+  | 'hero-thali'
+  | 'hero-tiffin'
   | 'cat-pizza'
   | 'cat-biryani'
   | 'cat-meals'
@@ -33,45 +35,87 @@ export interface FoodPhotoAsset {
   readonly baseUrl: string;
   readonly blurDataURL: string;
   readonly widths: readonly number[];
+  /** Local/static fallback when remote CDN fails */
+  readonly fallbackBaseUrl?: string;
+  /** Hero banner tuning — HD crop focal point + quality */
+  readonly hero?: {
+    readonly focalY?: number;
+    readonly quality?: number;
+  };
 }
 
 const WARM_BLUR =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCfAB//2Q==';
 
+/** Unsplash CDN supports width/quality transforms; local & third-party URLs are served as-is */
+function isUnsplashPhotoUrl(baseUrl: string): boolean {
+  return baseUrl.includes('images.unsplash.com');
+}
+
+function resolveStaticPhoto(asset: FoodPhotoAsset): ResolvedFoodPhoto {
+  const src = asset.baseUrl;
+  return {
+    src,
+    webpSrcSet: '',
+    avifSrcSet: '',
+    blurDataURL: asset.blurDataURL,
+    preloadHref: src,
+    widths: asset.widths,
+  };
+}
+
 export const FOOD_PHOTO_MANIFEST: Record<FoodPhotoAssetId, FoodPhotoAsset> = {
   'hero-biryani': {
     id: 'hero-biryani',
-    baseUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
+    /* Premium Hyderabadi chicken biryani — curated HD hero (1200px source) */
+    baseUrl: '/hero/hyderabadi-chicken-biryani-hero.jpg',
+    blurDataURL: WARM_BLUR,
+    widths: [960, 1200],
+  },
+  'hero-thali': {
+    id: 'hero-thali',
+    baseUrl: 'https://images.unsplash.com/photo-1626646292532-7e4f2be936e8',
+    blurDataURL: WARM_BLUR,
+    widths: [640, 960, 1280, 1600, 1920],
+  },
+  'hero-tiffin': {
+    id: 'hero-tiffin',
+    baseUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc',
     blurDataURL: WARM_BLUR,
     widths: [640, 960, 1280, 1600, 1920],
   },
   'cat-pizza': {
     id: 'cat-pizza',
     baseUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591',
+    fallbackBaseUrl: '/categories/pizza.jpg',
     blurDataURL: WARM_BLUR,
     widths: [96, 144, 192],
   },
   'cat-biryani': {
     id: 'cat-biryani',
     baseUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
+    fallbackBaseUrl: '/categories/biryani.jpg',
     blurDataURL: WARM_BLUR,
     widths: [96, 144, 192],
   },
   'cat-meals': {
     id: 'cat-meals',
     baseUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d',
+    fallbackBaseUrl: '/categories/meals.jpg',
     blurDataURL: WARM_BLUR,
     widths: [96, 144, 192],
   },
   'cat-south-indian': {
     id: 'cat-south-indian',
     baseUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950',
+    fallbackBaseUrl: '/categories/south-indian.jpg',
     blurDataURL: WARM_BLUR,
     widths: [96, 144, 192],
   },
   'cat-north-indian': {
     id: 'cat-north-indian',
-    baseUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398',
+    baseUrl: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe',
+    fallbackBaseUrl: '/categories/north-indian.jpg',
     blurDataURL: WARM_BLUR,
     widths: [96, 144, 192],
   },
@@ -205,17 +249,31 @@ export const FOOD_PHOTO_MANIFEST: Record<FoodPhotoAssetId, FoodPhotoAsset> = {
 
 export type FoodPhotoFormat = 'jpg' | 'webp' | 'avif';
 
+export interface FoodPhotoCropOptions {
+  readonly focalX?: number;
+  readonly focalY?: number;
+}
+
 export function foodPhotoFormatUrl(
   baseUrl: string,
   width: number,
   format: FoodPhotoFormat,
   quality = 82,
+  crop?: FoodPhotoCropOptions,
 ): string {
+  if (!isUnsplashPhotoUrl(baseUrl)) {
+    return baseUrl;
+  }
   const url = new URL(baseUrl);
   url.searchParams.set('w', String(width));
   url.searchParams.set('q', String(quality));
   url.searchParams.set('fit', 'crop');
   url.searchParams.set('auto', format === 'jpg' ? 'format' : 'format');
+  if (crop?.focalY != null) {
+    url.searchParams.set('crop', 'focalpoint');
+    url.searchParams.set('fp-x', String(crop.focalX ?? 0.5));
+    url.searchParams.set('fp-y', String(crop.focalY));
+  }
   if (format === 'webp') url.searchParams.set('fm', 'webp');
   if (format === 'avif') url.searchParams.set('fm', 'avif');
   return url.toString();
@@ -226,8 +284,13 @@ export function foodPhotoFormatSrcSet(
   widths: readonly number[],
   format: FoodPhotoFormat,
   quality = 82,
+  crop?: FoodPhotoCropOptions,
 ): string {
-  return widths.map((w) => `${foodPhotoFormatUrl(baseUrl, w, format, quality)} ${w}w`).join(', ');
+  if (!isUnsplashPhotoUrl(baseUrl)) {
+    const maxWidth = widths[widths.length - 1] ?? 1200;
+    return `${baseUrl} ${maxWidth}w`;
+  }
+  return widths.map((w) => `${foodPhotoFormatUrl(baseUrl, w, format, quality, crop)} ${w}w`).join(', ');
 }
 
 export interface ResolvedFoodPhoto {
@@ -237,16 +300,32 @@ export interface ResolvedFoodPhoto {
   blurDataURL: string;
   preloadHref: string;
   widths: readonly number[];
+  fallbackSrc?: string;
+}
+
+export function resolveCategoryChipPhoto(assetId: FoodPhotoAssetId, primaryWidth = 144, quality = 80): ResolvedFoodPhoto {
+  const resolved = resolveFoodPhoto(assetId, primaryWidth, quality);
+  const asset = FOOD_PHOTO_MANIFEST[assetId];
+  if (!asset.fallbackBaseUrl) return resolved;
+  return {
+    ...resolved,
+    fallbackSrc: asset.fallbackBaseUrl,
+  };
 }
 
 export function resolveFoodPhoto(assetId: FoodPhotoAssetId, primaryWidth: number, quality = 82): ResolvedFoodPhoto {
   const asset = FOOD_PHOTO_MANIFEST[assetId];
+  if (!isUnsplashPhotoUrl(asset.baseUrl)) {
+    return resolveStaticPhoto(asset);
+  }
+  const resolvedQuality = asset.hero?.quality ?? quality;
+  const crop = asset.hero?.focalY != null ? { focalY: asset.hero.focalY } : undefined;
   return {
-    src: foodPhotoFormatUrl(asset.baseUrl, primaryWidth, 'webp', quality),
-    webpSrcSet: foodPhotoFormatSrcSet(asset.baseUrl, asset.widths, 'webp', quality),
-    avifSrcSet: foodPhotoFormatSrcSet(asset.baseUrl, asset.widths, 'avif', quality),
+    src: foodPhotoFormatUrl(asset.baseUrl, primaryWidth, 'webp', resolvedQuality, crop),
+    webpSrcSet: foodPhotoFormatSrcSet(asset.baseUrl, asset.widths, 'webp', resolvedQuality, crop),
+    avifSrcSet: foodPhotoFormatSrcSet(asset.baseUrl, asset.widths, 'avif', resolvedQuality, crop),
     blurDataURL: asset.blurDataURL,
-    preloadHref: foodPhotoFormatUrl(asset.baseUrl, primaryWidth, 'webp', quality),
+    preloadHref: foodPhotoFormatUrl(asset.baseUrl, primaryWidth, 'webp', resolvedQuality, crop),
     widths: asset.widths,
   };
 }
@@ -270,10 +349,14 @@ export function resolveFoodPhotoByUrl(url: string, primaryWidth: number, quality
 }
 
 export function pictureSources(resolved: ResolvedFoodPhoto, sizes: string) {
-  return [
-    { type: 'image/avif', srcSet: resolved.avifSrcSet, sizes },
-    { type: 'image/webp', srcSet: resolved.webpSrcSet, sizes },
-  ] as const;
+  const sources: Array<{ type: string; srcSet: string; sizes: string }> = [];
+  if (resolved.avifSrcSet) {
+    sources.push({ type: 'image/avif', srcSet: resolved.avifSrcSet, sizes });
+  }
+  if (resolved.webpSrcSet) {
+    sources.push({ type: 'image/webp', srcSet: resolved.webpSrcSet, sizes });
+  }
+  return sources;
 }
 
 export const HOME_CATEGORY_PHOTO_ASSETS: Record<

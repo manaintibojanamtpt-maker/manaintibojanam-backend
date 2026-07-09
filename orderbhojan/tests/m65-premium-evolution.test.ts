@@ -58,7 +58,7 @@ describe('M6.5 premium evolution layer', () => {
     const menu = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
 
     if (isPx2) {
-      assert.match(home, /ImmersiveHero/);
+      assert.match(home, /KitchenDoorHero/);
       assert.match(restaurant, /RestaurantHero/);
       assert.match(menu, /ob-menu-px2/);
     } else {

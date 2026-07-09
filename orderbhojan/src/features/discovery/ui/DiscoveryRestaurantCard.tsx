@@ -55,15 +55,22 @@ export function DiscoveryRestaurantCard({
       }}
       aria-label={`${restaurant.displayName}, ${cuisineLabel(restaurant)}, rated ${restaurant.rating ?? '—'}`}
     >
-      <div className="ob-restaurant-tile__media-wrap">
+      <div className="ob-restaurant-tile__media-wrap ob-stove-glow-frame">
         {coverUrl ? (
         <img
           src={coverUrl}
           alt=""
-          className={`bds-restaurant-card__media ${cover.className}`}
+          className={`bds-restaurant-card__media ob-kitchen-card__img ${cover.className}`}
           loading="lazy"
           decoding="async"
           onLoad={cover.onLoad}
+          onError={(event) => {
+            const img = event.currentTarget;
+            if (!img.dataset.fallbackApplied && restaurant.logoUrl) {
+              img.dataset.fallbackApplied = 'true';
+              img.src = restaurant.logoUrl;
+            }
+          }}
         />
         ) : (
           <div className="bds-restaurant-card__media ob-restaurant-tile__media-fallback" aria-hidden>
