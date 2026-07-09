@@ -45,6 +45,13 @@ jobs:
           curl -sf http://localhost:8080/health/live
           curl -sf http://localhost:8080/health/ready
 
+      - name: Bootstrap discovery profiles
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          npm ci
+          npm run bootstrap:discovery-profiles
+
       - name: Prod flag guard check
         run: |
           echo "Verify prod_spine_flags_enabled_count == 0 in Grafana (manual gate)"
