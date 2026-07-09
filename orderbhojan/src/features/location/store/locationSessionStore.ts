@@ -17,6 +17,7 @@ interface LocationSessionState {
   readonly savedAddresses: SavedAddress[];
   readonly recentLocations: RecentLocationEntry[];
   readonly selectorOpen: boolean;
+  readonly wizardOpen: boolean;
 
   setActiveLocation: (location: CustomerLocation | null) => void;
   setPermissionState: (state: GeolocationPermissionState) => void;
@@ -25,6 +26,7 @@ interface LocationSessionState {
   setSavedAddresses: (addresses: SavedAddress[]) => void;
   setRecentLocations: (entries: RecentLocationEntry[]) => void;
   setSelectorOpen: (open: boolean) => void;
+  setWizardOpen: (open: boolean) => void;
   resetUi: () => void;
 }
 
@@ -38,6 +40,7 @@ export const useLocationSessionStore = create<LocationSessionState>()(
       savedAddresses: [],
       recentLocations: [],
       selectorOpen: false,
+      wizardOpen: false,
 
       setActiveLocation: (activeLocation) => set({ activeLocation, uiStatus: activeLocation ? 'ready' : 'idle' }),
       setPermissionState: (permissionState) => set({ permissionState }),
@@ -46,6 +49,7 @@ export const useLocationSessionStore = create<LocationSessionState>()(
       setSavedAddresses: (savedAddresses) => set({ savedAddresses }),
       setRecentLocations: (recentLocations) => set({ recentLocations }),
       setSelectorOpen: (selectorOpen) => set({ selectorOpen }),
+      setWizardOpen: (wizardOpen: boolean) => set({ wizardOpen }),
       resetUi: () => set({ uiStatus: 'idle', uiError: null }),
     }),
     {

@@ -146,6 +146,16 @@ export function useLocationActions() {
     locationStore().setSelectorOpen(false);
   }, []);
 
+  const openWizard = useCallback(() => {
+    const store = locationStore();
+    store.setSelectorOpen(false);
+    store.setWizardOpen(true);
+  }, []);
+
+  const closeWizard = useCallback(() => {
+    locationStore().setWizardOpen(false);
+  }, []);
+
   return {
     requestCurrentLocation,
     selectSavedAddress,
@@ -158,5 +168,7 @@ export function useLocationActions() {
     setManualSession,
     openSelector,
     closeSelector,
+    openWizard,
+    closeWizard,
   };
 }

@@ -4,6 +4,7 @@ export interface TenantStoreOperations {
   openTime?: string;
   closeTime?: string;
   offlineMessage?: string;
+  timezone?: string;
 }
 
 export interface ResolvedStoreSettings {
@@ -19,6 +20,19 @@ export interface ResolvedStoreSettings {
 
 const DEFAULT_OPEN = '09:00';
 const DEFAULT_CLOSE = '22:00';
+const DEFAULT_STORE_TIMEZONE = 'Asia/Kolkata';
+
+function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour}:${minute}`;
+}
 
 export const DEFAULT_STORE_OPERATIONS: Required<
   Pick<TenantStoreOperations, 'isStoreOpen' | 'businessHoursEnabled' | 'openTime' | 'closeTime'>
@@ -71,8 +85,13 @@ export function resolveStoreSettings(
   };
 }
 
-function isWithinBusinessHours(openTime: string, closeTime: string, currentTime: Date): boolean {
-  const currentTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
+function isWithinBusinessHours(
+  openTime: string,
+  closeTime: string,
+  currentTime: Date,
+  timeZone = DEFAULT_STORE_TIMEZONE,
+): boolean {
+  const currentTimeStr = formatLocalTimeHHmm(currentTime, timeZone);
 
   if (closeTime < openTime) {
     return currentTimeStr >= openTime || currentTimeStr <= closeTime;
@@ -83,7 +102,8 @@ function isWithinBusinessHours(openTime: string, closeTime: string, currentTime:
 
 export function isTenantStoreOpenNow(
   settings: ResolvedStoreSettings | null | undefined,
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  timeZone = DEFAULT_STORE_TIMEZONE,
 ): boolean {
   if (!settings) return true;
   if (settings.isStoreOpen === false) return false;
@@ -91,7 +111,7 @@ export function isTenantStoreOpenNow(
   if (settings.storeTiming.businessHoursEnabled) {
     const { openTime, closeTime } = settings.storeTiming;
     if (openTime && closeTime) {
-      return isWithinBusinessHours(openTime, closeTime, currentTime);
+      return isWithinBusinessHours(openTime, closeTime, currentTime, timeZone);
     }
   }
 
@@ -100,14 +120,15 @@ export function isTenantStoreOpenNow(
 
 export function getStoreClosedReason(
   settings: ResolvedStoreSettings | null | undefined,
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  timeZone = DEFAULT_STORE_TIMEZONE,
 ): 'manual' | 'hours' | null {
   if (!settings) return null;
   if (settings.isStoreOpen === false) return 'manual';
 
   if (settings.storeTiming.businessHoursEnabled) {
     const { openTime, closeTime } = settings.storeTiming;
-    if (openTime && closeTime && !isWithinBusinessHours(openTime, closeTime, currentTime)) {
+    if (openTime && closeTime && !isWithinBusinessHours(openTime, closeTime, currentTime, timeZone)) {
       return 'hours';
     }
   }

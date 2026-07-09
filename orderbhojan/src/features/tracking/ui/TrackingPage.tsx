@@ -137,7 +137,7 @@ export function TrackingPage() {
 
       <OrderTimeline tracking={tracking} />
 
-      {tracking.invoice ? (
+      {tracking.status === 'DELIVERED' && tracking.invoice ? (
         <div className="ob-tracking-px2__post-actions">
           <Button variant="secondary" onClick={() => setInvoiceOpen(true)}>
             View digital invoice

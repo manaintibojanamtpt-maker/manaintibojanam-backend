@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { LocationChip, LocationSelectorSheet, useLocationFeatureEnabled } from '@/features/location';
+import { LocationChip, LocationSelectorSheet, DeliveryLocationWizard, useLocationFeatureEnabled } from '@/features/location';
 import { ExperienceBottomNav, MarketplaceFloatingCart } from '@/features/experience';
 import { OrderBhojanBrand } from '@/shared/ui/OrderBhojanBrand';
 
@@ -37,7 +37,12 @@ export function MarketplaceLayout() {
 
       <ExperienceBottomNav />
       <MarketplaceFloatingCart />
-      {locationEnabled ? <LocationSelectorSheet /> : null}
+      {locationEnabled ? (
+        <>
+          <LocationSelectorSheet />
+          <DeliveryLocationWizard />
+        </>
+      ) : null}
     </div>
   );
 }

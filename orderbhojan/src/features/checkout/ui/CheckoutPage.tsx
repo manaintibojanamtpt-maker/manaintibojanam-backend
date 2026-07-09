@@ -25,7 +25,7 @@ function CheckoutDeliveryAddress() {
   const locationEnabled = useLocationFeatureEnabled();
   const active = useActiveLocation();
   const { uiStatus } = useLocationUiState();
-  const { openSelector } = useLocationActions();
+  const { openWizard } = useLocationActions();
 
   if (!locationEnabled) return null;
 
@@ -53,8 +53,8 @@ function CheckoutDeliveryAddress() {
             </Text>
           )}
         </div>
-        <Button variant="ghost" size="compact" onClick={openSelector}>
-          Change
+        <Button variant="ghost" size="compact" onClick={openWizard}>
+          {active ? 'Change' : 'Add address'}
         </Button>
       </div>
     </section>
@@ -96,6 +96,9 @@ function normalizePhoneFromSession(phoneNumber: string | null | undefined): stri
 export function CheckoutPage() {
   const navigate = useNavigate();
   const { sessionUser } = useAuth();
+  const locationEnabled = useLocationFeatureEnabled();
+  const activeLocation = useActiveLocation();
+  const { openWizard } = useLocationActions();
   const {
     quote,
     paymentMethods,
@@ -130,6 +133,11 @@ export function CheckoutPage() {
     if (!canCheckout) return;
     void prepareCheckout();
   }, [canCheckout, prepareCheckout]);
+
+  useEffect(() => {
+    if (!locationEnabled || activeLocation || orderId) return;
+    openWizard();
+  }, [activeLocation, locationEnabled, openWizard, orderId]);
 
   const validatePhone = (): boolean => {
     const parsed = phoneNumberSchema.safeParse(phone.trim());

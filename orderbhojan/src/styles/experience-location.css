@@ -176,3 +176,35 @@
     padding-right: max(var(--bds-space-3), env(safe-area-inset-right));
   }
 }
+
+.ob-location-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-4);
+}
+
+.ob-location-wizard__detect,
+.ob-location-wizard__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-3);
+}
+
+.ob-location-wizard__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-2);
+}
+
+.ob-location-wizard__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bds-space-3);
+  margin-top: var(--bds-space-2);
+}
+
+.ob-location-wizard__blocked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bds-space-3);
+}

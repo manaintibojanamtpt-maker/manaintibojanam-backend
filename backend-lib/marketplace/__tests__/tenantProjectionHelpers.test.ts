@@ -4,6 +4,7 @@ import {
   computeTenantDeliveryFee,
   extractTenantSyncRevision,
   formatHoursLabel,
+  isStoreOpenNow,
   mergeSyncRevisions,
   isImplausibleCustomerDistance,
   resolveDeliveryFeeForDisplay,
@@ -81,6 +82,29 @@ describe('tenantProjectionHelpers', () => {
       mergeSyncRevisions('2026-06-01T10:00:00.000Z', '2026-06-03T08:00:00.000Z'),
       '2026-06-03T08:00:00.000Z',
     );
+  });
+
+  it('uses Asia/Kolkata for business hours instead of server local time', () => {
+    const timing = resolveStoreTiming(
+      {
+        storeOperations: {
+          isStoreOpen: true,
+          businessHoursEnabled: true,
+          openTime: '09:00',
+          closeTime: '22:00',
+        },
+      } as never,
+      {},
+    );
+
+    const lunchIst = new Date('2026-07-09T08:43:00.000Z');
+    assert.equal(isStoreOpenNow(timing, lunchIst), true);
+
+    const openBoundary = new Date('2026-07-09T03:30:00.000Z');
+    assert.equal(isStoreOpenNow(timing, openBoundary), true);
+
+    const beforeOpen = new Date('2026-07-09T02:00:00.000Z');
+    assert.equal(isStoreOpenNow(timing, beforeOpen), false);
   });
 });
 

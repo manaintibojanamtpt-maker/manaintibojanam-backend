@@ -3,7 +3,7 @@ import { Clock, Power, Store } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTenant } from '../../context/TenantContext';
 import { updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
-import { DEFAULT_STORE_OPERATIONS, TenantStoreOperations } from '../../lib/tenantStoreOperations';
+import { DEFAULT_STORE_OPERATIONS, isTenantStoreOpenNow, resolveStoreSettings, TenantStoreOperations } from '../../lib/tenantStoreOperations';
 
 interface StoreLiveControlProps {
   variant?: 'compact' | 'full';
@@ -69,25 +69,34 @@ export const StoreLiveControl: React.FC<StoreLiveControlProps> = ({ variant = 'c
   };
 
   const isLive = ops.isStoreOpen !== false;
+  const effectiveSettings = resolveStoreSettings({ storeOperations: ops });
+  const isAcceptingOrders = isTenantStoreOpenNow(effectiveSettings);
 
   if (variant === 'compact') {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border ${isLive ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
-              <Store size={18} className={isLive ? 'text-emerald-400' : 'text-red-400'} />
+            <div className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border ${isAcceptingOrders ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+              <Store size={18} className={isAcceptingOrders ? 'text-emerald-400' : 'text-red-400'} />
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/40">Storefront Status</p>
-              <p className={`text-lg font-black ${isLive ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isLive ? 'Live — Accepting Orders' : 'Offline — Paused'}
+              <p className={`text-lg font-black ${isAcceptingOrders ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isAcceptingOrders ? 'Live — Accepting Orders' : 'Offline — Paused'}
               </p>
               <p className="mt-1 text-xs text-white/50">
                 {ops.businessHoursEnabled
-                  ? `Auto offline outside ${ops.openTime} – ${ops.closeTime}`
-                  : 'Manual control only (business hours off)'}
+                  ? `Auto offline outside ${ops.openTime} – ${ops.closeTime} (IST)`
+                  : isLive
+                    ? 'Manual live — business hours off'
+                    : 'Manual offline'}
               </p>
+              {isLive && !isAcceptingOrders ? (
+                <p className="mt-1 text-xs text-amber-400/90">
+                  Manual toggle is live, but marketplace is closed until business hours resume.
+                </p>
+              ) : null}
             </div>
           </div>
 

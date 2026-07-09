@@ -27,10 +27,24 @@ export interface ResolvedStoreTiming {
   readonly closeTime: string;
   readonly businessHoursEnabled: boolean;
   readonly offlineMessage?: string;
+  readonly timezone: string;
 }
 
 const DEFAULT_OPEN = '09:00';
 const DEFAULT_CLOSE = '22:00';
+export const DEFAULT_STORE_TIMEZONE = 'Asia/Kolkata';
+
+export function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour}:${minute}`;
+}
 
 export function readTenantLocation(
   raw: Record<string, unknown>,
@@ -98,6 +112,10 @@ export function resolveStoreTiming(
       closeTime: ops.closeTime || DEFAULT_CLOSE,
       businessHoursEnabled: ops.businessHoursEnabled === true,
       offlineMessage: ops.offlineMessage,
+      timezone:
+        typeof ops.timezone === 'string' && ops.timezone.trim()
+          ? ops.timezone.trim()
+          : DEFAULT_STORE_TIMEZONE,
     };
   }
 
@@ -110,6 +128,7 @@ export function resolveStoreTiming(
       closeTime:
         typeof legacyTiming.closeTime === 'string' ? legacyTiming.closeTime : DEFAULT_CLOSE,
       businessHoursEnabled: !manualOverride,
+      timezone: DEFAULT_STORE_TIMEZONE,
     };
   }
 
@@ -118,11 +137,17 @@ export function resolveStoreTiming(
     openTime: DEFAULT_OPEN,
     closeTime: DEFAULT_CLOSE,
     businessHoursEnabled: false,
+    timezone: DEFAULT_STORE_TIMEZONE,
   };
 }
 
-function isWithinBusinessHours(openTime: string, closeTime: string, currentTime: Date): boolean {
-  const currentTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
+function isWithinBusinessHours(
+  openTime: string,
+  closeTime: string,
+  currentTime: Date,
+  timeZone = DEFAULT_STORE_TIMEZONE,
+): boolean {
+  const currentTimeStr = formatLocalTimeHHmm(currentTime, timeZone);
   if (closeTime < openTime) {
     return currentTimeStr >= openTime || currentTimeStr <= closeTime;
   }
@@ -132,7 +157,7 @@ function isWithinBusinessHours(openTime: string, closeTime: string, currentTime:
 export function isStoreOpenNow(timing: ResolvedStoreTiming, now = new Date()): boolean {
   if (!timing.isStoreOpen) return false;
   if (!timing.businessHoursEnabled) return true;
-  return isWithinBusinessHours(timing.openTime, timing.closeTime, now);
+  return isWithinBusinessHours(timing.openTime, timing.closeTime, now, timing.timezone);
 }
 
 export function formatTime12h(hhmm: string): string {

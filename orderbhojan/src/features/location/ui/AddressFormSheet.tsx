@@ -49,7 +49,8 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
   const [selection, setSelection] = useState<AddressCascadeSelection>(() =>
     resolveInitialCascade(active?.displayLabel),
   );
-  const [street, setStreet] = useState('');
+  const [house, setHouse] = useState('');
+  const [building, setBuilding] = useState('');
   const [landmark, setLandmark] = useState('');
   const [coordinates, setCoordinates] = useState(() => active?.coordinates ?? PUNE_COORDS);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +62,8 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
     if (!open) return;
     const next = resolveInitialCascade(active?.displayLabel);
     setSelection(next);
-    setStreet('');
+    setHouse('');
+    setBuilding('');
     setLandmark('');
     setError(null);
     if (active?.coordinates) {
@@ -79,6 +81,7 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
     const district = districts.find((d) => d.code === districtCode)!;
     const city = cities.find((c) => c.code === cityCode)!;
     const area = areas.find((a) => a.code === areaCode)!;
+    const street = [house.trim(), building.trim()].filter(Boolean).join(', ');
     const formattedAddress = `${street}, ${area.name}, ${city.name}, ${state.name} ${pincode}`;
     return {
       country: 'IN',
@@ -100,8 +103,8 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
 
   const handleSave = async () => {
     setError(null);
-    if (!street.trim()) {
-      setError('Street / house is required');
+    if (!house.trim()) {
+      setError('House / flat number is required');
       return;
     }
     if (!validatePincodeForArea(areaCode, pincode)) {
@@ -207,7 +210,8 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
         </label>
 
         <Input label="Pincode" inputMode="numeric" value={pincode} onChange={(e) => setSelection((prev) => ({ ...prev, pincode: e.target.value }))} />
-        <Input label="Street / House" value={street} onChange={(e) => setStreet(e.target.value)} />
+        <Input label="House / Flat No." value={house} onChange={(e) => setHouse(e.target.value)} />
+        <Input label="Building / Apartment" value={building} onChange={(e) => setBuilding(e.target.value)} />
         <Input label="Landmark (optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} />
 
         <MapPinPicker coordinates={coordinates} onChange={setCoordinates} />

@@ -9,4 +9,8 @@ coverage/
 
 .tmp-*
 
+.sync-work/
+tmp-pune-discovery.json
+scripts/.smoke-ops-health-report.json
+
 .vercel

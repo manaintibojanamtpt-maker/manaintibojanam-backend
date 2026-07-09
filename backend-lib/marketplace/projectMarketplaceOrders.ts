@@ -224,6 +224,25 @@ export function projectOrderTracking(
   const restaurantName = meta?.displayName ?? safeText(data.tenantName) ?? restaurantSlug ?? 'Kitchen';
   const orderNumberValue = readOrderNumber(data);
   const orderNumber = formatOrderNumberLabel(orderNumberValue, orderId);
+  const invoice =
+    status === 'DELIVERED'
+      ? {
+          orderNumber,
+          createdAt: readTimestamp(data.createdAt),
+          kitchenName: restaurantName,
+          customerName: safeText(data.customerName),
+          phone: phoneDigits(data.phone ?? data.customerPhone),
+          address: safeText(data.address ?? (data.deliveryAddress as { addressLine1?: string } | undefined)?.addressLine1),
+          paymentMethod: safeText(data.paymentMethod),
+          paymentStatus: safeText(data.paymentStatus),
+          items,
+          subtotal: Number(data.subtotal ?? grandTotal),
+          gstAmount: Number(data.gstAmount ?? 0),
+          deliveryFee: Number(data.deliveryFee ?? 0),
+          packingFee: Number(data.packingFee ?? 0),
+          grandTotal,
+        }
+      : undefined;
 
   return {
     orderId,
@@ -246,22 +265,7 @@ export function projectOrderTracking(
           riderPhone,
         }
       : undefined,
-    invoice: {
-      orderNumber,
-      createdAt: readTimestamp(data.createdAt),
-      kitchenName: restaurantName,
-      customerName: safeText(data.customerName),
-      phone: phoneDigits(data.phone ?? data.customerPhone),
-      address: safeText(data.address ?? (data.deliveryAddress as { addressLine1?: string } | undefined)?.addressLine1),
-      paymentMethod: safeText(data.paymentMethod),
-      paymentStatus: safeText(data.paymentStatus),
-      items,
-      subtotal: Number(data.subtotal ?? grandTotal),
-      gstAmount: Number(data.gstAmount ?? 0),
-      deliveryFee: Number(data.deliveryFee ?? 0),
-      packingFee: Number(data.packingFee ?? 0),
-      grandTotal,
-    },
+    invoice,
     feedback: {
       eligible: status === 'DELIVERED',
       submitted: reviewed,

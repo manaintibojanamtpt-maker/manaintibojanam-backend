@@ -19,7 +19,7 @@ import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
   const open = useLocationSessionStore((s) => s.selectorOpen);
-  const { closeSelector, requestCurrentLocation, selectSavedAddress, selectRecentLocation } = useLocationActions();
+  const { closeSelector, requestCurrentLocation, selectSavedAddress, selectRecentLocation, openWizard } = useLocationActions();
   const { uiStatus, uiError } = useLocationUiState();
   const active = useActiveLocation();
   const saved = useSavedAddressesList();
@@ -48,7 +48,10 @@ export function LocationSelectorSheet() {
             variant="primary"
             fullWidth
             className="ob-location-sheet__gps"
-            onClick={() => void requestCurrentLocation()}
+            onClick={() => {
+              closeSelector();
+              openWizard();
+            }}
             disabled={uiStatus === 'loading'}
           >
             <Icon size={18} label="GPS">
@@ -121,7 +124,10 @@ export function LocationSelectorSheet() {
                   </Button>
                 ))
               )}
-              <Button variant="secondary" fullWidth onClick={() => setShowAddressForm(true)}>
+              <Button variant="secondary" fullWidth onClick={() => {
+                closeSelector();
+                openWizard();
+              }}>
                 Add new address
               </Button>
             </section>
