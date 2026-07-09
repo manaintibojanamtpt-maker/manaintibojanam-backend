@@ -24,8 +24,8 @@ jobs:
 
       - name: Install workspace package dependencies
         run: |
-          npm ci --prefix packages/design-system
-          npm ci --prefix packages/marketplace-contracts
+          npm ci --prefix ../packages/design-system
+          npm ci --prefix ../packages/marketplace-contracts
 
       - name: Install dependencies
         run: npm ci
