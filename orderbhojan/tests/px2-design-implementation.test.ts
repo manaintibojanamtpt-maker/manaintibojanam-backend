@@ -58,42 +58,76 @@ describe('PX2 design-to-code implementation', () => {
   });
 
   it('experience screens use BDS PX2 components', () => {
-    for (const screen of px2Screens) {
+    const bdsScreens = px2Screens.filter(
+      (screen) =>
+        !screen.includes('HomeExperiencePage') &&
+        !screen.includes('SearchExperience') &&
+        !screen.includes('RestaurantExperiencePage') &&
+        !screen.includes('FoodExperiencePage') &&
+        !screen.includes('CartExperiencePage'),
+    );
+    for (const screen of bdsScreens) {
       const content = readFileSync(join(root, screen), 'utf8');
       assert.match(content, /@bhojan\/design-system/, `${screen} must import BDS`);
       assert.doesNotMatch(content, /ob-m65-/, `${screen} must not use M65 classes`);
     }
 
     const home = readFileSync(join(root, px2Screens[0]), 'utf8');
-    assert.match(home, /KitchenDoorHero/);
+    assert.match(home, /OrderBhojanHomeHero/);
     const hero = readFileSync(join(root, 'src/features/experience/ui/home/KitchenDoorHero.tsx'), 'utf8');
     assert.match(hero, /PremiumSearch/);
 
-    const restaurant = readFileSync(join(root, px2Screens[1]), 'utf8');
-    assert.match(restaurant, /RestaurantHero/);
-    assert.match(restaurant, /FloatingCTA/);
+    const restaurant = readFileSync(join(root, 'src/presentation/restaurant/OrderBhojanRestaurantHero.tsx'), 'utf8');
+    assert.match(restaurant, /GlassCard/);
+    assert.match(restaurant, /ProfileImage/);
 
-    const menu = readFileSync(join(root, px2Screens[2]), 'utf8');
-    assert.match(menu, /ob-menu-px2/);
-    assert.match(menu, /ob-food-px6/);
+    const menuExperience = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),
+      'utf8',
+    );
+    assert.match(menuExperience, /SectionHeader/);
+    assert.match(menuExperience, /OrderBhojanFoodCategoryRail/);
+    assert.doesNotMatch(menuExperience, /ob-menu-px2/);
+    assert.doesNotMatch(menuExperience, /FoodRow/);
 
-    const search = readFileSync(join(root, px2Screens[3]), 'utf8');
-    assert.match(search, /PremiumSearch/);
-    assert.match(search, /ob-search-px2/);
+    const menuCard = readFileSync(join(root, 'src/presentation/food/OrderBhojanFoodCardItem.tsx'), 'utf8');
+    assert.match(menuCard, /MenuItemCardView/);
+    assert.match(menuCard, /storefront-design-system/);
 
-    const cart = readFileSync(join(root, px2Screens[4]), 'utf8');
-    assert.match(cart, /PremiumEmpty/);
+    const searchPresentation = readFileSync(
+      join(root, 'src/presentation/search/OrderBhojanSearchBar.tsx'),
+      'utf8',
+    );
+    assert.match(searchPresentation, /MarketplaceSearchBar/);
+    const searchExperience = readFileSync(
+      join(root, 'src/presentation/search/OrderBhojanSearchExperience.tsx'),
+      'utf8',
+    );
+    assert.match(searchExperience, /OrderBhojanSearchFiltersBar/);
+
+    const cart = readFileSync(join(root, 'src/presentation/cart/OrderBhojanCartExperience.tsx'), 'utf8');
+    assert.match(cart, /CartPageView/);
+    assert.match(cart, /storefront-design-system/);
+
+    const checkoutPresentation = readFileSync(
+      join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
+      'utf8',
+    );
+    assert.match(checkoutPresentation, /CheckoutPageView/);
+    assert.match(checkoutPresentation, /\/orders\/\$\{orderId\}\/track/);
   });
 
-  it('FoodCategoryRail delegates to BDS StickyCategoryRail', () => {
+  it('FoodCategoryRail delegates to Founder DS presentation', () => {
     const rail = readFileSync(join(root, 'src/features/food/ui/FoodCategoryRail.tsx'), 'utf8');
-    assert.match(rail, /StickyCategoryRail/);
+    assert.match(rail, /OrderBhojanFoodCategoryRail/);
+    assert.doesNotMatch(rail, /StickyCategoryRail/);
     assert.doesNotMatch(rail, /ob-food-rail__chip/);
   });
 
-  it('FoodCardItem uses BDS FoodRow', () => {
+  it('FoodCardItem delegates to MenuItemCardView presentation', () => {
     const card = readFileSync(join(root, 'src/features/food/ui/FoodCardItem.tsx'), 'utf8');
-    assert.match(card, /FoodRow/);
+    assert.match(card, /OrderBhojanFoodCardItem/);
+    assert.doesNotMatch(card, /FoodRow/);
     assert.doesNotMatch(card, /ob-food-card__ribbon/);
   });
 

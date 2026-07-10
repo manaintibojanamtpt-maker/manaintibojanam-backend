@@ -35,7 +35,7 @@ describe('M12 customer surfaces', () => {
   });
 
   it('cart page validates before checkout', () => {
-    const cart = readFileSync(join(root, 'src/features/experience/ui/cart/CartExperiencePage.tsx'), 'utf8');
+    const cart = readFileSync(join(root, 'src/presentation/cart/OrderBhojanCartExperience.tsx'), 'utf8');
     assert.match(cart, /useCartValidation/);
     assert.match(cart, /validate\(/);
   });

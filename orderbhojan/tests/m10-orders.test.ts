@@ -40,7 +40,7 @@ describe('M10 orders module structure', () => {
   });
 
   it('checkout success navigates to tracking', () => {
-    const checkout = readFileSync(join(root, 'src/features/checkout/ui/CheckoutPage.tsx'), 'utf8');
+    const checkout = readFileSync(join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'), 'utf8');
     assert.match(checkout, /\/orders\/\$\{orderId\}\/track/);
   });
 });

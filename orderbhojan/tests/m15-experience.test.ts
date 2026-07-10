@@ -53,8 +53,6 @@ describe('M1.5 shell routes', () => {
 describe('M1.5 BDS compliance', () => {
   const experienceFiles = [
     'src/features/experience/ui/home/HeroHeader.tsx',
-    'src/features/experience/ui/search/MockSearchExperiencePage.tsx',
-    'src/features/experience/ui/cart/CartExperiencePage.tsx',
     'src/features/experience/ui/shared/MarketplaceRestaurantTile.tsx',
   ];
 
@@ -65,6 +63,24 @@ describe('M1.5 BDS compliance', () => {
       assert.doesNotMatch(content, /@\/shared\/components/);
     });
   }
+
+  it('cart experience delegates to Founder DS presentation', () => {
+    const shim = readFileSync(join(root, 'src/features/experience/ui/cart/CartExperiencePage.tsx'), 'utf8');
+    assert.match(shim, /OrderBhojanCartExperience/);
+    const cart = readFileSync(join(root, 'src/presentation/cart/OrderBhojanCartExperience.tsx'), 'utf8');
+    assert.match(cart, /storefront-design-system/);
+    assert.doesNotMatch(cart, /@\/shared\/components/);
+  });
+
+  it('mock search page uses Founder storefront design system', () => {
+    const content = readFileSync(
+      join(root, 'src/features/experience/ui/search/MockSearchExperiencePage.tsx'),
+      'utf8',
+    );
+    assert.match(content, /@bhojan\/storefront-design-system/);
+    assert.match(content, /MarketplaceSearchBar/);
+    assert.doesNotMatch(content, /@\/shared\/components/);
+  });
 
   it('loads experience shell styles', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
