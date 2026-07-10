@@ -136,6 +136,9 @@ const migratedObUi = new Set([
   'orderbhojan/src/features/auth/ui/ProfilePage.tsx',
   'orderbhojan/src/features/auth/ui/AuthShellPage.tsx',
   'orderbhojan/src/features/auth/ui/PhoneOtpForm.tsx',
+  'orderbhojan/src/features/favorites/ui/FavoritesPage.tsx',
+  'orderbhojan/src/features/notifications/ui/NotificationsPage.tsx',
+  'orderbhojan/src/features/settings/ui/SettingsPreferencesSection.tsx',
 ]);
 
 // 1. OrderBhojan presentation must not import legacy BDS for migrated surfaces

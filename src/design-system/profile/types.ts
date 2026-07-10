@@ -4,6 +4,7 @@ export interface ProfileQuickTileViewModel {
 }
 
 export interface ProfilePreferenceViewModel {
+  readonly id: string;
   readonly icon: string;
   readonly label: string;
   readonly value: string;

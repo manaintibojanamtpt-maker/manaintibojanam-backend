@@ -3,14 +3,9 @@ import { ProfileGuestView, ProfileMemberView } from '@bhojan/storefront-design-s
 import { useLocationActions, useLocationFeatureEnabled } from '@/features/location';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCustomerProfile } from '@/features/auth/hooks/useCustomerProfile';
+import { useCustomerSettingsActions } from '@/presentation/settings';
 
 const SUPPORT_MAILTO = 'mailto:support@orderbhojan.com?subject=OrderBhojan%20Support';
-
-const PREFERENCE_ROWS = [
-  { icon: '🌶', label: 'Spice level', value: 'Medium' },
-  { icon: '🥬', label: 'Dietary', value: 'Veg' },
-  { icon: '🔔', label: 'Notifications', value: 'On' },
-] as const;
 
 export function OrderBhojanProfilePage() {
   const navigate = useNavigate();
@@ -18,6 +13,7 @@ export function OrderBhojanProfilePage() {
   const profileQuery = useCustomerProfile();
   const locationEnabled = useLocationFeatureEnabled();
   const { openSelector } = useLocationActions();
+  const { preferenceRows, handlePreferenceRow } = useCustomerSettingsActions();
 
   const handleQuickTile = (tile: string) => {
     if (tile === 'orders') {
@@ -65,10 +61,11 @@ export function OrderBhojanProfilePage() {
           { id: 'addresses', label: 'Addresses' },
           { id: 'favorites', label: 'Favorites' },
         ],
-        preferences: PREFERENCE_ROWS.map((row) => ({ ...row })),
+        preferences: preferenceRows.map((row) => ({ ...row })),
         showProfileError: profileQuery.isError,
       }}
       onQuickTile={handleQuickTile}
+      onPreferenceClick={handlePreferenceRow}
       onSupport={() => {
         window.location.href = SUPPORT_MAILTO;
       }}

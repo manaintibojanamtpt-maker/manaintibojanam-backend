@@ -1,15 +1,15 @@
-import { ChevronRight } from 'lucide-react';
 import { GlassCard } from '../primitives/GlassCard';
 import { ProfileImage } from '../primitives/ProfileImage';
-import { SectionHeader } from '../primitives/SectionHeader';
 import { SoftButton } from '../primitives/SoftButton';
 import { TransactionalPageShell } from '../cart/TransactionalPageShell';
+import { SettingsPreferencesView } from '../settings/SettingsPreferencesView';
 import type { ProfileMemberViewModel } from './types';
 import { ProfileErrorBanner } from './ProfileGuestView';
 
 export function ProfileMemberView({
   profile,
   onQuickTile,
+  onPreferenceClick,
   onSupport,
   onAbout,
   onSignOut,
@@ -17,6 +17,7 @@ export function ProfileMemberView({
 }: {
   readonly profile: ProfileMemberViewModel;
   readonly onQuickTile: (id: string) => void;
+  readonly onPreferenceClick?: (id: string) => void;
   readonly onSupport: () => void;
   readonly onAbout: () => void;
   readonly onSignOut: () => void;
@@ -52,28 +53,7 @@ export function ProfileMemberView({
         ))}
       </div>
 
-      <GlassCard hoverEffect={false} className="!rounded-2xl !p-4" aria-label="Preferences">
-        <SectionHeader title="Preferences" align="left" className="!mb-3 !mt-0" />
-        <div className="divide-y divide-white/10">
-          {profile.preferences.map((row) => (
-            <button
-              key={row.label}
-              type="button"
-              className="flex w-full items-center justify-between py-3 text-left first:pt-0 last:pb-0"
-              aria-label={`${row.label}: ${row.value}`}
-            >
-              <span className="flex items-center gap-3 text-white/80">
-                <span aria-hidden>{row.icon}</span>
-                {row.label}
-              </span>
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-white/60">
-                {row.value}
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </span>
-            </button>
-          ))}
-        </div>
-      </GlassCard>
+      <SettingsPreferencesView rows={profile.preferences} onRowClick={onPreferenceClick} />
 
       <div className="flex flex-col gap-2">
         <SoftButton type="button" tone="ghost" fullWidth onClick={onSupport}>
