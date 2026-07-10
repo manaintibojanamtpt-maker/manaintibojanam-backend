@@ -133,6 +133,9 @@ const migratedObUi = new Set([
   'orderbhojan/src/features/tracking/ui/DeliveryTrackingPanel.tsx',
   'orderbhojan/src/features/tracking/ui/OrderInvoiceSheet.tsx',
   'orderbhojan/src/features/tracking/ui/OrderFeedbackPanel.tsx',
+  'orderbhojan/src/features/auth/ui/ProfilePage.tsx',
+  'orderbhojan/src/features/auth/ui/AuthShellPage.tsx',
+  'orderbhojan/src/features/auth/ui/PhoneOtpForm.tsx',
 ]);
 
 // 1. OrderBhojan presentation must not import legacy BDS for migrated surfaces

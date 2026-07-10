@@ -64,7 +64,8 @@ describe('PX2 design-to-code implementation', () => {
         !screen.includes('SearchExperience') &&
         !screen.includes('RestaurantExperiencePage') &&
         !screen.includes('FoodExperiencePage') &&
-        !screen.includes('CartExperiencePage'),
+        !screen.includes('CartExperiencePage') &&
+        !screen.includes('ProfilePage'),
     );
     for (const screen of bdsScreens) {
       const content = readFileSync(join(root, screen), 'utf8');
@@ -115,6 +116,13 @@ describe('PX2 design-to-code implementation', () => {
     );
     assert.match(checkoutPresentation, /CheckoutPageView/);
     assert.match(checkoutPresentation, /\/orders\/\$\{orderId\}\/track/);
+
+    const profilePresentation = readFileSync(
+      join(root, 'src/presentation/profile/OrderBhojanProfilePage.tsx'),
+      'utf8',
+    );
+    assert.match(profilePresentation, /ProfileGuestView/);
+    assert.match(profilePresentation, /storefront-design-system/);
   });
 
   it('FoodCategoryRail delegates to Founder DS presentation', () => {

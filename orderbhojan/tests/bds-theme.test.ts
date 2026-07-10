@@ -31,7 +31,6 @@ describe('BDS theme certification', () => {
     const pages = [
       'styles/experience-premium.css',
       'app/pages/FoundationPage.tsx',
-      'features/auth/ui/AuthShellPage.tsx',
     ];
     for (const page of pages) {
       const content = readFileSync(join(root, 'src', page), 'utf8');
@@ -39,5 +38,10 @@ describe('BDS theme certification', () => {
       assert.doesNotMatch(content, /brand-\d+/);
       assert.doesNotMatch(content, /surface-\d+/);
     }
+    const authPresentation = readFileSync(
+      join(root, 'src/presentation/auth/OrderBhojanAuthShellPage.tsx'),
+      'utf8',
+    );
+    assert.match(authPresentation, /storefront-design-system/);
   });
 });
