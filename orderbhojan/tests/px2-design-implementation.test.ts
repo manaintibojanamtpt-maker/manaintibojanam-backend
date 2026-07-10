@@ -42,8 +42,11 @@ const requiredBdsSymbols = [
 describe('PX2 design-to-code implementation', () => {
   it('loads PX2 layout CSS from main entry', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
     assert.match(main, /experience-px2-layout\.css/);
-    assert.match(main, /experience-checkout\.css/);
+    assert.match(globals, /design-system\/styles\/index\.css/);
+    assert.doesNotMatch(main, /experience-premium-m65\.css/);
+    assert.doesNotMatch(main, /experience-checkout\.css/);
   });
 
   it('package version targets px2', () => {

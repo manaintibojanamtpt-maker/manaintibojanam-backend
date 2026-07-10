@@ -39,8 +39,8 @@ describe('M6.5 premium evolution layer', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
     if (isPx2) {
       assert.match(main, /experience-px2-layout\.css/);
-      assert.match(main, /experience-checkout\.css/);
-      assert.match(main, /experience-premium-m65\.css/);
+      assert.doesNotMatch(main, /experience-premium-m65\.css/);
+      assert.doesNotMatch(main, /experience-checkout\.css/);
     } else {
       assert.match(main, /experience-premium-m65\.css/);
     }
@@ -51,28 +51,34 @@ describe('M6.5 premium evolution layer', () => {
       join(root, 'src/features/experience/ui/home/HomeExperiencePage.tsx'),
       'utf8',
     );
-    const restaurant = readFileSync(
-      join(root, 'src/features/restaurant/ui/RestaurantExperiencePage.tsx'),
+    const restaurantExperience = readFileSync(
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx'),
       'utf8',
     );
-    const menu = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
+    const menuExperience = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),
+      'utf8',
+    );
 
     if (isPx2) {
-      assert.match(home, /KitchenDoorHero/);
-      assert.match(restaurant, /RestaurantHero/);
-      assert.match(menu, /ob-menu-px2/);
+      assert.match(home, /OrderBhojanHomeHero/);
+      assert.match(restaurantExperience, /SoftButton/);
+      assert.match(menuExperience, /OrderBhojanFoodCategoryRail/);
+      assert.doesNotMatch(menuExperience, /ob-menu-px2/);
     } else {
       assert.match(home, /ob-m65-home/);
       assert.match(home, /MotionReveal/);
-      assert.match(restaurant, /ob-m65-restaurant/);
+      assert.match(restaurantExperience, /ob-m65-restaurant/);
+      const menu = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
       assert.match(menu, /ob-m65-menu/);
     }
   });
 
-  it('food cards use BDS food presentation', () => {
-    const card = readFileSync(join(root, 'src/features/food/ui/FoodCardItem.tsx'), 'utf8');
+  it('food cards use Founder DS menu presentation', () => {
+    const card = readFileSync(join(root, 'src/presentation/food/OrderBhojanFoodCardItem.tsx'), 'utf8');
     if (isPx2) {
-      assert.match(card, /FoodRow/);
+      assert.match(card, /MenuItemCardView/);
+      assert.match(card, /storefront-design-system/);
     } else {
       assert.match(card, /useBlurUpImage/);
       assert.match(card, /ob-food-card__ribbon/);
