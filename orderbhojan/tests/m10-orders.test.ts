@@ -22,9 +22,9 @@ describe('M10 orders module structure', () => {
   }
 
   it('orders page loads list via marketplace client hook', () => {
-    const page = readFileSync(join(root, 'src/features/experience/ui/orders/OrdersExperiencePage.tsx'), 'utf8');
+    const page = readFileSync(join(root, 'src/presentation/orders/OrderBhojanOrdersExperience.tsx'), 'utf8');
     assert.match(page, /useOrdersList/);
-    assert.match(page, /OrderSummaryCard/);
+    assert.match(page, /OrdersListPageView/);
   });
 
   it('router wires orders list behind auth', () => {

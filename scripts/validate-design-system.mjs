@@ -126,6 +126,8 @@ const migratedObUi = new Set([
   'orderbhojan/src/features/restaurant/ui/RestaurantGalleryRail.tsx',
   'orderbhojan/src/features/experience/ui/cart/CartExperiencePage.tsx',
   'orderbhojan/src/features/checkout/ui/CheckoutPage.tsx',
+  'orderbhojan/src/features/experience/ui/orders/OrdersExperiencePage.tsx',
+  'orderbhojan/src/features/orders/ui/OrderSummaryCard.tsx',
 ]);
 
 // 1. OrderBhojan presentation must not import legacy BDS for migrated surfaces
