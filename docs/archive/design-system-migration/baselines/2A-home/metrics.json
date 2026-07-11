@@ -1,0 +1,22 @@
+{
+  "milestone": "2A-home",
+  "date": "2026-07-10",
+  "build": {
+    "package": "orderbhojan@0.9.0-px2",
+    "cssRawKb": 251.14,
+    "cssGzipKb": 37.35,
+    "jsMainRawKb": 1470.64,
+    "jsMainGzipKb": 388.62,
+    "precacheKiB": 2036,
+    "buildTimeSec": 22
+  },
+  "deltaFromPre2A": {
+    "cssRawKb": 10.1,
+    "jsMainRawKb": 45.6,
+    "precacheKiB": 54
+  },
+  "validation": {
+    "build": "PASS",
+    "validateArchitecture": "PASS"
+  }
+}

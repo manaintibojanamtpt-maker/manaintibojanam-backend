@@ -1,0 +1,47 @@
+{
+  "milestone": "2B-listing",
+  "date": "2026-07-10",
+  "route": "/",
+  "viewport": {
+    "desktop": "1440x900",
+    "tablet": "768x1024",
+    "mobile": "390x844"
+  },
+  "componentTree": {
+    "root": "DiscoveryHomeFeed",
+    "children": [
+      {
+        "component": "DiscoveryCollectionRail",
+        "presentation": "OrderBhojan presentation layer",
+        "children": [
+          { "component": "Section" },
+          { "component": "SectionHeader" },
+          {
+            "component": "OrderBhojanKitchenCard",
+            "designSystem": "MarketplaceKitchenCardView",
+            "variant": "default"
+          },
+          { "component": "SoftButton", "label": "Load more" }
+        ]
+      },
+      {
+        "component": "KitchenSpotlightCard",
+        "children": [
+          {
+            "component": "OrderBhojanKitchenCard",
+            "variant": "spotlight"
+          }
+        ]
+      },
+      {
+        "component": "FeaturedRestaurantsSection",
+        "children": [
+          { "component": "Section" },
+          { "component": "SectionHeader" },
+          { "component": "OrderBhojanKitchenCard", "layout": "grid lg:2 xl:3" }
+        ]
+      }
+    ],
+    "adapters": ["mapRestaurantToKitchenCard"]
+  }
+}

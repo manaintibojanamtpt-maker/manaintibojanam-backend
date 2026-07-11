@@ -1,0 +1,63 @@
+{
+  "milestone": "2C-search",
+  "date": "2026-07-10",
+  "route": "/search",
+  "viewport": {
+    "desktop": "1440x900",
+    "tablet": "768x1024",
+    "mobile": "390x844"
+  },
+  "componentTree": {
+    "root": "OrderBhojanSearchExperience",
+    "states": ["browse", "searching", "loading", "error", "empty"],
+    "children": [
+      {
+        "component": "Section",
+        "props": { "density": "hero", "background": "gradient" },
+        "children": [
+          { "component": "OrderBhojanSearchBar", "designSystem": ["MarketplaceSearchBar", "MarketplaceSearchAutocomplete"] }
+        ]
+      },
+      {
+        "component": "main",
+        "browseState": {
+          "component": "OrderBhojanSearchBrowsePanel",
+          "children": ["Section", "SectionHeader", "chip rows", "OrderBhojanSearchBrowseSkeleton"]
+        },
+        "searchState": {
+          "children": [
+            { "component": "OrderBhojanSearchFiltersBar" },
+            { "component": "OrderBhojanSearchResultsSkeleton" },
+            { "component": "OrderBhojanDiscoveryStatePanel", "roles": ["error", "empty"] },
+            {
+              "component": "OrderBhojanSearchResultsSection",
+              "children": [
+                { "component": "SectionHeader" },
+                {
+                  "component": "OrderBhojanSearchResultRow",
+                  "variants": {
+                    "restaurant": "OrderBhojanKitchenCard",
+                    "other": "MarketplaceSearchResultCardView"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "adapters": [
+      "mapSearchSuggestionsToAutocompleteView",
+      "mapSearchItemToResultCard",
+      "mapRestaurantToKitchenCard"
+    ],
+    "unchangedHooks": [
+      "useSearchResults",
+      "useSearchSuggestions",
+      "useSearchBrowse",
+      "useSearchFilterStore",
+      "useSearchHistoryStore",
+      "useSearchSessionStore"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "milestone": "2B-listing",
+  "date": "2026-07-10",
+  "build": {
+    "package": "orderbhojan@0.9.0-px2",
+    "cssRawKb": 252.82,
+    "cssGzipKb": 39.27,
+    "jsMainRawKb": 1473.18,
+    "jsMainGzipKb": 405.71,
+    "precacheKiB": 2040,
+    "buildTimeSec": 22
+  },
+  "deltaFrom2A": {
+    "cssGzipKb": 1.92,
+    "jsMainRawKb": 2.54,
+    "precacheKiB": 4
+  },
+  "validation": {
+    "build": "PASS",
+    "validateArchitecture": "PASS",
+    "m3DiscoveryTests": "PASS"
+  }
+}

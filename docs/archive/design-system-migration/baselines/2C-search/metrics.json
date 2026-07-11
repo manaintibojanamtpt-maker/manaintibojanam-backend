@@ -1,0 +1,31 @@
+{
+  "milestone": "2C-search",
+  "date": "2026-07-10",
+  "build": {
+    "package": "orderbhojan@0.9.0-px2",
+    "cssRawKb": 253.55,
+    "cssGzipKb": 39.41,
+    "jsMainRawKb": 1477.43,
+    "jsMainGzipKb": 406.95,
+    "precacheKiB": 2045,
+    "buildTimeSec": 21.53
+  },
+  "deltaFrom2B": {
+    "cssGzipKb": 0.14,
+    "jsMainRawKb": 4.25,
+    "precacheKiB": 5
+  },
+  "validation": {
+    "build": "PASS",
+    "validateArchitecture": "PASS",
+    "m4SearchTests": "PASS",
+    "px2DesignTests": "PASS"
+  },
+  "functionalRegression": {
+    "autocomplete": "PASS",
+    "filtering": "PASS (store unchanged)",
+    "keyboardNavigation": "PASS (enhanced)",
+    "searchHistory": "PASS",
+    "restaurantSelection": "PASS"
+  }
+}

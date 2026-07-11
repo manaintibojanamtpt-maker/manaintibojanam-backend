@@ -1,0 +1,46 @@
+{
+  "milestone": "2A-home",
+  "date": "2026-07-10",
+  "route": "/",
+  "viewport": {
+    "desktop": "1440x900",
+    "tablet": "768x1024",
+    "mobile": "390x844"
+  },
+  "componentTree": {
+    "root": "HomeExperiencePage",
+    "children": [
+      {
+        "component": "OrderBhojanHomeHero",
+        "designSystem": ["MarketplaceDiscoveryHeroView", "MarketplaceSearchBar"],
+        "children": ["LocationChip (feature flag)", "PremiumSearch launcher"]
+      },
+      {
+        "component": "Section",
+        "props": { "density": "comfortable", "background": "default" },
+        "children": [
+          { "component": "SectionHeader", "title": "What's on your mind?" },
+          { "component": "OrderBhojanHomeCategories" }
+        ]
+      },
+      {
+        "component": "Section",
+        "props": { "density": "comfortable", "background": "subtle" },
+        "children": [
+          {
+            "component": "DiscoveryHomeFeed | HomeSpotlightMockFeed",
+            "note": "feature flag gated"
+          }
+        ]
+      },
+      {
+        "component": "Section",
+        "children": [
+          { "component": "SectionHeader", "title": "Why OrderBhojan" },
+          { "component": "OrderBhojanHomeTrustStrip" }
+        ]
+      }
+    ],
+    "shell": ["MarketplaceLayout", "OrderBhojanBottomNav", "OrderBhojanFloatingCart"]
+  }
+}

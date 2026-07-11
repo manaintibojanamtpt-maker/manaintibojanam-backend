@@ -1,0 +1,51 @@
+{
+  "milestone": "2D-ux-states",
+  "date": "2026-07-10",
+  "routes": ["/", "/search"],
+  "componentTree": {
+    "root": "presentation/states",
+    "components": [
+      {
+        "component": "OrderBhojanDiscoveryUxState",
+        "variants": [
+          "loading",
+          "error",
+          "retry",
+          "empty",
+          "no-results",
+          "no-restaurants",
+          "offline",
+          "network-failure",
+          "timeout",
+          "maintenance",
+          "location-disabled",
+          "permission-denied",
+          "load-more-error",
+          "custom"
+        ],
+        "designSystem": ["GlassCard", "SectionHeader", "SoftButton"]
+      },
+      {
+        "component": "OrderBhojanDiscoveryOfflineNotice",
+        "designSystem": ["GlassCard", "SoftButton"]
+      },
+      {
+        "component": "useOnlineStatus",
+        "note": "presentation-only navigator.onLine listener"
+      }
+    ],
+    "consumers": [
+      "DiscoveryHomeFeed",
+      "DiscoveryCollectionRail",
+      "HomeSpotlightMockFeed",
+      "FeaturedRestaurantsSection",
+      "TrendingFoodsSection",
+      "OrderBhojanSearchExperience",
+      "ExperienceEmptyStates (shim)"
+    ],
+    "skeletons": {
+      "source": "SkeletonSystem",
+      "variants": ["HomeBentoSkeleton", "TrendingSkeleton", "RecommendedSkeleton", "CategorySkeleton", "Skeleton"]
+    }
+  }
+}
