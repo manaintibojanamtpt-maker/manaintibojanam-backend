@@ -9,15 +9,19 @@ import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
 import { useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
 import { useTenant } from './context/TenantContext';
-import Header from './components/Header';
+import {
+  Header,
+  BottomNav,
+  StorefrontDesktopHeader,
+  FloatingMiniCart,
+  DesktopFloatingCart,
+} from './design-system';
+import ActiveOrderStrip from './components/ActiveOrderStrip';
+import StorefrontInstallButton from './components/StorefrontInstallButton';
 import { Store } from 'lucide-react';
-import BottomNav from './components/BottomNav';
-import FloatingMiniCart from './components/FloatingMiniCart';
 import InstallPrompt from './components/InstallPrompt';
 import { Toaster, toast } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
-import StorefrontDesktopHeader from './components/StorefrontDesktopHeader';
-import DesktopFloatingCart from './components/DesktopFloatingCart';
 import NotchNotification from './components/NotchNotification';
 import FlyToCartAnimation from './components/FlyToCartAnimation';
 import { useFCMInitialization } from './hooks/useFCMInitialization';
@@ -78,7 +82,9 @@ const MyOrders = lazy(() => import('./pages/MyOrders'));
 const Login = lazy(() => import('./pages/Login'));
 const Account = lazy(() => import('./pages/Account'));
 const Addresses = lazy(() => import('./pages/Addresses'));
-const OrderTracking = lazy(() => import('./components/OrderTracking'));
+const OrderTracking = lazy(() =>
+  import('./design-system').then((module) => ({ default: module.OrderTracking })),
+);
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
@@ -717,8 +723,10 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div className="flex-1 flex w-full min-h-screen bg-brand-bg dark:bg-dark-bg">
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {customerPreview && <CustomerPreviewBanner />}
-        {!isFullScreen && !isHome && <StorefrontDesktopHeader />}
-        {!hideHeader && <Header />}
+        {!isFullScreen && !isHome && (
+          <StorefrontDesktopHeader installSlot={<StorefrontInstallButton variant="pill" />} />
+        )}
+        {!hideHeader && <Header installSlot={<StorefrontInstallButton variant="icon" />} />}
         <main id="main-scroll-container" className="flex-1 relative" style={{ paddingTop: isEdgeToEdge ? '0' : 'env(safe-area-inset-top)', paddingBottom: isFullScreen ? 'env(safe-area-inset-bottom)' : 'calc(140px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
           {isEdgeToEdge ? (
             <AnimatePresence mode="wait">
@@ -749,7 +757,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         )}
         {!isFullScreen && <DesktopFloatingCart />}
         <div className="lg:hidden">
-          {!isFullScreen && <BottomNav />}
+          {!isFullScreen && <BottomNav activeOrderSlot={<ActiveOrderStrip />} />}
         </div>
         {!isFullScreen && <AIAssistant />}
       </div>

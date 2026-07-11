@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { MapPin, RefreshCw } from 'lucide-react';
 import { EnterpriseHeader } from '../components/marketing/EnterpriseHeader';
 import { EnterpriseFooter } from '../components/EnterpriseFooter';
-import { MarketplaceKitchenCardView } from '../components/marketplace/MarketplaceKitchenCard';
 import { MarketplaceHomeStates } from '../components/marketplace/MarketplaceHomeStates';
-import { MarketplaceSearchBar } from '../components/marketplace/MarketplaceSearchBar';
-import { MarketplaceSearchResults } from '../components/marketplace/MarketplaceSearchResults';
+import {
+  MarketplaceKitchenCardView,
+  MarketplaceSearchBar,
+  MarketplaceSearchResults,
+} from '../design-system';
 import { useMarketplaceHome } from '../hooks/useMarketplaceHome';
 import { useMarketplaceSearch } from '../hooks/useMarketplaceSearch';
 

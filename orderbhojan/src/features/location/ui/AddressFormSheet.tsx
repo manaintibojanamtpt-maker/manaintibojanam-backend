@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  BottomSheet,
-  Button,
-  Input,
-  Text,
-} from '@bhojan/design-system';
+import { useMemo, useState } from 'react';
+import BottomSheet from '@bhojan/storefront-design-system/layout/BottomSheet';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { TextFieldView } from '@bhojan/storefront-design-system/primitives/TextFieldView';
 import type { IndiaAddress } from '../domain/location.types';
 import { savedAddressInputSchema, type SavedAddressInput } from '../domain/location.schema';
 import {
@@ -32,6 +29,9 @@ interface AddressFormSheetProps {
 }
 
 const PUNE_COORDS = { lat: 18.5362, lng: 73.8958, source: 'map_pin' as const, capturedAt: new Date().toISOString() };
+const FIELD_CLASS = 'flex w-full flex-col gap-1.5';
+const SELECT_CLASS =
+  'w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#FF7A00]/50';
 
 function resolveInitialCascade(displayLabel?: string): AddressCascadeSelection {
   if (displayLabel) {
@@ -41,7 +41,7 @@ function resolveInitialCascade(displayLabel?: string): AddressCascadeSelection {
   return DEFAULT_ADDRESS_CASCADE;
 }
 
-export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
+function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) {
   const { saveNewAddress } = useLocationActions();
   const active = useActiveLocation();
   const [label, setLabel] = useState<SavedAddressInput['label']>('home');
@@ -57,19 +57,6 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
   const [saving, setSaving] = useState(false);
 
   const { stateCode, districtCode, cityCode, areaCode, pincode } = selection;
-
-  useEffect(() => {
-    if (!open) return;
-    const next = resolveInitialCascade(active?.displayLabel);
-    setSelection(next);
-    setHouse('');
-    setBuilding('');
-    setLandmark('');
-    setError(null);
-    if (active?.coordinates) {
-      setCoordinates(active.coordinates);
-    }
-  }, [open, active?.displayLabel, active?.coordinates]);
 
   const states = useMemo(() => listStates(), []);
   const districts = useMemo(() => listDistricts(stateCode), [stateCode]);
@@ -134,29 +121,30 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add address">
-      <div className="ob-address-form">
-        <div className="ob-address-form__labels" role="group" aria-label="Address label">
+    <BottomSheet isOpen onClose={onClose} title="Add address" panelClassName="bg-[#120e0c] text-white">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Address label">
           {(['home', 'work', 'other'] as const).map((value) => (
-            <Button
+            <SoftButton
               key={value}
-              variant={label === value ? 'primary' : 'secondary'}
+              type="button"
+              tone={label === value ? 'primary' : 'secondary'}
               size="compact"
               onClick={() => setLabel(value)}
             >
               {value}
-            </Button>
+            </SoftButton>
           ))}
         </div>
 
         {label === 'other' ? (
-          <Input label="Custom label" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} />
+          <TextFieldView label="Custom label" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} />
         ) : null}
 
-        <label className="ob-address-form__field">
-          <Text variant="caption" className="ob-address-form__label">State</Text>
+        <label className={FIELD_CLASS}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/50">State</span>
           <select
-            className="ob-address-form__select"
+            className={SELECT_CLASS}
             value={stateCode}
             onChange={(e) => setSelection(cascadeFromState(e.target.value))}
             aria-label="State"
@@ -167,10 +155,10 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
           </select>
         </label>
 
-        <label className="ob-address-form__field">
-          <Text variant="caption" className="ob-address-form__label">District</Text>
+        <label className={FIELD_CLASS}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/50">District</span>
           <select
-            className="ob-address-form__select"
+            className={SELECT_CLASS}
             value={districtCode}
             onChange={(e) => setSelection(cascadeFromDistrict(stateCode, e.target.value))}
             aria-label="District"
@@ -181,10 +169,10 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
           </select>
         </label>
 
-        <label className="ob-address-form__field">
-          <Text variant="caption" className="ob-address-form__label">City</Text>
+        <label className={FIELD_CLASS}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/50">City</span>
           <select
-            className="ob-address-form__select"
+            className={SELECT_CLASS}
             value={cityCode}
             onChange={(e) => setSelection(cascadeFromCity(stateCode, districtCode, e.target.value))}
             aria-label="City"
@@ -195,10 +183,10 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
           </select>
         </label>
 
-        <label className="ob-address-form__field">
-          <Text variant="caption" className="ob-address-form__label">Area</Text>
+        <label className={FIELD_CLASS}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/50">Area</span>
           <select
-            className="ob-address-form__select"
+            className={SELECT_CLASS}
             value={areaCode}
             onChange={(e) => setSelection(cascadeFromArea(stateCode, districtCode, cityCode, e.target.value))}
             aria-label="Area"
@@ -209,21 +197,26 @@ export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
           </select>
         </label>
 
-        <Input label="Pincode" inputMode="numeric" value={pincode} onChange={(e) => setSelection((prev) => ({ ...prev, pincode: e.target.value }))} />
-        <Input label="House / Flat No." value={house} onChange={(e) => setHouse(e.target.value)} />
-        <Input label="Building / Apartment" value={building} onChange={(e) => setBuilding(e.target.value)} />
-        <Input label="Landmark (optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} />
+        <TextFieldView label="Pincode" inputMode="numeric" value={pincode} onChange={(e) => setSelection((prev) => ({ ...prev, pincode: e.target.value }))} />
+        <TextFieldView label="House / Flat No." value={house} onChange={(e) => setHouse(e.target.value)} />
+        <TextFieldView label="Building / Apartment" value={building} onChange={(e) => setBuilding(e.target.value)} />
+        <TextFieldView label="Landmark (optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} />
 
         <MapPinPicker coordinates={coordinates} onChange={setCoordinates} />
 
         {error ? (
-          <Text variant="caption" role="alert" style={{ color: 'var(--bds-color-error)' }}>{error}</Text>
+          <p className="text-sm text-red-400" role="alert">{error}</p>
         ) : null}
 
-        <Button variant="primary" fullWidth onClick={() => void handleSave()} disabled={saving}>
+        <SoftButton type="button" fullWidth onClick={() => void handleSave()} disabled={saving}>
           {saving ? 'Saving…' : 'Save address'}
-        </Button>
+        </SoftButton>
       </div>
     </BottomSheet>
   );
+}
+
+export function AddressFormSheet({ open, onClose }: AddressFormSheetProps) {
+  if (!open) return null;
+  return <AddressFormSheetContent onClose={onClose} />;
 }

@@ -48,12 +48,11 @@ import { detectCustomerLocation } from '../lib/customerLocation/CustomerLocation
 import { isSdkSuccess } from '../sdk/core/resultHelpers';
 import { collection, getDocs, limit, query, doc, getDoc, orderBy, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
-import MenuItemCard from '../components/MenuItemCard';
+import { MenuItemCard, CategorySkeleton, TrendingSkeleton, RecommendedSkeleton, Skeleton, HomeBentoSkeleton } from '../design-system';
 import Testimonials from '../components/Testimonials';
 import ReferralBanner from '../components/ReferralBanner';
 import SubscriptionWizardModal from '../components/SubscriptionWizardModal';
 import { cn } from '../lib/utils';
-import { CategorySkeleton, TrendingSkeleton, RecommendedSkeleton, Skeleton, HomeBentoSkeleton } from '../components/SkeletonSystem';
 import { triggerHaptic } from '../utils/haptics';
 
 // Centralized skeletons used from SkeletonSystem

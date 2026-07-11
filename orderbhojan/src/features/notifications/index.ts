@@ -1,2 +1,2 @@
 export { NOTIFICATIONS_FEATURE } from './constants';
-export { NotificationsPage } from './ui/NotificationsPage';
+export { OrderBhojanNotificationsPage as NotificationsPage } from '@/presentation/notifications';

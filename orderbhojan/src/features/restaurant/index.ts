@@ -2,7 +2,7 @@ export const M5_MILESTONE = 'M5';
 
 export { RestaurantProvider } from './ui/RestaurantProvider';
 export { RestaurantRoutePage } from './ui/RestaurantRoutePage';
-export { RestaurantExperiencePage } from './ui/RestaurantExperiencePage';
+export { OrderBhojanRestaurantExperience as RestaurantExperiencePage } from '@/presentation/restaurant';
 export { useRestaurantFeatureEnabled } from './hooks/useRestaurantFeature';
 export { useRestaurantExperience, useRestaurantLocationInvalidation } from './hooks/useRestaurantExperience';
 export { restaurantKeys } from './hooks/restaurantQueryKeys';

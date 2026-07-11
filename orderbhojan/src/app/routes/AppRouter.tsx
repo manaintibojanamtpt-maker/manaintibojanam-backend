@@ -50,7 +50,7 @@ import { NotificationsPage } from '@/features/notifications';
 
 import { RestaurantRoutePage } from '@/features/restaurant';
 
-import { Skeleton } from '@bhojan/design-system';
+import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
 
 
 
@@ -70,11 +70,10 @@ function FoodRouteFallback() {
 
   return (
 
-    <div style={{ padding: 'var(--bds-space-4)' }} aria-busy="true">
+    <div style={{ padding: '1rem' }} aria-busy="true">
 
-      <Skeleton height="3rem" />
-
-      <Skeleton height="12rem" style={{ marginTop: 'var(--bds-space-4)' }} />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="mt-4 h-48 w-full rounded-2xl" />
 
     </div>
 

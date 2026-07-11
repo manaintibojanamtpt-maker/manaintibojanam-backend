@@ -1,0 +1,25 @@
+/** Motion duration and easing — not activated globally until Phase 7+ */
+:root {
+  --ds-duration-fast: 150ms;
+  --ds-duration-normal: 300ms;
+  --ds-duration-slow: 500ms;
+  --ds-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, rgba(255,255,255,0.07) 25%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.07) 75%);
+  background-size: 1000px 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+  }
+}

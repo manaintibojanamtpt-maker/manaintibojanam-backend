@@ -17,7 +17,14 @@ export type MarketplaceHomeStatus =
   | 'disabled';
 
 export interface MarketplaceBadge {
-  readonly id: 'closest' | 'fast_delivery' | 'highly_rated' | 'within_delivery_radius';
+  readonly id:
+    | 'closest'
+    | 'fast_delivery'
+    | 'highly_rated'
+    | 'within_delivery_radius'
+    | 'offer'
+    | 'closed'
+    | 'kitchen_format';
   readonly label: string;
 }
 
@@ -33,6 +40,7 @@ export interface MarketplaceKitchenCard {
   readonly isOpen: boolean;
   readonly isServiceable: boolean;
   readonly eligibilityLabel: string;
+  readonly deliveryFeeLabel?: string;
   readonly badges: readonly MarketplaceBadge[];
   readonly storePath: string;
 }

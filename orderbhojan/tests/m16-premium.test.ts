@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
@@ -8,10 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 describe('M1.6 premium visual layer', () => {
-  it('loads premium CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-premium\.css/);
-    statSync(join(root, 'src/styles/experience-premium.css'));
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-premium\.css/);
+
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+    assert.match(globals, /design-system\/styles\/index\.css/);
   });
 
   it('uses scroll chrome hook in hero header', () => {
@@ -20,18 +23,17 @@ describe('M1.6 premium visual layer', () => {
     assert.match(header, /ob-hero-header--scrolled/);
   });
 
-  it('premium CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-premium.css'), 'utf8');
-    assert.match(css, /safe-area-inset-top/);
-    assert.match(css, /safe-area-inset-bottom/);
+  it('mib theme CSS includes reduced motion', () => {
+    const css = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
     assert.match(css, /prefers-reduced-motion/);
     assert.match(css, /ob-bottom-nav-shell/);
+    assert.match(css, /ob-hero-header--scrolled/);
   });
 
   it('floating nav island uses glass styling', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-premium.css'), 'utf8');
+    const css = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
     assert.match(css, /backdrop-filter/);
-    assert.match(css, /ob-bottom-nav-fixed/);
+    assert.match(css, /mib-glass/);
   });
 
   it('does not add marketplace API imports to experience UI', () => {

@@ -10,8 +10,8 @@ const root = resolve(__dirname, '..');
 describe('M11 tracking module structure', () => {
   const requiredFiles = [
     'src/features/tracking/hooks/useOrderTracking.ts',
-    'src/features/tracking/ui/TrackingPage.tsx',
-    'src/features/tracking/ui/OrderTimeline.tsx',
+    'src/presentation/tracking/OrderBhojanTrackingPage.tsx',
+    'src/presentation/tracking/OrderBhojanOrderTimeline.tsx',
   ];
 
   for (const file of requiredFiles) {

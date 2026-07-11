@@ -8,7 +8,9 @@ import { useCheckoutState } from '../hooks/useCheckoutState';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { createOrder, stageOrderDraft } from '../services/api';
 import { saveGuestOrder, rememberGuestCheckoutPhone } from '../lib/guestOrders';
-const AutoLocationForm = React.lazy(() => import('../components/AutoLocationForm'));
+const AutoLocationForm = React.lazy(() =>
+  import('../design-system').then((module) => ({ default: module.AutoLocationForm })),
+);
 import { OrderStatus } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -21,13 +23,12 @@ import { doc, updateDoc, setDoc, arrayUnion, collection, getDocs, query, where, 
 import { trackEvent } from '../services/AnalyticsService';
 import { differenceInMinutes } from 'date-fns';
 import { MenuItem } from '../types';
-import { Skeleton } from '../components/SkeletonSystem';
+import { Skeleton, SoftButton } from '../design-system';
 import { getUpsellRecommendations } from '../services/RecommendationEngine';
 import { ensureRazorpayLoaded, loadRazorpay } from '../utils/loadRazorpay';
 import { formatTenantPickupAddress, getEnabledPaymentMethods } from '../lib/tenantCheckoutConfig';
 import { buildDeliveryTimeSlots, isAsapSlot } from '../lib/deliveryTimeSlots';
 import { getStoreClosedMessage, type ResolvedStoreSettings } from '../lib/tenantStoreOperations';
-import SoftButton from '../components/ui/SoftButton';
 
 // Countdown removed by request
 

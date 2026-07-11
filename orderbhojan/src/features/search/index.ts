@@ -1,9 +1,9 @@
 export const M4_MILESTONE = 'M4';
 
 export { SearchProvider } from './ui/SearchProvider';
-export { SearchExperience } from './ui/SearchExperience';
-export { SearchFiltersBar } from './ui/SearchFiltersBar';
-export { SearchBrowsePanel } from './ui/SearchBrowsePanel';
+export { OrderBhojanSearchExperience as SearchExperience } from '@/presentation/search';
+export { OrderBhojanSearchFiltersBar as SearchFiltersBar } from '@/presentation/search';
+export { OrderBhojanSearchBrowsePanel as SearchBrowsePanel } from '@/presentation/search';
 export { useSearchFeatureEnabled } from './hooks/useSearchFeature';
 export { useSearchBrowse, useSearchLocationInvalidation } from './hooks/useSearchBrowse';
 export { useSearchResults } from './hooks/useSearchResults';

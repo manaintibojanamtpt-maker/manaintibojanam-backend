@@ -8,10 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 describe('M2 location intelligence module', () => {
-  it('loads location CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-location\.css/);
-    statSync(join(root, 'src/styles/experience-location.css'));
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-location\.css/);
+
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+    assert.match(globals, /design-system\/styles\/index\.css/);
   });
 
   it('has location feature module structure', () => {
@@ -57,11 +60,16 @@ describe('M2 location intelligence module', () => {
     assert.match(handlers, /location\/validate-pincode/);
   });
 
-  it('location CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-location.css'), 'utf8');
-    assert.match(css, /safe-area-inset-bottom/);
-    assert.match(css, /prefers-reduced-motion/);
-    assert.match(css, /--bds-/);
+  it('location presentation includes safe-area and reduced motion tokens', () => {
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+    const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+    const locationBar = readFileSync(
+      join(root, 'src/presentation/discovery/OrderBhojanHomeLocationBar.tsx'),
+      'utf8',
+    );
+    assert.match(globals, /--bds-/);
+    assert.match(mibTheme, /prefers-reduced-motion/);
+    assert.match(locationBar, /LocationChip/);
   });
 });
 

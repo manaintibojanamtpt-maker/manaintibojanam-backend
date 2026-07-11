@@ -8,3 +8,5 @@ export { CheckoutDeliveryAddressView } from './CheckoutDeliveryAddressView';
 export { CheckoutBillSummaryView } from './CheckoutBillSummaryView';
 export { CheckoutContactView } from './CheckoutContactView';
 export { CheckoutPageView, CheckoutSuccessView } from './CheckoutPageView';
+export { default as FloatingMiniCart } from './FloatingMiniCart';
+export { default as DesktopFloatingCart } from './DesktopFloatingCart';

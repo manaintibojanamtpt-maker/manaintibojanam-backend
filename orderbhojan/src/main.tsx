@@ -5,15 +5,6 @@ import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
 import { trackEvent } from '@/telemetry';
 import '@/styles/globals.css';
-import '@/styles/experience-shell.css';
-import '@/styles/experience-premium.css';
-import '@/styles/experience-location.css';
-import '@/styles/experience-discovery.css';
-import '@/styles/experience-search.css';
-import '@/styles/experience-restaurant.css';
-import '@/styles/experience-food.css';
-import '@/styles/experience-px2-layout.css';
-import '@/styles/experience-home-v2.css';
 
 async function bootstrap() {
   const config = await ensureAppConfig();

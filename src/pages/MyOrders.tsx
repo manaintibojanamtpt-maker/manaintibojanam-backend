@@ -19,7 +19,7 @@ import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 import { addDoc, serverTimestamp, collection, doc, updateDoc } from "firebase/firestore";
 import { getDb } from '../lib/firebase-db';
-import DigitalInvoice from "../components/DigitalInvoice";
+import { DigitalInvoice } from '../design-system';
 import { formatPrice, safeParseDate } from "../lib/utils";
 import { buildMenuUrl, buildOrderShareMessage, buildReorderIntentMessage, buildStorefrontUrl, generateWhatsAppLink } from "../utils/whatsapp";
 import { deriveCustomerMemory } from "../utils/customerMemory";

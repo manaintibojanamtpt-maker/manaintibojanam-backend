@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PremiumSearch } from '@bhojan/design-system';
 import { KITCHEN_HERO_HEADLINE, KITCHEN_HERO_SCENES } from '../../data/kitchenHeroScenes';
 import { resolveFoodPhoto } from '../../data/food-photo-manifest';
 import { useKitchenHeroMotion } from '../../hooks/useKitchenHeroMotion';
@@ -45,6 +45,8 @@ export function KitchenDoorHero() {
       img.src = scene.photo.preloadHref;
     });
   }, [richMotion, resolvedScenes]);
+
+  const openSearch = () => navigate('/search');
 
   return (
     <section className="ob-kitchen-hero" aria-label="Home kitchens">
@@ -91,17 +93,20 @@ export function KitchenDoorHero() {
           </p>
 
           <div className="ob-kitchen-hero__search-dock">
-            <PremiumSearch
-              className="ob-kitchen-hero__search-input"
-              placeholder="Search dishes, kitchens…"
-              readOnly
-              onClick={() => navigate('/search')}
-              onFocus={(e) => {
-                e.preventDefault();
-                navigate('/search');
-              }}
-              aria-label="Search dishes and home kitchens"
-            />
+            <label className="bds-premium-search bds-glass-surface ob-kitchen-hero__search-input">
+              <Search className="h-[18px] w-[18px] shrink-0 text-white/60" aria-hidden />
+              <input
+                className="bds-premium-search__input"
+                placeholder="Search dishes, kitchens…"
+                readOnly
+                onClick={openSearch}
+                onFocus={(e) => {
+                  e.preventDefault();
+                  openSearch();
+                }}
+                aria-label="Search dishes and home kitchens"
+              />
+            </label>
           </div>
         </div>
       </div>

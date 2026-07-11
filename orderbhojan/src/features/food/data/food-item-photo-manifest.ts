@@ -5,7 +5,7 @@ import {
   type FoodPhotoAssetId,
   type ResolvedFoodPhoto,
 } from '@/features/experience/data/food-photo-manifest';
-import type { AppetitePictureSource } from '@bhojan/design-system';
+import type { AppetitePictureSource } from '@/shared/types/media';
 
 export const FOOD_ITEM_PHOTO_ASSETS: Record<string, FoodPhotoAssetId> = {
   food_biryani_chicken: 'dish-biryani-chicken',

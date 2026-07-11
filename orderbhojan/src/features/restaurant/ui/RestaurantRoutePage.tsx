@@ -1,6 +1,6 @@
 import { FeaturePlaceholderPage } from '@/app/pages/FeaturePlaceholderPage';
 import { useRestaurantFeatureEnabled } from '../hooks/useRestaurantFeature';
-import { RestaurantExperiencePage } from './RestaurantExperiencePage';
+import { OrderBhojanRestaurantExperience as RestaurantExperiencePage } from '@/presentation/restaurant';
 
 export function RestaurantRoutePage() {
   const enabled = useRestaurantFeatureEnabled();

@@ -8,7 +8,8 @@ import {
 import { FeaturedRestaurantsSection } from './FeaturedRestaurantsSection';
 import { TrendingFoodsSection } from './TrendingFoodsSection';
 import { HomeKitchenSpotlightMock } from './HomeKitchenSpotlightMock';
-import { RestaurantRailSkeleton } from '../shared/ExperienceSkeletons';
+import { OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
+import { OrderBhojanDiscoveryUxState } from '@/presentation/states';
 
 export interface HomeSpotlightMockFeedProps {
   readonly categoryId: FoodCategoryId | null;
@@ -18,16 +19,31 @@ export function HomeSpotlightMockFeed({ categoryId }: HomeSpotlightMockFeedProps
   const query = useFeaturedRestaurants();
 
   if (query.isLoading) {
+    return <OrderBhojanHomeFeedSkeleton />;
+  }
+
+  if (query.isError) {
     return (
-      <>
-        <RestaurantRailSkeleton title="Near you" />
-        <RestaurantRailSkeleton title="Popular dishes" />
-      </>
+      <OrderBhojanDiscoveryUxState
+        variant="error"
+        title="Could not load kitchens"
+        description="Check your connection and try again."
+        primaryLabel="Retry"
+        onPrimary={() => void query.refetch()}
+      />
     );
   }
 
-  if (query.isError || !query.data?.length) {
-    return null;
+  if (!query.data?.length) {
+    return (
+      <OrderBhojanDiscoveryUxState
+        variant="no-restaurants"
+        title="No kitchens available"
+        description="Try again later or change your category filter."
+        primaryLabel="Retry"
+        onPrimary={() => void query.refetch()}
+      />
+    );
   }
 
   const filtered = query.data.filter((r) => matchesHomeCategory(r.categoryIds, categoryId));

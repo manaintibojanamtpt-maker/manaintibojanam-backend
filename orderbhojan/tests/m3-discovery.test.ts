@@ -68,7 +68,6 @@ describe('M3 discovery module structure', () => {
     'src/features/discovery/ui/DiscoveryHomeFeed.tsx',
     'src/features/discovery/ui/DiscoveryRestaurantCard.tsx',
     'src/types/marketplace-discovery.ts',
-    'src/styles/experience-discovery.css',
     'scripts/gate-m3.mjs',
   ];
 
@@ -78,9 +77,10 @@ describe('M3 discovery module structure', () => {
     });
   }
 
-  it('loads discovery CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-discovery\.css/);
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-discovery\.css/);
   });
 
   it('wires discovery behind feature flag on home', () => {
@@ -132,9 +132,10 @@ describe('M3 discovery module structure', () => {
     assert.doesNotMatch(engine, /checkout/);
   });
 
-  it('discovery CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-discovery.css'), 'utf8');
-    assert.match(css, /safe-area-inset-bottom/);
-    assert.match(css, /prefers-reduced-motion/);
+  it('discovery presentation includes safe-area and reduced motion tokens', () => {
+    const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+    const feed = readFileSync(join(root, 'src/presentation/discovery/OrderBhojanHomeFeedSkeleton.tsx'), 'utf8');
+    assert.match(mibTheme, /prefers-reduced-motion/);
+    assert.match(feed, /storefront-design-system/);
   });
 });

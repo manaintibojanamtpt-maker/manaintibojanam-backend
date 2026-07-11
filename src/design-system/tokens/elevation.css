@@ -1,0 +1,8 @@
+/** Elevation / shadow tokens from src/index.css MIB utilities */
+:root {
+  --mib-shadow-card: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  --mib-shadow-glow: 0 0 30px -10px rgba(255, 107, 53, 0.25);
+  --ds-shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  --ds-shadow-cta: 0 12px 24px -12px rgba(255, 107, 53, 0.5);
+  --ds-shadow-nav: 0 20px 50px rgba(0, 0, 0, 0.5);
+}

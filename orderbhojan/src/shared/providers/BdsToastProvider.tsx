@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Toast } from '@bhojan/design-system';
+import { ToastHost } from '@/shared/ui/ToastHost';
 
 export interface ToastMessage {
   id: string;
@@ -26,7 +26,9 @@ export function BdsToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {toast ? <Toast message={toast.message} variant={toast.variant} onDismiss={() => setToast(null)} /> : null}
+      {toast ? (
+        <ToastHost message={toast.message} variant={toast.variant} onDismiss={() => setToast(null)} />
+      ) : null}
     </ToastContext.Provider>
   );
 }
@@ -37,7 +39,6 @@ export function useBdsToast(): ToastContextValue {
   return ctx;
 }
 
-/** Imperative helper for non-React code paths (telemetry, etc.) */
 let toastHandler: ToastContextValue['showToast'] | null = null;
 
 export function registerToastHandler(handler: ToastContextValue['showToast']) {

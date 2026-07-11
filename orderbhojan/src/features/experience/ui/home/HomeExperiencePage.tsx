@@ -1,35 +1,14 @@
-import {
-  MotionPage,
-  MotionReveal,
-  PremiumChip,
-  Rail,
-  TrustStrip,
-  TrustShieldIcon,
-  TrustClockIcon,
-  TrustDeliveryIcon,
-  TrustVerifiedIcon,
-  TrustLiveIcon,
-} from '@bhojan/design-system';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed } from '@/features/discovery';
-import { HOME_CATEGORY_CHIPS } from '../../data/mockCatalog';
-import {
-  HOME_CATEGORY_PHOTO_ASSETS,
-  pictureSources,
-  resolveCategoryChipPhoto,
-} from '../../data/food-photo-manifest';
+import { Section } from '@bhojan/storefront-design-system/primitives/Section';
+import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
-import { KitchenDoorHero } from './KitchenDoorHero';
-import { HomeLocationBar } from './HomeLocationBar';
-
-const TRUST_ITEMS = [
-  { id: 'fresh', label: 'Fresh', icon: <TrustClockIcon /> },
-  { id: 'hygiene', label: 'Hygienic', icon: <TrustShieldIcon /> },
-  { id: 'verified', label: 'Verified', icon: <TrustVerifiedIcon /> },
-  { id: 'live', label: 'Live cooking', icon: <TrustLiveIcon /> },
-  { id: 'delivery', label: 'Fast delivery', icon: <TrustDeliveryIcon /> },
-] as const;
+import {
+  OrderBhojanHomeHero,
+  OrderBhojanHomeCategories,
+  OrderBhojanHomeTrustStrip,
+} from '@/presentation/discovery';
 
 function MockRestaurantFeed({ categoryId }: { categoryId: FoodCategoryId | null }) {
   return <HomeSpotlightMockFeed categoryId={categoryId} />;
@@ -37,49 +16,41 @@ function MockRestaurantFeed({ categoryId }: { categoryId: FoodCategoryId | null 
 
 export function HomeExperiencePage() {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
-  const { selectedId, select } = useCategoryStore();
+  const { selectedId } = useCategoryStore();
 
   return (
-    <MotionPage className="bds-px2-page ob-home-page">
-      <KitchenDoorHero />
-      <HomeLocationBar />
+    <div className="min-h-screen bg-[#030303] text-white">
+      <OrderBhojanHomeHero />
 
-      <div className="bds-px2-page__content ob-home-page__content">
-        <section className="ob-home-categories" aria-label="Categories">
-          <Rail className="ob-home-categories__rail">
-            {HOME_CATEGORY_CHIPS.map((cat) => {
-              const assetId = HOME_CATEGORY_PHOTO_ASSETS[cat.id];
-              const photo = resolveCategoryChipPhoto(assetId, 144, 80);
-              return (
-                <PremiumChip
-                  key={cat.id}
-                  label={cat.label}
-                  imageUrl={photo.src}
-                  imageSrcSet={photo.webpSrcSet}
-                  imageSizes="4.5rem"
-                  imageBlurDataURL={photo.blurDataURL}
-                  imageSources={pictureSources(photo, '4.5rem')}
-                  imageFallbackSrc={photo.fallbackSrc}
-                  selected={selectedId === cat.id}
-                  onClick={() => select(cat.id)}
-                />
-              );
-            })}
-          </Rail>
-        </section>
+      <Section density="comfortable" background="default" className="!py-8">
+        <SectionHeader
+          label="Categories"
+          title="What's on your mind?"
+          description="Swipe to explore cuisines near you"
+          align="left"
+          className="!text-left"
+        />
+        <OrderBhojanHomeCategories />
+      </Section>
 
-        <MotionReveal delay={0.05}>
-          {discoveryEnabled ? (
-            <DiscoveryHomeFeed />
-          ) : (
-            <MockRestaurantFeed categoryId={selectedId} />
-          )}
-        </MotionReveal>
+      <Section density="comfortable" background="subtle" className="!py-8">
+        {discoveryEnabled ? (
+          <DiscoveryHomeFeed />
+        ) : (
+          <MockRestaurantFeed categoryId={selectedId} />
+        )}
+      </Section>
 
-        <section className="ob-home-trust" aria-label="Trust">
-          <TrustStrip variant="scroll" iconOnly items={[...TRUST_ITEMS]} />
-        </section>
-      </div>
-    </MotionPage>
+      <Section density="comfortable" background="default" className="!py-8">
+        <SectionHeader
+          label="Trust"
+          title="Why OrderBhojan"
+          description="Verified home kitchens with the warmth you expect"
+          align="left"
+          className="!text-left"
+        />
+        <OrderBhojanHomeTrustStrip />
+      </Section>
+    </div>
   );
 }

@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
-import {
-  BottomSheet,
-  Button,
-  Card,
-  Icon,
-  Input,
-  Text,
-} from '@bhojan/design-system';
+import { useState } from 'react';
+import { LocateFixed } from 'lucide-react';
+import BottomSheet from '@bhojan/storefront-design-system/layout/BottomSheet';
+import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { TextFieldView } from '@bhojan/storefront-design-system/primitives/TextFieldView';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { useLocationGeocodeEnabled } from '../hooks/useLocationFeature';
 import { useLocationActions } from '../hooks/useLocationActions';
@@ -37,12 +34,9 @@ function buildDeliveryLabel(
   return parts.join(', ');
 }
 
-export function DeliveryLocationWizard() {
-  const open = useLocationSessionStore((state) => state.wizardOpen);
+function DeliveryLocationWizardContent({ onClose }: { readonly onClose: () => void }) {
   const geocodeEnabled = useLocationGeocodeEnabled();
-  const { closeWizard } = useLocationActions();
   const restaurantId = useRestaurantContextStore((state) => state.restaurantId);
-  const contextToken = useRestaurantContextStore((state) => state.contextToken);
 
   const [step, setStep] = useState<WizardStep>('detect');
   const [detecting, setDetecting] = useState(false);
@@ -55,20 +49,6 @@ export function DeliveryLocationWizard() {
   const [building, setBuilding] = useState('');
   const [landmark, setLandmark] = useState('');
 
-  useEffect(() => {
-    if (!open) return;
-    setStep('detect');
-    setDetecting(false);
-    setSaving(false);
-    setError(null);
-    setAreaLabel('');
-    setCoordinates(null);
-    setDistancePreview(null);
-    setHouse('');
-    setBuilding('');
-    setLandmark('');
-  }, [open]);
-
   const applyCoordinates = async (coords: GeoCoordinates) => {
     setDetecting(true);
     setError(null);
@@ -78,13 +58,10 @@ export function DeliveryLocationWizard() {
         lat: coords.lat,
         lng: coords.lng,
         restaurantId: restaurantId ?? undefined,
-        contextToken: contextToken ?? undefined,
-        orderType: 'delivery',
       });
-
+      setCoordinates(coords);
+      setAreaLabel(label);
       if (!serviceability.delivery) {
-        setCoordinates(coords);
-        setAreaLabel(label);
         setDistancePreview({
           distanceKm: serviceability.distanceKm,
           message: serviceability.message,
@@ -92,9 +69,6 @@ export function DeliveryLocationWizard() {
         setStep('out_of_bounds');
         return;
       }
-
-      setCoordinates(coords);
-      setAreaLabel(label);
       setDistancePreview({
         distanceKm: serviceability.distanceKm,
         message: serviceability.message,
@@ -153,7 +127,7 @@ export function DeliveryLocationWizard() {
           checkedAt: new Date().toISOString(),
         },
       });
-      closeWizard();
+      onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save delivery location');
     } finally {
@@ -162,88 +136,86 @@ export function DeliveryLocationWizard() {
   };
 
   return (
-    <BottomSheet open={open} onClose={closeWizard} title="Confirm delivery location">
-      <div className="ob-location-wizard">
+    <BottomSheet isOpen onClose={onClose} title="Confirm delivery location" panelClassName="bg-[#120e0c] text-white">
+      <div className="flex flex-col gap-4">
         {step === 'detect' ? (
-          <div className="ob-location-wizard__detect">
-            <Text variant="body">
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-white/70">
               Use your current location, then add flat, building, and landmark — same flow as the founder storefront.
-            </Text>
-            <Button
-              variant="primary"
-              fullWidth
-              className="ob-location-sheet__gps"
-              disabled={detecting}
-              onClick={() => void handleDetect()}
-            >
-              <Icon size={18} label="GPS">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
-              </Icon>
+            </p>
+            <SoftButton type="button" fullWidth disabled={detecting} onClick={() => void handleDetect()}>
+              <LocateFixed className="h-4 w-4" aria-hidden />
               {detecting ? 'Detecting location…' : 'Auto detect my location'}
-            </Button>
+            </SoftButton>
           </div>
         ) : null}
 
         {step === 'out_of_bounds' ? (
-          <Card className="ob-location-wizard__blocked" role="alert">
-            <Text variant="subtitle">Location not serviceable</Text>
-            <Text variant="bodySm">
+          <div role="alert">
+            <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
+            <p className="text-base font-bold text-white">Location not serviceable</p>
+            <p className="mt-2 text-sm text-white/70">
               {distancePreview?.message ??
                 'This kitchen does not deliver to the selected location right now.'}
-            </Text>
-            <Button variant="secondary" fullWidth onClick={() => setStep('detect')}>
+            </p>
+            <SoftButton type="button" tone="ghost" fullWidth className="mt-4" onClick={() => setStep('detect')}>
               Try another location
-            </Button>
-          </Card>
+            </SoftButton>
+            </GlassCard>
+          </div>
         ) : null}
 
         {step === 'form' && coordinates ? (
-          <div className="ob-location-wizard__form">
-            <Card className="ob-location-wizard__summary">
-              <Text variant="microLabel">Delivering to</Text>
-              <Text variant="bodySm" style={{ fontWeight: 700 }}>{areaLabel}</Text>
-              <div className="ob-location-wizard__metrics">
+          <div className="flex flex-col gap-4">
+            <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/50">Delivering to</p>
+              <p className="mt-1 text-sm font-bold text-white">{areaLabel}</p>
+              <div className="mt-2 space-y-1">
                 {distancePreview?.distanceKm != null ? (
-                  <Text variant="caption">Distance: {distancePreview.distanceKm.toFixed(1)} km</Text>
+                  <p className="text-xs text-white/60">Distance: {distancePreview.distanceKm.toFixed(1)} km</p>
                 ) : null}
                 {distancePreview?.message ? (
-                  <Text variant="caption">{distancePreview.message}</Text>
+                  <p className="text-xs text-white/60">{distancePreview.message}</p>
                 ) : null}
               </div>
-            </Card>
+            </GlassCard>
 
-            <Input
+            <TextFieldView
               label="House / Flat No."
               value={house}
               onChange={(event) => setHouse(event.target.value)}
               placeholder="e.g. 402, Block B"
             />
-            <Input
+            <TextFieldView
               label="Building / Apartment"
               value={building}
               onChange={(event) => setBuilding(event.target.value)}
               placeholder="e.g. Green Valley Residency"
             />
-            <Input
+            <TextFieldView
               label="Landmark"
               value={landmark}
               onChange={(event) => setLandmark(event.target.value)}
               placeholder="Near main gate, opposite park"
             />
 
-            <Button variant="primary" fullWidth disabled={saving} onClick={() => void handleConfirm()}>
+            <SoftButton type="button" fullWidth disabled={saving} onClick={() => void handleConfirm()}>
               {saving ? 'Saving…' : 'Confirm & proceed'}
-            </Button>
+            </SoftButton>
           </div>
         ) : null}
 
         {error ? (
-          <Text variant="caption" role="alert" style={{ color: 'var(--bds-color-error)' }}>
-            {error}
-          </Text>
+          <p className="text-sm text-red-400" role="alert">{error}</p>
         ) : null}
       </div>
     </BottomSheet>
   );
+}
+
+export function DeliveryLocationWizard() {
+  const open = useLocationSessionStore((state) => state.wizardOpen);
+  const { closeWizard } = useLocationActions();
+  if (!open) return null;
+  return <DeliveryLocationWizardContent onClose={closeWizard} />;
 }

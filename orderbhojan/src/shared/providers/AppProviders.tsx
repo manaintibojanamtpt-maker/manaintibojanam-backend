@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
-import { DesignSystemProvider } from '@bhojan/design-system';
 import { DiscoveryProvider } from '@/features/discovery';
 import { SearchProvider } from '@/features/search';
 import { RestaurantProvider } from '@/features/restaurant';
@@ -38,7 +37,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <DesignSystemProvider theme="food">
+    <div className="min-h-[100dvh] bg-[#070504] text-white">
       <TelemetryProvider>
         <FeatureFlagProvider>
             <AuthProvider>
@@ -62,7 +61,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             </AuthProvider>
         </FeatureFlagProvider>
       </TelemetryProvider>
-    </DesignSystemProvider>
+    </div>
   );
 }
 

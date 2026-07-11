@@ -1,12 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  Icon,
-  Text,
-} from '@bhojan/design-system';
+import { Heart } from 'lucide-react';
 import type { MockRestaurant } from '../../domain/experience.types';
 import { useFavoritesStore } from '../../store/favoritesStore';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoritesSync';
@@ -40,9 +33,8 @@ export function MarketplaceRestaurantTile({
   };
 
   return (
-    <Card
-      interactive
-      className="bds-restaurant-card bds-restaurant-card--immersive ob-restaurant-tile"
+    <div
+      className="bds-card bds-card--interactive bds-restaurant-card bds-restaurant-card--immersive ob-restaurant-tile"
       style={{ width, minWidth: width }}
       onClick={handleNavigate}
       role="button"
@@ -65,15 +57,18 @@ export function MarketplaceRestaurantTile({
           onLoad={cover.onLoad}
         />
         <div className="ob-restaurant-tile__badges">
-          {!restaurant.isOpen ? <Badge variant="status">Closed</Badge> : null}
-          {!compactHome && restaurant.offer ? <Badge variant="offer">{restaurant.offer}</Badge> : null}
-          {!compactHome && restaurant.isCloudKitchen ? <Badge variant="cloudKitchen">Cloud</Badge> : null}
+          {!restaurant.isOpen ? <span className="bds-badge">Closed</span> : null}
+          {!compactHome && restaurant.offer ? (
+            <span className="bds-badge bds-badge--offer">{restaurant.offer}</span>
+          ) : null}
+          {!compactHome && restaurant.isCloudKitchen ? (
+            <span className="bds-badge bds-badge--offer">Cloud</span>
+          ) : null}
         </div>
         {!compactHome ? (
-          <Button
-            variant="ghost"
-            size="compact"
-            className={`ob-restaurant-tile__favorite${favorite ? ' ob-restaurant-tile__favorite--active' : ''}`}
+          <button
+            type="button"
+            className={`bds-btn bds-btn--ghost bds-btn--compact ob-restaurant-tile__favorite${favorite ? ' ob-restaurant-tile__favorite--active' : ''}`}
             aria-label={favorite ? `Remove ${restaurant.name} from favorites` : `Add ${restaurant.name} to favorites`}
             aria-pressed={favorite}
             onClick={(event) => {
@@ -81,38 +76,42 @@ export function MarketplaceRestaurantTile({
               toggleFavorite(restaurant.id);
             }}
           >
-            <Icon size={18} label={favorite ? 'Favorited' : 'Favorite'}>
-              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
-            </Icon>
-          </Button>
+            <Heart className="h-[18px] w-[18px]" fill={favorite ? 'currentColor' : 'none'} aria-hidden />
+          </button>
         ) : null}
       </div>
       <div className="bds-restaurant-card__body">
         <div className="ob-restaurant-tile__title-row">
-          {!compactHome ? <Avatar src={restaurant.logoUrl} alt="" size="sm" /> : null}
+          {!compactHome ? (
+            <div className="bds-avatar bds-avatar--sm" role="img" aria-label="">
+              {restaurant.logoUrl ? <img src={restaurant.logoUrl} alt="" /> : null}
+            </div>
+          ) : null}
           <div className="ob-restaurant-tile__title-copy">
-            <Text variant="subtitle" as="div" className="ob-restaurant-tile__name">
+            <div className="bds-text-subtitle ob-restaurant-tile__name">
               {restaurant.name}
-            </Text>
-            <Text variant="caption" className="ob-restaurant-tile__cuisine">
+            </div>
+            <div className="bds-text-caption ob-restaurant-tile__cuisine">
               {restaurant.cuisine}
-            </Text>
+            </div>
           </div>
           {!compactHome ? (
-            <Badge variant={restaurant.isVeg ? 'veg' : 'nonVeg'}>{restaurant.isVeg ? 'Veg' : 'Non-Veg'}</Badge>
+            <span className={`bds-badge ${restaurant.isVeg ? 'bds-badge--veg' : 'bds-badge--non-veg'}`}>
+              {restaurant.isVeg ? 'Veg' : 'Non-Veg'}
+            </span>
           ) : null}
         </div>
         <div className="ob-restaurant-tile__meta">
-          <Badge variant="rating">★ {restaurant.rating.toFixed(1)}</Badge>
-          <Badge variant="delivery">{restaurant.eta}</Badge>
+          <span className="bds-badge bds-badge--rating">★ {restaurant.rating.toFixed(1)}</span>
+          <span className="bds-badge bds-badge--delivery">{restaurant.eta}</span>
           {!compactHome ? (
             <>
-              <Badge variant="delivery">{restaurant.deliveryFee}</Badge>
-              <Badge variant="default">{restaurant.distance}</Badge>
+              <span className="bds-badge bds-badge--delivery">{restaurant.deliveryFee}</span>
+              <span className="bds-badge">{restaurant.distance}</span>
             </>
           ) : null}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

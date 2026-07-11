@@ -1,25 +1,25 @@
 import { Outlet } from 'react-router-dom';
-import { useBreakpoint } from '@bhojan/design-system';
+import { useBreakpoint } from '@/shared/hooks/useMedia';
 
 export interface ResponsiveLayoutProps {
   maxWidth?: string;
   padding?: string;
 }
 
-export function ResponsiveLayout({ maxWidth = '72rem', padding = 'var(--bds-space-4)' }: ResponsiveLayoutProps) {
-  const isTablet = useBreakpoint('md');
-  const isDesktop = useBreakpoint('lg');
+export function ResponsiveLayout({ maxWidth = '72rem', padding = '1rem' }: ResponsiveLayoutProps) {
+  const breakpoint = useBreakpoint();
+  const isTablet = breakpoint !== 'mobile';
+  const isDesktop = breakpoint === 'desktop';
 
   return (
     <div
+      className="mx-auto w-full"
       style={{
-        width: '100%',
         maxWidth,
-        margin: '0 auto',
         padding,
-        paddingBottom: isTablet ? 'var(--bds-space-8)' : 'var(--bds-space-6)',
+        paddingBottom: isTablet ? '2rem' : '1.5rem',
       }}
-      data-bds-viewport={isDesktop ? 'desktop' : isTablet ? 'tablet' : 'mobile'}
+      data-viewport={isDesktop ? 'desktop' : isTablet ? 'tablet' : 'mobile'}
     >
       <Outlet />
     </div>
@@ -28,7 +28,7 @@ export function ResponsiveLayout({ maxWidth = '72rem', padding = 'var(--bds-spac
 
 export function FullScreenLayout() {
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bds-color-background)' }}>
+    <div className="min-h-[100dvh] bg-[#070504] text-white">
       <Outlet />
     </div>
   );

@@ -1,0 +1,17 @@
+
+.mib-glass {
+  background: rgba(18, 13, 10, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mib-hero-gradient {
+  background: linear-gradient(
+    to bottom,
+    rgba(7, 5, 4, 0.2) 0%,
+    rgba(7, 5, 4, 0.4) 40%,
+    rgba(7, 5, 4, 0.8) 80%,
+    rgba(7, 5, 4, 1) 100%
+  );
+}

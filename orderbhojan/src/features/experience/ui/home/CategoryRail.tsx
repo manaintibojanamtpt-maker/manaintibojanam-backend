@@ -1,4 +1,3 @@
-import { Chip, Rail, Text } from '@bhojan/design-system';
 import { FOOD_CATEGORIES } from '../../data/mockCatalog';
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
@@ -9,23 +8,23 @@ export function CategoryRail() {
   return (
     <section className="ob-section ob-section--full" aria-label="Food categories">
       <div className="ob-section__header">
-        <Text variant="subtitle" as="h2" className="ob-section__title">What&apos;s on your mind?</Text>
-        <Text variant="caption" className="ob-section__hint">Swipe</Text>
+        <h2 className="bds-text-subtitle ob-section__title">What&apos;s on your mind?</h2>
+        <p className="bds-text-caption ob-section__hint">Swipe</p>
       </div>
-      <Rail className="ob-category-rail bds-rail">
+      <div className="bds-rail ob-category-rail">
         {FOOD_CATEGORIES.map((category) => (
-          <Chip
+          <button
             key={category.id}
-            selected={selectedId === category.id}
-            className="ob-category-chip"
+            type="button"
+            className={`bds-chip ob-category-chip${selectedId === category.id ? ' bds-chip--selected' : ''}`}
             aria-pressed={selectedId === category.id}
             onClick={() => select(category.id as FoodCategoryId)}
           >
             <span className="ob-category-chip__emoji" aria-hidden>{category.emoji}</span>
             {category.label}
-          </Chip>
+          </button>
         ))}
-      </Rail>
+      </div>
     </section>
   );
 }

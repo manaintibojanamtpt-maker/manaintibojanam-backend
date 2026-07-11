@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Button, Text, useReducedMotion } from '@bhojan/design-system';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { useReducedMotion } from '@/shared/hooks/useMedia';
 import { HERO_BANNERS } from '../../data/mockCatalog';
 import { useBlurUpImage } from '../../hooks/useBlurUpImage';
 
@@ -34,11 +35,11 @@ export function HeroBannerCarousel() {
         />
         <div className="ob-hero-banner__overlay" aria-hidden />
         <div className="ob-hero-banner__content">
-          <Text variant="title" as="h2" className="ob-hero-banner__title">{slide.title}</Text>
-          <Text variant="bodySm" className="ob-hero-banner__subtitle">{slide.subtitle}</Text>
-          <Button variant="secondary" size="compact" className="ob-hero-banner__cta" aria-label={slide.cta}>
+          <h2 className="bds-text-title ob-hero-banner__title">{slide.title}</h2>
+          <p className="bds-text-body-sm ob-hero-banner__subtitle">{slide.subtitle}</p>
+          <SoftButton tone="secondary" size="compact" className="ob-hero-banner__cta" aria-label={slide.cta}>
             {slide.cta}
-          </Button>
+          </SoftButton>
         </div>
       </div>
       <div className="ob-hero-banner__dots" role="tablist" aria-label="Banner slides">

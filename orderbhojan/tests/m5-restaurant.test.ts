@@ -44,9 +44,8 @@ describe('M5 restaurant module structure', () => {
   const requiredFiles = [
     'src/features/restaurant/engine/restaurantExperienceLayer.ts',
     'src/features/restaurant/infrastructure/restaurantApiClient.ts',
-    'src/features/restaurant/ui/RestaurantExperiencePage.tsx',
+    'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx',
     'src/types/marketplace-restaurant.ts',
-    'src/styles/experience-restaurant.css',
     'scripts/gate-m5.mjs',
   ];
 
@@ -56,9 +55,10 @@ describe('M5 restaurant module structure', () => {
     });
   }
 
-  it('loads restaurant CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-restaurant\.css/);
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-restaurant\.css/);
   });
 
   it('routes restaurant page in fullscreen layout', () => {
@@ -96,7 +96,7 @@ describe('M5 restaurant module structure', () => {
 
   it('restaurant module does not import menu or checkout', () => {
     const page = readFileSync(
-      join(root, 'src/features/restaurant/ui/RestaurantExperiencePage.tsx'),
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx'),
       'utf8',
     );
     assert.doesNotMatch(page, /getMenu/);
@@ -104,9 +104,33 @@ describe('M5 restaurant module structure', () => {
     assert.doesNotMatch(page, /getMarketplaceApiClient/);
   });
 
-  it('restaurant CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-restaurant.css'), 'utf8');
-    assert.match(css, /safe-area-inset-bottom/);
-    assert.match(css, /prefers-reduced-motion/);
+  it('restaurant UX states use Founder DS marketplace view', () => {
+    const states = readFileSync(
+      join(root, 'src/presentation/states/restaurant/index.tsx'),
+      'utf8',
+    );
+    assert.match(states, /MarketplaceUxStateView/);
+    assert.match(states, /storefront-design-system/);
+    const experience = readFileSync(
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx'),
+      'utf8',
+    );
+    assert.match(experience, /OrderBhojanRestaurantErrorState/);
+    assert.match(experience, /OrderBhojanRestaurantClosedBanner/);
+    const skeleton = readFileSync(
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantSkeleton.tsx'),
+      'utf8',
+    );
+    assert.match(skeleton, /RestaurantHeroSkeleton/);
+  });
+
+  it('restaurant presentation includes safe-area and reduced motion tokens', () => {
+    const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+    const experience = readFileSync(
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx'),
+      'utf8',
+    );
+    assert.match(mibTheme, /prefers-reduced-motion/);
+    assert.match(experience, /safe-area-inset-bottom/);
   });
 });

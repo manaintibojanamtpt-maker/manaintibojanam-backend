@@ -1,0 +1,106 @@
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { useFoodFeatureEnabled } from '@/features/food/hooks/useFoodFeature';
+import { useHeroPreload } from '@/features/experience/hooks/useHeroPreload';
+import {
+  pictureSources,
+  resolveRestaurantCover,
+  resolveRestaurantLogo,
+  restaurantSlugFromString,
+} from '@/features/restaurant/data/restaurant-photo-manifest';
+import { useRestaurantScrollChrome } from '@/features/restaurant/hooks/useRestaurantScrollChrome';
+import { useRestaurantExperience } from '@/features/restaurant/hooks/useRestaurantExperience';
+import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
+import { formatOpenStatusLabel } from '@/features/restaurant/domain/formatters';
+import {
+  OrderBhojanDiscoveryOfflineNotice,
+  OrderBhojanRestaurantClosedBanner,
+  OrderBhojanRestaurantErrorState,
+  OrderBhojanRestaurantUxShell,
+  useOnlineStatus,
+} from '@/presentation/states';
+import { OrderBhojanRestaurantSkeleton } from './OrderBhojanRestaurantSkeleton';
+import { OrderBhojanRestaurantHero } from './OrderBhojanRestaurantHero';
+import { OrderBhojanRestaurantInfoSections } from './OrderBhojanRestaurantInfoSections';
+import { OrderBhojanRestaurantStickyHeader } from './OrderBhojanRestaurantActions';
+import type { RestaurantExperienceResponse } from '@/types/marketplace-restaurant';
+
+function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const menuEnabled = useFoodFeatureEnabled();
+  const collapsed = useRestaurantScrollChrome();
+  const { experience } = data;
+  const slug = restaurantSlugFromString(experience.slug);
+  const manifestCover = resolveRestaurantCover(slug, 88);
+  const manifestLogo = resolveRestaurantLogo(slug, 82);
+  const coverSrc = experience.coverImage || manifestCover.src;
+  const logoSrc = experience.logo || manifestLogo.src;
+  const enterFromPoster = Boolean((location.state as { fromPoster?: boolean } | null)?.fromPoster);
+
+  useHeroPreload(coverSrc, manifestCover.webpSrcSet);
+
+  return (
+    <div className="min-h-screen bg-[#030303] text-white">
+      <OrderBhojanRestaurantStickyHeader name={experience.displayName} visible={collapsed} />
+      <OrderBhojanRestaurantHero
+        data={data}
+        collapsed={collapsed}
+        enterFromPoster={enterFromPoster}
+        coverSrc={coverSrc}
+        coverSrcSet={experience.coverImage ? undefined : manifestCover.webpSrcSet}
+        coverSizes="100vw"
+        coverBlurDataURL={experience.coverImage ? undefined : manifestCover.blurDataURL}
+        coverSources={experience.coverImage ? undefined : pictureSources(manifestCover, '100vw')}
+        logoSrc={logoSrc}
+      />
+      <OrderBhojanRestaurantInfoSections data={data} />
+
+      {experience.openStatus === 'closed' ? (
+        <OrderBhojanRestaurantClosedBanner label={formatOpenStatusLabel(experience.openStatus)} />
+      ) : null}
+
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#030303]/95 p-4 backdrop-blur-md ${
+          collapsed ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : 'pb-[max(1.25rem,env(safe-area-inset-bottom))]'
+        }`}
+      >
+        <SoftButton
+          type="button"
+          className="w-full"
+          disabled={!menuEnabled || experience.openStatus === 'closed'}
+          onClick={() =>
+            navigate(`/restaurant/${experience.slug}/menu`, { state: { fromRestaurant: true } })
+          }
+        >
+          Open Menu
+        </SoftButton>
+      </div>
+    </div>
+  );
+}
+
+export function OrderBhojanRestaurantExperience() {
+  const { restaurantSlug } = useParams<{ restaurantSlug: string }>();
+  useTenantRevisionSync(restaurantSlug);
+  const online = useOnlineStatus();
+  const query = useRestaurantExperience(restaurantSlug);
+
+  if (query.isLoading) {
+    return <OrderBhojanRestaurantSkeleton />;
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <OrderBhojanRestaurantUxShell>
+        {!online ? <OrderBhojanDiscoveryOfflineNotice onRetry={() => void query.refetch()} /> : null}
+        <OrderBhojanRestaurantErrorState
+          offline={!online}
+          onRetry={() => void query.refetch()}
+        />
+      </OrderBhojanRestaurantUxShell>
+    );
+  }
+
+  return <OrderBhojanRestaurantContent data={query.data} />;
+}

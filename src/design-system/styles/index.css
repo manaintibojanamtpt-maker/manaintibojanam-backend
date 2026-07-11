@@ -1,0 +1,12 @@
+/**
+ * Design system style entry — NOT wired to src/index.css yet (Phase 5 verification only).
+ * Import this file when activating global tokens in a future phase.
+ */
+@import "../tokens/typography.css";
+@import "../tokens/colors.css";
+@import "../tokens/spacing.css";
+@import "../tokens/radius.css";
+@import "../tokens/elevation.css";
+@import "../tokens/glass.css";
+@import "../tokens/motion.css";
+@import "./soft-buttons.css";

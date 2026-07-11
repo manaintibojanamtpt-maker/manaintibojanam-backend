@@ -11,8 +11,8 @@ describe('M10 orders module structure', () => {
   const requiredFiles = [
     'src/features/orders/hooks/useOrdersList.ts',
     'src/features/orders/hooks/ordersQueryKeys.ts',
-    'src/features/orders/ui/OrderSummaryCard.tsx',
-    'src/features/experience/ui/orders/OrdersExperiencePage.tsx',
+    'src/presentation/orders/OrderBhojanOrderSummaryCard.tsx',
+    'src/presentation/orders/OrderBhojanOrdersExperience.tsx',
   ];
 
   for (const file of requiredFiles) {

@@ -63,9 +63,8 @@ describe('M4 search module structure', () => {
   const requiredFiles = [
     'src/features/search/engine/searchPlatform.ts',
     'src/features/search/infrastructure/searchApiClient.ts',
-    'src/features/search/ui/SearchExperience.tsx',
+    'src/presentation/search/OrderBhojanSearchExperience.tsx',
     'src/types/marketplace-search.ts',
-    'src/styles/experience-search.css',
     'scripts/gate-m4.mjs',
   ];
 
@@ -75,9 +74,10 @@ describe('M4 search module structure', () => {
     });
   }
 
-  it('loads search CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-search\.css/);
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-search\.css/);
   });
 
   it('wires search behind feature flag', () => {
@@ -119,10 +119,11 @@ describe('M4 search module structure', () => {
     assert.doesNotMatch(engine, /checkout/);
   });
 
-  it('search CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-search.css'), 'utf8');
-    assert.match(css, /safe-area-inset-bottom/);
-    assert.match(css, /prefers-reduced-motion/);
+  it('search presentation includes safe-area and reduced motion tokens', () => {
+    const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+    const search = readFileSync(join(root, 'src/presentation/search/OrderBhojanSearchExperience.tsx'), 'utf8');
+    assert.match(mibTheme, /prefers-reduced-motion/);
+    assert.match(search, /storefront-design-system/);
   });
 
   it('supports all required result types in schema', async () => {

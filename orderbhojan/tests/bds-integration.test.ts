@@ -37,7 +37,7 @@ function walk(dir: string, files: string[] = []): string[] {
   return files;
 }
 
-describe('BDS integration — no custom UI primitives', () => {
+describe('Storefront design system integration — no custom UI primitives', () => {
   it('removed legacy shared/components primitives', () => {
     for (const rel of forbiddenUiPaths) {
       const full = join(srcRoot, rel);
@@ -51,9 +51,9 @@ describe('BDS integration — no custom UI primitives', () => {
     }
   });
 
-  it('AppProviders uses DesignSystemProvider', () => {
+  it('AppProviders does not use DesignSystemProvider', () => {
     const content = readFileSync(join(srcRoot, 'shared/providers/AppProviders.tsx'), 'utf8');
-    assert.match(content, /DesignSystemProvider/);
+    assert.doesNotMatch(content, /DesignSystemProvider/);
     assert.doesNotMatch(content, /shared\/providers\/ThemeProvider/);
   });
 
@@ -66,14 +66,20 @@ describe('BDS integration — no custom UI primitives', () => {
     assert.deepEqual(violations, []);
   });
 
-  it('globals.css imports BDS styles', () => {
+  it('globals.css imports storefront design-system styles', () => {
     const css = readFileSync(join(srcRoot, 'styles/globals.css'), 'utf8');
-    assert.match(css, /@bhojan\/design-system\/styles\.css/);
+    assert.match(css, /design-system\/styles\/index\.css/);
     assert.doesNotMatch(css, /--color-brand-600/);
   });
 
-  it('package.json depends on @bhojan/design-system', () => {
+  it('package.json does not depend on @bhojan/design-system', () => {
     const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-    assert.ok(pkg.dependencies['@bhojan/design-system']);
+    assert.equal(pkg.dependencies['@bhojan/design-system'], undefined);
+  });
+
+  it('main entry loads globals.css only', () => {
+    const main = readFileSync(join(srcRoot, 'main.tsx'), 'utf8');
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-/);
   });
 });

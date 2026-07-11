@@ -1,87 +1,77 @@
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Chip,
-  EmptyState,
-  Icon,
-  SearchBar,
-  Skeleton,
-  Text,
-} from '@bhojan/design-system';
+import { MarketplaceSearchBar } from '@bhojan/storefront-design-system/marketplace/MarketplaceSearchBar';
+import { Section } from '@bhojan/storefront-design-system/primitives/Section';
+import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
+import { CategorySkeleton } from '@bhojan/storefront-design-system/skeleton/SkeletonSystem';
 import {
   POPULAR_SEARCHES,
   RECENT_SEARCHES,
   TRENDING_FOODS,
 } from '../../data/mockCatalog';
-import { MenuSkeleton } from '../shared/ExperienceSkeletons';
+
+const chipClass =
+  'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:border-[#FF7A00]/40 hover:text-white';
 
 export function MockSearchExperiencePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="ob-page-enter ob-search-page ob-search-premium" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--bds-space-6)' }}>
-      <Text variant="heading" as="h1" style={{ letterSpacing: '-0.03em' }}>Search</Text>
-      <SearchBar
-        placeholder="Search food, restaurants..."
-        aria-label="Search food and restaurants"
-        readOnly
-      />
+    <div className="min-h-screen bg-[#030303] text-white">
+      <Section density="hero" background="gradient">
+        <SectionHeader title="Search" align="left" className="!text-left" />
+        <div className="pointer-events-none opacity-80">
+          <MarketplaceSearchBar
+            value=""
+            onChange={() => undefined}
+            onSubmit={() => navigate('/search')}
+            onClear={() => undefined}
+          />
+        </div>
+      </Section>
 
-      <section className="ob-section" aria-label="Recent searches">
-        <div className="ob-section__header">
-          <Text variant="subtitle" as="h2" className="ob-section__title">Recent Searches</Text>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--bds-space-2)' }}>
-          {RECENT_SEARCHES.map((term) => (
-            <Chip key={term.id} className="ob-category-chip" aria-label={`Recent search ${term.label}`}>{term.label}</Chip>
-          ))}
-        </div>
-      </section>
-
-      <section className="ob-section" aria-label="Popular searches">
-        <div className="ob-section__header">
-          <Text variant="subtitle" as="h2" className="ob-section__title">Popular Searches</Text>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--bds-space-2)' }}>
-          {POPULAR_SEARCHES.map((term) => (
-            <Chip key={term.id} className="ob-category-chip" aria-label={`Popular search ${term.label}`}>{term.label}</Chip>
-          ))}
-        </div>
-      </section>
-
-      <section className="ob-section" aria-label="Trending foods">
-        <div className="ob-section__header">
-          <Text variant="subtitle" as="h2" className="ob-section__title">Trending Foods</Text>
-        </div>
-        <MenuSkeleton />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--bds-space-3)', marginTop: 'var(--bds-space-4)' }}>
-          {TRENDING_FOODS.map((food) => (
-            <div key={food.id} className="ob-search-trend-item">
-              <Skeleton width="3.25rem" height="3.25rem" />
-              <div>
-                <Text variant="bodySm" style={{ fontWeight: 700 }}>{food.name}</Text>
-                <Text variant="caption" style={{ color: 'var(--bds-color-text-secondary)' }}>{food.description}</Text>
-              </div>
-              <Text variant="price">₹{food.price}</Text>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <EmptyState
-        title="Search coming soon"
-        description="Full search will arrive in a later milestone. Browse categories on Home for now."
-        actionLabel="Continue Browsing"
-        onAction={() => navigate('/')}
-        icon={
-          <div className="ob-empty-premium__icon">
-            <Icon size={40} label="Search">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </Icon>
+      <main className="mx-auto max-w-5xl space-y-2 px-4 pb-16 sm:px-6 lg:px-8">
+        <Section density="comfortable" background="default" className="!py-6">
+          <SectionHeader title="Recent searches" align="left" className="!mb-4 !text-left" />
+          <div className="flex flex-wrap gap-2">
+            {RECENT_SEARCHES.map((term) => (
+              <span key={term.id} className={chipClass}>
+                {term.label}
+              </span>
+            ))}
           </div>
-        }
-      />
-      <Link to="/" className="bds-sr-only">Back to home</Link>
+        </Section>
+
+        <Section density="comfortable" background="subtle" className="!py-6">
+          <SectionHeader title="Popular searches" align="left" className="!mb-4 !text-left" />
+          <div className="flex flex-wrap gap-2">
+            {POPULAR_SEARCHES.map((term) => (
+              <span key={term.id} className={chipClass}>
+                {term.label}
+              </span>
+            ))}
+          </div>
+        </Section>
+
+        <Section density="comfortable" background="default" className="!py-6">
+          <SectionHeader title="Trending foods" align="left" className="!mb-4 !text-left" />
+          <CategorySkeleton />
+          <div className="mt-4 space-y-3">
+            {TRENDING_FOODS.map((food) => (
+              <Link
+                key={food.id}
+                to={`/restaurant/${food.restaurantSlug}`}
+                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition hover:border-[#FF7A00]/40"
+              >
+                <div className="h-12 w-12 rounded-xl bg-white/5" />
+                <div>
+                  <p className="text-sm font-semibold text-white">{food.name}</p>
+                  <p className="text-xs text-white/50">{food.restaurantSlug}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      </main>
     </div>
   );
 }

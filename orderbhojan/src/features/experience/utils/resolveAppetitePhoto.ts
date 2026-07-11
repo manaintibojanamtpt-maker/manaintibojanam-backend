@@ -3,7 +3,7 @@ import {
   resolveFoodPhotoByUrl,
   type ResolvedFoodPhoto,
 } from '../data/food-photo-manifest';
-import type { AppetitePictureSource } from '@bhojan/design-system';
+import type { AppetitePictureSource } from '@/shared/types/media';
 
 export interface AppetitePhotoProps {
   src: string;

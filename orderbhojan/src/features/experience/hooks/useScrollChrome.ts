@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useReducedMotion } from '@bhojan/design-system';
+import { useReducedMotion } from '@/shared/hooks/useMedia';
 
 /** Visual-only scroll state for glass header / pinned search chrome. */
 export function useScrollChrome(threshold = 32): boolean {

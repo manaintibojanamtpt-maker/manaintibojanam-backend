@@ -1,10 +1,9 @@
 import { Outlet } from 'react-router-dom';
-import { Text } from '@bhojan/design-system';
 
 export function AuthLayout() {
   return (
-    <Text as="div" className="ob-auth-px2-shell" data-bds-layout="auth">
+    <div className="min-h-[100dvh] bg-[#070504] text-white">
       <Outlet />
-    </Text>
+    </div>
   );
 }

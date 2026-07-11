@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Text } from '@bhojan/design-system';
 
 const LOGO_SRC = '/brand/orderbhojan-logo.png';
 
@@ -14,24 +13,24 @@ export function OrderBhojanBrand({ variant = 'compact', linkToHome = true }: Ord
       <img
         src={LOGO_SRC}
         alt=""
-        className={`ob-brand__logo ob-brand__logo--${variant}`}
+        className={`rounded-xl object-cover ${variant === 'nav' ? 'h-9 w-9' : 'h-8 w-8'}`}
         width={variant === 'nav' ? 36 : 32}
         height={variant === 'nav' ? 36 : 32}
         decoding="async"
       />
-      <Text variant="subtitle" as="span" className="ob-brand__name">
-        OrderBhojan
-      </Text>
+      <span className="text-sm font-extrabold tracking-tight text-white">OrderBhojan</span>
     </>
   );
 
+  const className = `inline-flex items-center gap-2 ${variant === 'nav' ? 'text-base' : 'text-sm'}`;
+
   if (linkToHome) {
     return (
-      <Link to="/" aria-label="OrderBhojan home" className={`ob-brand ob-brand--${variant}`}>
+      <Link to="/" aria-label="OrderBhojan home" className={className}>
         {content}
       </Link>
     );
   }
 
-  return <div className={`ob-brand ob-brand--${variant}`}>{content}</div>;
+  return <div className={className}>{content}</div>;
 }

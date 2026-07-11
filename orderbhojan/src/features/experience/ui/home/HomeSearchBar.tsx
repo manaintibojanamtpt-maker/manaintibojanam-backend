@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Chip, SearchBar, Icon, Button } from '@bhojan/design-system';
+import { Mic, Search } from 'lucide-react';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { useScrollChrome } from '../../hooks/useScrollChrome';
 import { POPULAR_SEARCHES } from '../../data/mockCatalog';
 
@@ -12,33 +13,27 @@ export function HomeSearchBar() {
       role="search"
     >
       <div className="ob-home-search__shell">
-        <SearchBar
+        <input
+          className="bds-search"
           placeholder="Search food, restaurants..."
           readOnly
           aria-label="Search food and restaurants"
           onFocus={(event) => event.currentTarget.blur()}
         />
         <div className="ob-home-search__actions">
-          <Button variant="ghost" size="compact" aria-label="Voice search placeholder" disabled>
-            <Icon size={18} label="Voice search">
-              <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-              <path d="M12 18v4" />
-            </Icon>
-          </Button>
+          <SoftButton tone="ghost" size="compact" aria-label="Voice search placeholder" disabled>
+            <Mic className="h-[18px] w-[18px]" aria-hidden />
+          </SoftButton>
           <Link to="/search" aria-label="Open search page" className="ob-icon-btn">
-            <Icon size={20} label="Search">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </Icon>
+            <Search className="h-5 w-5" aria-hidden />
           </Link>
         </div>
       </div>
       <div className="ob-home-search__trending" aria-label="Trending searches">
         {POPULAR_SEARCHES.slice(0, 3).map((term) => (
-          <Chip key={term.id} className="ob-home-search__trending-chip" aria-label={`Trending ${term.label}`}>
+          <span key={term.id} className="bds-chip ob-home-search__trending-chip" aria-label={`Trending ${term.label}`}>
             {term.label}
-          </Chip>
+          </span>
         ))}
       </div>
     </div>

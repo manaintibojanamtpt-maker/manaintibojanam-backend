@@ -19,8 +19,11 @@ export function filtersForDiscoveryCollection(
   filters: DiscoveryFilters,
 ): DiscoveryFilters {
   if (collectionId === 'cloud-kitchens') {
-    const { cloudKitchenOnly: _c, kitchenFormat: _k, ...rest } = filters;
-    return rest;
+    return Object.fromEntries(
+      Object.entries(filters).filter(
+        ([key]) => key !== 'cloudKitchenOnly' && key !== 'kitchenFormat',
+      ),
+    ) as DiscoveryFilters;
   }
   return filters;
 }

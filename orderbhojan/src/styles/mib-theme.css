@@ -1,6 +1,10 @@
 /* MIB founder app theme — aligned with src/index.css (--mib-* tokens) */
 
 :root {
+  --ob-safe-top: env(safe-area-inset-top, 0px);
+  --ob-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ob-safe-left: env(safe-area-inset-left, 0px);
+  --ob-safe-right: env(safe-area-inset-right, 0px);
   --mib-bg: #070504;
   --mib-surface: #120d0a;
   --mib-surface-strong: #1a1410;
@@ -84,6 +88,24 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
     rgba(18, 13, 10, 0.9);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --ob-bp: tablet;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --ob-bp: desktop;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --ob-bp: wide;
+  }
 }
 
 @media (max-width: 768px) {

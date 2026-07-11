@@ -1,16 +1,24 @@
-import { EmptyState } from '@bhojan/design-system';
+import { EmptyStateView } from '@/shared/ui/EmptyStateView';
 
 export function FeaturePlaceholderPage({
+  title,
+  description,
   feature,
   milestone,
 }: {
-  feature: string;
-  milestone: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly feature?: string;
+  readonly milestone?: string;
 }) {
+  const resolvedTitle = title ?? feature ?? 'Coming soon';
+  const resolvedDescription =
+    description ??
+    (milestone ? `${milestone} feature is disabled for this build.` : 'This feature is disabled for this build.');
+
   return (
-    <EmptyState
-      title={feature}
-      description={`Reserved for ${milestone}. Route exists for architecture validation only — no business logic in BDS-2.`}
-    />
+    <div className="p-6">
+      <EmptyStateView title={resolvedTitle} description={resolvedDescription} />
+    </div>
   );
 }

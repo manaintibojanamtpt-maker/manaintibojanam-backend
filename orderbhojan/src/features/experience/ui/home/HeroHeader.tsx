@@ -1,10 +1,6 @@
 import { Link } from 'react-router-dom';
-import {
-  Avatar,
-  Button,
-  Icon,
-  Text,
-} from '@bhojan/design-system';
+import { Bell, ChevronDown, MapPin } from 'lucide-react';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { LocationChip, useLocationFeatureEnabled } from '@/features/location';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useGreeting } from '../../hooks/useGreeting';
@@ -28,47 +24,41 @@ export function HeroHeader() {
     >
       <div className="ob-hero-header__top">
         <div className="ob-hero-header__identity">
-          <Text variant="caption" className="ob-hero-header__greeting">{greeting}</Text>
-          <Text variant="title" as="p" className="ob-hero-header__name">
+          <p className="bds-text-caption ob-hero-header__greeting">{greeting}</p>
+          <p className="bds-text-title ob-hero-header__name">
             {sessionUser?.displayName ?? (status === 'guest' ? 'Guest' : 'Foodie')}
-          </Text>
+          </p>
         </div>
         <div className="ob-hero-header__actions">
           <Link to="/notifications" aria-label="Notifications" className="ob-icon-btn">
-            <Icon size={22} label="Notifications">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-            </Icon>
+            <Bell className="h-[22px] w-[22px]" aria-hidden />
           </Link>
           <Link to="/profile" aria-label="Profile">
-            <Avatar
-              src={sessionUser?.photoURL ?? undefined}
-              initials={initials}
-              size="lg"
-            />
+            <div className="bds-avatar bds-avatar--lg" role="img" aria-label={initials}>
+              {sessionUser?.photoURL ? (
+                <img src={sessionUser.photoURL} alt="" />
+              ) : (
+                initials
+              )}
+            </div>
           </Link>
         </div>
       </div>
       {locationEnabled ? (
         <LocationChip variant="hero" className="ob-hero-header__address" />
       ) : (
-        <Button
-          variant="ghost"
+        <SoftButton
+          tone="ghost"
           fullWidth
           className="ob-hero-header__address"
           aria-label="Delivery address placeholder"
         >
-          <Icon size={18} label="Location">
-            <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
-            <circle cx="12" cy="10" r="2.5" />
-          </Icon>
-          <Text variant="bodySm" className="ob-hero-header__address-label">
+          <MapPin className="h-[18px] w-[18px]" aria-hidden />
+          <span className="bds-text-body-sm ob-hero-header__address-label">
             {DELIVERY_ADDRESS_PLACEHOLDER}
-          </Text>
-          <Icon size={16} aria-hidden>
-            <path d="m6 9 6 6 6-6" />
-          </Icon>
-        </Button>
+          </span>
+          <ChevronDown className="h-4 w-4" aria-hidden />
+        </SoftButton>
       )}
     </header>
   );

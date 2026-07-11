@@ -40,33 +40,39 @@ describe('M1.5 shell routes', () => {
     assert.match(router, /OrdersExperiencePage/);
   });
 
-  it('uses five-item experience bottom navigation', () => {
-    const nav = readFileSync(join(root, 'src/features/experience/ui/layout/ExperienceBottomNav.tsx'), 'utf8');
-    assert.match(nav, /Home/);
-    assert.match(nav, /Search/);
-    assert.match(nav, /Cart/);
-    assert.match(nav, /Orders/);
-    assert.match(nav, /Profile/);
+  it('uses five-item experience bottom navigation via OrderBhojanBottomNav', () => {
+    const index = readFileSync(join(root, 'src/features/experience/index.ts'), 'utf8');
+    assert.match(index, /OrderBhojanBottomNav/);
+    assert.match(index, /@\/presentation\/shell/);
+
+    const bottomNav = readFileSync(join(root, 'src/presentation/shell/OrderBhojanBottomNav.tsx'), 'utf8');
+    assert.match(bottomNav, /Home/);
+    assert.match(bottomNav, /Search/);
+    assert.match(bottomNav, /Cart/);
+    assert.match(bottomNav, /Orders/);
+    assert.match(bottomNav, /Profile/);
+    assert.match(bottomNav, /storefront-design-system/);
   });
 });
 
-describe('M1.5 BDS compliance', () => {
+describe('M1.5 storefront design system compliance', () => {
   const experienceFiles = [
     'src/features/experience/ui/home/HeroHeader.tsx',
     'src/features/experience/ui/shared/MarketplaceRestaurantTile.tsx',
   ];
 
   for (const rel of experienceFiles) {
-    it(`uses BDS imports in ${rel}`, () => {
+    it(`avoids legacy primitives in ${rel}`, () => {
       const content = readFileSync(join(root, rel), 'utf8');
-      assert.match(content, /@bhojan\/design-system/);
+      assert.doesNotMatch(content, /@bhojan\/design-system/);
       assert.doesNotMatch(content, /@\/shared\/components/);
     });
   }
 
   it('cart experience delegates to Founder DS presentation', () => {
-    const shim = readFileSync(join(root, 'src/features/experience/ui/cart/CartExperiencePage.tsx'), 'utf8');
-    assert.match(shim, /OrderBhojanCartExperience/);
+    const index = readFileSync(join(root, 'src/features/experience/index.ts'), 'utf8');
+    assert.match(index, /OrderBhojanCartExperience/);
+    assert.match(index, /@\/presentation\/cart/);
     const cart = readFileSync(join(root, 'src/presentation/cart/OrderBhojanCartExperience.tsx'), 'utf8');
     assert.match(cart, /storefront-design-system/);
     assert.doesNotMatch(cart, /@\/shared\/components/);
@@ -82,11 +88,19 @@ describe('M1.5 BDS compliance', () => {
     assert.doesNotMatch(content, /@\/shared\/components/);
   });
 
-  it('loads experience shell styles', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-shell\.css/);
-    assert.match(main, /experience-premium\.css/);
-    statSync(join(root, 'src/styles/experience-shell.css'));
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-/);
+
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+    assert.match(globals, /design-system\/styles\/index\.css/);
+  });
+
+  it('floating cart exports OrderBhojanFloatingCart from presentation', () => {
+    const index = readFileSync(join(root, 'src/features/experience/index.ts'), 'utf8');
+    assert.match(index, /OrderBhojanFloatingCart/);
+    assert.match(index, /@\/presentation\/shell/);
   });
 });
 

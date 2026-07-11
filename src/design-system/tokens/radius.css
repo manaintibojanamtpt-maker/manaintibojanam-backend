@@ -1,0 +1,11 @@
+/** Border radius tokens from founder MIB cards and buttons */
+:root {
+  --ds-radius-sm: 0.75rem;
+  --ds-radius-md: 1rem;
+  --ds-radius-lg: 1.25rem;
+  --ds-radius-xl: 1.5rem;
+  --ds-radius-2xl: 1.75rem;
+  --ds-radius-3xl: 2rem;
+  --ds-radius-pill: 9999px;
+  --mib-radius-card: 1.75rem;
+}

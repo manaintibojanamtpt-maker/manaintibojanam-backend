@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { LocationChip, LocationSelectorSheet, DeliveryLocationWizard, useLocationFeatureEnabled } from '@/features/location';
-import { ExperienceBottomNav, MarketplaceFloatingCart } from '@/features/experience';
+import { OrderBhojanBottomNav, OrderBhojanFloatingCart } from '@/presentation/shell';
+import { MarketplaceCompactHeaderView } from '@bhojan/storefront-design-system/adapters/marketplace/MarketplaceCompactHeaderView';
 import { OrderBhojanBrand } from '@/shared/ui/OrderBhojanBrand';
 
 function isHomeRoute(pathname: string): boolean {
@@ -14,29 +15,32 @@ export function MarketplaceLayout() {
   const showCompactHeader = !onHome;
 
   return (
-    <div className="ob-px2-marketplace bds-marketplace-with-sidenav">
+    <div className="ob-px2-marketplace min-h-[100dvh] bg-[#070504] text-[#fffaf3]">
       {showCompactHeader ? (
-        <header
-          className={`ob-px2-compact-header bds-glass-surface${onHome ? ' ob-px2-compact-header--home' : ''}`}
-        >
-          {!onHome ? (
-            <OrderBhojanBrand variant="compact" />
-          ) : null}
-          {locationEnabled ? (
-            <LocationChip
-              variant="compact"
-              className={onHome ? 'ob-px2-compact-header__location--home' : 'ob-compact-header__location'}
-            />
-          ) : null}
-        </header>
+        <MarketplaceCompactHeaderView
+          brandSlot={<OrderBhojanBrand variant="compact" />}
+          locationSlot={
+            locationEnabled ? (
+              <LocationChip variant="compact" className="ob-compact-header__location" />
+            ) : null
+          }
+        />
       ) : null}
 
-      <main className="ob-px2-main">
+      <main
+        id="main-scroll-container"
+        className="ob-px2-main flex-1 relative"
+        style={{
+          paddingBottom: 'calc(140px + env(safe-area-inset-bottom))',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <Outlet />
       </main>
 
-      <ExperienceBottomNav />
-      <MarketplaceFloatingCart />
+      <OrderBhojanBottomNav />
+      <OrderBhojanFloatingCart />
+
       {locationEnabled ? (
         <>
           <LocationSelectorSheet />

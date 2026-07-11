@@ -30,13 +30,11 @@ import { MenuItem } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import { getDb } from '../lib/firebase-db';
 import { activeTenantId as fallbackTenantId } from '../services/api';
-import MenuItemCard from '../components/MenuItemCard';
-import Banner from '../components/Banner';
+import { MenuItemCard, Banner, MenuItemSkeleton, CategorySkeleton, Skeleton } from '../design-system';
 import { collection, query, where, orderBy, doc, limit, getDocs, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AiOrderingWidget from '../components/AiOrderingWidget';
 import HelpMeChooseModal from '../components/HelpMeChooseModal';
 import { triggerHaptic } from '../utils/haptics';
-import { MenuItemSkeleton, CategorySkeleton, Skeleton } from '../components/SkeletonSystem';
 
 // SkeletonCard removed in favor of centralized SkeletonSystem
 

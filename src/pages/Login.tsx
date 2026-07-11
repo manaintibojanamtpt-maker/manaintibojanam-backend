@@ -21,7 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { resolvePostLoginRedirect } from '../hooks/useStorefrontPath';
 import { exitCustomerPreviewMode, isCustomerPreviewMode } from '../lib/storefrontPreview';
-import SoftButton from '../components/ui/SoftButton';
+import { SoftButton } from '../design-system';
 
 const BIOMETRIC_ONBOARDING_DISMISSED_KEY = 'biometricOnboardingDismissed';
 

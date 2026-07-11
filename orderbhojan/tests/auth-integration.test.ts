@@ -19,7 +19,6 @@ describe('M1 auth integration boundaries', () => {
       'application/authService.ts',
       'application/profileBootstrapService.ts',
       'hooks/useCustomerProfile.ts',
-      'ui/ProfilePage.tsx',
     ];
     for (const file of files) {
       const content = readAuthFile(file);

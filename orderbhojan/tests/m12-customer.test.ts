@@ -9,8 +9,8 @@ const root = resolve(__dirname, '..');
 
 describe('M12 customer surfaces', () => {
   const requiredFiles = [
-    'src/features/favorites/ui/FavoritesPage.tsx',
-    'src/features/notifications/ui/NotificationsPage.tsx',
+    'src/presentation/favorites/OrderBhojanFavoritesPage.tsx',
+    'src/presentation/notifications/OrderBhojanNotificationsPage.tsx',
     'src/features/cart/hooks/useCartValidation.ts',
   ];
 

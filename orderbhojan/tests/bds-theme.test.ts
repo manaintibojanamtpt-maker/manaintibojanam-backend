@@ -3,15 +3,18 @@ import { readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { BDS_FROZEN, BDS_VERSION } from '@bhojan/design-system';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
-describe('BDS theme certification', () => {
-  it('design system is frozen at v1.0.0', () => {
-    assert.equal(BDS_VERSION, '1.0.0');
-    assert.equal(BDS_FROZEN, true);
+describe('Storefront design system theme certification', () => {
+  it('founder design system constants remain frozen at v1.0.0', () => {
+    const constants = readFileSync(
+      resolve(root, '../packages/design-system/src/constants.ts'),
+      'utf8',
+    );
+    assert.match(constants, /BDS_VERSION = '1\.0\.0'/);
+    assert.match(constants, /BDS_FROZEN = true/);
   });
 
   it('index.html uses Evening Kitchen theme-color and display fonts', () => {
@@ -29,7 +32,7 @@ describe('BDS theme certification', () => {
 
   it('pages use BDS CSS variables not legacy brand tokens', () => {
     const pages = [
-      'styles/experience-premium.css',
+      'styles/globals.css',
       'app/pages/FoundationPage.tsx',
     ];
     for (const page of pages) {

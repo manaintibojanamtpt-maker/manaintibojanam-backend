@@ -1,12 +1,7 @@
 import React from 'react';
-import {
-  Button,
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  ErrorState,
-} from '@bhojan/design-system';
+import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
+import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
 import { logger, trackError } from '@/telemetry';
 
 interface ErrorBoundaryProps {
@@ -44,16 +39,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ display: 'flex', minHeight: '50vh', alignItems: 'center', justifyContent: 'center', padding: 'var(--bds-space-6)' }}>
-          <Card style={{ maxWidth: '32rem', width: '100%' }}>
-            <CardHeader>
-              <CardTitle>{this.props.fallbackTitle ?? 'Something went wrong'}</CardTitle>
-              <CardDescription>
-                {this.state.error?.message ?? 'An unexpected error occurred.'}
-              </CardDescription>
-            </CardHeader>
-            <Button onClick={this.handleReset}>Try again</Button>
-          </Card>
+        <div className="flex min-h-[50vh] items-center justify-center p-6">
+          <GlassCard hoverEffect={false} className="w-full max-w-lg !rounded-[2rem] !p-8">
+            <h2 className="text-xl font-extrabold text-white">{this.props.fallbackTitle ?? 'Something went wrong'}</h2>
+            <p className="mt-2 text-sm text-white/70">
+              {this.state.error?.message ?? 'An unexpected error occurred.'}
+            </p>
+            <SoftButton type="button" className="mt-4" onClick={this.handleReset}>
+              Try again
+            </SoftButton>
+          </GlassCard>
         </div>
       );
     }
@@ -62,6 +57,21 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-export function AppErrorFallback({ title, description, onRetry }: { title: string; description?: string; onRetry?: () => void }) {
-  return <ErrorState title={title} description={description} onRetry={onRetry} />;
+export function AppErrorFallback({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <MarketplaceUxStateView
+      title={title}
+      description={description}
+      primaryLabel={onRetry ? 'Try again' : undefined}
+      onPrimary={onRetry}
+    />
+  );
 }

@@ -46,9 +46,8 @@ describe('M6 food module structure', () => {
   const requiredFiles = [
     'src/features/food/engine/foodExperienceLayer.ts',
     'src/features/food/infrastructure/foodApiClient.ts',
-    'src/features/food/ui/FoodExperiencePage.tsx',
+    'src/presentation/food/OrderBhojanFoodExperience.tsx',
     'src/types/marketplace-food.ts',
-    'src/styles/experience-food.css',
     'scripts/gate-m6.mjs',
   ];
 
@@ -58,9 +57,10 @@ describe('M6 food module structure', () => {
     });
   }
 
-  it('loads food CSS from main entry', () => {
+  it('loads storefront styles via globals.css only', () => {
     const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
-    assert.match(main, /experience-food\.css/);
+    assert.match(main, /@\/styles\/globals\.css/);
+    assert.doesNotMatch(main, /experience-food\.css/);
   });
 
   it('routes food menu page in fullscreen layout', () => {
@@ -101,21 +101,58 @@ describe('M6 food module structure', () => {
     assert.doesNotMatch(layer, /stripInternal[\s\S]*contextToken/);
   });
 
-  it('food UI does not import marketplace client directly', () => {
-    const page = readFileSync(join(root, 'src/features/food/ui/FoodExperiencePage.tsx'), 'utf8');
+  it('menu presentation uses Founder DS adapters', () => {
+    const experience = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),
+      'utf8',
+    );
+    assert.match(experience, /storefront-design-system/);
+    assert.match(experience, /useFoodMenu/);
+    assert.doesNotMatch(experience, /getMarketplaceApiClient/);
+    assert.doesNotMatch(experience, /FoodRow/);
+  });
+
+  it('food customize sheet uses Founder DS BottomSheet', () => {
+    const sheet = readFileSync(join(root, 'src/presentation/food/OrderBhojanFoodCustomizeSheet.tsx'), 'utf8');
+    assert.match(sheet, /storefront-design-system\/layout\/BottomSheet/);
+    assert.match(sheet, /FoodCustomizationPanelView/);
+    assert.doesNotMatch(sheet, /@bhojan\/design-system/);
+  });
+
+  it('food presentation does not import marketplace client directly', () => {
+    const page = readFileSync(join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'), 'utf8');
     assert.doesNotMatch(page, /getMarketplaceApiClient/);
     assert.doesNotMatch(page, /checkout/);
   });
 
-  it('food CSS includes safe-area and reduced motion', () => {
-    const css = readFileSync(join(root, 'src/styles/experience-food.css'), 'utf8');
-    assert.match(css, /safe-area-inset-bottom/);
-    assert.match(css, /prefers-reduced-motion/);
+  it('menu UX states use Founder DS skeletons and error states', () => {
+    const skeleton = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodMenuSkeleton.tsx'),
+      'utf8',
+    );
+    assert.match(skeleton, /RestaurantMenuPageSkeleton/);
+    const experience = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),
+      'utf8',
+    );
+    assert.match(experience, /OrderBhojanMenuErrorState/);
+    assert.match(experience, /OrderBhojanMenuEmptyState/);
+    assert.doesNotMatch(experience, /@bhojan\/design-system/);
+  });
+
+  it('food presentation includes safe-area and reduced motion tokens', () => {
+    const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+    const floatingCart = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodFloatingCart.tsx'),
+      'utf8',
+    );
+    assert.match(mibTheme, /prefers-reduced-motion/);
+    assert.match(floatingCart, /safe-area-inset-bottom/);
   });
 
   it('restaurant page wires Open Menu when M6 flag enabled', () => {
     const page = readFileSync(
-      join(root, 'src/features/restaurant/ui/RestaurantExperiencePage.tsx'),
+      join(root, 'src/presentation/restaurant/OrderBhojanRestaurantExperience.tsx'),
       'utf8',
     );
     assert.match(page, /useFoodFeatureEnabled/);

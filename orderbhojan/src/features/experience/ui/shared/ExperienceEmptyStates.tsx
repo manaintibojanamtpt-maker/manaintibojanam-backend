@@ -1,8 +1,4 @@
-import {
-  EmptyState,
-  ErrorState,
-  Icon,
-} from '@bhojan/design-system';
+import { OrderBhojanDiscoveryOfflineNotice, OrderBhojanDiscoveryUxState } from '@/presentation/states';
 
 export type ExperienceEmptyVariant =
   | 'no-restaurants'
@@ -11,29 +7,18 @@ export type ExperienceEmptyVariant =
   | 'permission-denied'
   | 'search-empty';
 
-const COPY: Record<ExperienceEmptyVariant, { title: string; description: string }> = {
-  'no-restaurants': {
-    title: 'No restaurants nearby',
-    description: 'Try changing your delivery address or check back later.',
-  },
-  'no-internet': {
-    title: 'No internet connection',
-    description: 'Check your network and pull to refresh when you are back online.',
-  },
-  'no-address': {
-    title: 'Add a delivery address',
-    description: 'Set your location to see restaurants that deliver to you.',
-  },
-  'permission-denied': {
-    title: 'Location permission denied',
-    description: 'Enable location in settings or enter your address manually.',
-  },
-  'search-empty': {
-    title: 'No results found',
-    description: 'Try a different dish, cuisine, or restaurant name.',
-  },
+const VARIANT_MAP: Record<
+  ExperienceEmptyVariant,
+  { variant: 'no-restaurants' | 'offline' | 'location-disabled' | 'permission-denied' | 'no-results'; title?: string; description?: string }
+> = {
+  'no-restaurants': { variant: 'no-restaurants' },
+  'no-internet': { variant: 'offline' },
+  'no-address': { variant: 'location-disabled' },
+  'permission-denied': { variant: 'permission-denied' },
+  'search-empty': { variant: 'no-results' },
 };
 
+/** Shim — delegates to Founder DS presentation states (Phase 6 / 2D). */
 export function ExperienceEmptyState({
   variant,
   onAction,
@@ -43,31 +28,28 @@ export function ExperienceEmptyState({
   onAction?: () => void;
   actionLabel?: string;
 }) {
-  const copy = COPY[variant];
+  const mapped = VARIANT_MAP[variant];
   return (
-    <EmptyState
-      title={copy.title}
-      description={copy.description}
-      actionLabel={onAction ? actionLabel : undefined}
-      onAction={onAction}
-      icon={
-        <Icon size={40} label={copy.title}>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 8v5" />
-          <path d="M12 16h.01" />
-        </Icon>
-      }
+    <OrderBhojanDiscoveryUxState
+      variant={mapped.variant}
+      title={mapped.title}
+      description={mapped.description}
+      primaryLabel={onAction ? actionLabel : undefined}
+      onPrimary={onAction}
     />
   );
 }
 
+/** Shim — delegates to Founder DS offline notice (Phase 6 / 2D). */
 export function ExperienceOfflineState({ onRetry }: { onRetry?: () => void }) {
   return (
-    <ErrorState
-      title="You appear to be offline"
-      description="Reconnect to browse restaurants and offers."
-      retryLabel="Retry"
-      onRetry={onRetry}
-    />
+    <div className="space-y-4">
+      <OrderBhojanDiscoveryOfflineNotice onRetry={onRetry} />
+      <OrderBhojanDiscoveryUxState
+        variant="offline"
+        primaryLabel={onRetry ? 'Retry' : undefined}
+        onPrimary={onRetry}
+      />
+    </div>
   );
 }
