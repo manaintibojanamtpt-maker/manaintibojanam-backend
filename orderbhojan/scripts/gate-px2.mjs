@@ -103,6 +103,10 @@ run('TypeScript + ESLint', 'npm', ['run', 'lint']);
 run('Unit + PX2 tests', 'npm', ['run', 'test:unit']);
 run('OpenAPI validation', 'npm', ['run', 'test:openapi']);
 run('Production build', 'npm', ['run', 'build']);
+run('Design system architecture', 'node', [
+  join(root, '../scripts/design-system/validate-architecture.mjs'),
+]);
+run('Design system compliance', 'node', [join(root, '../scripts/validate-design-system.mjs')]);
 run('Performance smoke', 'npm', ['run', 'test:performance']);
 run('Responsive smoke', 'npm', ['run', 'test:responsive']);
 run('Lighthouse readiness', 'npm', ['run', 'test:lighthouse']);

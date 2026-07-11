@@ -112,34 +112,7 @@ const legacyToDs = [
 
 const obPresentationFiles = walk(path.join(obRoot, 'presentation'));
 const obFeatureUiFiles = walk(obRoot).filter((f) => /\/features\/[^/]+\/ui\//.test(rel(f)));
-const migratedObUi = new Set([
-  'orderbhojan/src/features/food/ui/FoodExperiencePage.tsx',
-  'orderbhojan/src/features/food/ui/FoodCardItem.tsx',
-  'orderbhojan/src/features/food/ui/FoodCategoryRail.tsx',
-  'orderbhojan/src/features/food/ui/FoodFeaturedPoster.tsx',
-  'orderbhojan/src/features/food/ui/FoodRestaurantStrip.tsx',
-  'orderbhojan/src/features/food/ui/FoodFloatingPreview.tsx',
-  'orderbhojan/src/features/food/ui/FoodCustomizeSheet.tsx',
-  'orderbhojan/src/features/food/ui/FoodStoryPanel.tsx',
-  'orderbhojan/src/features/restaurant/ui/RestaurantExperiencePage.tsx',
-  'orderbhojan/src/features/restaurant/ui/RestaurantGlassActions.tsx',
-  'orderbhojan/src/features/restaurant/ui/RestaurantGalleryRail.tsx',
-  'orderbhojan/src/features/experience/ui/cart/CartExperiencePage.tsx',
-  'orderbhojan/src/features/checkout/ui/CheckoutPage.tsx',
-  'orderbhojan/src/features/experience/ui/orders/OrdersExperiencePage.tsx',
-  'orderbhojan/src/features/orders/ui/OrderSummaryCard.tsx',
-  'orderbhojan/src/features/tracking/ui/TrackingPage.tsx',
-  'orderbhojan/src/features/tracking/ui/OrderTimeline.tsx',
-  'orderbhojan/src/features/tracking/ui/DeliveryTrackingPanel.tsx',
-  'orderbhojan/src/features/tracking/ui/OrderInvoiceSheet.tsx',
-  'orderbhojan/src/features/tracking/ui/OrderFeedbackPanel.tsx',
-  'orderbhojan/src/features/auth/ui/ProfilePage.tsx',
-  'orderbhojan/src/features/auth/ui/AuthShellPage.tsx',
-  'orderbhojan/src/features/auth/ui/PhoneOtpForm.tsx',
-  'orderbhojan/src/features/favorites/ui/FavoritesPage.tsx',
-  'orderbhojan/src/features/notifications/ui/NotificationsPage.tsx',
-  'orderbhojan/src/features/settings/ui/SettingsPreferencesSection.tsx',
-]);
+const migratedObUi = new Set([]);
 
 // 1. OrderBhojan presentation must not import legacy BDS for migrated surfaces
 for (const file of obPresentationFiles) {

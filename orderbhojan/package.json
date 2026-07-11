@@ -6,7 +6,7 @@
   "description": "OrderBhojan - production marketplace customer platform (PX2 Design-to-Code)",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run build --prefix ../packages/design-system && npm run build --prefix ../packages/marketplace-contracts",
+    "prebuild": "npm run build --prefix ../packages/marketplace-contracts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
@@ -38,16 +38,17 @@
     "gate:m65": "node scripts/gate-m65.mjs",
     "gate:px2": "node scripts/gate-px2.mjs",
     "gate:prod": "node scripts/gate-prod.mjs",
-    "audit": "npm audit --audit-level=high"
+    "audit": "npm audit --audit-level=high",
+    "deploy": "npm run build && cd .. && firebase deploy --only hosting:orderbhojan --project orderbhojan"
   },
   "dependencies": {
-    "@bhojan/design-system": "file:../packages/design-system",
     "@bhojan/marketplace-contracts": "file:../packages/marketplace-contracts",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.2",
     "clsx": "^2.1.1",
     "firebase": "^12.11.0",
     "framer-motion": "^12.42.2",
+    "lucide-react": "^0.546.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.66.1",

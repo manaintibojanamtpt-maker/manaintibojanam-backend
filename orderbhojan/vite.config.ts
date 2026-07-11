@@ -5,20 +5,36 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/firebase')) return 'firebase';
+          if (id.includes('node_modules/framer-motion')) return 'motion';
+          if (id.includes('node_modules/@tanstack/react-query')) return 'query';
+          if (id.includes('node_modules/react-router')) return 'router';
+          if (id.includes('node_modules/lucide-react')) return 'icons';
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react-vendor';
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@bhojan/storefront-design-system': path.resolve(__dirname, '../src/design-system'),
       // Monorepo: BDS has its own node_modules/react — must share one instance with the app.
       react: path.resolve(__dirname, './node_modules/react'),
       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
       'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime'),
+      'lucide-react': path.resolve(__dirname, './node_modules/lucide-react'),
     },
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
     // Local file: package — pre-bundling caches stale exports when BDS is rebuilt.
-    exclude: ['@bhojan/design-system'],
+    exclude: ['@bhojan/storefront-design-system'],
   },
   plugins: [
     tailwindcss(),

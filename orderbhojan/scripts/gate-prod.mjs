@@ -18,11 +18,11 @@ function run(label, command, args) {
 
 const requiredFiles = [
   'src/features/orders/hooks/useOrdersList.ts',
-  'src/features/tracking/ui/TrackingPage.tsx',
-  'src/features/favorites/ui/FavoritesPage.tsx',
-  'src/features/notifications/ui/NotificationsPage.tsx',
+  'src/presentation/tracking/OrderBhojanTrackingPage.tsx',
+  'src/presentation/favorites/OrderBhojanFavoritesPage.tsx',
+  'src/presentation/notifications/OrderBhojanNotificationsPage.tsx',
   'src/features/cart/hooks/useCartValidation.ts',
-  'src/features/checkout/ui/CheckoutPage.tsx',
+  'src/presentation/checkout/OrderBhojanCheckoutPage.tsx',
   'tests/m10-orders.test.ts',
   'tests/m11-tracking.test.ts',
   'tests/m12-customer.test.ts',

@@ -8,8 +8,10 @@ coverage/
 !.env.example
 
 .tmp-*
-
 .sync-work/
+.firebase/
+backups/
+
 tmp-pune-discovery.json
 scripts/.smoke-ops-health-report.json
 

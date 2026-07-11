@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
  * Lighthouse readiness smoke — static checks for perf/a11y foundations.
- * Full Lighthouse audit is manual (see docs/m16/ACCEPTANCE-CHECKLIST.md).
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -11,15 +10,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
-const premiumCss = readFileSync(join(root, 'src/styles/experience-premium.css'), 'utf8');
+const globalsCss = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+const mibThemeCss = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+const styles = `${globalsCss}\n${mibThemeCss}`;
 
 const checks = [
   ['viewport meta', () => /name="viewport"/i.test(indexHtml)],
   ['theme-color', () => /theme-color/i.test(indexHtml)],
   ['font preconnect', () => /preconnect/i.test(indexHtml) || /fonts\.googleapis/i.test(indexHtml)],
-  ['safe-area-inset-top', () => /safe-area-inset-top/.test(premiumCss)],
-  ['safe-area-inset-bottom', () => /safe-area-inset-bottom/.test(premiumCss)],
-  ['prefers-reduced-motion', () => /prefers-reduced-motion/.test(premiumCss)],
+  ['safe-area-inset-top', () => /safe-area-inset-top/.test(styles)],
+  ['safe-area-inset-bottom', () => /safe-area-inset-bottom/.test(styles)],
+  ['prefers-reduced-motion', () => /prefers-reduced-motion/.test(styles)],
   ['lazy loading hooks', () => existsSync(join(root, 'src/features/experience/hooks/useBlurUpImage.ts'))],
   ['production dist', () => existsSync(join(root, 'dist/index.html'))],
 ];

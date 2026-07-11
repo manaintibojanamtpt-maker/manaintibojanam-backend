@@ -17,7 +17,10 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@bhojan/storefront-design-system": ["../src/design-system/index.ts"],
+      "@bhojan/storefront-design-system/*": ["../src/design-system/*"],
+      "lucide-react": ["./node_modules/lucide-react"]
     }
   },
   "include": ["src"]

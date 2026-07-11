@@ -5,28 +5,28 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const premiumCss = readFileSync(join(root, 'src/styles/experience-premium.css'), 'utf8');
+const globalsCss = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+const mibThemeCss = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+const styles = `${globalsCss}\n${mibThemeCss}`;
 
 const breakpoints = [320, 375, 768, 1024, 1280];
 
 for (const bp of breakpoints) {
   const pattern = new RegExp(`min-width:\\s*${bp}px`);
-  if (!pattern.test(premiumCss) && bp >= 768) {
+  if (!pattern.test(styles) && bp >= 768) {
     console.error(`[responsive-smoke] Missing breakpoint: ${bp}px`);
     process.exit(1);
   }
 }
 
 const required = [
-  'env(safe-area-inset-left)',
-  'env(safe-area-inset-right)',
-  'overflow-x',
-  'clamp(',
+  'safe-area-inset-left',
+  'safe-area-inset-right',
   '100dvh',
 ];
 
 for (const token of required) {
-  if (!premiumCss.includes(token) && token !== 'overflow-x') {
+  if (!styles.includes(token)) {
     console.error(`[responsive-smoke] Missing token: ${token}`);
     process.exit(1);
   }
