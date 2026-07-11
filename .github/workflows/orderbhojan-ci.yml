@@ -37,3 +37,11 @@ jobs:
 
       - name: Production readiness gate
         run: npm run gate:prod
+
+      - name: Install root Firebase tooling
+        run: npm ci
+        working-directory: .
+
+      - name: Validate Firebase hosting targets
+        run: npm run firebase:validate-hosting
+        working-directory: .
