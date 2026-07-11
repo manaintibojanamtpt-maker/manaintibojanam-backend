@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dsRoot = path.join(root, 'src/design-system');
 const obRoot = path.join(root, 'orderbhojan/src');
-const exceptionsPath = path.join(root, 'docs/design-system-migration/EXCEPTIONS.md');
+const exceptionsPath = path.join(root, 'docs/archive/design-system-migration/EXCEPTIONS.md');
 
 const issues = [];
 const waived = [];
@@ -285,5 +285,5 @@ console.log(`FAIL — ${blocking.length} issue(s):\n`);
 for (const issue of blocking) {
   console.log(`  • ${issue}`);
 }
-console.log('\nSee docs/design-system-migration/EXCEPTIONS.md to request an approved exception.');
+console.log('\nSee docs/archive/design-system-migration/EXCEPTIONS.md to request an approved exception.');
 process.exit(1);
