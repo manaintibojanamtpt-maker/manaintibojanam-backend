@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { collection, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useAuth } from '../context/AuthContext';
-import menuData from '../../menu.json';
-import accountsData from '../../accounts.json';
-import ordersData from '../../orders.json';
 
 const DataImporter = () => {
   const [status, setStatus] = useState<string>('Ready to import');
@@ -143,7 +140,7 @@ const DataImporter = () => {
     <div className="p-8 max-w-2xl mx-auto bg-white dark:bg-zinc-900 rounded-lg shadow mt-10">
       <h1 className="text-2xl font-bold mb-4">Database Importer (bhojanos2)</h1>
       <p className="mb-6 text-gray-600 dark:text-gray-400">
-        This tool will migrate data from menu.json and accounts.json into the active Firestore database.
+        This tool restores data from /backup.json into the active Firestore database.
       </p>
       
       <div className="flex gap-4 mb-4">

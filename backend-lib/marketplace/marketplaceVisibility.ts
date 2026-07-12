@@ -1,9 +1,13 @@
+function isPublishedStoreStatus(storeStatus: unknown): boolean {
+  return storeStatus === 'published' || storeStatus === 'live';
+}
+
 /** Single visibility rule for marketplace discovery — owner, API, and SDK must align. */
 export function isMarketplaceVisibleTenant(data: Record<string, unknown>): boolean {
   const status = typeof data.status === 'string' ? data.status.toLowerCase() : '';
   if (status === 'suspended' || status === 'rejected') return false;
   if (data.sandboxMode === true) return true;
-  return data.storeStatus === 'published';
+  return isPublishedStoreStatus(data.storeStatus);
 }
 
 export function isActiveTenantStatus(data: Record<string, unknown>): boolean {
@@ -21,5 +25,5 @@ export function isConsumerListedTenant(data: Record<string, unknown>): boolean {
   const status = typeof data.status === 'string' ? data.status.toLowerCase() : '';
   if (status === 'suspended' || status === 'rejected') return false;
   if (data.sandboxMode === true) return false;
-  return data.storeStatus === 'published';
+  return isPublishedStoreStatus(data.storeStatus);
 }

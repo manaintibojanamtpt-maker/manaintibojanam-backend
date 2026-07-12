@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "localId": "SANDBOX_USER_UID",
+      "email": "uat-customer@bhojan.test",
+      "emailVerified": true,
+      "displayName": "UAT Customer",
+      "createdAt": "0",
+      "providerUserInfo": []
+    }
+  ]
+}

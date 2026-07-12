@@ -273,6 +273,9 @@ export default function SubscriptionPage() {
       if (!createRes.ok || !createData.order?.id) {
         throw new Error(createData.error || 'Failed to create secure payment session');
       }
+      if (!createData.isMock && !createData.key) {
+        throw new Error('Payment gateway is not configured');
+      }
 
       if (createData.isMock) {
         toast.success('Test Mode: Subscription simulated');
@@ -300,7 +303,7 @@ export default function SubscriptionPage() {
       }
 
       const options = {
-        key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
+        key: createData.key,
         amount: createData.order.amount,
         currency: 'INR',
         name: brandName,

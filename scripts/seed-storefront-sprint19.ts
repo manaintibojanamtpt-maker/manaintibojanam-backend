@@ -38,7 +38,7 @@ async function main() {
 
       status: 'active',
 
-      storeStatus: 'live',
+      storeStatus: 'published',
 
       cuisineTags: ['Biryani', 'Hyderabadi', 'Non-Veg'],
 
@@ -50,15 +50,22 @@ async function main() {
 
       },
 
+      location: {
+        lat: 17.4401,
+        lng: 78.3489,
+        city: 'Hyderabad',
+        state: 'Telangana',
+      },
+
       storeOperations: {
 
         isStoreOpen: true,
 
         businessHoursEnabled: true,
 
-        openTime: '11:00 AM',
+        openTime: '11:00',
 
-        closeTime: '11:00 PM',
+        closeTime: '23:00',
 
       },
 
@@ -67,6 +74,14 @@ async function main() {
         prepTime: 25,
 
         deliveryFee: 29,
+
+        enabled: true,
+
+        feesConfigured: true,
+
+        baseFee: 29,
+
+        maxRadius: 12,
 
       },
 

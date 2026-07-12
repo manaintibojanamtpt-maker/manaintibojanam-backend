@@ -3,7 +3,7 @@
  * Run after deploy: npx tsx scripts/bootstrap-discovery-profiles.ts
  */
 import { FirebaseAdminProvider } from '../backend-lib/firebase/FirebaseAdminProvider.js';
-import { isMarketplaceVisibleTenant } from '../backend-lib/marketplace/marketplaceVisibility.js';
+import { isConsumerListedTenant } from '../backend-lib/marketplace/marketplaceVisibility.js';
 import { publishTenantDomainEvent } from '../backend-lib/marketplace/tenantDomainEventBus.js';
 import { registerTenantDomainEventSubscribers } from '../backend-lib/marketplace/registerTenantDomainEvents.js';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -19,7 +19,7 @@ async function main() {
 
   for (const doc of snapshot.docs) {
     const raw = doc.data() as Record<string, unknown>;
-    if (!isMarketplaceVisibleTenant(raw)) {
+    if (!isConsumerListedTenant(raw)) {
       skipped += 1;
       continue;
     }

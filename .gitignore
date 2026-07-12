@@ -7,6 +7,18 @@ coverage/
 .env*
 !.env.example
 
+# Firebase exports, credentials, and local config (never commit)
+users.json
+accounts.json
+create-admin.mjs
+create-admin.local.mjs
+firebase-applet-config.json
+firebase-applet-config.local.json
+prod-audit-sample.json
+public/backup.json
+*-service-account.json
+*serviceAccount*.json
+
 .tmp-*
 .sync-work/
 .firebase/

@@ -7,8 +7,17 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read the standard Web SDK config from your applet config
-const configPath = path.join(__dirname, 'firebase-applet-config.json');
+// Read Firebase config from local override or example template (never commit real keys).
+const configPath = [
+  path.join(__dirname, 'firebase-applet-config.local.json'),
+  path.join(__dirname, 'firebase-applet-config.prod.example.json'),
+].find((candidate) => fs.existsSync(candidate));
+
+if (!configPath) {
+  console.error('Missing firebase-applet-config.local.json — copy firebase-applet-config.prod.example.json');
+  process.exit(1);
+}
+
 const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 console.log("Initializing Firebase Web SDK with project:", firebaseConfig.projectId);
@@ -39,8 +48,15 @@ async function runImport() {
     if (count % 400 !== 0) await menuBatch.commit();
     console.log(`Successfully imported ${count} menu items!`);
 
-    console.log("Reading accounts.json...");
-    const accountsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'accounts.json'), 'utf8'));
+    const accountsPath =
+      process.env.ACCOUNTS_JSON_PATH ?? path.join(__dirname, 'accounts.json.example');
+    if (!fs.existsSync(accountsPath)) {
+      console.log(`Skipping users import — ${accountsPath} not found`);
+      return;
+    }
+
+    console.log(`Reading ${accountsPath}...`);
+    const accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
     const usersList = accountsData.users || [];
     
     console.log(`Importing ${usersList.length} users...`);

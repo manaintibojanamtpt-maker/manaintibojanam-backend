@@ -10,6 +10,7 @@ import {
   resolveDeliveryFeeForDisplay,
   resolveKitchenDietaryFromMenuTypes,
   resolveStoreTiming,
+  normalizeStoreTimeToHHmm,
 } from '../tenantProjectionHelpers.js';
 import { parseFirestoreTenant } from '../projectFoodMenuV1.js';
 import { projectRestaurantExperience } from '../projectRestaurantExperience.js';
@@ -105,6 +106,29 @@ describe('tenantProjectionHelpers', () => {
 
     const beforeOpen = new Date('2026-07-09T02:00:00.000Z');
     assert.equal(isStoreOpenNow(timing, beforeOpen), false);
+  });
+
+  it('normalizes 12-hour owner store hours for open/close checks', () => {
+    const timing = resolveStoreTiming(
+      {
+        storeOperations: {
+          isStoreOpen: true,
+          businessHoursEnabled: true,
+          openTime: '11:00 AM',
+          closeTime: '11:00 PM',
+        },
+      } as never,
+      {},
+    );
+
+    assert.equal(normalizeStoreTimeToHHmm('11:00 AM'), '11:00');
+    assert.equal(normalizeStoreTimeToHHmm('11:00 PM'), '23:00');
+
+    const dinnerIst = new Date('2026-07-11T17:14:00.000Z');
+    assert.equal(isStoreOpenNow(timing, dinnerIst), true);
+
+    const afterClose = new Date('2026-07-11T18:31:00.000Z');
+    assert.equal(isStoreOpenNow(timing, afterClose), false);
   });
 });
 

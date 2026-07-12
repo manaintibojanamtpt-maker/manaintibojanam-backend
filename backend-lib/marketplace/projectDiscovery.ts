@@ -317,7 +317,10 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
-  const publishedSnap = await db.collection('tenants').where('storeStatus', '==', 'published').get();
+  const [publishedSnap, liveSnap] = await Promise.all([
+    db.collection('tenants').where('storeStatus', '==', 'published').get(),
+    db.collection('tenants').where('storeStatus', '==', 'live').get(),
+  ]);
 
   const seen = new Set<string>();
   const restaurants: RestaurantPublic[] = [];
@@ -334,6 +337,7 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
   };
 
   for (const doc of publishedSnap.docs) ingest(doc);
+  for (const doc of liveSnap.docs) ingest(doc);
 
   return { restaurants, poolSyncRevision };
 }
@@ -501,23 +505,24 @@ export function parseDiscoveryRequest(url: URL): DiscoveryRequestParams {
   const lng = Number(url.searchParams.get('lng') ?? '78.3489');
   const page = Number(url.searchParams.get('page') ?? '1');
   const limit = Number(url.searchParams.get('limit') ?? '6');
-  const filters: DiscoveryFilters = {};
   const maxDistanceKm = url.searchParams.get('maxDistanceKm');
   const minRating = url.searchParams.get('minRating');
   const maxDeliveryFee = url.searchParams.get('maxDeliveryFee');
   const sort = url.searchParams.get('sort');
-  if (maxDistanceKm) filters.maxDistanceKm = Number(maxDistanceKm);
-  if (minRating) filters.minRating = Number(minRating);
-  if (maxDeliveryFee) filters.maxDeliveryFee = Number(maxDeliveryFee);
-  if (url.searchParams.get('vegOnly') === 'true') filters.vegOnly = true;
-  if (url.searchParams.get('cloudKitchenOnly') === 'true') filters.cloudKitchenOnly = true;
   const kitchenFormat = url.searchParams.get('kitchenFormat');
-  if (kitchenFormat) filters.kitchenFormat = kitchenFormat as KitchenFormat;
-  if (url.searchParams.get('offersOnly') === 'true') filters.offersOnly = true;
-  if (url.searchParams.get('openNowOnly') === 'true') filters.openNowOnly = true;
   const cuisines = url.searchParams.get('cuisines');
-  if (cuisines) filters.cuisines = cuisines.split(',').map((c) => c.trim()).filter(Boolean);
-  if (sort) filters.sort = sort as DiscoveryFilters['sort'];
+  const filters: DiscoveryFilters = {
+    ...(maxDistanceKm ? { maxDistanceKm: Number(maxDistanceKm) } : {}),
+    ...(minRating ? { minRating: Number(minRating) } : {}),
+    ...(maxDeliveryFee ? { maxDeliveryFee: Number(maxDeliveryFee) } : {}),
+    ...(url.searchParams.get('vegOnly') === 'true' ? { vegOnly: true } : {}),
+    ...(url.searchParams.get('cloudKitchenOnly') === 'true' ? { cloudKitchenOnly: true } : {}),
+    ...(kitchenFormat ? { kitchenFormat: kitchenFormat as KitchenFormat } : {}),
+    ...(url.searchParams.get('offersOnly') === 'true' ? { offersOnly: true } : {}),
+    ...(url.searchParams.get('openNowOnly') === 'true' ? { openNowOnly: true } : {}),
+    ...(cuisines ? { cuisines: cuisines.split(',').map((c) => c.trim()).filter(Boolean) } : {}),
+    ...(sort ? { sort: sort as DiscoveryFilters['sort'] } : {}),
+  };
 
   return { lat, lng, page, limit, filters };
 }

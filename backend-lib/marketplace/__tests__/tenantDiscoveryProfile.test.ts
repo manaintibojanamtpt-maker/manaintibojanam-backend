@@ -33,6 +33,7 @@ describe('marketplaceVisibility', () => {
 describe('consumerListedTenant', () => {
   it('excludes sandbox and draft tenants from consumer storefront', () => {
     assert.equal(isConsumerListedTenant({ storeStatus: 'published', status: 'active' }), true);
+    assert.equal(isConsumerListedTenant({ storeStatus: 'live', status: 'active' }), true);
     assert.equal(isConsumerListedTenant({ sandboxMode: true, status: 'active' }), false);
     assert.equal(isConsumerListedTenant({ storeStatus: 'draft', status: 'active' }), false);
   });

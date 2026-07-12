@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "localId": "SANDBOX_OWNER_UID",
+      "email": "uat-owner@bhojan.test",
+      "emailVerified": true,
+      "displayName": "UAT Owner",
+      "createdAt": "0",
+      "providerUserInfo": []
+    }
+  ]
+}

@@ -432,7 +432,7 @@ const Checkout: React.FC = () => {
       if (state.paymentMethod === 'online') {
         const API_BASE_URL = EnvironmentConfig.getApiUrl();
         
-        let subscriptionData = null;
+        let subscriptionData: Record<string, unknown> | null = null;
         if (hasSubscription && subscriptionItem && state.currentUser) {
           subscriptionData = {
             userId: state.currentUser.uid,
@@ -544,6 +544,9 @@ const Checkout: React.FC = () => {
         if (!createRes.ok || !createData.success || !createData.order?.id) {
           throw new Error(createData.error || 'Failed to create secure payment session');
         }
+        if (!createData.isMock && !createData.key) {
+          throw new Error('Payment gateway is not configured');
+        }
 
         // Handle Mock Payment in development environments if keys are missing
         if (createData.isMock) {
@@ -577,7 +580,7 @@ const Checkout: React.FC = () => {
         }
 
         const options = {
-          key: createData.key || 'rzp_live_Sjcjj19nnWXEzX',
+          key: createData.key,
           amount: createData.order.amount,
           currency: 'INR',
           name: 'BhojanOS',

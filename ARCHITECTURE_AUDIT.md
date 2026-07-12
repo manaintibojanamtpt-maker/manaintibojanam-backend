@@ -438,9 +438,9 @@ OrderBhojan: **no `onSnapshot` usage found** in `orderbhojan/src/` — polling/H
 
 | Severity | Finding | File:line |
 |----------|---------|-----------|
-| **CRITICAL** | Admin password plaintext | `create-admin.mjs:17-18` — `ADMIN_PASSWORD = 'Kalyan@1990@@'` |
-| **CRITICAL** | Live Razorpay key fallback in checkout | `src/pages/Checkout.tsx:579` — `rzp_live_Sjcjj19nnWXEzX` |
-| **CRITICAL** | Same Razorpay fallback | `src/pages/SubscriptionPage.tsx:303` |
+| **CRITICAL** | Admin password plaintext | `create-admin.mjs` — removed; use `scripts/create-admin.example.mjs` with env vars |
+| **CRITICAL** | Live Razorpay key fallback in checkout | `src/pages/Checkout.tsx` — hardcoded fallback removed |
+| **CRITICAL** | Same Razorpay fallback | `src/pages/SubscriptionPage.tsx` — hardcoded fallback removed |
 | **HIGH** | Full Firebase web config (bhojanos2) committed | `firebase-applet-config.json:2-8`, consumed by `create-admin.mjs:11` |
 | **HIGH** | Same config as dev fallback in frontend bundle | `src/config/firebaseClientConfig.ts:5-13` — `AIzaSyBBKia1hM4ZU0hYS52dTy63KTkwzZFYzgI` |
 | **HIGH** | Weak biometric salt default | `server.ts:4542` — `'mana-inti-salt'` if `BIOMETRIC_SALT` unset |

@@ -34,6 +34,31 @@ const DEFAULT_OPEN = '09:00';
 const DEFAULT_CLOSE = '22:00';
 export const DEFAULT_STORE_TIMEZONE = 'Asia/Kolkata';
 
+/** Normalize owner-entered hours (12h or 24h) to HH:mm for comparisons. */
+export function normalizeStoreTimeToHHmm(value: string): string {
+  const trimmed = value.trim();
+  const match24 = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
+  if (match24) {
+    const hour = Number(match24[1]);
+    const minute = Number(match24[2]);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+  }
+
+  const match12 = /^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i.exec(trimmed);
+  if (match12) {
+    let hour = Number(match12[1]);
+    const minute = Number(match12[2] ?? '0');
+    const ampm = match12[3].toUpperCase();
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  return trimmed;
+}
+
 export function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone,
@@ -106,10 +131,16 @@ export function resolveStoreTiming(
       : undefined;
 
   if (ops) {
+    const openTime = normalizeStoreTimeToHHmm(
+      typeof ops.openTime === 'string' && ops.openTime.trim() ? ops.openTime : DEFAULT_OPEN,
+    );
+    const closeTime = normalizeStoreTimeToHHmm(
+      typeof ops.closeTime === 'string' && ops.closeTime.trim() ? ops.closeTime : DEFAULT_CLOSE,
+    );
     return {
       isStoreOpen: ops.isStoreOpen !== false,
-      openTime: ops.openTime || DEFAULT_OPEN,
-      closeTime: ops.closeTime || DEFAULT_CLOSE,
+      openTime,
+      closeTime,
       businessHoursEnabled: ops.businessHoursEnabled === true,
       offlineMessage: ops.offlineMessage,
       timezone:
@@ -121,12 +152,16 @@ export function resolveStoreTiming(
 
   if (legacyTiming) {
     const manualOverride = legacyTiming.isManualOverride === true;
+    const openTime = normalizeStoreTimeToHHmm(
+      typeof legacyTiming.openTime === 'string' ? legacyTiming.openTime : DEFAULT_OPEN,
+    );
+    const closeTime = normalizeStoreTimeToHHmm(
+      typeof legacyTiming.closeTime === 'string' ? legacyTiming.closeTime : DEFAULT_CLOSE,
+    );
     return {
       isStoreOpen: true,
-      openTime:
-        typeof legacyTiming.openTime === 'string' ? legacyTiming.openTime : DEFAULT_OPEN,
-      closeTime:
-        typeof legacyTiming.closeTime === 'string' ? legacyTiming.closeTime : DEFAULT_CLOSE,
+      openTime,
+      closeTime,
       businessHoursEnabled: !manualOverride,
       timezone: DEFAULT_STORE_TIMEZONE,
     };
@@ -238,7 +273,7 @@ export function resolveKitchenDietaryFromMenuTypes(
   return 'veg_friendly';
 }
 
-export function kitchenDietaryToBadges(profile: KitchenDietaryProfile): string[] {
+export function kitchenDietaryToBadges(profile: KitchenDietaryProfile): Array<'veg' | 'pure_veg'> {
   switch (profile) {
     case 'pure_veg':
       return ['pure_veg'];
