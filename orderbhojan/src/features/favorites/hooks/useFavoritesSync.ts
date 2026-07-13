@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchBearerToken } from '@/features/auth/application/authService';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { MarketplaceApiError } from '@/marketplace-api/errors';
 import { useAuth } from '@/shared/providers/AuthProvider';
@@ -18,6 +19,11 @@ export function useFavoritesSync() {
     queryKey: favoritesQueryKeys.list(),
     enabled: isAuthenticated && status !== 'loading',
     queryFn: async () => {
+      const token = await fetchBearerToken();
+      if (!token) {
+        setIds([]);
+        return [];
+      }
       try {
         const result = await getMarketplaceApiClient().listFavorites();
         const ids = result.favorites.map((r) => r.restaurantId);

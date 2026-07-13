@@ -55,6 +55,26 @@ export function mergeRemoteFirebaseConfig(
   };
 }
 
+/** Live production must adopt backend Firebase project even when build env still says orderbhojan. */
+export function mergeRemoteFirebaseConfigPreferRemote(
+  config: AppConfig,
+  remote: RemoteClientConfig,
+): AppConfig {
+  const remoteFirebase = remote.firebase;
+  return {
+    ...config,
+    firebase: {
+      apiKey: remoteFirebase.apiKey || config.firebase.apiKey,
+      authDomain: remoteFirebase.authDomain || config.firebase.authDomain,
+      projectId: remoteFirebase.projectId || BHOJANOS_PROD_FIREBASE_DEFAULTS.projectId,
+      storageBucket: remoteFirebase.storageBucket || config.firebase.storageBucket,
+      messagingSenderId: remoteFirebase.messagingSenderId || config.firebase.messagingSenderId,
+      appId: remoteFirebase.appId || config.firebase.appId,
+      measurementId: config.firebase.measurementId,
+    },
+  };
+}
+
 export async function fetchRemoteClientConfig(
   baseUrl: string,
 ): Promise<RemoteClientConfig | null> {
@@ -86,7 +106,20 @@ export async function hydrateFirebaseConfig(config: AppConfig): Promise<AppConfi
 
   const remote = await fetchRemoteClientConfig(hydrated.marketplaceApiBaseUrl);
   if (remote) {
-    hydrated = mergeRemoteFirebaseConfig(hydrated, remote);
+    hydrated =
+      wrongProdFirebaseProject || (usesLiveBackend && import.meta.env?.PROD)
+        ? mergeRemoteFirebaseConfigPreferRemote(hydrated, remote)
+        : mergeRemoteFirebaseConfig(hydrated, remote);
+  } else if (wrongProdFirebaseProject) {
+    hydrated = {
+      ...hydrated,
+      firebase: {
+        ...hydrated.firebase,
+        projectId: BHOJANOS_PROD_FIREBASE_DEFAULTS.projectId,
+        authDomain: BHOJANOS_PROD_FIREBASE_DEFAULTS.authDomain,
+        storageBucket: BHOJANOS_PROD_FIREBASE_DEFAULTS.storageBucket,
+      },
+    };
   }
   return applyFirebaseDefaults(hydrated);
 }

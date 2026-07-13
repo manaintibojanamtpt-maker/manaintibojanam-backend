@@ -46,6 +46,14 @@ function isLiveMarketplaceBuild(): boolean {
   return Boolean(import.meta.env?.PROD);
 }
 
+function resolveFirebaseProjectId(liveMarketplace: boolean): string {
+  const explicit = readEnv('VITE_FIREBASE_PROJECT_ID');
+  if (liveMarketplace && import.meta.env?.PROD && (!explicit || explicit === 'orderbhojan')) {
+    return 'bhojanos-prod';
+  }
+  return explicit || (liveMarketplace ? 'bhojanos-prod' : 'orderbhojan');
+}
+
 export function loadAppConfig(): AppConfig {
   const liveMarketplace = isLiveMarketplaceBuild();
   const explicitApiUrl = readEnv('VITE_MARKETPLACE_API_URL');
@@ -70,10 +78,7 @@ export function loadAppConfig(): AppConfig {
     firebase: {
       apiKey: readEnv('VITE_FIREBASE_API_KEY'),
       authDomain: readEnv('VITE_FIREBASE_AUTH_DOMAIN'),
-      projectId: readEnv(
-        'VITE_FIREBASE_PROJECT_ID',
-        liveMarketplace ? 'bhojanos-prod' : 'orderbhojan',
-      ),
+      projectId: resolveFirebaseProjectId(liveMarketplace),
       storageBucket: readEnv('VITE_FIREBASE_STORAGE_BUCKET'),
       messagingSenderId: readEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
       appId: readEnv('VITE_FIREBASE_APP_ID'),

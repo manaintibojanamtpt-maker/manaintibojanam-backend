@@ -5,7 +5,6 @@ import { MarketplaceSearchBar } from '@bhojan/storefront-design-system/marketpla
 import { KITCHEN_HERO_HEADLINE, KITCHEN_HERO_SCENES } from '@/features/experience/data/kitchenHeroScenes';
 import { resolveFoodPhoto } from '@/features/experience/data/food-photo-manifest';
 import { useKitchenHeroMotion } from '@/features/experience/hooks/useKitchenHeroMotion';
-import { useHeroPreload } from '@/features/experience/hooks/useHeroPreload';
 import { OrderBhojanHomeLocationBar } from './OrderBhojanHomeLocationBar';
 
 const SCENE_INTERVAL_MS = 8000;
@@ -33,8 +32,6 @@ export function OrderBhojanHomeHero() {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const activeScene = slides[activeIndex] ?? slides[0];
-
-  useHeroPreload(activeScene?.src ?? '', activeScene?.webpSrcSet);
 
   useEffect(() => {
     if (!richMotion || slides.length <= 1) return undefined;

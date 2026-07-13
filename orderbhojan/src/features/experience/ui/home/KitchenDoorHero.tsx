@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { KITCHEN_HERO_HEADLINE, KITCHEN_HERO_SCENES } from '../../data/kitchenHeroScenes';
 import { resolveFoodPhoto } from '../../data/food-photo-manifest';
 import { useKitchenHeroMotion } from '../../hooks/useKitchenHeroMotion';
-import { useHeroPreload } from '../../hooks/useHeroPreload';
 
 const SCENE_INTERVAL_MS = 8000;
 const CROSSFADE_MS = 600;
@@ -25,8 +24,6 @@ export function KitchenDoorHero() {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const activeScene = resolvedScenes[activeIndex] ?? resolvedScenes[0];
-
-  useHeroPreload(activeScene.photo.preloadHref, activeScene.photo.webpSrcSet);
 
   useEffect(() => {
     if (!richMotion || resolvedScenes.length <= 1) return undefined;
