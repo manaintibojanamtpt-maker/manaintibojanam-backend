@@ -6,7 +6,7 @@
   "description": "OrderBhojan - production marketplace customer platform (PX2 Design-to-Code)",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run build --prefix ../packages/marketplace-contracts",
+    "prebuild": "npm run build --prefix ../packages/marketplace-contracts && node scripts/link-storefront-peer-deps.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
@@ -53,6 +53,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.66.1",
     "react-router-dom": "^7.13.2",
+    "tailwind-merge": "^3.6.0",
     "zod": "^3.24.2",
     "zustand": "^5.0.8"
   },

@@ -40,6 +40,10 @@ jobs:
         run: npm ci
         working-directory: orderbhojan
 
+      - name: Link storefront design-system peer deps for tsc
+        run: node scripts/link-storefront-peer-deps.mjs
+        working-directory: orderbhojan
+
       - name: Production readiness gate
         run: npm run gate:prod
         working-directory: orderbhojan
