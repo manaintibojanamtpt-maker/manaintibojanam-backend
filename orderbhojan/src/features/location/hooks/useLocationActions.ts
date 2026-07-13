@@ -143,11 +143,13 @@ export function useLocationActions() {
   );
 
   const openSelector = useCallback(() => {
+    locationStore().setWizardOpen(false);
     locationStore().setSelectorOpen(true);
   }, []);
 
   const closeSelector = useCallback(() => {
     locationStore().setSelectorOpen(false);
+    locationStore().resetUi();
   }, []);
 
   const openWizard = useCallback(() => {

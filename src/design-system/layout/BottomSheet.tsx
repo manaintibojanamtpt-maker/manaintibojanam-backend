@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { m, AnimatePresence, useAnimation, PanInfo } from 'framer-motion';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion';
 
 export interface BottomSheetProps {
   isOpen: boolean;
@@ -11,6 +12,26 @@ export interface BottomSheetProps {
   panelClassName?: string;
 }
 
+let scrollLockCount = 0;
+
+function lockPageScroll() {
+  scrollLockCount += 1;
+  if (scrollLockCount !== 1) return;
+  const scrollRoot = document.getElementById('main-scroll-container');
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  if (scrollRoot) scrollRoot.style.overflow = 'hidden';
+}
+
+function unlockPageScroll() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount !== 0) return;
+  const scrollRoot = document.getElementById('main-scroll-container');
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+  if (scrollRoot) scrollRoot.style.overflow = '';
+}
+
 const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
   onClose,
@@ -20,25 +41,15 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   initialSnap = 0,
   panelClassName = '',
 }) => {
-  const controls = useAnimation();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
 
   useEffect(() => {
-    const scrollRoot = document.getElementById('main-scroll-container');
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      if (scrollRoot) scrollRoot.style.overflow = 'hidden';
-      void controls.start({ y: 0, transition: { type: 'spring', bounce: 0.1, duration: 0.4 } });
-    } else {
-      document.body.style.overflow = '';
-      if (scrollRoot) scrollRoot.style.overflow = '';
-      void controls.start({ y: '100%' });
-    }
+    if (!isOpen) return undefined;
+    lockPageScroll();
     return () => {
-      document.body.style.overflow = '';
-      if (scrollRoot) scrollRoot.style.overflow = '';
+      unlockPageScroll();
     };
-  }, [isOpen, controls]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,79 +60,74 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  const handleDragEnd = async (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const offset = info.offset.y;
-    const velocity = info.velocity.y;
-
-    if (offset > 150 || velocity > 500) {
-      await controls.start({ y: '100%' });
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.y > 120 || info.velocity.y > 500) {
       onClose();
-    } else {
-      controls.start({ y: 0, transition: { type: 'spring', bounce: 0.2, duration: 0.4 } });
     }
   };
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
+      {isOpen ? (
         <>
-          <m.div
+          <m.button
+            type="button"
+            aria-label="Close"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[1200] cursor-default border-0 bg-black/60 backdrop-blur-sm"
           />
           <m.div
-            ref={containerRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? 'bottom-sheet-title' : undefined}
             initial={{ y: '100%' }}
-            animate={controls}
+            animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            onAnimationComplete={() => {
-              if (isOpen) controls.set({ y: 0 });
-            }}
-            transition={{ type: 'spring', bounce: 0.1, duration: 0.4 }}
+            transition={{ type: 'spring', bounce: 0.12, duration: 0.38 }}
             drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={0.05}
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.08}
             onDragEnd={handleDragEnd}
-            className={`fixed bottom-0 left-0 right-0 z-[201] bg-white dark:bg-gray-900 rounded-t-[32px] shadow-2xl flex flex-col will-change-transform pb-safe ${panelClassName}`.trim()}
+            className={`fixed bottom-0 left-0 right-0 z-[1201] flex flex-col rounded-t-[32px] bg-white shadow-2xl will-change-transform dark:bg-gray-900 pb-safe ${panelClassName}`.trim()}
             style={{
               height: `${snapPoints[initialSnap]}vh`,
-              maxHeight: 'calc(100vh - 40px)',
-              touchAction: 'none',
+              maxHeight: 'calc(100dvh - 24px)',
             }}
           >
-            <div className="w-full pt-4 pb-2 flex justify-center shrink-0 cursor-grab active:cursor-grabbing">
-              <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full" />
-            </div>
-            {title && (
-              <div className="px-6 pb-4 shrink-0 text-center">
-                <h3 id="bottom-sheet-title" className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{title}</h3>
-              </div>
-            )}
             <div
-              className="flex-1 overflow-y-auto px-6 pb-6 no-scrollbar overscroll-contain"
-              style={{ touchAction: 'pan-y' }}
-              role="document"
-              aria-labelledby={title ? 'bottom-sheet-title' : undefined}
-              onPointerDown={(e) => {
-                const target = e.currentTarget;
-                if (target.scrollTop > 0) {
-                  e.stopPropagation();
-                }
-              }}
+              className="flex w-full shrink-0 cursor-grab touch-none justify-center pb-2 pt-4 active:cursor-grabbing"
+              onPointerDown={(event) => dragControls.start(event)}
+            >
+              <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+            </div>
+            {title ? (
+              <div className="shrink-0 px-6 pb-4 text-center">
+                <h3 id="bottom-sheet-title" className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  {title}
+                </h3>
+              </div>
+            ) : null}
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 no-scrollbar"
+              style={{ WebkitOverflowScrolling: 'touch' }}
             >
               {children}
             </div>
           </m.div>
         </>
-      )}
-    </AnimatePresence>
+      ) : null}
+    </AnimatePresence>,
+    document.body,
   );
 };
 

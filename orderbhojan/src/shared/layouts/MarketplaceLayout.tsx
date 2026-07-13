@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { LocationChip, useLocationFeatureEnabled } from '@/features/location';
-import { useLocationSessionStore } from '@/features/location/store/locationSessionStore';
 import { OrderBhojanBottomNav, OrderBhojanFloatingCart } from '@/presentation/shell';
 import { MarketplaceCompactHeaderView } from '@bhojan/storefront-design-system/adapters/marketplace/MarketplaceCompactHeaderView';
 import { OrderBhojanBrand } from '@/shared/ui/OrderBhojanBrand';
@@ -18,11 +17,8 @@ export function MarketplaceLayout() {
   const onHome = isHomeRoute(pathname);
   const focusRoute = isFocusRoute(pathname);
   const locationEnabled = useLocationFeatureEnabled();
-  const locationOverlayOpen = useLocationSessionStore(
-    (s) => s.selectorOpen || s.wizardOpen,
-  );
   const showCompactHeader = !onHome;
-  const showChrome = !focusRoute && !locationOverlayOpen;
+  const showChrome = !focusRoute;
 
   return (
     <div className="ob-px2-marketplace flex h-[100dvh] flex-col bg-[#070504] text-[#fffaf3]">
