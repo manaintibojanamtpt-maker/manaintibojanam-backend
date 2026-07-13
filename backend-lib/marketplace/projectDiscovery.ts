@@ -225,32 +225,56 @@ function filterPoolByConsumerRadius(
   return restaurants.filter((r) => isWithinConsumerDiscoveryRadius(r.distanceKm));
 }
 
+function mergeRestaurantPools(
+  ...pools: readonly (readonly RestaurantPublic[])[]
+): RestaurantPublic[] {
+  const seen = new Set<string>();
+  const merged: RestaurantPublic[] = [];
+  for (const pool of pools) {
+    for (const restaurant of pool) {
+      const key = restaurant.slug || restaurant.tenantId;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(restaurant);
+    }
+  }
+  return merged;
+}
+
+function mergeSyncRevisionStrings(...revisions: readonly (string | undefined)[]): string | undefined {
+  return revisions.reduce<string | undefined>(
+    (acc, revision) => mergeSyncRevisions(acc, revision),
+    undefined,
+  );
+}
+
 export async function loadMarketplaceRestaurants(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
-  let loaded: { restaurants: RestaurantPublic[]; poolSyncRevision?: string };
+  const geoIndexed = isMarketplaceGeoIndexEnabled()
+    ? await loadMarketplaceRestaurantsFromGeoIndex(db, coords)
+    : { restaurants: [] as RestaurantPublic[], poolSyncRevision: undefined };
 
-  if (isMarketplaceGeoIndexEnabled()) {
-    const geoIndexed = await loadMarketplaceRestaurantsFromGeoIndex(db, coords);
-    if (geoIndexed.restaurants.length > 0) {
-      loaded = geoIndexed;
-    } else {
-      const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
-      loaded = indexed.restaurants.length > 0
-        ? indexed
-        : await loadMarketplaceRestaurantsFromTenantsScan(db, coords);
-    }
-  } else {
-    const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
-    loaded = indexed.restaurants.length > 0
-      ? indexed
+  const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
+  const scanned =
+    indexed.restaurants.length > 0
+      ? { restaurants: [] as RestaurantPublic[], poolSyncRevision: undefined }
       : await loadMarketplaceRestaurantsFromTenantsScan(db, coords);
-  }
+
+  const merged = mergeRestaurantPools(
+    geoIndexed.restaurants,
+    indexed.restaurants,
+    scanned.restaurants,
+  );
 
   return {
-    ...loaded,
-    restaurants: filterPoolByConsumerRadius(loaded.restaurants),
+    restaurants: filterPoolByConsumerRadius(sortRestaurants(merged, 'distance')),
+    poolSyncRevision: mergeSyncRevisionStrings(
+      geoIndexed.poolSyncRevision,
+      indexed.poolSyncRevision,
+      scanned.poolSyncRevision,
+    ),
   };
 }
 
@@ -271,7 +295,7 @@ async function loadMarketplaceRestaurantsFromGeoIndex(
   for (const tenantDoc of tenantDocs) {
     if (!tenantDoc.exists) continue;
     const raw = tenantDoc.data() as Record<string, unknown>;
-    if (!isConsumerListedTenant(raw)) continue;
+    if (!isConsumerListedTenant(raw, tenantDoc.id)) continue;
     poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
     const tenant = parseFirestoreTenant(tenantDoc.id, raw);
     restaurants.push(projectRestaurantPublic(tenant, raw, coords));
@@ -300,7 +324,7 @@ async function loadMarketplaceRestaurantsFromProfiles(
   for (const tenantDoc of tenantDocs) {
     if (!tenantDoc.exists) continue;
     const raw = tenantDoc.data() as Record<string, unknown>;
-    if (!isConsumerListedTenant(raw)) continue;
+    if (!isConsumerListedTenant(raw, tenantDoc.id)) continue;
     poolSyncRevision = mergeSyncRevisions(
       poolSyncRevision,
       extractTenantSyncRevision(raw),
@@ -330,7 +354,7 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
     if (seen.has(doc.id)) return;
     seen.add(doc.id);
     const raw = doc.data() as Record<string, unknown>;
-    if (!isConsumerListedTenant(raw)) return;
+    if (!isConsumerListedTenant(raw, doc.id)) return;
     poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
     const tenant = parseFirestoreTenant(doc.id, raw);
     restaurants.push(projectRestaurantPublic(tenant, raw, coords));

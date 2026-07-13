@@ -3586,8 +3586,8 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
 app.post("/api/verify-razorpay-payment", async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, draftId } = req.body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !draftId) {
-      return res.status(400).json({ success: false, error: 'Missing payment verification parameters or draftId.' });
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, error: 'Missing payment verification parameters.' });
     }
 
     if (!isRazorpayConfigured) {
@@ -3603,6 +3603,11 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
     if (!verified) {
       logger.warn({ message: 'Razorpay signature verification failed', draftId, razorpay_order_id });
       return res.status(400).json({ success: false, verified: false, error: 'Razorpay payment signature verification failed.' });
+    }
+
+    // Subscription / non-draft payments: signature verification is sufficient.
+    if (!draftId) {
+      return res.json({ success: true, verified: true });
     }
 
     const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
