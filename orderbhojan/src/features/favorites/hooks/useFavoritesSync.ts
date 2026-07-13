@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
+import { MarketplaceApiError } from '@/marketplace-api/errors';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useFavoritesStore } from '@/features/experience/store/favoritesStore';
 
@@ -10,17 +11,31 @@ export const favoritesQueryKeys = {
 };
 
 export function useFavoritesSync() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, status } = useAuth();
   const setIds = useFavoritesStore((s) => s.setIds);
 
   const favoritesQuery = useQuery({
     queryKey: favoritesQueryKeys.list(),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && status !== 'loading',
     queryFn: async () => {
-      const result = await getMarketplaceApiClient().listFavorites();
-      const ids = result.favorites.map((r) => r.restaurantId);
-      setIds(ids);
-      return result.favorites;
+      try {
+        const result = await getMarketplaceApiClient().listFavorites();
+        const ids = result.favorites.map((r) => r.restaurantId);
+        setIds(ids);
+        return result.favorites;
+      } catch (error) {
+        if (error instanceof MarketplaceApiError && (error.status === 401 || error.code === 'HTTP_401')) {
+          setIds([]);
+          return [];
+        }
+        throw error;
+      }
+    },
+    retry: (failureCount, error) => {
+      if (error instanceof MarketplaceApiError && (error.status === 401 || error.code === 'HTTP_401')) {
+        return false;
+      }
+      return failureCount < 1;
     },
     staleTime: 30_000,
   });

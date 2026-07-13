@@ -128,7 +128,7 @@ export function OrderBhojanMenuEmptyState({
     <MarketplaceUxStateView
       role="status"
       title="Menu is empty"
-      description="This kitchen has not published any dishes yet. Check back later."
+      description="This kitchen has not published menu items yet. The owner can add dishes from BhojanOS Owner Portal."
       icon={<UtensilsCrossed className="h-10 w-10 text-white/30" aria-hidden />}
       primaryLabel={onBack ? 'Back to restaurant' : undefined}
       onPrimary={onBack}

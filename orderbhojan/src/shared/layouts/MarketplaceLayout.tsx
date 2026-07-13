@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { LocationChip, LocationSelectorSheet, DeliveryLocationWizard, useLocationFeatureEnabled } from '@/features/location';
+import { LocationChip, useLocationFeatureEnabled } from '@/features/location';
 import { useLocationSessionStore } from '@/features/location/store/locationSessionStore';
 import { OrderBhojanBottomNav, OrderBhojanFloatingCart } from '@/presentation/shell';
 import { MarketplaceCompactHeaderView } from '@bhojan/storefront-design-system/adapters/marketplace/MarketplaceCompactHeaderView';
@@ -52,13 +52,6 @@ export function MarketplaceLayout() {
 
       {showChrome ? <OrderBhojanBottomNav /> : null}
       {showChrome ? <OrderBhojanFloatingCart /> : null}
-
-      {locationEnabled ? (
-        <>
-          <LocationSelectorSheet />
-          <DeliveryLocationWizard />
-        </>
-      ) : null}
     </div>
   );
 }

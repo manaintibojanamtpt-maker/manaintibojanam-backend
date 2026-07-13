@@ -18,9 +18,18 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
-const ORDERBHOJAN_REMOTE =
+const ORDERBHOJAN_REMOTE_BASE =
   process.env.ORDERBHOJAN_REMOTE_URL ??
   'https://github.com/manaintibojanamtpt-maker/orderbhojan.git';
+
+function authenticatedRemoteUrl() {
+  const token = process.env.ORDERBHOJAN_SYNC_TOKEN?.trim();
+  if (!token) return ORDERBHOJAN_REMOTE_BASE;
+  return ORDERBHOJAN_REMOTE_BASE.replace(
+    'https://github.com/',
+    `https://x-access-token:${token}@github.com/`,
+  );
+}
 const EXPORT_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-export');
 const CLONE_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-remote');
 
@@ -245,8 +254,9 @@ function buildExport() {
 function syncIntoClone(exportRoot) {
   if (!fs.existsSync(path.join(CLONE_DIR, '.git'))) {
     fs.mkdirSync(path.dirname(CLONE_DIR), { recursive: true });
-    log('clone', ORDERBHOJAN_REMOTE);
-    execSync(`git clone ${ORDERBHOJAN_REMOTE} "${CLONE_DIR}"`, { stdio: 'inherit' });
+    const remoteUrl = authenticatedRemoteUrl();
+    log('clone', ORDERBHOJAN_REMOTE_BASE);
+    execSync(`git clone ${remoteUrl} "${CLONE_DIR}"`, { stdio: 'inherit' });
   } else {
     execSync('git reset --hard HEAD', { cwd: CLONE_DIR, stdio: 'inherit' });
     execSync('git clean -fd', { cwd: CLONE_DIR, stdio: 'inherit' });
@@ -297,6 +307,12 @@ function pushClone() {
   } finally {
     fs.rmSync(msgFile, { force: true });
   }
+  if (process.env.CI === 'true' && !process.env.ORDERBHOJAN_SYNC_TOKEN?.trim()) {
+    console.error(
+      '[sync-orderbhojan] CI push requires ORDERBHOJAN_SYNC_TOKEN secret with write access to orderbhojan repo',
+    );
+    process.exit(1);
+  }
   execSync('git push origin main', { cwd: CLONE_DIR, stdio: 'inherit' });
   log('pushed', 'origin/main on orderbhojan');
 }
@@ -305,7 +321,7 @@ function ensureMonorepoRemote() {
   try {
     const remotes = execSync('git remote', { cwd: REPO_ROOT, encoding: 'utf8' });
     if (!remotes.split(/\r?\n/).includes('orderbhojan')) {
-      execSync(`git remote add orderbhojan ${ORDERBHOJAN_REMOTE}`, { cwd: REPO_ROOT, stdio: 'inherit' });
+      execSync(`git remote add orderbhojan ${ORDERBHOJAN_REMOTE_BASE}`, { cwd: REPO_ROOT, stdio: 'inherit' });
       log('remote', 'added git remote "orderbhojan" on monorepo');
     }
   } catch (err) {

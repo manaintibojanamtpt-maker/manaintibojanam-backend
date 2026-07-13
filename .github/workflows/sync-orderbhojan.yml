@@ -1,0 +1,34 @@
+name: Sync OrderBhojan Repo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'orderbhojan/**'
+      - 'packages/marketplace-contracts/**'
+      - 'packages/design-system/**'
+      - 'src/**'
+      - 'scripts/sync-orderbhojan-repo.mjs'
+      - 'scripts/e2e/**'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-orderbhojan
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sync and push to orderbhojan repo
+        env:
+          ORDERBHOJAN_SYNC_TOKEN: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN }}
+        run: node scripts/sync-orderbhojan-repo.mjs --push

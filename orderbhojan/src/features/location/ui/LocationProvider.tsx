@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationFeatureEnabled } from '../hooks/useLocationFeature';
+import { LocationSelectorSheet } from './LocationSelectorSheet';
+import { DeliveryLocationWizard } from './DeliveryLocationWizard';
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const enabled = useLocationFeatureEnabled();
@@ -18,5 +20,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     void refreshSavedAddresses();
   }, [enabled, isAuthenticated, refreshSavedAddresses, sessionUser?.uid]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {enabled ? (
+        <>
+          <LocationSelectorSheet />
+          <DeliveryLocationWizard />
+        </>
+      ) : null}
+    </>
+  );
 }

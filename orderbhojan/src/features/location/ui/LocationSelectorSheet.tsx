@@ -90,6 +90,18 @@ export function LocationSelectorSheet() {
             </section>
           ) : null}
 
+          <SoftButton
+            type="button"
+            tone="secondary"
+            fullWidth
+            onClick={() => {
+              closeSelector();
+              openWizard();
+            }}
+          >
+            Enter address manually
+          </SoftButton>
+
           {isAuthenticated ? (
             <section className="flex flex-col gap-2" aria-label="Saved addresses">
               <p className="text-sm font-bold text-white">Saved addresses</p>

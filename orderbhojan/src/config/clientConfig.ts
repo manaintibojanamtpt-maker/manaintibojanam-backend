@@ -76,7 +76,11 @@ export async function fetchRemoteClientConfig(
 
 export async function hydrateFirebaseConfig(config: AppConfig): Promise<AppConfig> {
   let hydrated = applyFirebaseDefaults(config);
-  if (!isFirebaseConfigIncomplete(hydrated)) {
+  const usesLiveBackend = hydrated.marketplaceApiBaseUrl.includes('manaintibojanam-backend');
+  const wrongProdFirebaseProject =
+    import.meta.env?.PROD && usesLiveBackend && hydrated.firebase.projectId === 'orderbhojan';
+
+  if (!isFirebaseConfigIncomplete(hydrated) && !wrongProdFirebaseProject) {
     return hydrated;
   }
 
