@@ -5,6 +5,7 @@
   --ob-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ob-safe-left: env(safe-area-inset-left, 0px);
   --ob-safe-right: env(safe-area-inset-right, 0px);
+  --ob-chrome-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   --mib-bg: #070504;
   --mib-surface: #120d0a;
   --mib-surface-strong: #1a1410;
@@ -123,4 +124,29 @@
     transition: none !important;
     transform: none !important;
   }
+
+  .ob-shimmer {
+    animation: none !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+}
+
+@keyframes ob-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.ob-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: ob-shimmer 1.4s ease-in-out infinite;
 }

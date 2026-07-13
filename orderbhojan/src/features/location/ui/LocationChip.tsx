@@ -35,8 +35,8 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
     <SoftButton
       type="button"
       tone="ghost"
-      fullWidth
-      className={`!justify-start gap-2 ${variant === 'compact' ? '!px-2 !py-1.5' : ''} ${className}`.trim()}
+      fullWidth={variant !== 'compact'}
+      className={`!justify-start gap-2 ${variant === 'compact' ? 'w-full max-w-full !px-2 !py-1.5' : ''} ${className}`.trim()}
       aria-label={active ? `Delivery location: ${label}` : 'Set delivery location'}
       aria-expanded={selectorOpen}
       onClick={handleClick}

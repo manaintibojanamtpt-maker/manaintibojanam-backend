@@ -83,7 +83,7 @@ export const MarketplaceSearchAutocomplete: React.FC<MarketplaceSearchAutocomple
   };
 
   return (
-    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-xl">
+    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-xl">
       {view.status === 'loading' && (
         <div className="flex items-center gap-2 px-3 py-3 text-sm text-white/60">
           <Loader2 className="h-4 w-4 animate-spin text-[#FF7A00]" aria-hidden="true" />

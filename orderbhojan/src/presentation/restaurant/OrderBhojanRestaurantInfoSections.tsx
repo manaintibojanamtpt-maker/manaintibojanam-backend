@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { RestaurantExperienceResponse } from '@/types/marketplace-restaurant';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
@@ -6,6 +7,7 @@ import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButt
 import { OrderBhojanRestaurantGallery } from './OrderBhojanRestaurantGallery';
 
 export function OrderBhojanRestaurantInfoSections({ data }: { data: RestaurantExperienceResponse }) {
+  const navigate = useNavigate();
   const { experience, hours, highlights, policies } = data;
 
   return (
@@ -28,9 +30,7 @@ export function OrderBhojanRestaurantInfoSections({ data }: { data: RestaurantEx
             />
             <SoftButton
               type="button"
-              onClick={() => {
-                window.open(`https://bhojanos.com/k/${experience.slug}`, '_blank', 'noopener,noreferrer');
-              }}
+              onClick={() => navigate(`/restaurant/${experience.slug}/subscription`)}
             >
               View subscription plans
             </SoftButton>

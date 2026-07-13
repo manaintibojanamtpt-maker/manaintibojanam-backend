@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
-import type { CustomerLocation, GeoCoordinates } from '../domain/location.types';
+import type { GeoCoordinates } from '../domain/location.types';
 import type { SavedAddressInput } from '../domain/location.schema';
 import {
   applySessionLocation,
@@ -63,15 +63,19 @@ export function useLocationActions() {
     const store = locationStore();
     const saved = store.savedAddresses.find((a) => a.id === addressId);
     if (!saved) return;
-    const location: CustomerLocation = {
+    const applied = await applySessionLocation(
+      saved.address.coordinates,
+      saved.customLabel ?? saved.label,
+      { geocodeEnabled },
+    );
+    store.setActiveLocation({
+      ...applied,
       kind: 'saved',
-      coordinates: saved.address.coordinates,
-      displayLabel: saved.customLabel ?? saved.label,
       savedAddressId: saved.id,
-    };
-    store.setActiveLocation(location);
+    });
+    store.setRecentLocations(loadRecentLocationEntries());
     store.setSelectorOpen(false);
-  }, []);
+  }, [geocodeEnabled]);
 
   const selectRecentLocation = useCallback(async (entryId: string) => {
     const store = locationStore();

@@ -27,6 +27,7 @@ export function OrderBhojanKitchenCard({
   const favorite = isFavorite(restaurant.restaurantId);
 
   const kitchen = useMemo(() => mapRestaurantPublicToKitchenCard(restaurant), [restaurant]);
+  const isGridCard = className.includes('lg:w-full');
 
   const favoriteSlot = (
     <button
@@ -52,8 +53,10 @@ export function OrderBhojanKitchenCard({
 
   return (
     <div
-      className={`shrink-0 ${restaurantEnabled ? '' : 'pointer-events-none opacity-60'} ${className}`}
-      style={variant === 'default' ? { width, minWidth: width } : undefined}
+      className={`shrink-0 ${restaurantEnabled ? '' : 'pointer-events-none opacity-60'} ${
+        variant === 'default' && !isGridCard ? '' : 'min-w-0'
+      } ${className}`}
+      style={variant === 'default' && !isGridCard ? { width, minWidth: width } : undefined}
       aria-label={`${restaurant.displayName}, rated ${restaurant.rating ?? '—'}`}
     >
       <MarketplaceKitchenCardView

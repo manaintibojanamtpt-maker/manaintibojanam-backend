@@ -55,7 +55,8 @@ export function OrderBhojanHomeHero() {
   }, [richMotion, slides]);
 
   const goToSearch = () => {
-    navigate('/search');
+    const trimmed = searchValue.trim();
+    navigate(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : '/search');
   };
 
   return (
@@ -66,6 +67,7 @@ export function OrderBhojanHomeHero() {
       slides={slides}
       activeIndex={activeIndex}
       animated={richMotion}
+      onSlideSelect={setActiveIndex}
       locationSlot={<OrderBhojanHomeLocationBar />}
       searchSlot={
         <MarketplaceSearchBar

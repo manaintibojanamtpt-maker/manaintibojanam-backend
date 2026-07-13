@@ -24,7 +24,7 @@ export function ProfileMemberView({
   readonly onRetryProfile: () => void;
 }) {
   return (
-    <TransactionalPageShell title="" subtitle="">
+    <TransactionalPageShell title="Profile" subtitle="Your table at home" embedded>
       <GlassCard hoverEffect={false} className="!rounded-[2rem] !p-6 text-center">
         <ProfileImage
           name={profile.displayName}
@@ -32,11 +32,9 @@ export function ProfileMemberView({
           alt={profile.displayName}
           className="mx-auto mb-4 h-20 w-20"
         />
-        <h1 className="text-2xl font-extrabold tracking-tight text-white">{profile.displayName}</h1>
+        <h2 className="text-2xl font-extrabold tracking-tight text-white">{profile.displayName}</h2>
         <p className="mt-1 text-sm text-white/60">{profile.contactLine}</p>
-        <SoftButton type="button" tone="ghost" size="compact" className="mt-3" disabled>
-          Edit profile
-        </SoftButton>
+        <p className="mt-3 text-xs text-white/45">Details sync from your sign-in method</p>
       </GlassCard>
 
       <p className="text-[11px] font-semibold uppercase tracking-wide text-white/50">Your table at home</p>

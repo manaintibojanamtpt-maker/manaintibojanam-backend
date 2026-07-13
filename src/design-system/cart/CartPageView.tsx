@@ -41,49 +41,56 @@ export function CartPageView({
   onQuantityChange,
 }: CartPageViewProps) {
   return (
-    <TransactionalPageShell title={title} subtitle={subtitle}>
-      {restaurant && onMenu ? (
-        <CartRestaurantBannerView restaurant={restaurant} onMenu={onMenu} />
-      ) : null}
+    <div className="relative">
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-40" embedded>
+        {restaurant && onMenu ? (
+          <CartRestaurantBannerView restaurant={restaurant} onMenu={onMenu} />
+        ) : null}
 
-      <ul className="grid list-none gap-3 p-0">
-        {lines.map((line) => (
-          <CartLineView key={line.lineId} line={line} onQuantityChange={onQuantityChange} />
-        ))}
-      </ul>
-
-      <CartSummaryView summary={summary} />
-
-      {validationMessages.length > 0 ? (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3" role="alert">
-          {validationMessages.map((message) => (
-            <p key={message} className="text-sm text-red-300">
-              {message}
-            </p>
+        <ul className="grid list-none gap-3 p-0">
+          {lines.map((line) => (
+            <CartLineView key={line.lineId} line={line} onQuantityChange={onQuantityChange} />
           ))}
-        </div>
-      ) : null}
+        </ul>
 
-      {errorMessage ? (
-        <p role="alert" className="text-sm text-red-300">
-          {errorMessage}
-        </p>
-      ) : null}
+        <CartSummaryView summary={summary} />
 
-      <div className="mt-auto flex flex-col gap-3">
-        <SoftButton type="button" fullWidth disabled={checkoutBusy} onClick={onCheckout}>
-          {checkoutLabel}
-        </SoftButton>
-        <div className="flex flex-wrap gap-3">
-          <SoftButton type="button" tone="secondary" onClick={onBrowse}>
-            Continue browsing
+        {validationMessages.length > 0 ? (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3" role="alert">
+            {validationMessages.map((message) => (
+              <p key={message} className="text-sm text-red-300">
+                {message}
+              </p>
+            ))}
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <p role="alert" className="text-sm text-red-300">
+            {errorMessage}
+          </p>
+        ) : null}
+      </TransactionalPageShell>
+
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#070504]/95 px-4 py-4 backdrop-blur-xl"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="mx-auto flex max-w-lg flex-col gap-2">
+          <SoftButton type="button" fullWidth disabled={checkoutBusy} onClick={onCheckout}>
+            {checkoutLabel}
           </SoftButton>
-          <SoftButton type="button" tone="ghost" onClick={onClear}>
-            Clear cart
-          </SoftButton>
+          <div className="flex gap-2">
+            <SoftButton type="button" tone="secondary" className="flex-1" onClick={onBrowse}>
+              Continue browsing
+            </SoftButton>
+            <SoftButton type="button" tone="ghost" size="compact" onClick={onClear}>
+              Clear
+            </SoftButton>
+          </div>
         </div>
       </div>
-    </TransactionalPageShell>
+    </div>
   );
 }
 

@@ -67,13 +67,13 @@ export function DiscoveryCollectionRail({ collection }: DiscoveryCollectionRailP
         className="!mb-6 !text-left"
       />
 
-      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-3">
+      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar lg:grid lg:grid-cols-2 lg:gap-4 lg:overflow-visible xl:grid-cols-3">
         {restaurants.map((restaurant) => (
           <OrderBhojanKitchenCard
             key={restaurant.restaurantId}
             restaurant={restaurant}
             width="17.5rem"
-            className="lg:w-full lg:min-w-0"
+            className="lg:w-full lg:min-w-0 lg:max-w-full"
           />
         ))}
       </div>

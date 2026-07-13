@@ -3,6 +3,18 @@ import { m, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import type { MarketplaceNavItem } from './types';
 
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return reduced;
+}
+
 export interface MarketplaceBottomNavViewProps {
   items: readonly MarketplaceNavItem[];
   activePath: string;
@@ -30,8 +42,13 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
   resolveActive = defaultResolveActive,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) {
+      setIsVisible(true);
+      return;
+    }
     const mainContainer = document.getElementById(scrollContainerId);
     if (!mainContainer) return;
 
@@ -64,14 +81,14 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
 
     mainContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => mainContainer.removeEventListener('scroll', handleScroll);
-  }, [activePath, scrollContainerId]);
+  }, [activePath, scrollContainerId, reducedMotion]);
 
   return (
     <AnimatePresence>
       <m.nav
         initial={{ y: 0, opacity: 1 }}
-        animate={{ y: isVisible ? 0 : 100, opacity: isVisible ? 1 : 0 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+        animate={{ y: reducedMotion || isVisible ? 0 : 100, opacity: reducedMotion || isVisible ? 1 : 0 }}
+        transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 40 }}
         className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4 pointer-events-none"
         style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         aria-label="Primary"
@@ -92,10 +109,11 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
                     onNavigate(item.path);
                   }
                 }}
-                className="relative flex flex-col items-center justify-center w-16 h-12 group"
+                className="relative flex min-h-12 min-w-12 flex-col items-center justify-center px-2 py-1 group touch-manipulation"
+                aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
-                {isActive && (
+                {isActive && !reducedMotion && (
                   <m.div
                     layoutId="obActiveBar"
                     className="absolute -bottom-1 w-1 h-1 bg-orange-500 rounded-full"
@@ -103,36 +121,44 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
                   />
                 )}
 
+                {isActive && reducedMotion ? (
+                  <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-orange-500" aria-hidden />
+                ) : null}
+
                 <div className="relative z-10 flex flex-col items-center gap-1.5">
                   <m.div
-                    animate={{
-                      y: isActive ? -2 : 0,
-                      scale: isActive ? 1.15 : 1,
-                    }}
+                    animate={
+                      reducedMotion
+                        ? undefined
+                        : {
+                            y: isActive ? -2 : 0,
+                            scale: isActive ? 1.15 : 1,
+                          }
+                    }
                     className={cn(
                       'transition-colors duration-300',
-                      isActive ? 'text-orange-500' : 'text-white/40 group-active:text-white/60',
+                      isActive ? 'text-orange-500' : 'text-white/55 group-active:text-white/75',
                     )}
                   >
                     <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                   </m.div>
                   <span
                     className={cn(
-                      'text-[8px] font-black tracking-[0.2em] uppercase transition-all duration-300',
-                      isActive ? 'text-white' : 'text-white/20',
+                      'text-[9px] font-bold tracking-[0.16em] uppercase transition-all duration-300',
+                      isActive ? 'text-white' : 'text-white/50',
                     )}
                   >
                     {item.label}
                   </span>
                 </div>
 
-                {isActive && (
+                {isActive && !reducedMotion ? (
                   <m.div
                     layoutId="obNavGlow"
                     className="absolute inset-0 bg-orange-500/5 blur-xl rounded-full"
                     transition={{ duration: 1 }}
                   />
-                )}
+                ) : null}
               </button>
             );
           })}

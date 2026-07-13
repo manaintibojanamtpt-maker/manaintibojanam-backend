@@ -76,11 +76,6 @@ export function OrderBhojanCheckoutPage() {
     void prepareCheckout();
   }, [canCheckout, prepareCheckout]);
 
-  useEffect(() => {
-    if (!locationEnabled || activeLocation || orderId) return;
-    openWizard();
-  }, [activeLocation, locationEnabled, openWizard, orderId]);
-
   const validatePhone = (): boolean => {
     const parsed = phoneNumberSchema.safeParse(phone.trim());
     if (!parsed.success) {

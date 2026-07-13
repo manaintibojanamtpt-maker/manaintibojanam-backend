@@ -61,9 +61,10 @@ export function OrderBhojanRestaurantMaintenanceState({ onRetry }: { readonly on
 
 export interface OrderBhojanRestaurantClosedBannerProps {
   readonly label: string;
+  readonly onBrowse?: () => void;
 }
 
-export function OrderBhojanRestaurantClosedBanner({ label }: OrderBhojanRestaurantClosedBannerProps) {
+export function OrderBhojanRestaurantClosedBanner({ label, onBrowse }: OrderBhojanRestaurantClosedBannerProps) {
   return (
     <div
       role="status"
@@ -73,6 +74,15 @@ export function OrderBhojanRestaurantClosedBanner({ label }: OrderBhojanRestaura
       <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-center">
         <p className="text-sm font-semibold text-amber-100">{label}</p>
         <p className="mt-1 text-xs text-amber-100/70">Ordering is paused until the kitchen reopens.</p>
+        {onBrowse ? (
+          <button
+            type="button"
+            onClick={onBrowse}
+            className="mt-3 text-xs font-semibold text-[#FF7A00] underline-offset-2 hover:underline touch-manipulation"
+          >
+            Browse other kitchens
+          </button>
+        ) : null}
       </div>
     </div>
   );

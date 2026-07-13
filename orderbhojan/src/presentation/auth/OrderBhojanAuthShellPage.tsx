@@ -6,6 +6,7 @@ import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButt
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { formatAuthError } from '@/lib/authErrors';
 import { OrderBhojanPhoneOtpForm } from './OrderBhojanPhoneOtpForm';
+import { resolveAuthRedirect } from './resolveAuthRedirect';
 
 function sessionLabel(displayName?: string | null, phone?: string | null, email?: string | null) {
   return displayName ?? phone ?? email ?? 'your account';
@@ -19,7 +20,7 @@ export function OrderBhojanAuthShellPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
+  const redirectTo = resolveAuthRedirect(location);
 
   const handleGoogle = async () => {
     setPending(true);
@@ -48,7 +49,7 @@ export function OrderBhojanAuthShellPage() {
   };
 
   if (status === 'loading') {
-    return <AuthShellView loading title="" subtitle="" />;
+    return <AuthShellView loading title="Welcome back" subtitle="Checking your session…" />;
   }
 
   let body: ReactNode;

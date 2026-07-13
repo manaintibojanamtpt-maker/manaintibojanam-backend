@@ -4,6 +4,11 @@ const RAZORPAY_SCRIPT_ID = 'razorpay-checkout-js';
 const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
 
 let loadPromise: Promise<boolean> | null = null;
+let checkoutOpen = false;
+
+function uniqueRazorpayModalId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export interface RazorpayPaymentResponse {
   readonly razorpay_order_id: string;
@@ -184,12 +189,22 @@ export async function openRazorpayCheckout(options: {
 
   await ensureRazorpayLoaded();
 
+  if (checkoutOpen) {
+    throw new Error('Payment is already in progress. Close the payment window and try again.');
+  }
+
   return new Promise((resolve, reject) => {
     const Razorpay = (window as RazorpayWindow).Razorpay;
     if (!Razorpay) {
       reject(new Error('Razorpay SDK is unavailable'));
       return;
     }
+
+    checkoutOpen = true;
+    const finish = (fn: () => void) => {
+      checkoutOpen = false;
+      fn();
+    };
 
     const rzp = new Razorpay({
       key: options.key,
@@ -198,6 +213,7 @@ export async function openRazorpayCheckout(options: {
       name: options.merchantName ?? 'OrderBhojan',
       description: `Order ${options.draftId}`,
       order_id: options.razorpayOrderId,
+      modal_id: uniqueRazorpayModalId('ob_checkout'),
       prefill: {
         name: options.customerName?.trim() || undefined,
         email: options.customerEmail?.trim().toLowerCase() || undefined,
@@ -205,17 +221,17 @@ export async function openRazorpayCheckout(options: {
       },
       theme: { color: '#ff7a00' },
       handler: (response: RazorpayPaymentResponse) => {
-        resolve(response);
+        finish(() => resolve(response));
       },
       modal: {
         ondismiss: () => {
-          reject(new Error('Payment window closed'));
+          finish(() => reject(new Error('Payment window closed')));
         },
       },
     });
 
     rzp.on('payment.failed', (response) => {
-      reject(new Error(response.error?.description || 'Payment failed'));
+      finish(() => reject(new Error(response.error?.description || 'Payment failed')));
     });
 
     rzp.open();
@@ -250,4 +266,128 @@ export async function runRazorpayCheckoutFlow(params: {
 
   const verified = await verifyRazorpayPayment(paymentResponse, params.draftId);
   return verified.orderId;
+}
+
+export async function createSubscriptionRazorpayOrder(params: {
+  readonly planId: string;
+  readonly userId: string;
+}): Promise<CreateRazorpayOrderResult> {
+  const response = await fetch(`${getApiBaseUrl()}/api/create-razorpay-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      planId: params.planId,
+      userId: params.userId,
+    }),
+  });
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    isMock?: boolean;
+    order?: { id: string; amount: number; currency?: string };
+    key?: string;
+    error?: string;
+  };
+
+  if (!response.ok || !data.success || !data.order?.id) {
+    throw new Error(data.error || 'Failed to create secure payment session');
+  }
+
+  return {
+    razorpayOrderId: data.order.id,
+    amount: data.order.amount,
+    currency: data.order.currency ?? 'INR',
+    key: data.key ?? import.meta.env.VITE_RAZORPAY_KEY_ID ?? '',
+    isMock: data.isMock === true,
+  };
+}
+
+export async function verifySubscriptionRazorpayPayment(
+  payment: RazorpayPaymentResponse,
+): Promise<void> {
+  const response = await fetch(`${getApiBaseUrl()}/api/verify-razorpay-payment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payment),
+  });
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    verified?: boolean;
+    error?: string;
+  };
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || 'Payment could not be confirmed');
+  }
+}
+
+export async function openSubscriptionRazorpayCheckout(options: {
+  readonly razorpayOrderId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly key: string;
+  readonly merchantName: string;
+  readonly customerName?: string;
+  readonly customerEmail?: string;
+  readonly phone?: string;
+  readonly isMock: boolean;
+}): Promise<RazorpayPaymentResponse> {
+  if (options.isMock) {
+    return {
+      razorpay_order_id: options.razorpayOrderId,
+      razorpay_payment_id: 'mock_payment',
+      razorpay_signature: 'mock_signature',
+    };
+  }
+
+  await ensureRazorpayLoaded();
+
+  if (checkoutOpen) {
+    throw new Error('Payment is already in progress. Close the payment window and try again.');
+  }
+
+  return new Promise((resolve, reject) => {
+    const Razorpay = (window as RazorpayWindow).Razorpay;
+    if (!Razorpay) {
+      reject(new Error('Razorpay SDK is unavailable'));
+      return;
+    }
+
+    checkoutOpen = true;
+    const finish = (fn: () => void) => {
+      checkoutOpen = false;
+      fn();
+    };
+
+    const rzp = new Razorpay({
+      key: options.key,
+      amount: options.amount,
+      currency: options.currency,
+      name: options.merchantName,
+      description: 'Monthly meal subscription',
+      order_id: options.razorpayOrderId,
+      modal_id: uniqueRazorpayModalId('ob_sub'),
+      prefill: {
+        name: options.customerName?.trim() || undefined,
+        email: options.customerEmail?.trim().toLowerCase() || undefined,
+        contact: options.phone?.replace(/\D/g, '').slice(-10) || undefined,
+      },
+      theme: { color: '#ff7a00' },
+      handler: (response: RazorpayPaymentResponse) => {
+        finish(() => resolve(response));
+      },
+      modal: {
+        ondismiss: () => {
+          finish(() => reject(new Error('Payment cancelled')));
+        },
+      },
+    });
+
+    rzp.on('payment.failed', (response) => {
+      finish(() => reject(new Error(response.error?.description || 'Payment failed')));
+    });
+
+    rzp.open();
+  });
 }

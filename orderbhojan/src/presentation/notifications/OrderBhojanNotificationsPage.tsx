@@ -45,12 +45,15 @@ export function OrderBhojanNotificationsPage() {
   return (
     <NotificationsPageView
       title="Notifications"
-      description="Receive live order status and delivery updates."
+      description="Stay in the loop from order to doorstep."
       enableLabel="Enable push notifications"
       busyLabel="Enabling…"
       busy={busy}
       status={status}
       onEnable={() => void enableNotifications()}
+      viewOrdersLabel="View orders"
+      onViewOrders={() => navigate('/orders')}
+      deniedHint="Open your browser site settings for OrderBhojan and allow notifications, then try again."
     />
   );
 }

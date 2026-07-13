@@ -5,14 +5,18 @@
 @layer base {
   html {
     @apply antialiased;
+    color-scheme: dark;
+    background: #070504;
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
-    background: var(--bds-color-background);
-    color: var(--bds-color-text-primary);
-    font-family: var(--bds-font-sans);
+    background: #070504;
+    color: #fffaf3;
+    font-family: var(--bds-font-sans, "Figtree", ui-sans-serif, system-ui, sans-serif);
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   a {

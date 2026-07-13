@@ -10,7 +10,7 @@ export function FavoritesGuestView({
   readonly onSignIn: () => void;
 }) {
   return (
-    <TransactionalPageShell title="" subtitle="">
+    <TransactionalPageShell title="" subtitle="" embedded>
       <MarketplaceUxStateView
         title="Sign in to save favorites"
         description="Keep your go-to restaurants one tap away."
@@ -24,7 +24,7 @@ export function FavoritesGuestView({
 
 export function FavoritesLoadingView() {
   return (
-    <TransactionalPageShell title="Favorites" subtitle="">
+    <TransactionalPageShell title="Favorites" subtitle="" embedded>
       <Skeleton className="h-8 w-40" />
       <Skeleton className="h-48 w-full rounded-2xl" />
     </TransactionalPageShell>
@@ -49,7 +49,7 @@ export function FavoritesPageView({
   readonly gridContent: ReactNode | null;
 }) {
   return (
-    <TransactionalPageShell title={title} subtitle={subtitle}>
+    <TransactionalPageShell title={title} subtitle={subtitle} embedded>
       {gridContent ?? (
         <MarketplaceUxStateView
           title={emptyTitle}

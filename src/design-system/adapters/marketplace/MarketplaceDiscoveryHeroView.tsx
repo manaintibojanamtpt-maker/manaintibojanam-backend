@@ -17,6 +17,7 @@ export interface MarketplaceDiscoveryHeroViewProps {
   readonly animated: boolean;
   readonly searchSlot: React.ReactNode;
   readonly locationSlot?: React.ReactNode;
+  readonly onSlideSelect?: (index: number) => void;
 }
 
 export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroViewProps> = ({
@@ -28,41 +29,42 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
   animated,
   searchSlot,
   locationSlot = null,
+  onSlideSelect,
 }) => {
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   return (
     <section
-      className="relative overflow-hidden border-b border-white/5 bg-gradient-to-b from-[#FF7A00]/10 to-transparent"
+      className="relative overflow-hidden border-b border-white/5 bg-[#070504]"
       aria-label="Home kitchens"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] bg-gradient-to-b from-[#FF7A00]/12 to-transparent"
+        style={{ height: 'calc(100% + env(safe-area-inset-top, 0px))' }}
+        aria-hidden
+      />
       <div className="absolute inset-0 z-0">
-        {slides.map((slide, index) => {
-          const isActive = !animated ? index === 0 : index === activeIndex;
-          return (
-            <picture
-              key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-700 ${
-                isActive ? 'opacity-100' : 'opacity-0'
+        {activeSlide ? (
+          <picture className="absolute inset-0" aria-hidden>
+            {activeSlide.avifSrcSet ? (
+              <source type="image/avif" srcSet={activeSlide.avifSrcSet} sizes="100vw" />
+            ) : null}
+            {activeSlide.webpSrcSet ? (
+              <source type="image/webp" srcSet={activeSlide.webpSrcSet} sizes="100vw" />
+            ) : null}
+            <img
+              src={activeSlide.src}
+              alt=""
+              className={`h-full w-full object-cover brightness-[0.55] contrast-[1.05] ${
+                animated ? 'scale-105' : ''
               }`}
-              aria-hidden
-            >
-              {slide.avifSrcSet ? <source type="image/avif" srcSet={slide.avifSrcSet} sizes="100vw" /> : null}
-              {slide.webpSrcSet ? <source type="image/webp" srcSet={slide.webpSrcSet} sizes="100vw" /> : null}
-              <img
-                src={slide.src}
-                alt=""
-                className={`h-full w-full object-cover brightness-[0.55] contrast-[1.05] ${
-                  animated && isActive ? 'scale-105' : ''
-                }`}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-                decoding="async"
-              />
-            </picture>
-          );
-        })}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/80 to-[#030303]/30" />
         <div className="absolute inset-0 bg-black/25" />
       </div>
@@ -81,12 +83,17 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
         <div className="mt-6 max-w-2xl">{searchSlot}</div>
 
         {animated && slides.length > 1 ? (
-          <div className="mt-5 flex gap-2" aria-hidden>
+          <div className="mt-5 flex gap-2" role="tablist" aria-label="Hero scenes">
             {slides.map((slide, index) => (
-              <span
+              <button
                 key={slide.id}
-                className={`h-1.5 rounded-full transition-all ${
-                  index === activeIndex ? 'w-6 bg-[#FF7A00]' : 'w-1.5 bg-white/30'
+                type="button"
+                role="tab"
+                aria-selected={index === activeIndex}
+                aria-label={`Scene ${index + 1}`}
+                onClick={() => onSlideSelect?.(index)}
+                className={`h-2 min-w-2 rounded-full transition-all touch-manipulation ${
+                  index === activeIndex ? 'w-6 bg-[#FF7A00]' : 'w-2 bg-white/35'
                 }`}
               />
             ))}

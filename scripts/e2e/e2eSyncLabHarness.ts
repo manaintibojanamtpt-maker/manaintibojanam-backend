@@ -44,7 +44,7 @@ export const E2E_DEFAULT_MENU_OPTIONS: E2eMenuOptionsUpdate = {
   ],
 };
 
-/** Matches OrderBhojan DEFAULT_DISCOVERY_COORDS (Hyderabad). */
+/** Matches OrderBhojan DEFAULT_DISCOVERY_COORDS (Pune marketplace cluster). */
 const E2E_LOCATION = {
   lat: 17.4401,
   lng: 78.3489,

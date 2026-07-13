@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { useSearchBrowse } from '@/features/search/hooks/useSearchBrowse';
@@ -18,6 +18,7 @@ import { OrderBhojanSearchResultsSkeleton } from './OrderBhojanSearchResultsSkel
 
 export function OrderBhojanSearchExperience() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const query = useSearchSessionStore((s) => s.query);
   const setQuery = useSearchSessionStore((s) => s.setQuery);
   const addTerm = useSearchHistoryStore((s) => s.addTerm);
@@ -31,8 +32,12 @@ export function OrderBhojanSearchExperience() {
   const fieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const initial = searchParams.get('q')?.trim();
+    if (initial) {
+      setQuery(initial);
+    }
     fieldRef.current?.querySelector('input')?.focus();
-  }, []);
+  }, [searchParams, setQuery]);
 
   const selectTerm = (label: string) => {
     setQuery(label);
@@ -49,11 +54,16 @@ export function OrderBhojanSearchExperience() {
   return (
     <div className="min-h-screen bg-[#030303] text-white">
       <Section density="hero" background="gradient" className="!pb-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <SoftButton type="button" tone="ghost" size="compact" onClick={() => navigate(-1)} aria-label="Go back">
+            ← Back
+          </SoftButton>
+        </div>
         <h1 className="sr-only">Search OrderBhojan</h1>
         <OrderBhojanSearchBar onSubmit={handleSubmit} onSelectTerm={selectTerm} inputRef={fieldRef} />
       </Section>
 
-      <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 pb-[var(--ob-chrome-bottom)] sm:px-6 lg:px-8">
         {!online ? (
           <div className="py-6">
             <OrderBhojanDiscoveryOfflineNotice
@@ -116,12 +126,6 @@ export function OrderBhojanSearchExperience() {
             onSelectTerm={selectTerm}
           />
         )}
-      </main>
-
-      <div className="fixed bottom-20 left-4 z-40 sm:bottom-6">
-        <SoftButton type="button" tone="ghost" size="compact" onClick={() => navigate(-1)} aria-label="Go back">
-          ← Back
-        </SoftButton>
       </div>
     </div>
   );

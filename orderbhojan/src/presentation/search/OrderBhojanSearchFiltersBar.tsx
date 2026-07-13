@@ -117,7 +117,8 @@ export function OrderBhojanSearchFiltersBar() {
             key={chip.id}
             type="button"
             onClick={chip.onClick}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${chipClass(chip.active)}`}
+            className={`rounded-full border px-3 py-2 text-xs font-medium transition touch-manipulation min-h-10 ${chipClass(chip.active)}`}
+            aria-pressed={chip.active}
           >
             {chip.label}
           </button>
@@ -131,7 +132,8 @@ export function OrderBhojanSearchFiltersBar() {
             key={option.id}
             type="button"
             onClick={() => apply({ sort: option.id as SearchSort }, ['sort'])}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${chipClass(filters.sort === option.id)}`}
+            className={`rounded-full border px-3 py-2 text-xs font-medium transition touch-manipulation min-h-10 ${chipClass(filters.sort === option.id)}`}
+            aria-pressed={filters.sort === option.id}
           >
             {option.label}
           </button>

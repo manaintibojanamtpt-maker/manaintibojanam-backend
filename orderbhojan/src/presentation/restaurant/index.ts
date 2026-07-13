@@ -4,4 +4,5 @@ export { OrderBhojanRestaurantActions, OrderBhojanRestaurantStickyHeader } from 
 export { OrderBhojanRestaurantMeta } from './OrderBhojanRestaurantMeta';
 export { OrderBhojanRestaurantGallery } from './OrderBhojanRestaurantGallery';
 export { OrderBhojanRestaurantInfoSections } from './OrderBhojanRestaurantInfoSections';
+export { OrderBhojanRestaurantSubscriptionPage } from './OrderBhojanRestaurantSubscriptionPage';
 export { OrderBhojanRestaurantSkeleton } from './OrderBhojanRestaurantSkeleton';

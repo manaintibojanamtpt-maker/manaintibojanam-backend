@@ -11,6 +11,7 @@ import {
 } from '@/features/auth/domain/auth.types';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { isAuthFlowError } from '@/features/auth/application/authService';
+import { resolveAuthRedirect } from './resolveAuthRedirect';
 
 const RECAPTCHA_CONTAINER_ID = 'ob-phone-recaptcha';
 
@@ -22,7 +23,7 @@ export function OrderBhojanPhoneOtpForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
+  const redirectTo = resolveAuthRedirect(location);
 
   const phoneForm = useForm<PhoneOtpSendInput>({
     resolver: zodResolver(phoneOtpSendSchema),

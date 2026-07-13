@@ -76,14 +76,14 @@ export const MarketplaceFloatingCartView: React.FC<MarketplaceFloatingCartViewPr
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="absolute bottom-full mb-3 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 pointer-events-auto overflow-hidden"
+              className="absolute bottom-full mb-3 w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[#120D0A]/95 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl pointer-events-auto"
             >
-              <div className="p-4 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Quick Edit</span>
+              <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.04] p-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/55">Quick edit</span>
                 <button
                   type="button"
                   onClick={() => setSnapState('expanded')}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                  className="p-1 text-white/50 hover:text-white"
                   aria-label="Collapse quick edit"
                 >
                   <ChevronDown size={18} />
@@ -94,23 +94,23 @@ export const MarketplaceFloatingCartView: React.FC<MarketplaceFloatingCartViewPr
                 {lines.map((item) => (
                   <div key={item.id} className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{item.name}</p>
-                      <p className="text-[10px] font-bold text-orange-600">{item.priceLabel}</p>
+                      <p className="truncate text-xs font-bold text-white">{item.name}</p>
+                      <p className="text-[10px] font-bold text-[#FF7A00]">{item.priceLabel}</p>
                     </div>
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full p-1">
+                    <div className="flex items-center gap-2 rounded-full bg-white/10 p-1">
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                        className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-red-500"
+                        className="flex h-8 w-8 items-center justify-center text-white/60 hover:text-red-400 touch-manipulation"
                         aria-label="Decrease quantity"
                       >
                         <Minus size={12} strokeWidth={3} />
                       </button>
-                      <span className="text-xs font-black w-4 text-center dark:text-white">{item.quantity}</span>
+                      <span className="w-4 text-center text-xs font-black text-white">{item.quantity}</span>
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                        className="w-6 h-6 flex items-center justify-center text-orange-600"
+                        className="flex h-8 w-8 items-center justify-center text-[#FF7A00] touch-manipulation"
                         aria-label="Increase quantity"
                       >
                         <Plus size={12} strokeWidth={3} />

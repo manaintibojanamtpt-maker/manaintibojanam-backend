@@ -1,13 +1,13 @@
-import { useNavigate } from 'react-router-dom';
 import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
 import { DiscoveryFiltersBar } from './DiscoveryFiltersBar';
 import { TrendingFoodsSection } from '@/features/experience/ui/home/TrendingFoodsSection';
+import { useDiscoveryFeatureEnabled } from '../hooks/useDiscoveryFeature';
 import { KitchenSpotlightCard } from '@/features/experience/ui/home/KitchenSpotlightCard';
 import { buildDiscoverySpotlightFeed } from '@/features/experience/utils/homeSpotlightFeed';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
-import { useLocationFeatureEnabled, LocationSelectorSheet } from '@/features/location';
+import { useLocationFeatureEnabled, useLocationActions } from '@/features/location';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import {
   OrderBhojanHomeFeedSkeleton,
@@ -17,6 +17,7 @@ import {
   OrderBhojanDiscoveryUxState,
   useOnlineStatus,
 } from '@/presentation/states';
+import { PullToRefresh } from '@/presentation/ui/PullToRefresh';
 
 function DiscoveryActiveFilterBanner() {
   const filters = useDiscoveryFilterStore((s) => s.filters);
@@ -39,10 +40,11 @@ function DiscoveryActiveFilterBanner() {
 }
 
 export function DiscoveryHomeFeed() {
-  const navigate = useNavigate();
   const query = useDiscoveryHome();
+  const discoveryEnabled = useDiscoveryFeatureEnabled();
   const resetFilters = useDiscoveryFilterStore((s) => s.resetFilters);
   const locationEnabled = useLocationFeatureEnabled();
+  const { openSelector } = useLocationActions();
   const online = useOnlineStatus();
 
   if (query.isLoading) {
@@ -107,35 +109,41 @@ export function DiscoveryHomeFeed() {
             void query.refetch();
           }}
           secondaryLabel={locationEnabled ? 'Update location' : undefined}
-          onSecondary={locationEnabled ? () => navigate('/?openLocation=1') : undefined}
+          onSecondary={locationEnabled ? () => openSelector() : undefined}
         />
-        {locationEnabled ? <LocationSelectorSheet /> : null}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {query.data?.locationLabel ? (
-        <p className="text-xs font-medium uppercase tracking-widest text-white/50">
-          Kitchens within {CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of {query.data.locationLabel}
-        </p>
-      ) : null}
-      <DiscoveryFiltersBar />
-      <DiscoveryActiveFilterBanner />
-      {spotlightPlan.sparseCopy ? (
-        <p className="text-sm text-white/60">{spotlightPlan.sparseCopy}</p>
-      ) : null}
-      {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
-        <>
-          <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
-          <TrendingFoodsSection />
-        </>
-      ) : (
-        railsToRender.map((collection) => (
-          <DiscoveryCollectionRail key={collection.id} collection={collection} />
-        ))
-      )}
-    </div>
+    <PullToRefresh
+      disabled={query.isFetching}
+      onRefresh={async () => {
+        await query.refetch();
+      }}
+    >
+      <div className="space-y-6">
+        {query.data?.locationLabel ? (
+          <p className="text-xs font-medium uppercase tracking-widest text-white/50">
+            Kitchens within {CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of {query.data.locationLabel}
+          </p>
+        ) : null}
+        <DiscoveryFiltersBar />
+        <DiscoveryActiveFilterBanner />
+        {spotlightPlan.sparseCopy ? (
+          <p className="text-sm text-white/60">{spotlightPlan.sparseCopy}</p>
+        ) : null}
+        {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
+          <>
+            <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
+            {!discoveryEnabled ? <TrendingFoodsSection /> : null}
+          </>
+        ) : (
+          railsToRender.map((collection) => (
+            <DiscoveryCollectionRail key={collection.id} collection={collection} />
+          ))
+        )}
+      </div>
+    </PullToRefresh>
   );
 }

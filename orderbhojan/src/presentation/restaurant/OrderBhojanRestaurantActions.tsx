@@ -8,16 +8,13 @@ export interface OrderBhojanRestaurantActionsProps {
   readonly restaurantId: string;
   readonly name: string;
   readonly shareText: string;
-  readonly onBack?: () => void;
 }
 
 export function OrderBhojanRestaurantActions({
   restaurantId,
   name,
   shareText,
-  onBack,
 }: OrderBhojanRestaurantActionsProps) {
-  const navigate = useNavigate();
   const isFavorite = useFavoritesStore((s) => s.isFavorite);
   const toggle = useFavoritesStore((s) => s.toggle);
   const favorite = isFavorite(restaurantId);
@@ -38,15 +35,6 @@ export function OrderBhojanRestaurantActions({
   return (
     <GlassCard hoverEffect={false} className="!rounded-full !p-1.5">
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className={iconBtn}
-          aria-label="Go back"
-          onClick={onBack ?? (() => navigate(-1))}
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden />
-        </button>
-        <div className="w-6" aria-hidden />
         <button type="button" className={iconBtn} aria-label="Share restaurant" onClick={() => void share()}>
           <Share2 className="h-5 w-5" aria-hidden />
         </button>
@@ -70,19 +58,29 @@ export function OrderBhojanRestaurantActions({
 
 export function OrderBhojanRestaurantStickyHeader({
   name,
-  visible,
+  onBack,
 }: {
   readonly name: string;
-  readonly visible: boolean;
+  readonly onBack?: () => void;
 }) {
+  const navigate = useNavigate();
+
   return (
     <div
-      className={`fixed left-0 right-0 top-0 z-40 border-b border-white/10 bg-[#030303]/90 px-4 py-3 backdrop-blur-md transition-transform duration-300 ${
-        visible ? 'translate-y-0' : '-translate-y-full'
-      }`}
-      aria-hidden={!visible}
+      className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#030303]/92 px-4 py-3 backdrop-blur-md"
+      style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
-      <p className="truncate text-center text-sm font-semibold text-white">{name}</p>
+      <div className="mx-auto flex max-w-3xl items-center gap-3">
+        <button
+          type="button"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white touch-manipulation"
+          aria-label="Go back"
+          onClick={onBack ?? (() => navigate(-1))}
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{name}</p>
+      </div>
     </div>
   );
 }

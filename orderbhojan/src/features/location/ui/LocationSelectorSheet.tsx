@@ -47,8 +47,7 @@ export function LocationSelectorSheet() {
             fullWidth
             disabled={uiStatus === 'loading'}
             onClick={() => {
-              closeSelector();
-              openWizard();
+              void requestCurrentLocation();
             }}
           >
             <LocateFixed className="h-4 w-4" aria-hidden />

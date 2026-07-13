@@ -41,8 +41,9 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
   useHeroPreload(coverSrc, manifestCover.webpSrcSet);
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white">
-      <OrderBhojanRestaurantStickyHeader name={experience.displayName} visible={collapsed} />
+    <div className="min-h-screen bg-[#030303] pb-28 text-white">
+      <OrderBhojanRestaurantStickyHeader name={experience.displayName} />
+      <div style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top))' }}>
       <OrderBhojanRestaurantHero
         data={data}
         collapsed={collapsed}
@@ -54,16 +55,18 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
         coverSources={experience.coverImage ? undefined : pictureSources(manifestCover, '100vw')}
         logoSrc={logoSrc}
       />
+      </div>
       <OrderBhojanRestaurantInfoSections data={data} />
 
       {experience.openStatus === 'closed' ? (
-        <OrderBhojanRestaurantClosedBanner label={formatOpenStatusLabel(experience.openStatus)} />
+        <OrderBhojanRestaurantClosedBanner
+          label={formatOpenStatusLabel(experience.openStatus)}
+          onBrowse={() => navigate('/')}
+        />
       ) : null}
 
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#030303]/95 p-4 backdrop-blur-md ${
-          collapsed ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : 'pb-[max(1.25rem,env(safe-area-inset-bottom))]'
-        }`}
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#030303]/95 p-4 backdrop-blur-md pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <SoftButton
           type="button"
@@ -75,6 +78,11 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
         >
           Open Menu
         </SoftButton>
+        {experience.openStatus === 'closed' ? (
+          <SoftButton type="button" tone="ghost" className="mt-2 w-full" onClick={() => navigate('/')}>
+            Browse other kitchens
+          </SoftButton>
+        ) : null}
       </div>
     </div>
   );

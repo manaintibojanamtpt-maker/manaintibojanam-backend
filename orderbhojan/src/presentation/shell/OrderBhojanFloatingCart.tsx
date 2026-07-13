@@ -31,7 +31,7 @@ export function OrderBhojanFloatingCart() {
       itemCount={count}
       totalLabel={formatInr(total)}
       lines={viewLines}
-      hidden={pathname.startsWith('/checkout')}
+      hidden={pathname.startsWith('/checkout') || pathname.startsWith('/cart')}
       onUpdateQuantity={(lineId, quantity) => setQuantity(lineId, quantity)}
       onCheckout={() => navigate('/cart')}
     />

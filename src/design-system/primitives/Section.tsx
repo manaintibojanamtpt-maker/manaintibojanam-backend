@@ -20,7 +20,7 @@ export const Section: React.FC<SectionProps> = ({
     default: 'bg-[#030303]',
     subtle: 'bg-[#0A0A0A]',
     dark: 'bg-[#000000]',
-    gradient: 'bg-[#030303] relative overflow-hidden',
+    gradient: 'bg-[#030303] relative overflow-visible',
   };
 
   const densityClasses =

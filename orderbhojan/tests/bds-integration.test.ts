@@ -82,4 +82,10 @@ describe('Storefront design system integration — no custom UI primitives', () 
     assert.match(main, /@\/styles\/globals\.css/);
     assert.doesNotMatch(main, /experience-/);
   });
+
+  it('vite resolves a single react-router-dom instance for BDS + app', () => {
+    const viteConfig = readFileSync(join(root, 'vite.config.ts'), 'utf8');
+    assert.match(viteConfig, /react-router-dom/);
+    assert.match(viteConfig, /dedupe: \['react', 'react-dom', 'react-router', 'react-router-dom'\]/);
+  });
 });

@@ -60,52 +60,67 @@ export function CheckoutPageView({
   const showBothPaymentOptions = showCod && showRazorpay;
 
   return (
-    <TransactionalPageShell title={title} subtitle={subtitle}>
-      {address && onAddressAction ? (
-        <CheckoutDeliveryAddressView address={address} onAction={onAddressAction} />
-      ) : null}
+    <div className="relative">
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-36" embedded>
+        {address && onAddressAction ? (
+          <button
+            type="button"
+            className="w-full text-left touch-manipulation"
+            onClick={onAddressAction}
+            aria-label={`${address.label}: ${address.value}. ${address.actionLabel}`}
+          >
+            <CheckoutDeliveryAddressView address={address} onAction={onAddressAction} />
+          </button>
+        ) : null}
 
-      {quoteLoading && !bill ? (
-        <div aria-busy="true">
-          <Skeleton className="h-48 w-full rounded-2xl" />
-        </div>
-      ) : null}
+        {quoteLoading && !bill ? (
+          <div aria-busy="true" className="space-y-2">
+            <Skeleton className="h-48 w-full rounded-2xl ob-shimmer" />
+            <p className="text-sm text-white/55">Calculating your bill…</p>
+          </div>
+        ) : null}
 
-      {bill ? <CheckoutBillSummaryView bill={bill} /> : null}
+        {bill ? <CheckoutBillSummaryView bill={bill} /> : null}
 
-      <CheckoutContactView contact={contact} onChange={onContactChange} />
+        <CheckoutContactView contact={contact} onChange={onContactChange} />
 
-      {errorMessage ? (
-        <p role="alert" className="text-sm text-red-300">
-          {errorMessage}
-        </p>
-      ) : null}
+        {errorMessage ? (
+          <p role="alert" className="text-sm text-red-300">
+            {errorMessage}
+          </p>
+        ) : null}
 
-      <div className="flex flex-wrap gap-3">
-        <SoftButton type="button" tone="secondary" disabled={actionsDisabled} onClick={onBack}>
+        {hint ? <p className="text-sm text-white/60">{hint}</p> : null}
+
+        <SoftButton type="button" tone="ghost" size="compact" disabled={actionsDisabled} onClick={onBack}>
           {backLabel}
         </SoftButton>
+      </TransactionalPageShell>
 
-        {showCod && onPlaceCod ? (
-          <SoftButton
-            type="button"
-            tone={showBothPaymentOptions ? 'secondary' : 'primary'}
-            disabled={actionsDisabled}
-            onClick={onPlaceCod}
-          >
-            {codBusy ? 'Placing order…' : codLabel}
-          </SoftButton>
-        ) : null}
-
-        {showRazorpay && onPlaceRazorpay ? (
-          <SoftButton type="button" disabled={actionsDisabled} onClick={onPlaceRazorpay}>
-            {razorpayBusy ? 'Opening payment…' : razorpayLabel}
-          </SoftButton>
-        ) : null}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#070504]/95 px-4 py-4 backdrop-blur-xl"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="mx-auto flex max-w-lg flex-col gap-2">
+          {showRazorpay && onPlaceRazorpay ? (
+            <SoftButton type="button" fullWidth disabled={actionsDisabled} onClick={onPlaceRazorpay}>
+              {razorpayBusy ? 'Opening payment…' : razorpayLabel}
+            </SoftButton>
+          ) : null}
+          {showCod && onPlaceCod ? (
+            <SoftButton
+              type="button"
+              fullWidth
+              tone={showBothPaymentOptions ? 'secondary' : 'primary'}
+              disabled={actionsDisabled}
+              onClick={onPlaceCod}
+            >
+              {codBusy ? 'Placing order…' : codLabel}
+            </SoftButton>
+          ) : null}
+        </div>
       </div>
-
-      {hint ? <p className="text-sm text-white/60">{hint}</p> : null}
-    </TransactionalPageShell>
+    </div>
   );
 }
 

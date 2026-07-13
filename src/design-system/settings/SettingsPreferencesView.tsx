@@ -15,7 +15,8 @@ export function SettingsPreferencesView({
 }) {
   return (
     <GlassCard hoverEffect={false} className="!rounded-2xl !p-4" aria-label={title}>
-      <SectionHeader title={title} align="left" className="!mb-3 !mt-0" />
+      <SectionHeader title={title} align="left" className="!mb-1 !mt-0" />
+      <p className="mb-3 text-xs text-white/45">Tap spice or dietary to update. Push notifications opens device settings.</p>
       <div className="divide-y divide-white/10">
         {rows.map((row) => (
           <button

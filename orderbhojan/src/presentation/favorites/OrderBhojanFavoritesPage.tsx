@@ -6,6 +6,9 @@ import {
   FavoritesLoadingView,
   FavoritesPageView,
 } from '@bhojan/storefront-design-system/favorites';
+import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
+import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
+import { Heart } from 'lucide-react';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { OrderBhojanKitchenCard } from '@/presentation/discovery/OrderBhojanKitchenCard';
 import { useFavoritesSync } from '@/features/favorites/hooks/useFavoritesSync';
@@ -21,6 +24,22 @@ export function OrderBhojanFavoritesPage() {
 
   if (favoritesQuery.isLoading) {
     return <FavoritesLoadingView />;
+  }
+
+  if (favoritesQuery.isError) {
+    return (
+      <TransactionalPageShell title="Favorites" subtitle="" embedded>
+        <MarketplaceUxStateView
+          title="Could not load favorites"
+          description="Check your connection and try again."
+          icon={<Heart className="h-7 w-7 text-[#FF7A00]" aria-hidden />}
+          primaryLabel="Retry"
+          onPrimary={() => void favoritesQuery.refetch()}
+          secondaryLabel="Explore restaurants"
+          onSecondary={() => navigate('/')}
+        />
+      </TransactionalPageShell>
+    );
   }
 
   const favorites = favoritesQuery.data ?? [];

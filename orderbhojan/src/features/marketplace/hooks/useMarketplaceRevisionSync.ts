@@ -17,8 +17,10 @@ export function useMarketplaceRevisionSync(enabled = isLiveStorefrontSyncEnabled
     if (!enabled) return;
 
     let cancelled = false;
+    let timer: number | null = null;
 
     const poll = async () => {
+      if (cancelled || document.hidden) return;
       try {
         const payload = await fetchMarketplacePoolRevision();
         const revision = payload.poolSyncRevision;
@@ -35,14 +37,38 @@ export function useMarketplaceRevisionSync(enabled = isLiveStorefrontSyncEnabled
       }
     };
 
-    void poll();
-    const timer = window.setInterval(() => {
+    const startPolling = () => {
+      if (cancelled || timer != null) return;
       void poll();
-    }, REVISION_POLL_MS);
+      timer = window.setInterval(() => {
+        void poll();
+      }, REVISION_POLL_MS);
+    };
+
+    const stopPolling = () => {
+      if (timer == null) return;
+      window.clearInterval(timer);
+      timer = null;
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
+      void poll();
+      startPolling();
+    };
+
+    if (!document.hidden) {
+      startPolling();
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [enabled, queryClient]);
 }

@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
+import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
 import { loadDiscoveryHome, resolveDiscoveryCoords } from '../engine/discoveryEngine';
 import { discoveryKeys } from './discoveryQueryKeys';
@@ -12,7 +11,6 @@ export function useDiscoveryHome() {
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
   const coords = resolveDiscoveryCoords(activeLocation);
-  const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
     queryKey: discoveryKeys.home(coords.lat, coords.lng, filters),
@@ -21,11 +19,14 @@ export function useDiscoveryHome() {
         lat: coords.lat,
         lng: coords.lng,
         page: 1,
-        limit: 6,
+        limit: 24,
         filters,
       }),
     enabled,
-    ...liveQuery,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
     retry: 2,
   });
 }
@@ -37,9 +38,13 @@ export function useDiscoveryLocationInvalidation() {
   const enabled = useDiscoveryFeatureEnabled();
   const lat = activeLocation?.coordinates.lat;
   const lng = activeLocation?.coordinates.lng;
+  const previousCoordsRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || lat == null || lng == null) return;
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    if (previousCoordsRef.current === key) return;
+    previousCoordsRef.current = key;
     void queryClient.invalidateQueries({ queryKey: discoveryKeys.all });
   }, [enabled, lat, lng, queryClient]);
 }

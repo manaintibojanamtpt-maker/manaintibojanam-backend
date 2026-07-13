@@ -97,7 +97,7 @@ function OrderBhojanFoodCustomizeSheetBody({
       instructionsPlaceholder: 'Less spicy, no onion, etc.',
       unitPriceSummary: `${quantity} × ₹${unitPrice}`,
       lineTotalLabel: `₹${lineTotal}`,
-      confirmLabel: 'Add to preview',
+      confirmLabel: 'Add to cart',
     };
   }, [addons, food, instructions, lineTotal, photo.blurDataURL, quantity, selectedVariant?.id, unitPrice]);
 

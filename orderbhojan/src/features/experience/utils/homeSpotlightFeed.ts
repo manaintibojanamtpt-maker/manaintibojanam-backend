@@ -4,7 +4,7 @@ import type { RestaurantPublic } from '@/types/marketplace';
 export type HomeSpotlightMode = 'single' | 'dual' | 'sparse' | 'full';
 
 export const HOME_SPOTLIGHT_SPARSE_COPY =
-  'Mana Inti Bojanam is cooking in your area. More home kitchens are joining soon — you’ll see them here first.';
+  'Home kitchens are cooking in your area. More kitchens join OrderBhojan every week.';
 
 const RESTAURANT_RAIL_COLLECTION_IDS = new Set([
   'nearby',

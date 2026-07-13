@@ -3,6 +3,7 @@ import {
   getDoc,
   serverTimestamp,
   setDoc,
+  updateDoc,
   type Firestore,
 } from 'firebase/firestore';
 import { getFirebaseFirestore, isFirestoreConfigured } from '@/firebase';
@@ -18,6 +19,8 @@ export interface CustomerDocument {
   readonly preferences: {
     readonly notifications: boolean;
     readonly marketing: boolean;
+    readonly spiceLevel?: 'Mild' | 'Medium' | 'Hot';
+    readonly dietary?: 'Veg' | 'Egg' | 'Non-veg';
   };
   readonly createdAt?: unknown;
   readonly updatedAt?: unknown;
@@ -50,6 +53,8 @@ export async function upsertCustomerProfile(user: AuthSessionUser): Promise<Cust
     preferences: {
       notifications: existing.data()?.preferences?.notifications ?? true,
       marketing: existing.data()?.preferences?.marketing ?? false,
+      spiceLevel: existing.data()?.preferences?.spiceLevel ?? 'Medium',
+      dietary: existing.data()?.preferences?.dietary ?? 'Veg',
     },
     updatedAt: serverTimestamp(),
     lastLoginAt: serverTimestamp(),
@@ -86,6 +91,27 @@ function buildCustomerDocument(user: AuthSessionUser, providers?: readonly AuthP
     preferences: {
       notifications: true,
       marketing: false,
+      spiceLevel: 'Medium',
+      dietary: 'Veg',
     },
   };
+}
+
+export async function updateCustomerPreferences(
+  uid: string,
+  patch: Partial<CustomerDocument['preferences']>,
+): Promise<void> {
+  if (!isFirestoreConfigured()) return;
+  const db = getFirebaseFirestore();
+  if (!db) return;
+
+  const updates: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+  };
+  if (patch.notifications !== undefined) updates['preferences.notifications'] = patch.notifications;
+  if (patch.marketing !== undefined) updates['preferences.marketing'] = patch.marketing;
+  if (patch.spiceLevel !== undefined) updates['preferences.spiceLevel'] = patch.spiceLevel;
+  if (patch.dietary !== undefined) updates['preferences.dietary'] = patch.dietary;
+
+  await updateDoc(customerRef(db, uid), updates);
 }

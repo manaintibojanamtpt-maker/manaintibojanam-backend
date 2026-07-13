@@ -128,7 +128,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#FF7A00]/80">
             {kitchen.eligibilityLabel}
           </p>
-          <h3 className="mt-1 text-xl font-bold text-white group-hover:text-[#FF7A00]">{kitchen.name}</h3>
+          <h3 className="mt-1 line-clamp-2 text-xl font-bold text-white group-hover:text-[#FF7A00]">{kitchen.name}</h3>
           {kitchen.cuisineTags?.length ? (
             <p className="mt-1 text-sm text-white/60">{kitchen.cuisineTags.join(' · ')}</p>
           ) : null}
@@ -142,7 +142,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   return (
     <Link
       to={kitchen.storePath}
-      className={`group block rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-[#FF7A00]/40 hover:bg-white/[0.05] hover:shadow-[0_12px_40px_rgba(0,0,0,0.25)] ${className}`}
+      className={`group block h-full min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-[#FF7A00]/40 hover:bg-white/[0.05] hover:shadow-[0_12px_40px_rgba(0,0,0,0.25)] ${className}`}
     >
       <div className="flex gap-4">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white/5">

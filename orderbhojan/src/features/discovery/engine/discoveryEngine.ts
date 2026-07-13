@@ -8,10 +8,13 @@ import { applyDiscoveryFilters } from '../domain/filters';
 import { filtersForDiscoveryCollection } from '../domain/discoveryPolicy';
 import { getDiscoveryApiClient } from '../infrastructure/discoveryApiClient';
 
-/** Default Hyderabad coordinates when M2 location is unavailable. */
+/**
+ * Default Pune coordinates when M2 location is unavailable.
+ * Production kitchens are clustered in Pune; Hyderabad default caused empty mobile discovery.
+ */
 export const DEFAULT_DISCOVERY_COORDS = {
-  lat: 17.4401,
-  lng: 78.3489,
+  lat: 18.49959440695956,
+  lng: 73.97858993491619,
 } as const;
 
 export function resolveDiscoveryCoords(activeLocation?: {

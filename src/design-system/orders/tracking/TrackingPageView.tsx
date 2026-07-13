@@ -59,7 +59,7 @@ export function TrackingActivePageView({
   feedbackSlot,
 }: TrackingActivePageViewProps) {
   return (
-    <TransactionalPageShell title="" subtitle="">
+    <TransactionalPageShell title="Track order" subtitle="">
       <TrackingHeroView hero={hero} />
 
       {delivery ? (

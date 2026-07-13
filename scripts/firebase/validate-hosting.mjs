@@ -44,8 +44,8 @@ if (!existsSync(join(root, 'orderbhojan/dist/index.html'))) {
 }
 
 const dryRun = spawnSync(
-  'firebase',
-  ['deploy', '--only', 'hosting:orderbhojan', '--project', 'orderbhojan', '--dry-run'],
+  'npx',
+  ['firebase', 'deploy', '--only', 'hosting:orderbhojan', '--project', 'orderbhojan', '--dry-run'],
   { cwd: root, stdio: 'inherit', shell: true },
 );
 

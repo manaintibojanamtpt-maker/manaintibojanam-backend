@@ -26,7 +26,9 @@ export function OrderBhojanProfilePage() {
     }
     if (locationEnabled) {
       openSelector();
+      return;
     }
+    navigate('/?openLocation=1');
   };
 
   const displayName = profileQuery.data?.displayName ?? sessionUser?.displayName ?? 'Guest';
@@ -69,7 +71,9 @@ export function OrderBhojanProfilePage() {
       onSupport={() => {
         window.location.href = SUPPORT_MAILTO;
       }}
-      onAbout={() => navigate('/foundation')}
+      onAbout={() => {
+        window.open('https://www.bhojanos.com/about', '_blank', 'noopener,noreferrer');
+      }}
       onSignOut={() => signOut()}
       onRetryProfile={() => void profileQuery.refetch()}
     />
