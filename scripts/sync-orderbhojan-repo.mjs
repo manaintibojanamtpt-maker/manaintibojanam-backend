@@ -3,8 +3,8 @@
  * Sync OrderBhojan from the monorepo (manaintibojanam-backend) into the
  * standalone orderbhojan GitHub repo.
  *
- * Monorepo layout:  orderbhojan/ + packages/{design-system,marketplace-contracts}
- * Standalone layout: repo root = orderbhojan app, packages/ vendored at root.
+ * Monorepo layout:  orderbhojan/ + ../src/design-system + packages/marketplace-contracts
+ * Standalone layout: repo root = orderbhojan app, storefront-src/ + packages/ vendored at root.
  *
  * Usage:
  *   node scripts/sync-orderbhojan-repo.mjs           # build export only
@@ -23,6 +23,13 @@ const ORDERBHOJAN_REMOTE =
   'https://github.com/manaintibojanamtpt-maker/orderbhojan.git';
 const EXPORT_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-export');
 const CLONE_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-remote');
+
+/** Vendored monorepo src/ (storefront design-system + shared lib). */
+function copyStorefrontSrc(exportRoot) {
+  copyTree(path.join(REPO_ROOT, 'src'), path.join(exportRoot, 'storefront-src'), {
+    rootLabel: 'storefront-src/ (monorepo src/)',
+  });
+}
 
 const SKIP_NAMES = new Set([
   'node_modules',
@@ -49,6 +56,10 @@ function log(step, detail = '') {
 }
 
 function copyTree(src, dest, { rootLabel } = {}) {
+  if (!fs.existsSync(src)) {
+    console.warn(`[sync-orderbhojan] skip missing source: ${src}`);
+    return;
+  }
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     if (SKIP_NAMES.has(entry.name)) continue;
@@ -75,8 +86,24 @@ function patchStandaloneText(content) {
       "resolve(root, '../packages/design-system/src')",
       "resolve(root, 'packages/design-system/src')",
     )
+    .replaceAll(
+      "resolve(root, '../packages/design-system/src/constants.ts')",
+      "resolve(root, 'packages/design-system/src/constants.ts')",
+    )
     .replaceAll("path.resolve(process.cwd(), '../scripts/e2e/", "path.resolve(process.cwd(), 'scripts/e2e/")
-    .replaceAll("from '../../scripts/e2e/", "from './e2e/");
+    .replaceAll("from '../../scripts/e2e/", "from './e2e/")
+    .replaceAll('../src/design-system', 'storefront-src/design-system')
+    .replaceAll('../../../src/design-system', '../../storefront-src/design-system')
+    .replaceAll(
+      "resolve(dirname(fileURLToPath(import.meta.url)), '../..')",
+      "resolve(dirname(fileURLToPath(import.meta.url)), '..')",
+    )
+    .replaceAll("resolve(root, 'orderbhojan/node_modules')", "resolve(root, 'node_modules')")
+    .replaceAll("resolve(root, 'src/node_modules')", "resolve(root, 'storefront-src/node_modules')")
+    .replaceAll(
+      'npm run build && cd .. && firebase deploy',
+      'npm run build && firebase deploy',
+    );
 }
 
 function patchFile(filePath) {
@@ -85,21 +112,100 @@ function patchFile(filePath) {
   if (next !== raw) fs.writeFileSync(filePath, next, 'utf8');
 }
 
+function patchTsconfig(exportRoot) {
+  const tsconfigPath = path.join(exportRoot, 'tsconfig.json');
+  if (!fs.existsSync(tsconfigPath)) return;
+  const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
+  tsconfig.compilerOptions ??= {};
+  tsconfig.compilerOptions.paths ??= {};
+  tsconfig.compilerOptions.paths['@bhojan/storefront-design-system'] = [
+    'storefront-src/design-system/index.ts',
+  ];
+  tsconfig.compilerOptions.paths['@bhojan/storefront-design-system/*'] = [
+    'storefront-src/design-system/*',
+  ];
+  fs.writeFileSync(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`, 'utf8');
+}
+
+function patchStandaloneCi(exportRoot) {
+  const ciPath = path.join(exportRoot, '.github', 'workflows', 'ci.yml');
+  if (!fs.existsSync(ciPath)) return;
+  const ci = `name: OrderBhojan CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build marketplace contracts
+        run: npm run build --prefix packages/marketplace-contracts
+
+      - name: Link storefront design-system peer deps for tsc
+        run: node scripts/link-storefront-peer-deps.mjs
+
+      - name: Production readiness gate
+        run: npm run gate:prod
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+`;
+  fs.writeFileSync(ciPath, ci, 'utf8');
+}
+
+function patchStandaloneGitignore(exportRoot) {
+  const gitignorePath = path.join(exportRoot, '.gitignore');
+  const lines = fs.existsSync(gitignorePath)
+    ? fs.readFileSync(gitignorePath, 'utf8').split(/\r?\n/)
+    : [];
+  for (const line of ['storefront-src/node_modules', 'packages/node_modules']) {
+    if (!lines.includes(line)) lines.push(line);
+  }
+  fs.writeFileSync(gitignorePath, `${lines.filter(Boolean).join('\n')}\n`, 'utf8');
+}
+
 function patchKnownFiles(exportRoot) {
   const targets = [
     'package.json',
     'package-lock.json',
+    'tsconfig.json',
+    'vite.config.ts',
+    'src/styles/globals.css',
+    'scripts/link-storefront-peer-deps.mjs',
     'scripts/gate-bds2.mjs',
     'scripts/gate-px2.mjs',
     'scripts/owner-sync-e2e.ts',
     'tests/m15-experience.test.ts',
     'tests/px2-design-implementation.test.ts',
+    'tests/bds-theme.test.ts',
     'tests/owner-sync-e2e.test.ts',
   ];
   for (const rel of targets) {
     const abs = path.join(exportRoot, rel);
     if (fs.existsSync(abs)) patchFile(abs);
   }
+  patchTsconfig(exportRoot);
+  patchStandaloneCi(exportRoot);
+  patchStandaloneGitignore(exportRoot);
   log('patched', 'standalone path references');
 }
 
@@ -113,8 +219,10 @@ function buildExport() {
   fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
   copyTree(path.join(REPO_ROOT, 'orderbhojan'), EXPORT_DIR, { rootLabel: 'orderbhojan/' });
+  copyStorefrontSrc(EXPORT_DIR);
+
   copyTree(path.join(REPO_ROOT, 'packages', 'design-system'), path.join(EXPORT_DIR, 'packages', 'design-system'), {
-    rootLabel: 'packages/design-system',
+    rootLabel: 'packages/design-system (BDS test fixtures)',
   });
   copyTree(
     path.join(REPO_ROOT, 'packages', 'marketplace-contracts'),
@@ -212,7 +320,7 @@ if (shouldPush) {
   ensureMonorepoRemote();
   console.log('\nRepos:');
   console.log('  BhojanOS + backend  → git push origin main   (manaintibojanam-backend)');
-  console.log('  OrderBhojan app     → node scripts/sync-orderbhojan-repo.mjs --push');
+  console.log('  OrderBhojan app     → npm run sync:orderbhojan-repo:push');
 } else {
   console.log(`\nExport ready at ${exportRoot}`);
   console.log('Run with --push to commit and push to the orderbhojan repo.');

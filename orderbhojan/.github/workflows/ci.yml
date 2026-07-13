@@ -24,10 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build vendored workspace packages
-        run: |
-          npm run build --prefix packages/marketplace-contracts
-          npm run build --prefix packages/design-system
+      - name: Build marketplace contracts
+        run: npm run build --prefix packages/marketplace-contracts
+
+      - name: Link storefront design-system peer deps for tsc
+        run: node scripts/link-storefront-peer-deps.mjs
 
       - name: Production readiness gate
         run: npm run gate:prod
