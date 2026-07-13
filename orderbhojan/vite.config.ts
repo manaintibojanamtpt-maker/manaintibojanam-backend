@@ -12,7 +12,7 @@ export default defineConfig({
           if (id.includes('node_modules/firebase')) return 'firebase';
           if (id.includes('node_modules/framer-motion')) return 'motion';
           if (id.includes('node_modules/@tanstack/react-query')) return 'query';
-          if (id.includes('node_modules/react-router')) return 'router';
+          if (id.includes('react-router-dom') || id.includes('node_modules/react-router')) return 'router';
           if (id.includes('node_modules/lucide-react')) return 'icons';
           if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react-vendor';
         },
@@ -28,13 +28,15 @@ export default defineConfig({
       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
       'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime'),
+      'react-router-dom': path.resolve(__dirname, './node_modules/react-router-dom'),
       'lucide-react': path.resolve(__dirname, './node_modules/lucide-react'),
     },
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
   },
   optimizeDeps: {
     // Local file: package — pre-bundling caches stale exports when BDS is rebuilt.
     exclude: ['@bhojan/storefront-design-system'],
+    include: ['react-router-dom'],
   },
   plugins: [
     tailwindcss(),
@@ -46,8 +48,8 @@ export default defineConfig({
         name: 'OrderBhojan',
         short_name: 'OrderBhojan',
         description: 'India\'s next-generation food ordering marketplace',
-        theme_color: '#0a0706',
-        background_color: '#0a0706',
+        theme_color: '#070504',
+        background_color: '#070504',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -61,6 +63,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        globIgnores: ['**/hero/**', '**/categories/**', '**/brand/**'],
       },
     }),
   ],
