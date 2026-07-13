@@ -232,7 +232,7 @@ function mergeRestaurantPools(
   const merged: RestaurantPublic[] = [];
   for (const pool of pools) {
     for (const restaurant of pool) {
-      const key = restaurant.slug || restaurant.tenantId;
+      const key = restaurant.restaurantSlug || restaurant.restaurantId;
       if (!key || seen.has(key)) continue;
       seen.add(key);
       merged.push(restaurant);

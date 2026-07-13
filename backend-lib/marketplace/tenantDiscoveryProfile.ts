@@ -53,7 +53,7 @@ export function projectTenantDiscoveryProfile(input: {
   const tenant = parseFirestoreTenant(input.tenantId, input.raw);
   const timing = resolveStoreTiming(tenant, input.raw);
   const mp = tenant.marketplace;
-  const visible = isConsumerListedTenant(input.raw);
+  const visible = isConsumerListedTenant(input.raw, input.tenantId);
 
   let location: TenantDiscoveryProfile['location'];
   if (tenant.location && tenant.location.lat && tenant.location.lng) {
