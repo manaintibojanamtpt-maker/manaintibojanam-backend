@@ -9,9 +9,6 @@ on:
 jobs:
   gate-prod:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: orderbhojan
 
     steps:
       - uses: actions/checkout@v4
@@ -20,28 +17,32 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: orderbhojan/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            orderbhojan/package-lock.json
+            packages/design-system/package-lock.json
+            packages/marketplace-contracts/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
 
       - name: Install workspace package dependencies
         run: |
-          npm ci --prefix ../packages/design-system
-          npm ci --prefix ../packages/marketplace-contracts
+          npm ci --prefix ./packages/design-system
+          npm ci --prefix ./packages/marketplace-contracts
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build linked workspace packages
+      - name: Build workspace packages
         run: |
-          npm run build --prefix ../packages/marketplace-contracts
-          npm run build --prefix ../packages/design-system
+          npm run build --prefix ./packages/marketplace-contracts
+          npm run build --prefix ./packages/design-system
+
+      - name: Install orderbhojan dependencies
+        run: npm ci
+        working-directory: orderbhojan
 
       - name: Production readiness gate
         run: npm run gate:prod
-
-      - name: Install root Firebase tooling
-        run: npm ci
-        working-directory: .
+        working-directory: orderbhojan
 
       - name: Validate Firebase hosting targets
         run: npm run firebase:validate-hosting
-        working-directory: .
