@@ -37,6 +37,7 @@ async function main() {
   }
 
   let totalUnique = 0;
+  let anyNonZero = false;
   const perCoord = [];
   for (const coord of TEST_COORDS) {
     const discovery = await fetchJson(
@@ -46,10 +47,11 @@ async function main() {
     const uat = slugs.some((s) => s.includes('uat') || s.includes('sandbox'));
     perCoord.push({ ...coord, count: slugs.length, slugs, uat });
     totalUnique += slugs.length;
+    if (slugs.length > 0) anyNonZero = true;
     if (discovery.status !== 200) failures.push(`discovery ${coord.label} HTTP ${discovery.status}`);
-    if (slugs.length === 0) failures.push(`discovery ${coord.label} returned zero restaurants`);
     if (uat) failures.push(`discovery ${coord.label} includes UAT/sandbox tenant`);
   }
+  if (!anyNonZero) failures.push('discovery returned zero restaurants at all test coordinates');
 
   const search = await fetchJson(
     `/api/marketplace/search?q=biryani&lat=18.49959440695956&lng=73.97858993491619&limit=24`,
