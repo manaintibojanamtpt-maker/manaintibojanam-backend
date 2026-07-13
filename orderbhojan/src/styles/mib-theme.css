@@ -140,6 +140,19 @@
   }
 }
 
+@keyframes ob-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ob-menu-enter {
+  animation: ob-fade-in 0.4s ease forwards;
+}
+
 .ob-shimmer {
   background: linear-gradient(
     90deg,

@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
-import { useHeroPreload } from '@/features/experience/hooks/useHeroPreload';
 import type { FoodPublic } from '@/types/marketplace-food';
-import { resolveFoodItemPhoto } from '@/features/food/data/food-item-photo-manifest';
 import { groupItemsByCategory } from '@/features/food/domain/formatters';
 import { hasBestsellerLabel } from '@/features/food/domain/contractPresentation';
 import { useCategoryScrollSpy } from '@/features/food/hooks/useCategoryScrollSpy';
@@ -64,10 +62,6 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
     return merged.slice(0, 6);
   }, [menu?.featuredIds, itemMap, items]);
 
-  const heroFood = signatureItems[0];
-  const heroPhoto = heroFood ? resolveFoodItemPhoto(heroFood.foodId, 960, '100vw', 88) : null;
-  useHeroPreload(heroPhoto?.preloadHref ?? '', heroPhoto?.srcSet);
-
   if (query.isLoading) return <OrderBhojanFoodMenuSkeleton />;
 
   if (query.isError || !menu) {
@@ -88,7 +82,9 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
   }
 
   return (
-    <div className={`min-h-screen bg-[#030303] text-white${enterFromRestaurant ? ' opacity-0 animate-[fadeIn_0.4s_ease_forwards]' : ''}`}>
+    <div
+      className={`min-h-screen bg-[#030303] text-white${enterFromRestaurant ? ' ob-menu-enter' : ''}`}
+    >
       <OrderBhojanFoodRestaurantStrip
         slug={restaurantSlug}
         name={restaurantName}

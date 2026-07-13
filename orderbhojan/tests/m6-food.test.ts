@@ -137,6 +137,8 @@ describe('M6 food module structure', () => {
     );
     assert.match(experience, /OrderBhojanMenuErrorState/);
     assert.match(experience, /OrderBhojanMenuEmptyState/);
+    assert.match(experience, /ob-menu-enter/);
+    assert.doesNotMatch(experience, /animate-\[fadeIn/);
     assert.doesNotMatch(experience, /@bhojan\/design-system/);
   });
 

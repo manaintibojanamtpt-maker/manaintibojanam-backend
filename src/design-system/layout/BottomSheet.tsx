@@ -71,10 +71,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   }
 
   return createPortal(
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen ? (
         <>
           <m.button
+            key="bottom-sheet-backdrop"
             type="button"
             aria-label="Close"
             initial={{ opacity: 0 }}
@@ -85,6 +86,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             className="fixed inset-0 z-[1200] cursor-default border-0 bg-black/60 backdrop-blur-sm"
           />
           <m.div
+            key="bottom-sheet-panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? 'bottom-sheet-title' : undefined}
