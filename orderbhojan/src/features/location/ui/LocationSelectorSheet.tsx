@@ -15,7 +15,7 @@ import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
   const open = useLocationSessionStore((s) => s.selectorOpen);
-  const { closeSelector, requestCurrentLocation, selectSavedAddress, selectRecentLocation, openWizard } = useLocationActions();
+  const { closeSelector, requestCurrentLocation, selectSavedAddress, selectRecentLocation } = useLocationActions();
   const { uiStatus, uiError } = useLocationUiState();
   const active = useActiveLocation();
   const saved = useSavedAddressesList();
@@ -96,7 +96,7 @@ export function LocationSelectorSheet() {
             fullWidth
             onClick={() => {
               closeSelector();
-              openWizard();
+              setShowAddressForm(true);
             }}
           >
             Enter address manually
@@ -134,7 +134,7 @@ export function LocationSelectorSheet() {
                 fullWidth
                 onClick={() => {
                   closeSelector();
-                  openWizard();
+                  setShowAddressForm(true);
                 }}
               >
                 Add new address

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
-import { useActiveLocation } from '@/features/location';
+import { hasActiveDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { useAuth } from '@/shared/providers/AuthProvider';
@@ -101,7 +101,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
-    itemCount > 0 && Boolean(resolvedRestaurantId) && Boolean(contextToken);
+    itemCount > 0 &&
+    Boolean(resolvedRestaurantId) &&
+    Boolean(contextToken) &&
+    hasActiveDeliveryLocation(activeLocation);
 
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {

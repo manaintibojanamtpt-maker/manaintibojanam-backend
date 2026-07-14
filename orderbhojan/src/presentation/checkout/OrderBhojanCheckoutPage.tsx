@@ -8,6 +8,7 @@ import {
 import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
 import { phoneNumberSchema } from '@/features/auth/domain/auth.types';
 import {
+  hasActiveDeliveryLocation,
   useActiveLocation,
   useLocationActions,
   useLocationFeatureEnabled,
@@ -30,7 +31,7 @@ export function OrderBhojanCheckoutPage() {
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
   const { uiStatus } = useLocationUiState();
-  const { openWizard, openSelector } = useLocationActions();
+  const { openSelector } = useLocationActions();
   const {
     quote,
     paymentMethods,
@@ -55,6 +56,7 @@ export function OrderBhojanCheckoutPage() {
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const showBothPaymentOptions = supportsCod && supportsRazorpay;
+  const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
 
   const paymentSubtitle = useMemo(() => {
     if (showBothPaymentOptions) return 'Choose how you want to pay';
@@ -133,6 +135,19 @@ export function OrderBhojanCheckoutPage() {
     );
   }
 
+  if (locationEnabled && !hasDeliveryLocation) {
+    return (
+      <TransactionalPageShell title="Checkout" subtitle="">
+        <MarketplaceUxStateView
+          title="Set delivery location"
+          description="Add your delivery address to complete checkout."
+          primaryLabel="Add address"
+          onPrimary={() => openSelector()}
+        />
+      </TransactionalPageShell>
+    );
+  }
+
   if (!canCheckout) {
     return (
       <TransactionalPageShell title="Checkout" subtitle="">
@@ -147,11 +162,7 @@ export function OrderBhojanCheckoutPage() {
   }
 
   const handleAddressAction = () => {
-    if (activeLocation) {
-      openSelector();
-      return;
-    }
-    openWizard();
+    openSelector();
   };
 
   const addressLabel =

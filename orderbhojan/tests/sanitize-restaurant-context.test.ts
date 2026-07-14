@@ -105,7 +105,6 @@ describe('recovery-01 discovery copy', () => {
       resolve(root, '../src/design-system/cart/CheckoutDeliveryAddressView.tsx'),
       'utf8',
     );
-    assert.match(checkout, /openWizard/);
     assert.match(checkout, /openSelector/);
     assert.match(pageView, /<button[\s\S]*onClick=\{onAddressAction\}/);
     assert.doesNotMatch(deliveryView, /<SoftButton/);

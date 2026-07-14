@@ -3,8 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
-import { useActiveLocation } from '@/features/location';
-import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
+import { hasActiveDeliveryLocation, useActiveLocation } from '@/features/location';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 
 export function useCartValidation() {
@@ -20,7 +19,10 @@ export function useCartValidation() {
       if (!resolvedRestaurantId || !contextToken) {
         throw new Error('Restaurant context is missing');
       }
-      const coords = resolveRestaurantCoords(activeLocation ?? null);
+      if (!hasActiveDeliveryLocation(activeLocation)) {
+        throw new Error('Set your delivery location before checkout.');
+      }
+      const coords = activeLocation!.coordinates;
       return getMarketplaceApiClient().validateCart({
         restaurantId: resolvedRestaurantId,
         contextToken,

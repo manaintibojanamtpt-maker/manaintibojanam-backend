@@ -19,6 +19,7 @@ import {
   type AddressCascadeSelection,
   validatePincodeForArea,
 } from '../data/india/reference';
+import { useAuth } from '@/shared/providers/AuthProvider';
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useActiveLocation } from '../hooks/useActiveLocation';
 import { MapPinPicker } from './MapPinPicker';
@@ -42,7 +43,8 @@ function resolveInitialCascade(displayLabel?: string): AddressCascadeSelection {
 }
 
 function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) {
-  const { saveNewAddress } = useLocationActions();
+  const { saveNewAddress, setManualSession } = useLocationActions();
+  const { isAuthenticated } = useAuth();
   const active = useActiveLocation();
   const [label, setLabel] = useState<SavedAddressInput['label']>('home');
   const [customLabel, setCustomLabel] = useState('');
@@ -111,7 +113,13 @@ function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) 
     }
     setSaving(true);
     try {
-      await saveNewAddress(parsed.data);
+      if (isAuthenticated) {
+        await saveNewAddress(parsed.data);
+      } else {
+        const address = buildAddress();
+        const sessionLabel = address.formattedAddress ?? address.street;
+        await setManualSession(address.coordinates, sessionLabel);
+      }
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
