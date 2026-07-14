@@ -48,7 +48,7 @@ export function mapRestaurantPublicToKitchenCard(restaurant: RestaurantPublic): 
     tenantId: restaurant.restaurantId,
     slug: restaurant.restaurantSlug,
     name: restaurant.displayName,
-    distanceKm: restaurant.distanceKm ?? 0,
+    distanceKm: restaurant.distanceKm,
     etaMins,
     rating: restaurant.rating,
     cuisineTags: restaurant.cuisines.slice(0, 2),

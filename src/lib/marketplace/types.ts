@@ -32,7 +32,7 @@ export interface MarketplaceKitchenCard {
   readonly tenantId: string;
   readonly slug: string;
   readonly name: string;
-  readonly distanceKm: number;
+  readonly distanceKm?: number;
   readonly etaMins?: number;
   readonly rating?: number;
   readonly cuisineTags?: readonly string[];

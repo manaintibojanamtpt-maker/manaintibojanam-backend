@@ -51,12 +51,17 @@ function KitchenThumbnail({
 }
 
 function KitchenMetadata({ kitchen }: { kitchen: MarketplaceKitchenCard }) {
+  const distanceKm = kitchen.distanceKm;
+  const showDistance = distanceKm != null && Number.isFinite(distanceKm);
+
   return (
     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/60">
-      <span className="inline-flex items-center gap-1">
-        <MapPin className="h-3.5 w-3.5" />
-        {kitchen.distanceKm.toFixed(1)} km
-      </span>
+      {showDistance ? (
+        <span className="inline-flex items-center gap-1">
+          <MapPin className="h-3.5 w-3.5" />
+          {distanceKm.toFixed(1)} km
+        </span>
+      ) : null}
       {kitchen.etaMins !== undefined && (
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3.5 w-3.5" />
