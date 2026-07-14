@@ -251,6 +251,13 @@ function buildExport() {
   return EXPORT_DIR;
 }
 
+function ensureCloneRemoteAuth() {
+  execSync(`git remote set-url origin ${authenticatedRemoteUrl()}`, {
+    cwd: CLONE_DIR,
+    stdio: 'inherit',
+  });
+}
+
 function syncIntoClone(exportRoot) {
   if (!fs.existsSync(path.join(CLONE_DIR, '.git'))) {
     fs.mkdirSync(path.dirname(CLONE_DIR), { recursive: true });
@@ -258,6 +265,7 @@ function syncIntoClone(exportRoot) {
     log('clone', ORDERBHOJAN_REMOTE_BASE);
     execSync(`git clone ${remoteUrl} "${CLONE_DIR}"`, { stdio: 'inherit' });
   } else {
+    ensureCloneRemoteAuth();
     execSync('git reset --hard HEAD', { cwd: CLONE_DIR, stdio: 'inherit' });
     execSync('git clean -fd', { cwd: CLONE_DIR, stdio: 'inherit' });
     log('pull', 'orderbhojan remote');
@@ -313,6 +321,7 @@ function pushClone() {
     );
     process.exit(1);
   }
+  ensureCloneRemoteAuth();
   execSync('git push origin main', { cwd: CLONE_DIR, stdio: 'inherit' });
   log('pushed', 'origin/main on orderbhojan');
 }
@@ -331,6 +340,16 @@ function ensureMonorepoRemote() {
 
 const exportRoot = buildExport();
 if (shouldPush) {
+  if (process.env.CI === 'true' && !process.env.ORDERBHOJAN_SYNC_TOKEN?.trim()) {
+    console.error(
+      '[sync-orderbhojan] ORDERBHOJAN_SYNC_TOKEN secret is required in CI for --push',
+    );
+    console.error(
+      'Add a fine-grained GitHub PAT with contents:write on manaintibojanamtpt-maker/orderbhojan',
+    );
+    console.error('Repository secret name: ORDERBHOJAN_SYNC_TOKEN');
+    process.exit(1);
+  }
   syncIntoClone(exportRoot);
   pushClone();
   ensureMonorepoRemote();

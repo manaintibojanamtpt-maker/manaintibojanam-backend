@@ -48,5 +48,7 @@ jobs:
         run: npm run gate:prod
         working-directory: orderbhojan
 
-      - name: Validate Firebase hosting targets
+      - name: Validate Firebase hosting targets (static)
         run: npm run firebase:validate-hosting
+        env:
+          CI: true

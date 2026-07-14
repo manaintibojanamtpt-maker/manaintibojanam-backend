@@ -28,7 +28,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Skip sync when ORDERBHOJAN_SYNC_TOKEN is not configured
+        if: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN == '' }}
+        run: |
+          echo "::notice title=Sync skipped::Add repository secret ORDERBHOJAN_SYNC_TOKEN (PAT with contents:write on manaintibojanamtpt-maker/orderbhojan) to enable automatic standalone repo sync."
+
       - name: Sync and push to orderbhojan repo
+        if: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN != '' }}
         env:
           ORDERBHOJAN_SYNC_TOKEN: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN }}
         run: node scripts/sync-orderbhojan-repo.mjs --push

@@ -43,6 +43,17 @@ if (!existsSync(join(root, 'orderbhojan/dist/index.html'))) {
   console.warn('[validate-firebase-hosting] orderbhojan/dist/index.html missing — run npm run build --prefix orderbhojan before deploy');
 }
 
+const hasFirebaseToken = Boolean(process.env.FIREBASE_TOKEN?.trim());
+const skipDryRun = process.env.CI === 'true' && !hasFirebaseToken;
+
+if (skipDryRun) {
+  console.log(
+    '[validate-firebase-hosting] Skipping firebase deploy dry-run in CI (set FIREBASE_TOKEN to enable live auth check)',
+  );
+  console.log('[validate-firebase-hosting] Configuration OK — orderbhojan deploy targets https://orderbhojan.web.app');
+  process.exit(0);
+}
+
 const dryRun = spawnSync(
   'npx',
   ['firebase', 'deploy', '--only', 'hosting:orderbhojan', '--project', 'orderbhojan', '--dry-run'],
