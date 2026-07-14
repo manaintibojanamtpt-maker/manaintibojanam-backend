@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion';
 
@@ -32,6 +32,12 @@ function unlockPageScroll() {
   if (scrollRoot) scrollRoot.style.overflow = '';
 }
 
+function isMobileTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return true;
+  return navigator.maxTouchPoints > 1 && window.matchMedia('(pointer: coarse)').matches;
+}
+
 const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
   onClose,
@@ -41,19 +47,20 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   initialSnap = 0,
   panelClassName = '',
 }) => {
+  const isMobileTouch = useMemo(() => isMobileTouchDevice(), []);
   const dragControls = useDragControls();
   const [panelReady, setPanelReady] = useState(false);
-  const [backdropReady, setBackdropReady] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setPanelReady(false);
-      setBackdropReady(false);
-      return undefined;
     }
-    const timeout = window.setTimeout(() => setBackdropReady(true), 320);
-    return () => window.clearTimeout(timeout);
   }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !isMobileTouch) return;
+    setPanelReady(true);
+  }, [isOpen, isMobileTouch]);
 
   useEffect(() => {
     if (!isOpen || !panelReady) return undefined;
@@ -78,6 +85,38 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     }
   };
 
+  const panelHeightStyle = {
+    height: `${snapPoints[initialSnap]}vh`,
+    maxHeight: 'calc(100dvh - 24px)',
+  };
+
+  const panelBaseClass =
+    `fixed bottom-0 left-0 right-0 z-[1201] flex flex-col rounded-t-[32px] bg-white shadow-2xl dark:bg-gray-900 pb-safe ${panelClassName}`.trim();
+
+  const panelContent = (
+    <>
+      <div
+        className={`flex w-full shrink-0 justify-center pb-2 pt-4 ${isMobileTouch ? 'cursor-default' : 'cursor-grab touch-none active:cursor-grabbing'}`}
+        onPointerDown={isMobileTouch ? undefined : (event) => dragControls.start(event)}
+      >
+        <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+      </div>
+      {title ? (
+        <div className="shrink-0 px-6 pb-4 text-center">
+          <h3 id="bottom-sheet-title" className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {title}
+          </h3>
+        </div>
+      ) : null}
+      <div
+        className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 no-scrollbar touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {children}
+      </div>
+    </>
+  );
+
   if (typeof document === 'undefined') {
     return null;
   }
@@ -91,58 +130,53 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             type="button"
             aria-label="Close"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: panelReady ? 1 : 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={backdropReady ? onClose : undefined}
-            className={`fixed inset-0 z-[1200] cursor-default border-0 bg-black/60 backdrop-blur-sm${backdropReady ? '' : ' pointer-events-none'}`.trim()}
+            transition={{ duration: isMobileTouch ? 0.12 : 0.2 }}
+            onClick={panelReady ? onClose : undefined}
+            className={`fixed inset-0 z-[1200] cursor-default touch-manipulation border-0 bg-black/60 backdrop-blur-sm${panelReady ? '' : ' pointer-events-none'}`.trim()}
           />
-          <m.div
-            key="bottom-sheet-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={title ? 'bottom-sheet-title' : undefined}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', bounce: 0.12, duration: 0.38 }}
-            drag="y"
-            dragControls={dragControls}
-            dragListener={false}
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.08}
-            onDragEnd={handleDragEnd}
-            onAnimationComplete={() => {
-              if (!isOpen) return;
-              setPanelReady(true);
-              setBackdropReady(true);
-            }}
-            className={`fixed bottom-0 left-0 right-0 z-[1201] flex flex-col rounded-t-[32px] bg-white shadow-2xl will-change-transform dark:bg-gray-900 pb-safe ${panelClassName}`.trim()}
-            style={{
-              height: `${snapPoints[initialSnap]}vh`,
-              maxHeight: 'calc(100dvh - 24px)',
-            }}
-          >
+          {isMobileTouch ? (
             <div
-              className="flex w-full shrink-0 cursor-grab touch-none justify-center pb-2 pt-4 active:cursor-grabbing"
-              onPointerDown={(event) => dragControls.start(event)}
+              key="bottom-sheet-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+              className={panelBaseClass}
+              style={{
+                ...panelHeightStyle,
+                transform: 'translate3d(0,0,0)',
+                WebkitTransform: 'translate3d(0,0,0)',
+              }}
             >
-              <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+              {panelContent}
             </div>
-            {title ? (
-              <div className="shrink-0 px-6 pb-4 text-center">
-                <h3 id="bottom-sheet-title" className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-                  {title}
-                </h3>
-              </div>
-            ) : null}
-            <div
-              className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 no-scrollbar"
-              style={{ WebkitOverflowScrolling: 'touch' }}
+          ) : (
+            <m.div
+              key="bottom-sheet-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', bounce: 0.12, duration: 0.38 }}
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.08}
+              onDragEnd={handleDragEnd}
+              onAnimationComplete={() => {
+                if (!isOpen) return;
+                setPanelReady(true);
+              }}
+              className={`${panelBaseClass} will-change-transform`}
+              style={panelHeightStyle}
             >
-              {children}
-            </div>
-          </m.div>
+              {panelContent}
+            </m.div>
+          )}
         </>
       ) : null}
     </AnimatePresence>,
