@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion';
 
@@ -42,14 +42,26 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   panelClassName = '',
 }) => {
   const dragControls = useDragControls();
+  const [panelReady, setPanelReady] = useState(false);
+  const [backdropReady, setBackdropReady] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) {
+      setPanelReady(false);
+      setBackdropReady(false);
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => setBackdropReady(true), 320);
+    return () => window.clearTimeout(timeout);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !panelReady) return undefined;
     lockPageScroll();
     return () => {
       unlockPageScroll();
     };
-  }, [isOpen]);
+  }, [isOpen, panelReady]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,7 +83,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   }
 
   return createPortal(
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {isOpen ? (
         <>
           <m.button
@@ -82,8 +94,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[1200] cursor-default border-0 bg-black/60 backdrop-blur-sm"
+            onClick={backdropReady ? onClose : undefined}
+            className={`fixed inset-0 z-[1200] cursor-default border-0 bg-black/60 backdrop-blur-sm${backdropReady ? '' : ' pointer-events-none'}`.trim()}
           />
           <m.div
             key="bottom-sheet-panel"
@@ -100,6 +112,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={0.08}
             onDragEnd={handleDragEnd}
+            onAnimationComplete={() => {
+              if (!isOpen) return;
+              setPanelReady(true);
+              setBackdropReady(true);
+            }}
             className={`fixed bottom-0 left-0 right-0 z-[1201] flex flex-col rounded-t-[32px] bg-white shadow-2xl will-change-transform dark:bg-gray-900 pb-safe ${panelClassName}`.trim()}
             style={{
               height: `${snapPoints[initialSnap]}vh`,

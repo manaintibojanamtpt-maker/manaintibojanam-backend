@@ -15,7 +15,7 @@ interface LocationChipProps {
 export function LocationChip({ className = '', variant = 'hero' }: LocationChipProps) {
   const active = useActiveLocation();
   const { uiStatus, uiError } = useLocationUiState();
-  const { openSelector, closeSelector, requestCurrentLocation } = useLocationActions();
+  const { openSelector, requestCurrentLocation } = useLocationActions();
   const selectorOpen = useLocationSessionStore((s) => s.selectorOpen);
 
   const label =
@@ -24,10 +24,6 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       : active?.displayLabel ?? PLACEHOLDER;
 
   const handleClick = () => {
-    if (selectorOpen) {
-      closeSelector();
-      return;
-    }
     if (uiStatus === 'error' && uiError?.retryable) {
       void requestCurrentLocation();
       return;
