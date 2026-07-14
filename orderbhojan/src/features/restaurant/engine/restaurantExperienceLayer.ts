@@ -1,3 +1,4 @@
+import { DEFAULT_MARKETPLACE_COORDS } from '@/lib/marketplaceDefaults';
 import { getRestaurantApiClient } from '../infrastructure/restaurantApiClient';
 import type {
   RestaurantExperienceApiPayload,
@@ -8,10 +9,7 @@ import type {
   RestaurantOffersResponse,
 } from '@/types/marketplace-restaurant';
 
-export const DEFAULT_RESTAURANT_COORDS = {
-  lat: 17.4401,
-  lng: 78.3489,
-} as const;
+export const DEFAULT_RESTAURANT_COORDS = DEFAULT_MARKETPLACE_COORDS;
 
 export function resolveRestaurantCoords(activeLocation?: {
   coordinates: { lat: number; lng: number };

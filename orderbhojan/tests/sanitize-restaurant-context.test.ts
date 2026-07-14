@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, it, beforeEach } from 'node:test';
+import {
+  RESTAURANT_SLUG_MISMATCH_TOAST,
+  sanitizeRestaurantSlugContext,
+} from '../src/lib/sanitizeLiveRestaurantContext';
+import { registerToastHandler } from '../src/shared/providers/BdsToastProvider';
+import { useRestaurantContextStore } from '../src/features/restaurant/store/restaurantContextStore';
+import { useCartStore } from '../src/features/cart/store/cartStore';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = resolve(__dirname, '..');
+
+describe('sanitizeRestaurantSlugContext', () => {
+  beforeEach(() => {
+    useRestaurantContextStore.getState().clear();
+    useCartStore.getState().clear();
+    useCartStore.setState({ restaurantSlug: null, visible: false });
+  });
+
+  it('clears mismatched persisted context and cart with warning toast', () => {
+    const toasts: string[] = [];
+    registerToastHandler((message) => {
+      toasts.push(message);
+    });
+
+    useRestaurantContextStore.getState().setContext({
+        restaurantSlug: 'demo-biryani-house',
+        contextToken: 'ctx_a',
+        restaurantId: 'obr_demo_biryani_001',
+      });
+      useCartStore.setState({
+        restaurantSlug: 'demo-biryani-house',
+        lines: [
+          {
+            lineId: 'food-1',
+            foodId: 'food-1',
+            name: 'Biryani',
+            price: 199,
+            quantity: 1,
+            restaurantSlug: 'demo-biryani-house',
+            restaurantId: 'obr_demo_biryani_001',
+          },
+        ],
+      });
+
+      sanitizeRestaurantSlugContext('demo-dosa-corner');
+
+      assert.equal(useRestaurantContextStore.getState().restaurantSlug, null);
+      assert.equal(useCartStore.getState().lines.length, 0);
+      assert.ok(toasts.includes(RESTAURANT_SLUG_MISMATCH_TOAST));
+  });
+
+  it('no-ops when route slug matches persisted context', () => {
+    useRestaurantContextStore.getState().setContext({
+      restaurantSlug: 'demo-biryani-house',
+      contextToken: 'ctx_a',
+      restaurantId: 'obr_demo_biryani_001',
+    });
+
+    sanitizeRestaurantSlugContext('demo-biryani-house');
+
+    assert.equal(
+      useRestaurantContextStore.getState().restaurantSlug,
+      'demo-biryani-house',
+    );
+  });
+});
+
+describe('recovery-01 discovery copy', () => {
+  it('home feed surfaces Pune fallback messaging when location is unset', () => {
+    const feed = readFileSync(
+      join(root, 'src/features/discovery/ui/DiscoveryHomeFeed.tsx'),
+      'utf8',
+    );
+    assert.match(feed, /DEFAULT_MARKETPLACE_CITY_LABEL/);
+    assert.match(feed, /until you set your location/);
+    assert.match(feed, /Set your location/);
+    assert.doesNotMatch(feed, /primaryLabel="Show all kitchens"/);
+  });
+
+  it('location bar shows Pune fallback when active location is missing', () => {
+    const bar = readFileSync(
+      join(root, 'src/presentation/discovery/OrderBhojanHomeLocationBar.tsx'),
+      'utf8',
+    );
+    assert.match(bar, /DEFAULT_MARKETPLACE_CITY_LABEL/);
+    assert.match(bar, /until you set your location/);
+  });
+});

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
@@ -8,6 +8,7 @@ import { hasBestsellerLabel } from '@/features/food/domain/contractPresentation'
 import { useCategoryScrollSpy } from '@/features/food/hooks/useCategoryScrollSpy';
 import { useFoodMenu } from '@/features/food/hooks/useFoodMenu';
 import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
+import { sanitizeRestaurantSlugContext } from '@/lib/sanitizeLiveRestaurantContext';
 import { OrderBhojanFoodCustomizeSheet as FoodCustomizeSheet } from './OrderBhojanFoodCustomizeSheet';
 import {
   OrderBhojanDiscoveryOfflineNotice,
@@ -138,5 +139,12 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 export function OrderBhojanFoodExperience() {
   const { restaurantSlug } = useParams<{ restaurantSlug: string }>();
   useTenantRevisionSync(restaurantSlug);
+
+  useEffect(() => {
+    if (restaurantSlug) {
+      sanitizeRestaurantSlugContext(restaurantSlug);
+    }
+  }, [restaurantSlug]);
+
   return <OrderBhojanFoodContent restaurantSlug={restaurantSlug ?? ''} />;
 }

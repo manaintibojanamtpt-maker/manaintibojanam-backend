@@ -6,8 +6,10 @@ import { useDiscoveryFeatureEnabled } from '../hooks/useDiscoveryFeature';
 import { KitchenSpotlightCard } from '@/features/experience/ui/home/KitchenSpotlightCard';
 import { buildDiscoverySpotlightFeed } from '@/features/experience/utils/homeSpotlightFeed';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
+import { hasDiscoveryFilterOverrides } from '../domain/filterState';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
-import { useLocationFeatureEnabled, useLocationActions } from '@/features/location';
+import { useActiveLocation, useLocationFeatureEnabled, useLocationActions } from '@/features/location';
+import { DEFAULT_MARKETPLACE_CITY_LABEL } from '@/lib/marketplaceDefaults';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import {
   OrderBhojanHomeFeedSkeleton,
@@ -33,7 +35,7 @@ function DiscoveryActiveFilterBanner() {
     >
       <p className="text-sm text-white/70">Showing selected kitchen type only.</p>
       <SoftButton type="button" tone="ghost" size="compact" onClick={resetFilters}>
-        Show all kitchens
+        Clear filters
       </SoftButton>
     </div>
   );
@@ -42,10 +44,14 @@ function DiscoveryActiveFilterBanner() {
 export function DiscoveryHomeFeed() {
   const query = useDiscoveryHome();
   const discoveryEnabled = useDiscoveryFeatureEnabled();
+  const filters = useDiscoveryFilterStore((s) => s.filters);
   const resetFilters = useDiscoveryFilterStore((s) => s.resetFilters);
+  const setFilters = useDiscoveryFilterStore((s) => s.setFilters);
   const locationEnabled = useLocationFeatureEnabled();
+  const activeLocation = useActiveLocation();
   const { openSelector } = useLocationActions();
   const online = useOnlineStatus();
+  const filtersActive = hasDiscoveryFilterOverrides(filters);
 
   if (query.isLoading) {
     return (
@@ -91,25 +97,74 @@ export function DiscoveryHomeFeed() {
   const railsToRender = spotlightPlan.kitchenCollections.filter((c) => c.restaurants.length > 0);
 
   if (visibleCollections.length === 0) {
+    const usingPuneFallback = !activeLocation;
+    const locationLabel = query.data?.locationLabel ?? DEFAULT_MARKETPLACE_CITY_LABEL;
+    const openNowBlocking = Boolean(filters.openNowOnly);
+
+    let title = `No kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`;
+    let description = activeLocation
+      ? `We could not find published kitchens delivering to ${locationLabel}.`
+      : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location. We could not find kitchens matching your current view.`;
+    let primaryLabel = filtersActive ? 'Clear filters' : locationEnabled ? 'Set your location' : undefined;
+    let onPrimary = filtersActive
+      ? () => {
+          resetFilters();
+          void query.refetch();
+        }
+      : locationEnabled
+        ? () => openSelector()
+        : undefined;
+
+    if (usingPuneFallback && locationEnabled) {
+      title = 'Set your delivery location';
+      primaryLabel = 'Set your location';
+      onPrimary = () => openSelector();
+    } else if (filtersActive && !usingPuneFallback) {
+      title = 'No kitchens match your filters';
+      description = `Try clearing filters or updating your location near ${locationLabel}.`;
+      primaryLabel = 'Clear filters';
+      onPrimary = () => {
+        resetFilters();
+        void query.refetch();
+      };
+    }
+
+    const secondaryLabel = openNowBlocking
+      ? 'Include closed kitchens'
+      : usingPuneFallback && filtersActive && locationEnabled
+        ? 'Clear filters'
+        : locationEnabled && activeLocation && !filtersActive
+          ? 'Update location'
+          : filtersActive && locationEnabled && !usingPuneFallback
+            ? 'Update location'
+            : undefined;
+
+    const onSecondary = openNowBlocking
+      ? () => {
+          setFilters({ openNowOnly: false });
+          void query.refetch();
+        }
+      : secondaryLabel === 'Clear filters'
+        ? () => {
+            resetFilters();
+            void query.refetch();
+          }
+        : secondaryLabel === 'Update location'
+          ? () => openSelector()
+          : undefined;
+
     return (
       <div>
         <DiscoveryFiltersBar />
         <DiscoveryActiveFilterBanner />
         <OrderBhojanDiscoveryUxState
-          variant="no-restaurants"
-          title={`No kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`}
-          description={
-            query.data?.locationLabel
-              ? `We could not find published kitchens delivering to ${query.data.locationLabel}. Update your location or clear filters.`
-              : 'Update your delivery location or clear filters to see available kitchens.'
-          }
-          primaryLabel="Show all kitchens"
-          onPrimary={() => {
-            resetFilters();
-            void query.refetch();
-          }}
-          secondaryLabel={locationEnabled ? 'Update location' : undefined}
-          onSecondary={locationEnabled ? () => openSelector() : undefined}
+          variant={usingPuneFallback && locationEnabled ? 'location-disabled' : 'no-restaurants'}
+          title={title}
+          description={description}
+          primaryLabel={primaryLabel}
+          onPrimary={onPrimary}
+          secondaryLabel={secondaryLabel}
+          onSecondary={onSecondary}
         />
       </div>
     );
@@ -125,7 +180,9 @@ export function DiscoveryHomeFeed() {
       <div className="space-y-6">
         {query.data?.locationLabel ? (
           <p className="text-xs font-medium uppercase tracking-widest text-white/50">
-            Kitchens within {CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of {query.data.locationLabel}
+            {activeLocation
+              ? `Kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${query.data.locationLabel}`
+              : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location`}
           </p>
         ) : null}
         <DiscoveryFiltersBar />

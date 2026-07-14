@@ -39,7 +39,7 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
   }
 
   const payload = await getFoodApiClient().fetchMenu(params);
-  persistMenuContext(params.slug, payload.contextToken, params.slug);
+  persistMenuContext(params.slug, payload.contextToken, `obr_${params.slug}`);
   return enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload)));
 }
 

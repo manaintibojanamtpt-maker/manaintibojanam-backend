@@ -524,9 +524,14 @@ export function buildDiscoveryHome(
   };
 }
 
+const DEFAULT_DISCOVERY_COORDS = {
+  lat: 18.49959440695956,
+  lng: 73.97858993491619,
+} as const;
+
 export function parseDiscoveryRequest(url: URL): DiscoveryRequestParams {
-  const lat = Number(url.searchParams.get('lat') ?? '17.4401');
-  const lng = Number(url.searchParams.get('lng') ?? '78.3489');
+  const lat = Number(url.searchParams.get('lat') ?? String(DEFAULT_DISCOVERY_COORDS.lat));
+  const lng = Number(url.searchParams.get('lng') ?? String(DEFAULT_DISCOVERY_COORDS.lng));
   const page = Number(url.searchParams.get('page') ?? '1');
   const limit = Number(url.searchParams.get('limit') ?? '6');
   const maxDistanceKm = url.searchParams.get('maxDistanceKm');

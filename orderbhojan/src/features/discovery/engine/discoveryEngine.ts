@@ -6,16 +6,11 @@ import type {
 } from '@/types/marketplace-discovery';
 import { applyDiscoveryFilters } from '../domain/filters';
 import { filtersForDiscoveryCollection } from '../domain/discoveryPolicy';
+import { DEFAULT_MARKETPLACE_COORDS } from '@/lib/marketplaceDefaults';
 import { getDiscoveryApiClient } from '../infrastructure/discoveryApiClient';
 
-/**
- * Default Pune coordinates when M2 location is unavailable.
- * Production kitchens are clustered in Pune; Hyderabad default caused empty mobile discovery.
- */
-export const DEFAULT_DISCOVERY_COORDS = {
-  lat: 18.49959440695956,
-  lng: 73.97858993491619,
-} as const;
+/** @deprecated Use DEFAULT_MARKETPLACE_COORDS from @/lib/marketplaceDefaults */
+export const DEFAULT_DISCOVERY_COORDS = DEFAULT_MARKETPLACE_COORDS;
 
 export function resolveDiscoveryCoords(activeLocation?: {
   coordinates: { lat: number; lng: number };
