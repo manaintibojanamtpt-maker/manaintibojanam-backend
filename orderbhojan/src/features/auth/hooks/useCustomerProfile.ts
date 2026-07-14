@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { loadCustomerSession } from '../application/profileBootstrapService';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 
 export function useCustomerProfile() {
   const { sessionUser, isAuthenticated } = useAuth();
@@ -10,6 +11,9 @@ export function useCustomerProfile() {
     queryKey: ['customer', 'profile', uid],
     enabled: Boolean(uid && isAuthenticated),
     queryFn: () => loadCustomerSession(uid!),
-    retry: 2,
+    retry: (failureCount, error) => {
+      if (isFirestorePermissionDenied(error)) return false;
+      return failureCount < 2;
+    },
   });
 }

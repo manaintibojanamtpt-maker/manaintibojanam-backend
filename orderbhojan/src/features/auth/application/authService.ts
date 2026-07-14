@@ -18,7 +18,13 @@ export interface AuthActionResult {
 
 async function finalizeAuthenticatedSession(user: AuthSessionUser): Promise<AuthSessionUser> {
   useAuthSessionStore.getState().setGuestBrowsing(false);
-  await bootstrapCustomerSession(user);
+  try {
+    await bootstrapCustomerSession(user);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('[OrderBhojan] Customer profile bootstrap skipped after sign-in', error);
+    }
+  }
   return user;
 }
 

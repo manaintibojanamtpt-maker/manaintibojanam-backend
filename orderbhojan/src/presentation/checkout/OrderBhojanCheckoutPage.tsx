@@ -37,6 +37,7 @@ export function OrderBhojanCheckoutPage() {
     status,
     error,
     orderId,
+    orderNumber,
     itemCount,
     canCheckout,
     prepareCheckout,
@@ -100,13 +101,14 @@ export function OrderBhojanCheckoutPage() {
 
   if (orderId) {
     const isOnlinePayment = lastPaymentMethod === 'razorpay';
+    const orderLabel = orderNumber ?? orderId;
     return (
       <CheckoutSuccessView
         title="Order placed"
         subtitle={
           isOnlinePayment
-            ? `Your online payment for order ${orderId} is confirmed.`
-            : `Your COD order ${orderId} is confirmed.`
+            ? `Your online payment for order #${orderLabel} is confirmed.`
+            : `Your COD order #${orderLabel} is confirmed.`
         }
         trackLabel="Track order"
         ordersLabel="View orders"

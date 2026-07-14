@@ -7,6 +7,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getFirebaseFirestore, isFirestoreConfigured } from '@/firebase';
+import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import type { AuthProviderId, AuthSessionUser } from '../domain/auth.types';
 
 export interface CustomerDocument {
@@ -42,36 +43,48 @@ export async function upsertCustomerProfile(user: AuthSessionUser): Promise<Cust
   }
 
   const ref = customerRef(db, user.uid);
-  const existing = await getDoc(ref);
-  const payload = {
-    uid: user.uid,
-    displayName: user.displayName,
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    photoURL: user.photoURL,
-    authProviders: mergeProviders(existing.data()?.authProviders as AuthProviderId[] | undefined, user.provider),
-    preferences: {
-      notifications: existing.data()?.preferences?.notifications ?? true,
-      marketing: existing.data()?.preferences?.marketing ?? false,
-      spiceLevel: existing.data()?.preferences?.spiceLevel ?? 'Medium',
-      dietary: existing.data()?.preferences?.dietary ?? 'Veg',
-    },
-    updatedAt: serverTimestamp(),
-    lastLoginAt: serverTimestamp(),
-    ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
-  };
+  try {
+    const existing = await getDoc(ref);
+    const payload = {
+      uid: user.uid,
+      displayName: user.displayName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      photoURL: user.photoURL,
+      authProviders: mergeProviders(existing.data()?.authProviders as AuthProviderId[] | undefined, user.provider),
+      preferences: {
+        notifications: existing.data()?.preferences?.notifications ?? true,
+        marketing: existing.data()?.preferences?.marketing ?? false,
+        spiceLevel: existing.data()?.preferences?.spiceLevel ?? 'Medium',
+        dietary: existing.data()?.preferences?.dietary ?? 'Veg',
+      },
+      updatedAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+      ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+    };
 
-  await setDoc(ref, payload, { merge: true });
-  return buildCustomerDocument(user, payload.authProviders);
+    await setDoc(ref, payload, { merge: true });
+    return buildCustomerDocument(user, payload.authProviders);
+  } catch (error) {
+    if (isFirestorePermissionDenied(error)) {
+      return buildCustomerDocument(user);
+    }
+    throw error;
+  }
 }
 
 export async function readCustomerProfile(uid: string): Promise<CustomerDocument | null> {
   if (!isFirestoreConfigured()) return null;
   const db = getFirebaseFirestore();
   if (!db) return null;
-  const snapshot = await getDoc(customerRef(db, uid));
-  if (!snapshot.exists()) return null;
-  return snapshot.data() as CustomerDocument;
+  try {
+    const snapshot = await getDoc(customerRef(db, uid));
+    if (!snapshot.exists()) return null;
+    return snapshot.data() as CustomerDocument;
+  } catch (error) {
+    if (isFirestorePermissionDenied(error)) return null;
+    throw error;
+  }
 }
 
 function mergeProviders(existing: AuthProviderId[] | undefined, next: AuthProviderId): AuthProviderId[] {

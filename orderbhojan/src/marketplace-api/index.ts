@@ -316,7 +316,11 @@ export class MarketplaceApiClient {
     });
   }
 
-  checkoutPlace(body: Record<string, unknown>): Promise<{ orderId?: string; draftId?: string }> {
+  checkoutPlace(body: Record<string, unknown>): Promise<{
+    orderId?: string;
+    draftId?: string;
+    orderNumber?: number | string;
+  }> {
     return this.http.request({
       method: 'POST',
       path: `${MARKETPLACE_PREFIX}/checkout/place`,

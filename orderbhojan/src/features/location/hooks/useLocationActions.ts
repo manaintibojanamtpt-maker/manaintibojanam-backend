@@ -31,8 +31,12 @@ export function useLocationActions() {
       setSavedAddresses([]);
       return;
     }
-    const addresses = await fetchSavedAddresses(sessionUser.uid);
-    setSavedAddresses(addresses);
+    try {
+      const addresses = await fetchSavedAddresses(sessionUser.uid);
+      setSavedAddresses(addresses);
+    } catch {
+      setSavedAddresses([]);
+    }
   }, [sessionUser]);
 
   const requestCurrentLocation = useCallback(async () => {

@@ -4,6 +4,7 @@ import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
+import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import type { BillQuote } from '@/types/marketplace';
@@ -11,10 +12,21 @@ import type { BillQuote } from '@/types/marketplace';
 export interface CheckoutPlaceResponse {
   readonly orderId?: string;
   readonly draftId?: string;
+  readonly orderNumber?: number | string;
 }
 
-function resolvePlacedOrderId(response: CheckoutPlaceResponse): string | null {
-  return response.orderId ?? response.draftId ?? null;
+export interface PlacedOrderConfirmation {
+  readonly orderId: string;
+  readonly orderNumber: string;
+}
+
+function resolvePlacedOrder(response: CheckoutPlaceResponse): PlacedOrderConfirmation | null {
+  const orderId = response.orderId ?? response.draftId;
+  if (!orderId) return null;
+  return {
+    orderId,
+    orderNumber: formatCustomerOrderLabel(response.orderNumber, orderId),
+  };
 }
 
 export type CheckoutFlowStatus =
@@ -31,12 +43,13 @@ export interface CheckoutFlowState {
   readonly status: CheckoutFlowStatus;
   readonly error: string | null;
   readonly orderId: string | null;
+  readonly orderNumber: string | null;
   readonly itemCount: number;
   readonly canCheckout: boolean;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
-  placeCodOrder: (phone: string, customerName?: string) => Promise<string | null>;
-  placeRazorpayOrder: (phone: string, customerName?: string) => Promise<string | null>;
+  placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
+  placeRazorpayOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   reset: () => void;
 }
 
@@ -84,6 +97,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [status, setStatus] = useState<CheckoutFlowStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
@@ -148,14 +162,15 @@ export function useCheckoutFlow(): CheckoutFlowState {
         const response = (await getMarketplaceApiClient().checkoutPlace(
           payload,
         )) as CheckoutPlaceResponse;
-        const placedOrderId = resolvePlacedOrderId(response);
-        if (!placedOrderId) {
+        const placed = resolvePlacedOrder(response);
+        if (!placed) {
           throw new Error('Order confirmation is missing an order id');
         }
-        setOrderId(placedOrderId);
+        setOrderId(placed.orderId);
+        setOrderNumber(placed.orderNumber);
         setStatus('success');
         useCartStore.getState().clear();
-        return placedOrderId;
+        return placed;
       } catch (err) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Unable to place order');
@@ -186,18 +201,23 @@ export function useCheckoutFlow(): CheckoutFlowState {
           throw new Error('Payment session is missing a draft id');
         }
 
-        const confirmedOrderId = await runRazorpayCheckoutFlow({
+        const confirmed = await runRazorpayCheckoutFlow({
           draftId,
           phone: phone.trim(),
           customerName: customerName?.trim() || sessionUser?.displayName || undefined,
           customerEmail: sessionUser?.email ?? undefined,
           userId: sessionUser?.uid ?? null,
+          orderNumber: response.orderNumber,
         });
 
-        setOrderId(confirmedOrderId);
+        setOrderId(confirmed.orderId);
+        setOrderNumber(confirmed.orderNumber);
         setStatus('success');
         useCartStore.getState().clear();
-        return confirmedOrderId;
+        return {
+          orderId: confirmed.orderId,
+          orderNumber: confirmed.orderNumber,
+        };
       } catch (err) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Unable to complete payment');
@@ -213,6 +233,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     setStatus('idle');
     setError(null);
     setOrderId(null);
+    setOrderNumber(null);
   }, []);
 
   return {
@@ -221,6 +242,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     status,
     error,
     orderId,
+    orderNumber,
     itemCount,
     canCheckout,
     refreshQuote,

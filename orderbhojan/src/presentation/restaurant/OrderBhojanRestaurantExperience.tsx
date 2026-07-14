@@ -1,7 +1,6 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { useFoodFeatureEnabled } from '@/features/food/hooks/useFoodFeature';
-import { useHeroPreload } from '@/features/experience/hooks/useHeroPreload';
 import {
   pictureSources,
   resolveRestaurantCover,
@@ -37,8 +36,6 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
   const coverSrc = experience.coverImage || manifestCover.src;
   const logoSrc = experience.logo || manifestLogo.src;
   const enterFromPoster = Boolean((location.state as { fromPoster?: boolean } | null)?.fromPoster);
-
-  useHeroPreload(coverSrc, manifestCover.webpSrcSet);
 
   return (
     <div className="min-h-screen bg-[#030303] pb-28 text-white">

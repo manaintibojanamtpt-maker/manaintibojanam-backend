@@ -9,6 +9,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { getFirebaseFirestore, isFirestoreConfigured } from '@/firebase';
+import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import type { SavedAddress, IndiaAddress } from '../domain/location.types';
 import type { SavedAddressInput } from '../domain/location.schema';
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
@@ -39,8 +40,13 @@ function toSavedAddress(id: string, data: Record<string, unknown>): SavedAddress
 
 export async function listSavedAddresses(uid: string): Promise<SavedAddress[]> {
   if (!isFirestoreConfigured()) return [];
-  const snapshot = await getDocs(addressesCol(uid));
-  return snapshot.docs.map((d) => toSavedAddress(d.id, d.data()));
+  try {
+    const snapshot = await getDocs(addressesCol(uid));
+    return snapshot.docs.map((d) => toSavedAddress(d.id, d.data()));
+  } catch (error) {
+    if (isFirestorePermissionDenied(error)) return [];
+    throw error;
+  }
 }
 
 export async function saveAddress(uid: string, input: SavedAddressInput, addressId?: string): Promise<SavedAddress> {

@@ -692,11 +692,16 @@ export function registerMarketplaceRoutes(
         result.kind === 'razorpay'
           ? {
               draftId: result.draftId,
+              orderNumber: result.orderNumber,
               paymentMethod: 'razorpay',
               quote: result.quote,
               amountInPaise: result.amountInPaise,
             }
-          : { orderId: result.orderId, paymentMethod: 'cod' };
+          : {
+              orderId: result.orderId,
+              orderNumber: result.orderNumber,
+              paymentMethod: 'cod',
+            };
         sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
       } catch (error: unknown) {
         const status = (error as { statusCode?: number }).statusCode ?? 500;

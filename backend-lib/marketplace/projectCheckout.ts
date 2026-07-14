@@ -270,8 +270,15 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
 }
 
 export type MarketplacePlaceResult =
-  | { kind: 'cod'; orderId: string; tenantId: string; quote: BillQuote }
-  | { kind: 'razorpay'; draftId: string; tenantId: string; quote: BillQuote; amountInPaise: number };
+  | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote }
+  | {
+      kind: 'razorpay';
+      draftId: string;
+      orderNumber: number;
+      tenantId: string;
+      quote: BillQuote;
+      amountInPaise: number;
+    };
 
 async function buildResolvedOrderItems(
   db: Firestore,
@@ -378,6 +385,7 @@ export async function placeMarketplaceOrder(
     return {
       kind: 'razorpay',
       draftId: draftRef.id,
+      orderNumber,
       tenantId,
       quote,
       amountInPaise: Math.round(quote.grandTotal * 100),
@@ -400,7 +408,7 @@ export async function placeMarketplaceOrder(
   }
   await batch.commit().catch(() => undefined);
 
-  return { kind: 'cod', orderId: ref.id, tenantId, quote };
+  return { kind: 'cod', orderId: ref.id, orderNumber, tenantId, quote };
 }
 
 export function createCheckoutCorrelationId(): string {

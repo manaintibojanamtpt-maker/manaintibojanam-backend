@@ -3630,7 +3630,15 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
       'client_callback'
     );
 
-    res.json({ success: true, verified: true, orderId: draftId, promoted: promotion.promoted });
+    const orderNumber = draftData.orderPayload?.orderNumber ?? draftData.orderNumber ?? null;
+
+    res.json({
+      success: true,
+      verified: true,
+      orderId: draftId,
+      orderNumber,
+      promoted: promotion.promoted,
+    });
   } catch (err: any) {
     console.error("Razorpay Payment Verification Error:", err);
     logger.error({ message: 'Razorpay payment verification error', draftId: req.body?.draftId, error: err.message });

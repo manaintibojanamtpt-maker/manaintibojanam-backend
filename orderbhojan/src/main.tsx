@@ -3,10 +3,23 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
+import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { trackEvent } from '@/telemetry';
 import '@/styles/globals.css';
 
+function suppressFirestorePermissionRejections(): void {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('unhandledrejection', (event) => {
+    if (!isFirestorePermissionDenied(event.reason)) return;
+    event.preventDefault();
+    if (import.meta.env.DEV) {
+      console.warn('[OrderBhojan] Suppressed Firestore permission rejection at bootstrap', event.reason);
+    }
+  });
+}
+
 async function bootstrap() {
+  suppressFirestorePermissionRejections();
   const config = await ensureAppConfig();
 
   const rootElement = document.getElementById('root');
