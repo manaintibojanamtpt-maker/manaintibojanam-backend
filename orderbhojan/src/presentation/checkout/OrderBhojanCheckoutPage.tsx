@@ -30,7 +30,7 @@ export function OrderBhojanCheckoutPage() {
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
   const { uiStatus } = useLocationUiState();
-  const { openWizard } = useLocationActions();
+  const { openWizard, openSelector } = useLocationActions();
   const {
     quote,
     paymentMethods,
@@ -146,6 +146,14 @@ export function OrderBhojanCheckoutPage() {
     );
   }
 
+  const handleAddressAction = () => {
+    if (activeLocation) {
+      openSelector();
+      return;
+    }
+    openWizard();
+  };
+
   const addressLabel =
     uiStatus === 'loading' ? 'Detecting location…' : activeLocation?.displayLabel ?? DELIVERY_ADDRESS_PLACEHOLDER;
 
@@ -163,7 +171,7 @@ export function OrderBhojanCheckoutPage() {
             }
           : undefined
       }
-      onAddressAction={locationEnabled ? openWizard : undefined}
+      onAddressAction={locationEnabled ? handleAddressAction : undefined}
       bill={
         quote
           ? {

@@ -1,20 +1,17 @@
 import { MapPin } from 'lucide-react';
 import { GlassCard } from '../primitives/GlassCard';
 import { Skeleton } from '../primitives/Skeleton';
-import { SoftButton } from '../primitives/SoftButton';
 import type { CheckoutDeliveryAddressViewModel } from './types';
 
 export interface CheckoutDeliveryAddressViewProps {
   readonly address: CheckoutDeliveryAddressViewModel;
-  readonly onAction: () => void;
 }
 
 export function CheckoutDeliveryAddressView({
   address,
-  onAction,
 }: CheckoutDeliveryAddressViewProps) {
   return (
-    <GlassCard hoverEffect={false} className="!rounded-2xl !p-4" aria-label="Delivery address">
+    <GlassCard hoverEffect={false} className="!rounded-2xl !p-4" aria-hidden>
       <div className="flex items-start gap-3">
         <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#FF7A00]" aria-hidden />
         <div className="min-w-0 flex-1">
@@ -27,9 +24,9 @@ export function CheckoutDeliveryAddressView({
             <p className="mt-1 text-base text-white">{address.value}</p>
           )}
         </div>
-        <SoftButton type="button" tone="ghost" size="compact" onClick={onAction}>
-          {address.actionLabel}
-        </SoftButton>
+        <span className="soft-btn soft-btn--ghost soft-btn--compact shrink-0">
+          <span className="soft-btn__inner">{address.actionLabel}</span>
+        </span>
       </div>
     </GlassCard>
   );

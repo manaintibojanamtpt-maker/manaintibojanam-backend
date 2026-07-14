@@ -1,10 +1,8 @@
 import { MapPin } from 'lucide-react';
-import { LocationChip, useActiveLocation, useLocationFeatureEnabled } from '@/features/location';
-import { DEFAULT_MARKETPLACE_CITY_LABEL } from '@/lib/marketplaceDefaults';
+import { LocationChip, useLocationFeatureEnabled } from '@/features/location';
 
 export function OrderBhojanHomeLocationBar() {
   const locationEnabled = useLocationFeatureEnabled();
-  const activeLocation = useActiveLocation();
 
   return (
     <div
@@ -14,12 +12,8 @@ export function OrderBhojanHomeLocationBar() {
     >
       <MapPin className="h-3.5 w-3.5 shrink-0 text-[#FF7A00]" aria-hidden />
       <span className="shrink-0 font-medium text-white/50">Delivering to</span>
-      {locationEnabled && activeLocation ? (
-        <LocationChip variant="compact" className="min-w-0 !border-0 !bg-transparent !p-0 !text-white/90" />
-      ) : locationEnabled ? (
-        <span className="truncate font-semibold text-white/80">
-          Showing {DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location
-        </span>
+      {locationEnabled ? (
+        <LocationChip variant="compact" className="min-w-0 !border-0 !bg-transparent !p-0 !text-white/90 touch-manipulation" />
       ) : (
         <span className="truncate font-semibold text-white/80">Home kitchens near you</span>
       )}

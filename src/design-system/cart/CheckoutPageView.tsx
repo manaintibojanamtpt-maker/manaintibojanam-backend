@@ -69,7 +69,7 @@ export function CheckoutPageView({
             onClick={onAddressAction}
             aria-label={`${address.label}: ${address.value}. ${address.actionLabel}`}
           >
-            <CheckoutDeliveryAddressView address={address} onAction={onAddressAction} />
+            <CheckoutDeliveryAddressView address={address} />
           </button>
         ) : null}
 

@@ -82,12 +82,33 @@ describe('recovery-01 discovery copy', () => {
     assert.doesNotMatch(feed, /primaryLabel="Show all kitchens"/);
   });
 
-  it('location bar shows Pune fallback when active location is missing', () => {
+  it('location bar keeps LocationChip clickable when active location is missing', () => {
     const bar = readFileSync(
       join(root, 'src/presentation/discovery/OrderBhojanHomeLocationBar.tsx'),
       'utf8',
     );
-    assert.match(bar, /DEFAULT_MARKETPLACE_CITY_LABEL/);
-    assert.match(bar, /until you set your location/);
+    assert.match(bar, /locationEnabled \?/);
+    assert.match(bar, /<LocationChip/);
+    assert.doesNotMatch(bar, /until you set your location/);
+  });
+
+  it('checkout address card uses a single clickable control', () => {
+    const checkout = readFileSync(
+      join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
+      'utf8',
+    );
+    const pageView = readFileSync(
+      resolve(root, '../src/design-system/cart/CheckoutPageView.tsx'),
+      'utf8',
+    );
+    const deliveryView = readFileSync(
+      resolve(root, '../src/design-system/cart/CheckoutDeliveryAddressView.tsx'),
+      'utf8',
+    );
+    assert.match(checkout, /openWizard/);
+    assert.match(checkout, /openSelector/);
+    assert.match(pageView, /<button[\s\S]*onClick=\{onAddressAction\}/);
+    assert.doesNotMatch(deliveryView, /<SoftButton/);
+    assert.doesNotMatch(deliveryView, /<button/);
   });
 });
