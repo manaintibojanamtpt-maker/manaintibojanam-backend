@@ -40,6 +40,50 @@ export function getEffectivePlanId(tenant: TenantPlanSnapshot | null | undefined
   return planId;
 }
 
+export function isGrowthTrialExpired(tenant: TenantPlanSnapshot | null | undefined): boolean {
+  if (!tenant?.subscription?.trialExpiresAt) return false;
+  const planId = tenant.subscription?.planId || 'starter';
+  if (planId === 'starter') return false;
+  return !isTrialCurrentlyActive(tenant) && tenant.subscription?.status === 'trialing';
+}
+
+/** Paid checkout required (trial used/expired or switching paid plans). */
+export function ownerPlanRequiresPayment(
+  tenant: TenantPlanSnapshot | null | undefined,
+  planId: string,
+): boolean {
+  if (!tenant || planId === 'enterprise' || planId === 'starter') return false;
+  if (hasActiveGrowthAccess(tenant) && getEffectivePlanId(tenant) === planId) return false;
+
+  const sub = tenant.subscription;
+  const effectivePlanId = getEffectivePlanId(tenant);
+
+  if (planId === 'growth' && effectivePlanId === 'starter' && !sub?.trialUsed) {
+    return false;
+  }
+  if (effectivePlanId === 'starter' && !sub?.trialUsed && (planId === 'pro' || planId === 'growth')) {
+    return false;
+  }
+  if (isGrowthTrialExpired(tenant) && planId === 'growth') {
+    return true;
+  }
+  if (sub?.trialUsed || sub?.status === 'active') {
+    return planId !== effectivePlanId;
+  }
+  return planId !== effectivePlanId;
+}
+
+export function isOwnerPlanActionable(
+  tenant: TenantPlanSnapshot | null | undefined,
+  planId: string,
+): boolean {
+  if (planId === 'enterprise') return true;
+  if (ownerPlanRequiresPayment(tenant, planId)) return true;
+  if (hasActiveGrowthAccess(tenant) && getEffectivePlanId(tenant) === planId) return false;
+  if (isTrialCurrentlyActive(tenant) && getEffectivePlanId(tenant) === planId) return false;
+  return getEffectivePlanId(tenant) !== planId;
+}
+
 export function getOwnerPlanActionLabel(
   planId: string,
   planName: string,
@@ -49,6 +93,14 @@ export function getOwnerPlanActionLabel(
   const effectivePlanId = getEffectivePlanId(tenant);
   const sub = tenant?.subscription;
 
+  if (ownerPlanRequiresPayment(tenant, planId)) {
+    const plan = planId === 'growth' ? '₹999/mo' : planId === 'pro' ? '₹2,999/mo' : '';
+    if (isGrowthTrialExpired(tenant) && planId === 'growth') {
+      return `Pay ${plan} to continue`;
+    }
+    return plan ? `Pay ${plan}` : ownerCta;
+  }
+
   if (planId === effectivePlanId) {
     if (isTrialCurrentlyActive(tenant) && isOnGrowthOnboardingTrial(tenant) && planId === 'growth') {
       return 'Current plan (14-day trial)';
@@ -56,7 +108,10 @@ export function getOwnerPlanActionLabel(
     if (isTrialCurrentlyActive(tenant)) {
       return 'Current plan (trial active)';
     }
-    return 'Current plan';
+    if (hasActiveGrowthAccess(tenant)) {
+      return 'Current plan';
+    }
+    return ownerCta;
   }
 
   if (effectivePlanId !== 'starter') {

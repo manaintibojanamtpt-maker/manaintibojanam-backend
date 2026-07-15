@@ -950,6 +950,40 @@ export const updateTenantStatus = async (tenantId: string, status: string) => {
   return updateDoc(doc(getDb(), 'tenants', tenantId), { status, updatedAt: serverTimestamp() });
 };
 
+export type PlatformTenantSubscriptionAction = 'extendTrial' | 'grantPlan' | 'bypassExpiry';
+
+export const updatePlatformTenantSubscription = async (params: {
+  tenantId: string;
+  action: PlatformTenantSubscriptionAction;
+  planId?: 'growth' | 'pro' | 'enterprise';
+  days?: number;
+}) => {
+  const { auth } = await import('../firebase');
+  const user = auth.currentUser;
+  if (!user) throw new Error('You must be signed in.');
+
+  const token = await user.getIdToken(true);
+  const apiBase =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
+      ? window.location.origin
+      : API_BASE_URL;
+
+  const res = await fetch(`${apiBase}/api/platform/tenant-subscription`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(params),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) {
+    throw new Error(payload.error || 'Failed to update tenant subscription');
+  }
+  return payload;
+};
+
 export const updateLeadStage = async (leadId: string, stage: string) => {
   return updateDoc(doc(getDb(), 'salesPipeline', leadId), { stage, updatedAt: serverTimestamp() });
 };

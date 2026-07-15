@@ -14,8 +14,12 @@ import {
   isOnGrowthOnboardingTrial,
   isTrialCurrentlyActive,
   activateGrowthOnboardingTrial,
+  ownerPlanRequiresPayment,
+  isOwnerPlanActionable,
+  isGrowthTrialExpired,
 } from '../../lib/planStatus';
 import { upgradeOwnerSubscriptionPlan } from '../../lib/ownerSubscriptionApi';
+import { runOwnerSubscriptionPayment } from '../../lib/ownerSubscriptionPayment';
 import {
   FREE_PLAN,
   PAID_PLANS,
@@ -80,6 +84,20 @@ const OwnerSubscription = () => {
     setLoadingPlan(planId);
     try {
       const tenantDocId = tenantInfo.id || tenantInfo.slug;
+
+      if (ownerPlanRequiresPayment(tenantInfo, planId)) {
+        await runOwnerSubscriptionPayment({
+          tenantId: tenantDocId,
+          planId,
+          customerName: currentUser?.displayName || tenantInfo.name,
+          customerEmail: currentUser?.email || tenantInfo.contact?.email,
+          customerPhone: tenantInfo.kyc?.mobileNumber || tenantInfo.contact?.phone,
+        });
+        await refreshTenant();
+        toast.success(`${plan.name} activated. ${copy.upgradeSuccess}`);
+        return;
+      }
+
       if (
         planId === 'growth' &&
         effectivePlanId === 'starter' &&
@@ -130,6 +148,11 @@ const OwnerSubscription = () => {
                 : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
             </p>
           )}
+          {isGrowthTrialExpired(tenantInfo) && (
+            <p className="text-sm text-rose-400 mt-1">
+              Your Growth trial has expired. Pay ₹999/mo below to keep accepting live orders.
+            </p>
+          )}
           {effectivePlanId === 'starter' && (
             <p className="text-sm text-white/45 mt-1">
               {currentPlan.priceLabel} · {currentPlan.period}
@@ -160,7 +183,10 @@ const OwnerSubscription = () => {
               variant="owner"
               isCurrent={effectivePlanId === plan.id}
               loading={loadingPlan === plan.id}
-              disabled={(!canActivate && plan.id !== 'enterprise') || effectivePlanId === plan.id}
+              disabled={
+                (!canActivate && plan.id !== 'enterprise') ||
+                !isOwnerPlanActionable(tenantInfo, plan.id)
+              }
               onSelect={() => {
                 if (plan.id === effectivePlanId) return;
                 if (plan.id === 'enterprise' && !canActivate) {

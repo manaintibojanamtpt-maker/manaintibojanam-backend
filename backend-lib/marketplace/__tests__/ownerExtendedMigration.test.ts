@@ -11,6 +11,8 @@ describe('owner extended API migration', () => {
       'utf8',
     );
     assert.match(subscription, /app\.put\('\/api\/owner\/subscription\/plan'/);
+    assert.match(subscription, /app\.post\('\/api\/owner\/subscription\/checkout'/);
+    assert.match(subscription, /app\.post\('\/api\/owner\/subscription\/confirm-payment'/);
     assert.match(subscription, /assertOwnerTenantAccess/);
 
     const recipes = fs.readFileSync(
@@ -26,7 +28,7 @@ describe('owner extended API migration', () => {
       path.join(process.cwd(), 'src/pages/owner/OwnerSubscription.tsx'),
       'utf8',
     );
-    assert.match(source, /upgradeOwnerSubscriptionPlan|activateGrowthOnboardingTrial/);
+    assert.match(source, /upgradeOwnerSubscriptionPlan|activateGrowthOnboardingTrial|runOwnerSubscriptionPayment/);
     assert.doesNotMatch(source, /firebase\/firestore/);
     assert.doesNotMatch(source, /getDb\(\)/);
   });

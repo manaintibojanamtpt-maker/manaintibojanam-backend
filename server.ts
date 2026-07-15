@@ -57,6 +57,7 @@ import { registerOwnerCouponsRoutes } from "./backend-lib/marketplace/ownerCoupo
 import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrdersRoutes.js";
 import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
 import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
+import { registerPlatformTenantSubscriptionRoutes } from "./backend-lib/marketplace/platformTenantSubscriptionRoutes.js";
 import {
   registerOwnerRecipesRoutes,
   maybeDeductInventoryOnOrderStatus,
@@ -3107,7 +3108,13 @@ registerOwnerPortalRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess,
   getTransporter,
   getFounderEmail,
 });
-registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue, {
+  razorpay,
+  isRazorpayConfigured,
+  razorpayKeyId: RAZORPAY_KEY_ID,
+  verifyRazorpaySignature,
+});
+registerPlatformTenantSubscriptionRoutes(app, db, requireSuperadmin, FieldValue);
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);

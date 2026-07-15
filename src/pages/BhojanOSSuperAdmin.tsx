@@ -7,7 +7,8 @@ import {
   TrendingUp, RefreshCw, AlertTriangle, Zap, BarChart, Bell, ChevronUp, ChevronDown, ArrowRight, UserPlus, Rocket, BrainCircuit
 } from 'lucide-react';
 import { 
-  fetchAllTenants, updateTenantStatus, 
+  fetchAllTenants, updateTenantStatus,
+  updatePlatformTenantSubscription, 
   fetchOnboardingLeads, updateLeadStage,
   fetchSuperadminPlatformData,
 } from '../services/api';
@@ -151,6 +152,38 @@ export default function BhojanOSSuperAdmin() {
         tenantId
       });
       toast.error('Failed to update tenant status: ' + error.message);
+    }
+  };
+
+  const handleTenantSubscriptionAction = async (
+    tenantId: string,
+    action: 'extendTrial' | 'grantPlan' | 'bypassExpiry',
+    options?: { planId?: string; days?: number },
+  ) => {
+    try {
+      const label =
+        action === 'extendTrial'
+          ? `Trial extended by ${options?.days ?? 14} days`
+          : action === 'grantPlan'
+            ? `${options?.planId || 'growth'} plan granted`
+            : 'Trial expiry bypassed';
+      await updatePlatformTenantSubscription({
+        tenantId,
+        action,
+        planId: options?.planId as 'growth' | 'pro' | 'enterprise' | undefined,
+        days: options?.days,
+      });
+      toast.success(label);
+      await logAuditEvent({
+        tenantId,
+        action: 'TENANT_SUBSCRIPTION_OVERRIDE',
+        actor: currentUser?.uid || 'unknown',
+        actorRole: 'superadmin',
+        metadata: { action, ...options },
+      });
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update tenant subscription');
     }
   };
 
@@ -1030,6 +1063,7 @@ export default function BhojanOSSuperAdmin() {
                   getStatusIndicator={getStatusIndicator}
                   getTrustScore={calculateTrustScore}
                   onUpdateStatus={handleUpdateTenantStatus}
+                  onSubscriptionAction={handleTenantSubscriptionAction}
                   onSeedDefault={handleSeedDefaultDatabase}
                 />
               )}

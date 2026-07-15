@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import { subscribeOwnerOrders, type OwnerOrder } from '../../lib/ownerOrdersReads';
 import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
@@ -20,6 +21,7 @@ import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
 interface Order extends OwnerOrder {}
 
 const OwnerOrders: React.FC = () => {
+  const navigate = useNavigate();
   const { userProfile, profileLoading } = useAuth();
   const { tenantInfo, loading: tenantLoading } = useTenant();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -236,7 +238,11 @@ const OwnerOrders: React.FC = () => {
               <XCircle className="w-5 h-5 mr-2 flex-shrink-0" />
               <span><strong>Your Growth trial has expired.</strong> Upgrade to keep accepting live orders.</span>
             </div>
-            <button className="w-full md:w-auto px-4 py-3 md:py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
+            <button
+              type="button"
+              onClick={() => navigate('/owner/subscription')}
+              className="w-full md:w-auto px-4 py-3 md:py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+            >
               Upgrade to Growth (₹999/mo)
             </button>
           </div>
@@ -248,7 +254,11 @@ const OwnerOrders: React.FC = () => {
               <Clock className="w-5 h-5 mr-2 flex-shrink-0" />
               <span><strong>Growth trial active.</strong> You have {trialDaysRemaining} days left to accept live orders.</span>
             </div>
-            <button className="w-full md:w-auto px-4 py-3 md:py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
+            <button
+              type="button"
+              onClick={() => navigate('/owner/subscription')}
+              className="w-full md:w-auto px-4 py-3 md:py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
               Upgrade Now
             </button>
           </div>
