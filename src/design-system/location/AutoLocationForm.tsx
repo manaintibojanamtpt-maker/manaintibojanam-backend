@@ -4,10 +4,13 @@ import { m, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Tenant } from '../../types';
 import { computeDeliveryFee, calculateDeliveryDistanceKm } from '../../lib/deliveryFee';
-import { isLocationCustomerDetectionEnabled } from '../../lib/locationFeatureFlags';
-import { detectCustomerLocation } from '../../lib/customerLocation/CustomerLocationFacade';
-import type { CustomerCanonicalLocation } from '../../lib/customerLocation/types';
-import { isSdkSuccess } from '../../sdk/core/resultHelpers';
+import {
+  computeServiceability,
+  detectLiveLocation,
+  kitchenConfigFromDeliveryConfig,
+  trackGeolocationFailure,
+} from '@bhojan/location-core';
+import { fetchLocationSearch, fetchReverseGeocodeLabel } from '../../features/location-v2/locationApiClient';
 
 export { computeDeliveryFee as getDeliveryFee, calculateDeliveryDistanceKm };
 
@@ -41,7 +44,6 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
   tenant,
   title = "Confirm Delivery Location"
 }) => {
-  const customerDetectionEnabled = isLocationCustomerDetectionEnabled();
   const [step, setStep] = useState<'detect' | 'manual' | 'form' | 'out_of_bounds'>('detect');
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedAddress, setDetectedAddress] = useState('');
@@ -75,17 +77,33 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
     }
   }, [isOpen]);
 
+  const computeTenantServiceability = (lat: number, lng: number) => {
+    if (!tenant?.location?.lat || !tenant?.location?.lng) {
+      return { distanceKm: 0, deliveryFee: 0, isServiceable: true };
+    }
+    const config = kitchenConfigFromDeliveryConfig(
+      tenant.slug || tenant.id || 'founder',
+      tenant.location.lat,
+      tenant.location.lng,
+      tenant.deliveryConfig,
+    );
+    const result = computeServiceability(config, lat, lng);
+    return {
+      distanceKm: result.distanceKm,
+      deliveryFee: result.deliveryFee,
+      isServiceable: result.isServiceable,
+    };
+  };
+
   const applyCoordinates = async (
     lat: number,
     lng: number,
     formattedAddress?: string
   ) => {
     try {
-      const dist = tenant?.location?.lat
-        ? calculateDeliveryDistanceKm(tenant.location.lat, tenant.location.lng, lat, lng)
-        : 0;
-
-      const fee = computeDeliveryFee(dist, tenant?.deliveryConfig);
+      const serviceability = computeTenantServiceability(lat, lng);
+      const dist = serviceability.distanceKm;
+      const fee = serviceability.isServiceable ? serviceability.deliveryFee : -1;
 
       setCoordinates({ lat, lng });
       setDistanceInfo({ distance: dist, fee });
@@ -101,18 +119,8 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
         const summary = parts.slice(0, Math.min(4, parts.length)).join(', ');
         setDetectedAddress(summary || formattedAddress);
       } else {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-        );
-        const data = await response.json();
-
-        if (data && data.display_name) {
-          const parts = data.display_name.split(',').map((p: string) => p.trim());
-          const summary = parts.slice(0, Math.min(4, parts.length)).join(', ');
-          setDetectedAddress(summary || data.display_name);
-        } else {
-          setDetectedAddress('Location Selected');
-        }
+        const summary = await fetchReverseGeocodeLabel(lat, lng);
+        setDetectedAddress(summary);
       }
 
       setStep('form');
@@ -129,62 +137,25 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
     await applyCoordinates(lat, lng);
   };
 
-  const processDetectedCanonical = async (canonical: CustomerCanonicalLocation) => {
-    setIsDetecting(true);
-    await applyCoordinates(canonical.lat, canonical.lng, canonical.formattedAddress);
-  };
-
   const handleAutoDetect = async () => {
-    if (customerDetectionEnabled) {
-      setIsDetecting(true);
-      const result = await detectCustomerLocation({
-        enableHighAccuracy: true,
-        timeoutMs: 10_000,
-        maximumAgeMs: 0,
-      });
-
-      if (!isSdkSuccess(result)) {
-        const reason = result.error.details?.reason;
-        const message =
-          result.error.code === 'FORBIDDEN'
-            ? 'Location permission denied. Please search manually.'
-            : reason === 'TIMEOUT'
-              ? 'Location request timed out. Please search manually.'
-              : 'Could not auto-detect location. Please search manually.';
-        toast.error(message);
-        setIsDetecting(false);
-        setStep('manual');
-        return;
-      }
-
-      await processDetectedCanonical(result.value);
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
-      setStep('manual');
-      return;
-    }
-
     setIsDetecting(true);
 
-    const successCallback = (position: GeolocationPosition) => {
-      processCoordinates(position.coords.latitude, position.coords.longitude);
-    };
-
-    const errorCallback = (error: GeolocationPositionError) => {
-      console.warn('Geolocation failed:', error);
-      toast.error('Could not auto-detect location. Please search manually.');
+    const gps = await detectLiveLocation();
+    if (!gps.ok) {
+      trackGeolocationFailure(gps.code, gps.message, 'founder');
+      const message =
+        gps.code === 'PERMISSION_DENIED'
+          ? 'Location permission denied. Please search manually.'
+          : gps.code === 'TIMEOUT'
+            ? 'Location request timed out. Please search manually.'
+            : 'Could not auto-detect location. Please search manually.';
+      toast.error(message);
       setIsDetecting(false);
       setStep('manual');
-    };
+      return;
+    }
 
-    navigator.geolocation.getCurrentPosition(
-      successCallback,
-      errorCallback,
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    await processCoordinates(gps.coords.lat, gps.coords.lng);
   };
 
   const handleManualSearch = async (e: React.FormEvent) => {
@@ -199,9 +170,14 @@ const AutoLocationForm: React.FC<AutoLocationFormProps> = ({
         ? manualSearchQuery 
         : `${manualSearchQuery}, ${cityContext}`;
 
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formattedQuery)}&limit=5&countrycodes=in`);
-      const data = await response.json();
-      setSearchResults(data);
+      const data = await fetchLocationSearch(formattedQuery, 5);
+      setSearchResults(
+        data.map((entry) => ({
+          lat: String(entry.lat),
+          lon: String(entry.lng),
+          display_name: entry.displayName,
+        })),
+      );
       if (data.length === 0) {
         toast.error('No results found. Please try a different search.');
       }

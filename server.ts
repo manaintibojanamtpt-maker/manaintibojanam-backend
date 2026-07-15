@@ -49,6 +49,7 @@ import {
   GuestOrderTokenError,
   signGuestOrderToken,
 } from "./backend-lib/guestOrderToken";
+import { registerLocationRoutes } from "./backend-lib/location/registerLocationRoutes.js";
 import { registerMarketplaceRoutes } from "./backend-lib/marketplace/marketplaceRoutes";
 import { registerMarketplaceReferralRoutes } from "./backend-lib/marketplace/marketplaceReferralRoutes.js";
 import { registerOwnerStorefrontRoutes } from "./backend-lib/marketplace/ownerStorefrontRoutes";
@@ -3098,6 +3099,7 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
   }
 });
 
+registerLocationRoutes(app, db);
 registerMarketplaceRoutes(app, db, { verifyFirebaseToken });
 registerMarketplaceReferralRoutes(app, db, FieldValue, verifyFirebaseToken);
 registerOwnerStorefrontRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);

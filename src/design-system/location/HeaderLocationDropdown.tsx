@@ -3,13 +3,17 @@ import { MapPin, ChevronDown, Plus, Navigation } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDeliveryState } from '../../lib/useDeliveryState';
 import { useTenant } from '../../context/TenantContext';
-import { getDeliveryFee, calculateDeliveryDistanceKm } from '../../lib/deliveryFee';
+import { computeServiceability, kitchenConfigFromDeliveryConfig } from '@bhojan/location-core';
+import {
+  configureFounderLocationContext,
+  hydrateFounderFromUnifiedStore,
+  persistFounderAddress,
+} from '../../features/location-v2/adapters/founderAdapter';
+import { deliveryLocationOrchestrator } from '../../features/location-v2/DeliveryLocationOrchestrator';
 import AutoLocationForm from './AutoLocationForm';
 import toast from 'react-hot-toast';
 import { getDb } from '../../lib/firebase-db';
 import { doc, setDoc, arrayUnion } from 'firebase/firestore';
-
-const calculateDistance = calculateDeliveryDistanceKm;
 
 const HeaderLocationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +23,29 @@ const HeaderLocationDropdown = () => {
   const { currentUser, userProfile } = useAuth();
   const [deliveryState, setDeliveryState] = useDeliveryState();
   const { tenantInfo } = useTenant();
+
+  useEffect(() => {
+    configureFounderLocationContext(tenantInfo);
+    hydrateFounderFromUnifiedStore(deliveryState);
+  }, [tenantInfo, deliveryState]);
+
+  const computeFounderServiceability = (lat: number, lng: number) => {
+    if (!tenantInfo?.location?.lat || !tenantInfo?.location?.lng) {
+      return { distanceKm: 0, deliveryFee: 0, isServiceable: true };
+    }
+    const config = kitchenConfigFromDeliveryConfig(
+      tenantInfo.slug || tenantInfo.id || 'founder',
+      tenantInfo.location.lat,
+      tenantInfo.location.lng,
+      tenantInfo.deliveryConfig,
+    );
+    const result = computeServiceability(config, lat, lng);
+    return {
+      distanceKm: result.distanceKm,
+      deliveryFee: result.deliveryFee,
+      isServiceable: result.isServiceable,
+    };
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -51,13 +78,14 @@ const HeaderLocationDropdown = () => {
     let deliveryFee = 0;
 
     if (tenantLat && tenantLng && address.lat && address.lng) {
-      distanceKm = calculateDistance(tenantLat, tenantLng, address.lat, address.lng);
-      deliveryFee = getDeliveryFee(distanceKm, tenantInfo);
+      const serviceability = computeFounderServiceability(address.lat, address.lng);
+      distanceKm = serviceability.distanceKm;
+      deliveryFee = serviceability.deliveryFee;
 
-      if (deliveryFee === -1) {
+      if (!serviceability.isServiceable) {
         toast.error('Sorry, this kitchen currently does not deliver to your location.', { duration: 4000 });
         setIsOpen(false);
-        return; // Reject selection
+        return;
       }
     }
 
@@ -81,6 +109,11 @@ const HeaderLocationDropdown = () => {
         isDefault: address.isDefault
       }
     });
+
+    const v2Address = deliveryLocationOrchestrator.recomputeServiceability(address.lat, address.lng);
+    if (v2Address) {
+      persistFounderAddress(v2Address, deliveryState);
+    }
     setIsOpen(false);
     toast.success('Delivery location updated');
   };

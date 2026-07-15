@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "server.ts", "backend-lib"]
+  "include": ["src", "server.ts", "backend-lib", "packages/location-core", "api"]
 }

@@ -31,8 +31,8 @@ export function getCurrentPosition(options?: PositionOptions): Promise<Geolocati
       (error) => reject(mapGeolocationError(error)),
       {
         enableHighAccuracy: true,
-        timeout: 15_000,
-        maximumAge: 60_000,
+        timeout: 8_000,
+        maximumAge: 120_000,
         ...options,
       },
     );

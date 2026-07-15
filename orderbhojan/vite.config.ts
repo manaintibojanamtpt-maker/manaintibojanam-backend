@@ -22,6 +22,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@bhojan/location-core': path.resolve(__dirname, '../packages/location-core/src/index.ts'),
+      '@bhojan/location-v2': path.resolve(__dirname, '../src/features/location-v2/index.ts'),
       '@bhojan/storefront-design-system': path.resolve(__dirname, '../src/design-system'),
       // Monorepo: BDS has its own node_modules/react — must share one instance with the app.
       react: path.resolve(__dirname, './node_modules/react'),
@@ -98,6 +100,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api/client-config': {
+        target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/location': {
         target: process.env.VITE_MARKETPLACE_API_PROXY ?? 'http://localhost:8080',
         changeOrigin: true,
       },

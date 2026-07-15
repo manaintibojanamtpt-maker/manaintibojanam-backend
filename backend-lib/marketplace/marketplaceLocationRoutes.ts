@@ -1,23 +1,41 @@
 import type { Express, Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
+import { reverseGeocode } from '../location/reverseGeocode.js';
+import {
+  checkLocationServiceability,
+  toMarketplaceServiceabilityResult,
+} from '../location/serviceability.js';
 import { loadTenantBySlug } from './marketplaceTenantLoader.js';
 import {
   checkMarketplaceDeliveryZone,
-  checkMarketplaceServiceability,
   computeMarketplaceDistance,
-  reverseGeocodeMarketplace,
   validateMarketplacePincode,
 } from './projectLocation.js';
 
 export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): void {
   const prefix = '/api/marketplace/location';
 
-  app.get(`${prefix}/reverse`, (req: Request, res: Response) => {
+  app.get(`${prefix}/reverse`, async (req: Request, res: Response) => {
     try {
       const lat = Number(req.query.lat);
       const lng = Number(req.query.lng);
-      const value = reverseGeocodeMarketplace(lat, lng);
-      res.json({ ok: true, value });
+      const language = typeof req.query.language === 'string' ? req.query.language : undefined;
+      const result = await reverseGeocode({ lat, lng, language });
+      res.json({
+        ok: true,
+        value: {
+          displayLabel: result.displayLabel,
+          hints: {
+            cityName: result.text.city,
+            areaName: result.text.area,
+            pincode: result.text.pincode,
+            stateName: result.text.state,
+          },
+          confidence: result.meta.precision === 'exact' ? 'high' : result.meta.precision === 'nearby' ? 'medium' : 'low',
+          text: result.text,
+          meta: result.meta,
+        },
+      });
     } catch (error: unknown) {
       const status = (error as { statusCode?: number }).statusCode ?? 500;
       const message = error instanceof Error ? error.message : 'Reverse geocode failed';
@@ -41,7 +59,13 @@ export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): 
       };
 
       let restaurantCoords: { lat: number; lng: number } | undefined;
-      let maxRadiusKm: number | undefined;
+      let deliveryConfig: {
+        freeRadius?: number;
+        paidRadius?: number;
+        maxRadius?: number;
+        baseFee?: number;
+        perKmCharge?: number;
+      } | undefined;
       if (body.restaurantId) {
         const loaded = await loadTenantBySlug(db, body.restaurantId);
         if (!loaded) {
@@ -50,16 +74,18 @@ export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): 
         if (loaded.tenant.location) {
           restaurantCoords = { lat: loaded.tenant.location.lat, lng: loaded.tenant.location.lng };
         }
-        const delivery = (loaded.raw.deliveryConfig ?? {}) as Record<string, unknown>;
-        maxRadiusKm = Number(delivery.maxRadius ?? delivery.paidRadius ?? 0) || undefined;
+        deliveryConfig = (loaded.raw.deliveryConfig ?? {}) as typeof deliveryConfig;
       }
 
-      const value = checkMarketplaceServiceability({
+      const serviceability = checkLocationServiceability({
         lat: Number(body.lat),
         lng: Number(body.lng),
-        restaurantCoords,
-        maxRadiusKm,
+        kitchenId: body.restaurantId,
+        kitchenLat: restaurantCoords?.lat,
+        kitchenLng: restaurantCoords?.lng,
+        deliveryConfig,
       });
+      const value = toMarketplaceServiceabilityResult(serviceability);
       res.json({ ok: true, value });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Serviceability check failed';

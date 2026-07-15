@@ -67,6 +67,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@bhojan/location-core': path.resolve(__dirname, 'packages/location-core/src/index.ts'),
+        '@bhojan/location-v2': path.resolve(__dirname, 'src/features/location-v2/index.ts'),
       },
       dedupe: ['react', 'react-dom'],
     },
