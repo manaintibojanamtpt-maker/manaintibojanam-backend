@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
 import { isFounderOwnerEmail } from './config/founder';
+import { hasSuperadminPortalAccess } from './lib/authProfile';
 import { waitForOwnerTenantIds } from './lib/ownerAccess';
 import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
 
@@ -159,7 +160,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean;
   }
 
   if (superAdminOnly) {
-    if (userProfile.role !== 'superadmin') {
+    if (!hasSuperadminPortalAccess(currentUser.email, userProfile.role)) {
       return (
         <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-[#0c0c0c] gap-6 px-6 text-center">
           <h2 className="text-2xl font-bold text-white">Super Admin access required</h2>

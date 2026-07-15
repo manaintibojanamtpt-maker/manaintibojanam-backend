@@ -14,8 +14,11 @@ import {
   buildAuthFallbackProfile,
   hydrateOwnerProfileViaApi,
   isOwnerPortalPath,
+  isSuperAdminPortalPath,
   mergeAuthProfile,
+  resolveAuthRole,
 } from '../lib/authProfile';
+import { isFounderOwnerEmail } from '../config/founder';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -70,9 +73,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Profile refresh failed:', err);
-      const apiProfile = await hydrateOwnerProfileViaApi(user, null);
-      if (apiProfile) {
-        setUserProfile(apiProfile);
+      if (isFounderOwnerEmail(user.email)) {
+        setUserProfile((prev) =>
+          mergeAuthProfile(
+            user.uid,
+            {
+              ...buildAuthFallbackProfile(user),
+              role: 'superadmin',
+            },
+            prev,
+          ),
+        );
+      } else if (isOwnerPortalPath() || !isSuperAdminPortalPath()) {
+        const apiProfile = await hydrateOwnerProfileViaApi(user, null);
+        if (apiProfile) {
+          setUserProfile(apiProfile);
+        } else {
+          setUserProfile((prev) => prev ?? buildAuthFallbackProfile(user));
+        }
       } else {
         setUserProfile((prev) => prev ?? buildAuthFallbackProfile(user));
       }
@@ -135,10 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ? profile.ownedTenantIds.filter(Boolean)
               : [];
             const ownedIds = profileOwned.length > 0 ? profileOwned : readCachedOwnerTenantIds();
-            const elevatedRole =
-              ownedIds.length > 0 && (!profile.role || profile.role === 'user')
-                ? 'owner'
-                : profile.role;
+            const role = resolveAuthRole(user.email, profile.role, ownedIds);
 
             if (ownedIds.length > 0) {
               cacheOwnerTenantIds(ownedIds);
@@ -150,14 +165,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 {
                   ...profile,
                   ownedTenantIds: ownedIds,
-                  role: elevatedRole || (ownedIds.length > 0 ? 'owner' : profile.role),
+                  role,
                 },
                 prev,
               ),
             );
           } catch (err) {
             console.warn('Firestore profile bootstrap skipped:', err);
-            if (!isOwnerPortalPath()) {
+            if (isOwnerPortalPath()) {
+              // Owner API hydration already attempted above.
+            } else if (isFounderOwnerEmail(user.email)) {
+              if (!cancelled) {
+                setUserProfile((prev) =>
+                  mergeAuthProfile(
+                    user.uid,
+                    {
+                      ...buildAuthFallbackProfile(user),
+                      role: 'superadmin',
+                    },
+                    prev,
+                  ),
+                );
+              }
+            } else if (!isSuperAdminPortalPath()) {
               const apiProfile = await hydrateOwnerProfileViaApi(user, null);
               if (!cancelled && apiProfile) {
                 setUserProfile(apiProfile);

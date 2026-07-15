@@ -9,6 +9,7 @@ import bhojanOsLogo from '../assets/bhojan-os-logo.png';
 import { useAuth } from '../context/AuthContext';
 import { logIncident } from '../lib/monitoring';
 import { EnvironmentConfig } from '../config/environment';
+import { hasSuperadminPortalAccess } from '../lib/authProfile';
 import SoftButton from '../components/ui/SoftButton';
 
 const BhojanOSSuperAdminLogin: React.FC = () => {
@@ -24,7 +25,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
     if (authLoading || profileLoading) return;
 
     if (currentUser && userProfile) {
-      if (userProfile.role === 'superadmin') {
+      if (hasSuperadminPortalAccess(currentUser.email, userProfile.role)) {
         navigate('/super-admin');
       } else if (userProfile.role === 'admin') {
         toast.error('You are a store admin. Redirecting to the admin portal.');
@@ -154,7 +155,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
                 </p>
               </div>
 
-              {currentUser && userProfile && userProfile.role !== 'superadmin' && (
+              {currentUser && userProfile && !hasSuperadminPortalAccess(currentUser.email, userProfile.role) && (
                 <div className="mb-5 p-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06]">
                   <p className="text-xs text-amber-100/90 leading-relaxed mb-3">
                     Signed in as <strong>{currentUser.email}</strong> ({userProfile.role}). Sign out

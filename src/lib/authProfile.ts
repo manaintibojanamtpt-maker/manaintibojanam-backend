@@ -1,8 +1,11 @@
 import type { User as FirebaseUser } from 'firebase/auth';
 import { UserProfile } from '../types';
 import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
+import { resolveAuthRole } from './authRole';
 import { cacheOwnerTenantIds, readCachedOwnerTenantIds } from './ownerRedirect';
 import { syncOwnerTenantsViaApi } from './ownerProvisioning';
+
+export { hasSuperadminPortalAccess, resolveAuthRole } from './authRole';
 
 export function filterOwnedTenantIds(ids: string[], email?: string | null): string[] {
   return ids.filter(
@@ -22,7 +25,7 @@ export function buildAuthFallbackProfile(user: FirebaseUser, ownedTenantIds: str
     name: user.displayName || '',
     phone: user.phoneNumber || '',
     address: '',
-    role: owned.length > 0 ? 'owner' : 'user',
+    role: resolveAuthRole(user.email, undefined, owned),
     ownedTenantIds: owned,
   } as UserProfile;
 }
@@ -41,16 +44,17 @@ export function mergeAuthProfile(
       ? filterOwnedTenantIds(prev.ownedTenantIds.filter(Boolean), prev.email)
       : [];
   const ownedTenantIds = snapOwned.length > 0 ? snapOwned : prevOwned;
-  const role =
-    ownedTenantIds.length > 0 && (!fromSnap.role || fromSnap.role === 'user')
-      ? 'owner'
-      : fromSnap.role;
+  const role = resolveAuthRole(fromSnap.email, fromSnap.role, ownedTenantIds);
 
   return { ...fromSnap, ownedTenantIds, role };
 }
 
 export function isOwnerPortalPath(): boolean {
   return typeof window !== 'undefined' && window.location.pathname.startsWith('/owner');
+}
+
+export function isSuperAdminPortalPath(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin');
 }
 
 /** Server-side profile + tenant link — works when client Firestore is unavailable. */
@@ -64,10 +68,11 @@ export async function hydrateOwnerProfileViaApi(
     if (owned.length === 0) return null;
     cacheOwnerTenantIds(owned);
     const base = prev ?? buildAuthFallbackProfile(user, owned);
+    const role = resolveAuthRole(user.email, base.role, owned);
     return {
       ...base,
       ownedTenantIds: owned,
-      role: 'owner',
+      role,
       email: user.email || base.email,
       name: base.name || user.displayName || '',
     } as UserProfile;
