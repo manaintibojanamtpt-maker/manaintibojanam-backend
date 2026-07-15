@@ -444,9 +444,43 @@ function selectForCollection(id: DiscoveryCollectionId, pool: readonly Restauran
       return sortRestaurants(pool, 'rating').filter((r) => r.isOpen);
     case 'popular-near-you':
       return sortRestaurants(pool, 'popularity').filter((r) => (r.distanceKm ?? 99) <= 4);
+    case 'new-on-orderbhojan':
+    case 'recently-added':
+      return pool.filter((r) => r.badges.includes('new'));
+    case 'breakfast':
+      return pool.filter((r) =>
+        r.cuisines.some((c) => /breakfast|beverage|snack|chai/i.test(c)),
+      );
+    case 'lunch':
+      return pool.filter((r) =>
+        r.cuisines.some((c) => /meals|thali|biryani|indian/i.test(c)),
+      );
+    case 'dinner':
+      return sortRestaurants(pool, 'rating');
+    case 'late-night':
+      return pool.filter(
+        (r) =>
+          r.cuisines.some((c) => /late night|biryani/i.test(c)) ||
+          r.badges.includes('cloud_kitchen'),
+      );
+    case 'festival-specials':
+      return pool.filter((r) => r.cuisines.some((c) => /festive|thali/i.test(c)));
+    case 'healthy-choices':
+      return pool.filter(
+        (r) =>
+          r.badges.includes('pure_veg') ||
+          r.cuisines.some((c) => /healthy|salad/i.test(c)),
+      );
+    case 'family-meals':
+      return pool.filter((r) => r.cuisines.some((c) => /family|meals/i.test(c)));
+    case 'beverages':
+      return pool.filter((r) => r.cuisines.some((c) => /beverage|snack|chai/i.test(c)));
+    case 'desserts':
+      return pool.filter((r) => r.cuisines.some((c) => /dessert|bakery/i.test(c)));
     case 'featured':
-    default:
       return sortRestaurants(pool, 'rating').slice(0, 6);
+    default:
+      return [];
   }
 }
 

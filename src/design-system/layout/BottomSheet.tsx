@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 
 export interface BottomSheetProps {
   isOpen: boolean;
@@ -48,7 +48,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   panelClassName = '',
 }) => {
   const isMobileTouch = useMemo(() => isMobileTouchDevice(), []);
-  const dragControls = useDragControls();
   const [panelReady, setPanelReady] = useState(false);
 
   useEffect(() => {
@@ -58,9 +57,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   }, [isOpen]);
 
   useLayoutEffect(() => {
-    if (!isOpen || !isMobileTouch) return;
+    if (!isOpen) return;
     setPanelReady(true);
-  }, [isOpen, isMobileTouch]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !panelReady) return undefined;
@@ -79,12 +78,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.y > 120 || info.velocity.y > 500) {
-      onClose();
-    }
-  };
-
   const panelHeightStyle = {
     height: `${snapPoints[initialSnap]}vh`,
     maxHeight: 'calc(100dvh - 24px)',
@@ -95,10 +88,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const panelContent = (
     <>
-      <div
-        className={`flex w-full shrink-0 justify-center pb-2 pt-4 ${isMobileTouch ? 'cursor-default' : 'cursor-grab touch-none active:cursor-grabbing'}`}
-        onPointerDown={isMobileTouch ? undefined : (event) => dragControls.start(event)}
-      >
+      <div className="flex w-full shrink-0 justify-center pb-2 pt-4">
         <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
       </div>
       {title ? (
@@ -136,47 +126,20 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             onClick={panelReady ? onClose : undefined}
             className={`fixed inset-0 z-[1200] cursor-default touch-manipulation border-0 bg-black/60 backdrop-blur-sm${panelReady ? '' : ' pointer-events-none'}`.trim()}
           />
-          {isMobileTouch ? (
-            <div
-              key="bottom-sheet-panel"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={title ? 'bottom-sheet-title' : undefined}
-              className={panelBaseClass}
-              style={{
-                ...panelHeightStyle,
-                transform: 'translate3d(0,0,0)',
-                WebkitTransform: 'translate3d(0,0,0)',
-              }}
-            >
-              {panelContent}
-            </div>
-          ) : (
-            <m.div
-              key="bottom-sheet-panel"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={title ? 'bottom-sheet-title' : undefined}
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', bounce: 0.12, duration: 0.38 }}
-              drag="y"
-              dragControls={dragControls}
-              dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.08}
-              onDragEnd={handleDragEnd}
-              onAnimationComplete={() => {
-                if (!isOpen) return;
-                setPanelReady(true);
-              }}
-              className={`${panelBaseClass} will-change-transform`}
-              style={panelHeightStyle}
-            >
-              {panelContent}
-            </m.div>
-          )}
+          <div
+            key="bottom-sheet-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+            className={panelBaseClass}
+            style={{
+              ...panelHeightStyle,
+              transform: 'translate3d(0,0,0)',
+              WebkitTransform: 'translate3d(0,0,0)',
+            }}
+          >
+            {panelContent}
+          </div>
         </>
       ) : null}
     </AnimatePresence>,

@@ -39,8 +39,8 @@ export function formatDistance(restaurant: RestaurantPublic): string {
   return `${restaurant.distanceKm.toFixed(1)} km`;
 }
 
-export function formatDeliveryFee(restaurant: RestaurantPublic): string {
-  if (restaurant.deliveryFee == null) return '—';
+export function formatDeliveryFee(restaurant: RestaurantPublic): string | undefined {
+  if (restaurant.deliveryFee == null) return undefined;
   if (restaurant.deliveryFee === 0) return 'Free';
   return `₹${restaurant.deliveryFee}`;
 }

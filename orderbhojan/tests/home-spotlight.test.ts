@@ -70,4 +70,17 @@ describe('homeSpotlightFeed', () => {
     assert.equal(plan.mode, 'sparse');
     assert.equal(plan.kitchenCollections.filter((c) => c.id !== 'trending').length, 2);
   });
+
+  it('drops collection rails that repeat the same kitchen list', () => {
+    const collections = [
+      mockCollection('nearby', ['a', 'b', 'c']),
+      mockCollection('breakfast', ['a', 'b', 'c']),
+      mockCollection('top-rated', ['d']),
+    ];
+    const plan = buildDiscoverySpotlightFeed(collections);
+    assert.equal(plan.mode, 'sparse');
+    assert.equal(plan.kitchenCollections.length, 2);
+    assert.equal(plan.kitchenCollections[0]?.id, 'nearby');
+    assert.equal(plan.kitchenCollections[1]?.id, 'top-rated');
+  });
 });

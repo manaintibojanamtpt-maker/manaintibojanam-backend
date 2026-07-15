@@ -24,11 +24,14 @@ export function OrderBhojanProfilePage() {
       navigate('/favorites');
       return;
     }
-    if (locationEnabled) {
-      openSelector();
+    if (tile === 'addresses') {
+      if (locationEnabled) {
+        openSelector();
+        return;
+      }
+      navigate('/?openLocation=1');
       return;
     }
-    navigate('/?openLocation=1');
   };
 
   const displayName = profileQuery.data?.displayName ?? sessionUser?.displayName ?? 'Guest';

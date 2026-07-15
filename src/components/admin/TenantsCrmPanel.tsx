@@ -78,8 +78,8 @@ const StatusPill = memo(function StatusPill({ status }: { status: StatusIndicato
   const text = formatStatusLabel(status.label);
   return (
     <span
-      className={`inline-flex max-w-[160px] items-center gap-1.5 rounded-full border px-2.5 py-1 ${status.bgFill} ${status.border}`}
-      title={text}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 ${status.bgFill} ${status.border}`}
+      aria-label={text}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.bg}`} />
       <span className={`text-[9px] font-bold uppercase leading-tight tracking-[0.08em] ${status.color}`}>
@@ -97,11 +97,11 @@ const TrustScoreCell = memo(function TrustScoreCell({
   showLabel?: boolean;
 }) {
   return (
-    <div className="w-full max-w-[132px]">
+    <div className="w-full min-w-0">
       {showLabel && (
         <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-600">Trust score</p>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <span className="w-7 shrink-0 text-right text-sm font-bold tabular-nums text-white">{score}</span>
         <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
           <div
@@ -135,18 +135,18 @@ const IconAction = memo(function IconAction({
     danger: 'border-rose-500/20 bg-rose-500/5 text-rose-400 hover:bg-rose-500/10',
   }[tone];
 
-  const className = `inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all ${toneClass}`;
+  const className = `inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all ${toneClass}`;
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" title={label} aria-label={label} className={className}>
+      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className={className}>
         {children}
       </a>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} title={label} aria-label={label} className={className}>
+    <button type="button" onClick={onClick} aria-label={label} className={className}>
       {children}
     </button>
   );
@@ -213,7 +213,7 @@ const TenantRow = memo(function TenantRow({
             {tenant.name ? tenant.name.charAt(0).toUpperCase() : 'K'}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight text-white" title={tenant.name || 'Unnamed Kitchen'}>
+            <p className="truncate text-sm font-bold tracking-tight text-white">
               {tenant.name || 'Unnamed Kitchen'}
             </p>
             <p className="mt-0.5 text-[11px] font-medium text-gray-500">Joined {formatJoinedDate(tenant)}</p>
@@ -222,10 +222,7 @@ const TenantRow = memo(function TenantRow({
       </td>
 
       <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
-        <code
-          className="block max-w-full truncate rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] font-medium text-gray-400"
-          title={slug}
-        >
+        <code className="block max-w-full truncate rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] font-medium text-gray-400">
           {slug}
         </code>
       </td>
@@ -248,15 +245,13 @@ const TenantRow = memo(function TenantRow({
       </td>
 
       <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
-        <div className="min-w-0 max-w-full">
-          <p className="truncate text-xs font-semibold capitalize text-gray-200" title={planLines.plan}>
-            {planLines.plan}
-          </p>
-          <p className="mt-0.5 truncate text-[11px] leading-snug text-gray-500" title={planLines.detail}>
-            {planLines.detail}
-          </p>
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold capitalize text-gray-200">{planLines.plan}</p>
+          <p className="mt-0.5 truncate text-[11px] leading-snug text-gray-500">{planLines.detail}</p>
           {tenant.subscription?.founderOverride && (
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">Founder override</p>
+            <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-amber-400">
+              Founder override
+            </p>
           )}
         </div>
       </td>
@@ -265,8 +260,8 @@ const TenantRow = memo(function TenantRow({
         <TrustScoreCell score={score} />
       </td>
 
-      <td className="w-[248px] min-w-[248px] overflow-visible px-4 py-4 align-middle lg:px-5">
-        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
+        <div className="flex min-w-0 items-center justify-end gap-1.5 whitespace-nowrap">
           {onSubscriptionAction && (
             <>
               <IconAction
@@ -380,15 +375,15 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
         className="hidden overflow-hidden rounded-2xl border border-white/[0.06] bg-[#121212]/80 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.8)] md:block"
       >
         <div className="-mx-px overflow-x-auto">
-          <table className="w-full min-w-[1240px] table-fixed border-collapse text-left">
+          <table className="w-full min-w-[1280px] table-fixed border-collapse text-left">
             <colgroup>
-              <col style={{ width: '19%' }} />
-              <col style={{ width: '11%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '12%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '10%' }} />
               <col style={{ width: '14%' }} />
               <col style={{ width: '11%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '260px' }} />
             </colgroup>
             <thead className="sticky top-0 z-20">
               <tr className="border-b border-white/[0.08] bg-[#161616]/95 backdrop-blur-md">

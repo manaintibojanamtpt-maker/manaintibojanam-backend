@@ -38,6 +38,28 @@ export function collectUniqueRestaurants(
   return unique;
 }
 
+function collectionRestaurantKey(collection: DiscoveryCollection): string {
+  return collection.restaurants.map((restaurant) => restaurant.restaurantId).join(',');
+}
+
+/** Drop rails that repeat the exact same kitchen ordering as an earlier section. */
+export function dedupeIdenticalDiscoveryCollections(
+  collections: readonly DiscoveryCollection[],
+): DiscoveryCollection[] {
+  const seenKeys = new Set<string>();
+  const deduped: DiscoveryCollection[] = [];
+
+  for (const collection of collections) {
+    if (collection.restaurants.length === 0) continue;
+    const key = collectionRestaurantKey(collection);
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    deduped.push(collection);
+  }
+
+  return deduped;
+}
+
 export function resolveHomeSpotlightMode(uniqueKitchenCount: number): HomeSpotlightMode {
   if (uniqueKitchenCount <= 1) return 'single';
   if (uniqueKitchenCount === 2) return 'dual';
@@ -70,7 +92,7 @@ export function buildDiscoverySpotlightFeed(
       mode,
       uniqueKitchenCount: unique.length,
       spotlightRestaurant: null,
-      kitchenCollections: collections,
+      kitchenCollections: dedupeIdenticalDiscoveryCollections(collections),
       hiddenCollectionIds: [],
       sparseCopy: null,
     };
@@ -104,7 +126,9 @@ export function buildDiscoverySpotlightFeed(
       mode,
       uniqueKitchenCount: unique.length,
       spotlightRestaurant: null,
-      kitchenCollections: trending ? [combined, trending] : [combined],
+      kitchenCollections: dedupeIdenticalDiscoveryCollections(
+        trending ? [combined, trending] : [combined],
+      ),
       hiddenCollectionIds: collections
         .filter((c) => c.id !== 'trending' && c.id !== 'nearby')
         .map((c) => c.id),
@@ -134,7 +158,7 @@ export function buildDiscoverySpotlightFeed(
     mode,
     uniqueKitchenCount: unique.length,
     spotlightRestaurant: null,
-    kitchenCollections: [...picked, ...nonRestaurant],
+    kitchenCollections: dedupeIdenticalDiscoveryCollections([...picked, ...nonRestaurant]),
     hiddenCollectionIds: hidden,
     sparseCopy: null,
   };

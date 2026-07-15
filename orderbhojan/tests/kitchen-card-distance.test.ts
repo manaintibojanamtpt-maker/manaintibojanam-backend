@@ -43,6 +43,15 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
     );
     assert.doesNotMatch(source, /distanceKm:\s*restaurant\.distanceKm\s*\?\?\s*0/);
   });
+
+  it('omits delivery fee label when fee is unknown', () => {
+    const card = mapRestaurantPublicToKitchenCard(baseRestaurant());
+    assert.equal(card.deliveryFeeLabel, undefined);
+    const priced = mapRestaurantPublicToKitchenCard(baseRestaurant({ deliveryFee: 25 }));
+    assert.equal(priced.deliveryFeeLabel, '₹25');
+    const free = mapRestaurantPublicToKitchenCard(baseRestaurant({ deliveryFee: 0 }));
+    assert.equal(free.deliveryFeeLabel, 'Free');
+  });
 });
 
 describe('MarketplaceKitchenCardView distance rendering', () => {
