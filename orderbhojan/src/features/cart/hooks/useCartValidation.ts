@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
-import { hasActiveDeliveryLocation, useActiveLocation } from '@/features/location';
+import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 
 export function useCartValidation() {
@@ -21,6 +21,9 @@ export function useCartValidation() {
       }
       if (!hasActiveDeliveryLocation(activeLocation)) {
         throw new Error('Set your delivery location before checkout.');
+      }
+      if (!hasReadyDeliveryLocation(activeLocation)) {
+        throw new Error('Confirm your flat or house number before checkout.');
       }
       const coords = activeLocation!.coordinates;
       return getMarketplaceApiClient().validateCart({

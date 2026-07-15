@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getLocationStoreAddress, subscribeLocationStore } from '@bhojan/location-core';
 import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
 import {
   CheckoutPageView,
@@ -9,6 +10,7 @@ import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/Tr
 import { phoneNumberSchema } from '@/features/auth/domain/auth.types';
 import {
   hasActiveDeliveryLocation,
+  needsFlatConfirmation,
   useActiveLocation,
   useLocationActions,
   useLocationFeatureEnabled,
@@ -31,7 +33,7 @@ export function OrderBhojanCheckoutPage() {
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
   const { uiStatus } = useLocationUiState();
-  const { openSelector } = useLocationActions();
+  const { openSelector, openConfirmation } = useLocationActions();
   const {
     quote,
     paymentMethods,
@@ -57,6 +59,10 @@ export function OrderBhojanCheckoutPage() {
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const showBothPaymentOptions = supportsCod && supportsRazorpay;
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
+  const requiresFlatConfirmation = needsFlatConfirmation(activeLocation);
+  const [v2Address, setV2Address] = useState(() => getLocationStoreAddress());
+
+  useEffect(() => subscribeLocationStore(setV2Address), []);
 
   const paymentSubtitle = useMemo(() => {
     if (showBothPaymentOptions) return 'Choose how you want to pay';
@@ -148,6 +154,19 @@ export function OrderBhojanCheckoutPage() {
     );
   }
 
+  if (locationEnabled && requiresFlatConfirmation) {
+    return (
+      <TransactionalPageShell title="Checkout" subtitle="">
+        <MarketplaceUxStateView
+          title="Confirm delivery address"
+          description="Add your flat or house number to complete checkout."
+          primaryLabel="Confirm address"
+          onPrimary={() => openConfirmation()}
+        />
+      </TransactionalPageShell>
+    );
+  }
+
   if (!canCheckout) {
     return (
       <TransactionalPageShell title="Checkout" subtitle="">
@@ -166,7 +185,9 @@ export function OrderBhojanCheckoutPage() {
   };
 
   const addressLabel =
-    uiStatus === 'loading' ? 'Detecting location…' : activeLocation?.displayLabel ?? DELIVERY_ADDRESS_PLACEHOLDER;
+    uiStatus === 'loading'
+      ? 'Detecting location…'
+      : v2Address?.text?.shortLabel?.trim() || activeLocation?.displayLabel || DELIVERY_ADDRESS_PLACEHOLDER;
 
   return (
     <CheckoutPageView

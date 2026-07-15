@@ -10,7 +10,7 @@ import {
   useCartStore,
 } from '@/features/cart/store/cartStore';
 import { useCartValidation } from '@/features/cart/hooks/useCartValidation';
-import { hasActiveDeliveryLocation, useActiveLocation, useLocationActions } from '@/features/location';
+import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, useActiveLocation, useLocationActions } from '@/features/location';
 
 const DELIVERY_LOCATION_GATE_MESSAGE =
   'Set your delivery location to see delivery options and continue to checkout.';
@@ -45,8 +45,9 @@ export function OrderBhojanCartExperience() {
   const subtotal = cartSubtotal(lines);
   const { validate, isValidating, result, error, reset } = useCartValidation();
   const activeLocation = useActiveLocation();
-  const { openWizard } = useLocationActions();
+  const { openSelector, openConfirmation } = useLocationActions();
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
+  const isCheckoutReady = hasReadyDeliveryLocation(activeLocation);
 
   const restaurantLabel = useMemo(
     () =>
@@ -64,7 +65,11 @@ export function OrderBhojanCartExperience() {
 
   const handleCheckout = async () => {
     if (!hasDeliveryLocation) {
-      openWizard();
+      openSelector();
+      return;
+    }
+    if (needsFlatConfirmation(activeLocation)) {
+      openConfirmation();
       return;
     }
     try {
@@ -85,6 +90,9 @@ export function OrderBhojanCartExperience() {
   const slug = restaurantSlug ?? lines[0]?.restaurantSlug;
   const validationMessages = [
     ...(!hasDeliveryLocation ? [DELIVERY_LOCATION_GATE_MESSAGE] : []),
+    ...(hasDeliveryLocation && !isCheckoutReady
+      ? ['Confirm your flat or house number to continue to checkout.']
+      : []),
     ...(result && !result.valid ? result.issues.map((issue) => issue.message) : []),
   ];
   const errorMessage =
@@ -113,7 +121,13 @@ export function OrderBhojanCartExperience() {
       validationMessages={validationMessages}
       errorMessage={errorMessage}
       checkoutLabel={
-        isValidating ? 'Checking cart…' : hasDeliveryLocation ? 'Proceed to checkout' : 'Set delivery location'
+        isValidating
+          ? 'Checking cart…'
+          : isCheckoutReady
+            ? 'Proceed to checkout'
+            : hasDeliveryLocation
+              ? 'Confirm delivery address'
+              : 'Set delivery location'
       }
       checkoutBusy={isValidating}
       onCheckout={() => void handleCheckout()}

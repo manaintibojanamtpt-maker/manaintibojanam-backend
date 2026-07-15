@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
-import { hasActiveDeliveryLocation, useActiveLocation } from '@/features/location';
+import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { useAuth } from '@/shared/providers/AuthProvider';
@@ -104,7 +104,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     itemCount > 0 &&
     Boolean(resolvedRestaurantId) &&
     Boolean(contextToken) &&
-    hasActiveDeliveryLocation(activeLocation);
+    hasReadyDeliveryLocation(activeLocation);
 
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {
@@ -116,6 +116,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
     const coords = activeLocation?.coordinates;
     if (!coords) {
       throw new Error('Delivery address is required. Add your address before checkout.');
+    }
+    if (!hasReadyDeliveryLocation(activeLocation)) {
+      throw new Error('Confirm your flat or house number before checkout.');
     }
     return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
   }, [activeLocation, contextToken, lines, resolvedRestaurantId]);
