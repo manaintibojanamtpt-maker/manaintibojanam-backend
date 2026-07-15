@@ -369,7 +369,7 @@ const OwnerOrders: React.FC = () => {
                             <Phone className="w-3.5 h-3.5" /> Call Customer
                           </a>
                           <a 
-                            href={`https://wa.me/${phoneDigits(order.customerPhone || order.phone)}?text=Hi%20${encodeURIComponent(customerName)}!%20This%20is%20regarding%20your%20recent%20order%20%23${shortOrderId}.`}
+                            href={`https://wa.me/${phoneDigits(order.customerPhone || order.phone)}?text=Hi%20${encodeURIComponent(customerName)}!%20This%20is%20regarding%20your%20recent%20order%20%23${displayOrderNumber}.`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
