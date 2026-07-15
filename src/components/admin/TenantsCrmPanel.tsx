@@ -89,12 +89,20 @@ const StatusPill = memo(function StatusPill({ status }: { status: StatusIndicato
   );
 });
 
-const TrustScoreCell = memo(function TrustScoreCell({ score }: { score: number }) {
+const TrustScoreCell = memo(function TrustScoreCell({
+  score,
+  showLabel = false,
+}: {
+  score: number;
+  showLabel?: boolean;
+}) {
   return (
-    <div className="w-[108px]">
-      <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-600">Trust</p>
+    <div className="w-full max-w-[132px]">
+      {showLabel && (
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-600">Trust score</p>
+      )}
       <div className="flex items-center gap-2">
-        <span className="w-6 shrink-0 text-right text-sm font-bold tabular-nums text-white">{score}</span>
+        <span className="w-7 shrink-0 text-right text-sm font-bold tabular-nums text-white">{score}</span>
         <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${trustBarColor(score)}`}
@@ -157,6 +165,25 @@ function formatSubscriptionLabel(tenant: any): string {
   return `${planId} · ${status}`;
 }
 
+function subscriptionPlanLines(tenant: any): { plan: string; detail: string } {
+  const plan = tenant.subscription?.planId || 'starter';
+  const status = tenant.subscription?.status || tenant.status || 'unknown';
+  const expiresAt = tenant.subscription?.trialExpiresAt || tenant.trialEndsAt;
+  if (expiresAt) {
+    const expiry = new Date(expiresAt);
+    const expired = expiry.getTime() <= Date.now();
+    const date = expiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    return {
+      plan: plan.charAt(0).toUpperCase() + plan.slice(1),
+      detail: expired ? `${status} · expired` : `${status} · until ${date}`,
+    };
+  }
+  return {
+    plan: plan.charAt(0).toUpperCase() + plan.slice(1),
+    detail: status,
+  };
+}
+
 const TenantRow = memo(function TenantRow({
   tenant,
   getStatusIndicator,
@@ -176,9 +203,11 @@ const TenantRow = memo(function TenantRow({
   const email = tenant.contact?.email;
   const phone = tenant.contact?.phone;
 
+  const planLines = subscriptionPlanLines(tenant);
+
   return (
     <tr className="group border-b border-white/[0.04] transition-colors hover:bg-white/[0.02]">
-      <td className="px-5 py-4 align-middle">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] text-base font-black text-white">
             {tenant.name ? tenant.name.charAt(0).toUpperCase() : 'K'}
@@ -192,17 +221,17 @@ const TenantRow = memo(function TenantRow({
         </div>
       </td>
 
-      <td className="px-5 py-4 align-middle">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
         <code
-          className="block max-w-[200px] truncate rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] font-medium text-gray-400"
+          className="block max-w-full truncate rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] font-medium text-gray-400"
           title={slug}
         >
           {slug}
         </code>
       </td>
 
-      <td className="px-5 py-4 align-middle">
-        <div className="space-y-1.5 min-w-[140px]">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
+        <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 min-w-0">
             <Mail size={12} className="shrink-0 text-gray-600" />
             <span className="truncate text-xs font-medium text-gray-300">{email || '—'}</span>
@@ -214,25 +243,30 @@ const TenantRow = memo(function TenantRow({
         </div>
       </td>
 
-      <td className="px-5 py-4 align-middle">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
         <StatusPill status={status} />
       </td>
 
-      <td className="px-5 py-4 align-middle">
-        <div className="min-w-[150px]">
-          <p className="text-xs font-semibold text-gray-300">{formatSubscriptionLabel(tenant)}</p>
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
+        <div className="min-w-0 max-w-full">
+          <p className="truncate text-xs font-semibold capitalize text-gray-200" title={planLines.plan}>
+            {planLines.plan}
+          </p>
+          <p className="mt-0.5 truncate text-[11px] leading-snug text-gray-500" title={planLines.detail}>
+            {planLines.detail}
+          </p>
           {tenant.subscription?.founderOverride && (
             <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">Founder override</p>
           )}
         </div>
       </td>
 
-      <td className="px-5 py-4 align-middle">
+      <td className="min-w-0 overflow-hidden px-4 py-4 align-middle lg:px-5">
         <TrustScoreCell score={score} />
       </td>
 
-      <td className="px-5 py-4 align-middle text-right">
-        <div className="flex items-center justify-end gap-1.5">
+      <td className="w-[248px] min-w-[248px] overflow-visible px-4 py-4 align-middle lg:px-5">
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
           {onSubscriptionAction && (
             <>
               <IconAction
@@ -340,21 +374,21 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
         </button>
       </m.div>
 
-      {/* Desktop table */}
+      {/* Tablet / desktop table — horizontal scroll on narrower viewports */}
       <m.div
         variants={fadeUp}
-        className="hidden overflow-hidden rounded-2xl border border-white/[0.06] bg-[#121212]/80 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.8)] sm:block"
+        className="hidden overflow-hidden rounded-2xl border border-white/[0.06] bg-[#121212]/80 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.8)] md:block"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
+        <div className="-mx-px overflow-x-auto">
+          <table className="w-full min-w-[1240px] table-fixed border-collapse text-left">
             <colgroup>
-              <col style={{ width: '22%' }} />
+              <col style={{ width: '19%' }} />
+              <col style={{ width: '11%' }} />
+              <col style={{ width: '15%' }} />
               <col style={{ width: '12%' }} />
-              <col style={{ width: '16%' }} />
               <col style={{ width: '14%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '12%' }} />
+              <col style={{ width: '11%' }} />
+              <col style={{ width: '18%' }} />
             </colgroup>
             <thead className="sticky top-0 z-20">
               <tr className="border-b border-white/[0.08] bg-[#161616]/95 backdrop-blur-md">
@@ -362,9 +396,9 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
                   <th
                     key={head}
                     scope="col"
-                    className={`px-5 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 ${
+                    className={`px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 lg:px-5 ${
                       head === 'Actions' ? 'text-right' : 'text-left'
-                    }`}
+                    } ${head === 'Trust score' ? 'whitespace-nowrap' : ''}`}
                   >
                     {head}
                   </th>
@@ -412,7 +446,7 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
       </m.div>
 
       {/* Mobile cards */}
-      <div className="space-y-3 sm:hidden">
+      <div className="space-y-3 md:hidden">
         {filteredTenants.map((tenant) => {
           const status = getStatusIndicator(tenant);
           const score = getTrustScore(tenant);
@@ -450,8 +484,7 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
                   <p className="mt-1 truncate text-xs font-medium text-gray-300">{tenant.contact?.phone || '—'}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Trust Score</p>
-                  <TrustScoreCell score={score} />
+                  <TrustScoreCell score={score} showLabel />
                 </div>
               </div>
 
