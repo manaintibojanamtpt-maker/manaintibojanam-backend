@@ -15,8 +15,11 @@ describe('checkout location recovery (batch 2)', () => {
     );
 
     assert.match(checkout, /hasActiveDeliveryLocation/);
+    assert.match(checkout, /needsFlatConfirmation/);
+    assert.match(checkout, /openConfirmation/);
     assert.match(checkout, /Set delivery location/);
-    assert.match(checkout, /Add your delivery address to complete checkout/);
+    assert.match(checkout, /Confirm delivery address/);
+    assert.match(checkout, /Add your flat or house number/);
     assert.match(checkout, /Session expired/);
     assert.match(checkout, /openSelector/);
     assert.doesNotMatch(checkout, /openWizard/);

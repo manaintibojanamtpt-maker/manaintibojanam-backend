@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/marketplaceQueryPolicy.test.ts tests/sync-revision.test.ts tests/tenant-revision-sync.test.ts tests/sprint19-live-search.test.ts tests/owner-sync-e2e.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts tests/m4-search.test.ts tests/m5-restaurant.test.ts tests/m6-food.test.ts tests/m10-orders.test.ts tests/m11-tracking.test.ts tests/m12-customer.test.ts tests/m65-premium-evolution.test.ts tests/px2-design-implementation.test.ts tests/sprint18-contract-v1.test.ts tests/sprint19-firestore-sync.test.ts tests/sanitize-restaurant-context.test.ts tests/kitchen-card-distance.test.ts tests/home-spotlight.test.ts tests/cart-location-gate.test.ts tests/checkout-location-recovery.test.ts",
+    "test:unit": "node --import tsx --test tests/config.test.ts tests/featureFlags.test.ts tests/marketplaceClient.test.ts tests/marketplaceQueryPolicy.test.ts tests/sync-revision.test.ts tests/tenant-revision-sync.test.ts tests/sprint19-live-search.test.ts tests/owner-sync-e2e.test.ts tests/mswHandlers.test.ts tests/bds-integration.test.ts tests/bds-theme.test.ts tests/auth-state.test.ts tests/auth-msw.test.ts tests/auth-integration.test.ts tests/m15-experience.test.ts tests/m16-premium.test.ts tests/m2-location.test.ts tests/m3-discovery.test.ts tests/m4-search.test.ts tests/m5-restaurant.test.ts tests/m6-food.test.ts tests/m10-orders.test.ts tests/m11-tracking.test.ts tests/m12-customer.test.ts tests/m65-premium-evolution.test.ts tests/px2-design-implementation.test.ts tests/sprint18-contract-v1.test.ts tests/sprint19-firestore-sync.test.ts tests/sanitize-restaurant-context.test.ts tests/kitchen-card-distance.test.ts tests/home-spotlight.test.ts tests/cart-location-gate.test.ts tests/checkout-location-recovery.test.ts tests/ob-unified-location.test.ts",
     "test:e2e:owner-sync": "tsx scripts/owner-sync-e2e.ts",
     "seed:e2e-sync-lab": "tsx ../scripts/e2e/e2eSyncLabHarness.ts prepare-draft",
     "harness:e2e-update-menu": "tsx ../scripts/e2e/e2eSyncLabHarness.ts update-menu-options",
@@ -42,6 +42,7 @@
     "deploy": "npm run build && cd .. && firebase deploy --only hosting:orderbhojan --project orderbhojan"
   },
   "dependencies": {
+    "@bhojan/location-core": "file:../packages/location-core",
     "@bhojan/marketplace-contracts": "file:../packages/marketplace-contracts",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.2",
