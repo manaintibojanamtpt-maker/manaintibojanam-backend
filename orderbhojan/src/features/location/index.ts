@@ -8,4 +8,4 @@ export { useLocationFeatureEnabled, useLocationGeocodeEnabled, useLocationMapEna
 export { useActiveLocation, useLocationUiState, useSavedAddressesList, useRecentLocationsList } from './hooks/useActiveLocation';
 export { useLocationActions } from './hooks/useLocationActions';
 export type { CustomerLocation, SavedAddress, IndiaAddress } from './domain/location.types';
-export { hasActiveDeliveryLocation } from './domain/locationReadiness';
+export { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, resolveObDeliveryLocationGate } from './domain/locationReadiness';

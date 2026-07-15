@@ -1,21 +1,26 @@
 import { useCallback } from 'react';
+import { getLocationStoreAddress } from '@bhojan/location-core';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
 import type { GeoCoordinates } from '../domain/location.types';
 import type { SavedAddressInput } from '../domain/location.schema';
 import {
-  applySessionLocation,
   createSavedAddress,
-  detectCurrentCoordinates,
   fetchSavedAddresses,
   hydrateGuestSessionLocation,
   loadRecentLocationEntries,
   markDefaultAddress,
-  previewServiceability,
   removeSavedAddress,
 } from '../application/locationService';
+import {
+  applyObRecentLocation,
+  applyObSavedAddress,
+  captureObGpsLocationDraft,
+  confirmObLocationDraft,
+} from '../application/obLocationFlowService';
 import { useLocationSessionStore } from '../store/locationSessionStore';
 import { useLocationGeocodeEnabled } from './useLocationFeature';
+import { hydrateObLocationFromV2, persistObLocation } from '../unifiedLocationSync';
 
 function locationStore() {
   return useLocationSessionStore.getState();
@@ -45,13 +50,11 @@ export function useLocationActions() {
     store.setUiError(null);
     store.setPermissionState('prompting');
     try {
-      const coordinates = await detectCurrentCoordinates();
+      await captureObGpsLocationDraft(geocodeEnabled);
       store.setPermissionState('granted');
-      const location = await previewServiceability(coordinates, geocodeEnabled);
-      const applied = await applySessionLocation(location.coordinates, location.displayLabel, { geocodeEnabled });
-      store.setActiveLocation({ ...applied, serviceability: location.serviceability });
       store.setRecentLocations(loadRecentLocationEntries());
       store.setSelectorOpen(false);
+      store.setUiStatus('ready');
     } catch (error) {
       const mapped =
         error instanceof LocationError
@@ -67,16 +70,7 @@ export function useLocationActions() {
     const store = locationStore();
     const saved = store.savedAddresses.find((a) => a.id === addressId);
     if (!saved) return;
-    const applied = await applySessionLocation(
-      saved.address.coordinates,
-      saved.customLabel ?? saved.label,
-      { geocodeEnabled },
-    );
-    store.setActiveLocation({
-      ...applied,
-      kind: 'saved',
-      savedAddressId: saved.id,
-    });
+    await applyObSavedAddress(saved, geocodeEnabled);
     store.setRecentLocations(loadRecentLocationEntries());
     store.setSelectorOpen(false);
   }, [geocodeEnabled]);
@@ -85,8 +79,7 @@ export function useLocationActions() {
     const store = locationStore();
     const entry = store.recentLocations.find((e) => e.id === entryId);
     if (!entry) return;
-    const applied = await applySessionLocation(entry.coordinates, entry.displayLabel, { geocodeEnabled });
-    store.setActiveLocation(applied);
+    await applyObRecentLocation(entry.coordinates, entry.displayLabel, geocodeEnabled);
     store.setSelectorOpen(false);
   }, [geocodeEnabled]);
 
@@ -97,15 +90,10 @@ export function useLocationActions() {
       }
       const saved = await createSavedAddress(sessionUser.uid, input);
       await refreshSavedAddresses();
-      locationStore().setActiveLocation({
-        kind: 'saved',
-        coordinates: saved.address.coordinates,
-        displayLabel: saved.customLabel ?? saved.label,
-        savedAddressId: saved.id,
-      });
+      await applyObSavedAddress(saved, geocodeEnabled);
       locationStore().setSelectorOpen(false);
     },
-    [isAuthenticated, refreshSavedAddresses, sessionUser],
+    [geocodeEnabled, isAuthenticated, refreshSavedAddresses, sessionUser],
   );
 
   const deleteAddress = useCallback(
@@ -127,10 +115,13 @@ export function useLocationActions() {
   );
 
   const hydrate = useCallback(() => {
+    const fromV2 = hydrateObLocationFromV2();
     const guest = hydrateGuestSessionLocation();
     const { activeLocation, setActiveLocation, setRecentLocations } = locationStore();
-    if (guest && !activeLocation) {
-      setActiveLocation(guest);
+    if (fromV2 && !activeLocation) {
+      setActiveLocation(fromV2);
+    } else if (guest && !activeLocation) {
+      setActiveLocation(persistObLocation(guest));
     }
     setRecentLocations(loadRecentLocationEntries());
   }, []);
@@ -138,8 +129,7 @@ export function useLocationActions() {
   const setManualSession = useCallback(
     async (coordinates: GeoCoordinates, label: string) => {
       const store = locationStore();
-      const applied = await applySessionLocation(coordinates, label, { geocodeEnabled });
-      store.setActiveLocation(applied);
+      await applyObRecentLocation(coordinates, label, geocodeEnabled);
       store.setRecentLocations(loadRecentLocationEntries());
       store.setSelectorOpen(false);
     },
@@ -147,8 +137,10 @@ export function useLocationActions() {
   );
 
   const openSelector = useCallback(() => {
-    locationStore().setWizardOpen(false);
-    locationStore().setSelectorOpen(true);
+    const store = locationStore();
+    store.setWizardOpen(false);
+    store.setConfirmationOpen(false);
+    store.setSelectorOpen(true);
   }, []);
 
   const closeSelector = useCallback(() => {
@@ -159,11 +151,28 @@ export function useLocationActions() {
   const openWizard = useCallback(() => {
     const store = locationStore();
     store.setSelectorOpen(false);
-    store.setWizardOpen(true);
+    store.setConfirmationOpen(true);
   }, []);
 
   const closeWizard = useCallback(() => {
     locationStore().setWizardOpen(false);
+  }, []);
+
+  const openConfirmation = useCallback(() => {
+    const store = locationStore();
+    store.setSelectorOpen(false);
+    store.setWizardOpen(false);
+    store.setConfirmationOpen(true);
+  }, []);
+
+  const closeConfirmation = useCallback(() => {
+    locationStore().setConfirmationOpen(false);
+  }, []);
+
+  const confirmAddress = useCallback((input: { flat?: string; building?: string; landmark?: string }) => {
+    confirmObLocationDraft(input);
+    locationStore().setConfirmationOpen(false);
+    locationStore().setSelectorOpen(false);
   }, []);
 
   return {
@@ -180,5 +189,12 @@ export function useLocationActions() {
     closeSelector,
     openWizard,
     closeWizard,
+    openConfirmation,
+    closeConfirmation,
+    confirmAddress,
   };
+}
+
+export function useObV2Address() {
+  return getLocationStoreAddress();
 }
