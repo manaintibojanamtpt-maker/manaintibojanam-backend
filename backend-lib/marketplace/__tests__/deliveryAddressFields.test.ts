@@ -19,6 +19,27 @@ describe('deliveryAddressFields', () => {
     assert.equal(normalized.deliveryAddress?.lat, 17.44);
   });
 
+  it('composes full address from flat, building, landmark, and area', () => {
+    const normalized = normalizeDeliveryAddressFields({
+      lat: 18.53,
+      lng: 73.89,
+      flat: '402',
+      building: 'Green Valley',
+      landmark: 'Near main gate',
+      city: 'Pune',
+      area: 'Koregaon Park',
+    });
+
+    assert.equal(
+      normalized.address,
+      '402, Green Valley, Near main gate, Koregaon Park, Pune',
+    );
+    assert.equal(
+      normalized.deliveryAddress?.addressLine1,
+      '402, Green Valley, Near main gate, Koregaon Park, Pune',
+    );
+  });
+
   it('reads legacy object address fields on orders', () => {
     const text = resolveOrderAddressText(
       { lat: 17.44, lng: 78.34 },

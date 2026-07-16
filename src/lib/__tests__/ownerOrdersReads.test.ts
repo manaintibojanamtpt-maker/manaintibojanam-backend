@@ -144,4 +144,10 @@ describe('Owner Orders SDK read parity (M1B PR-1)', () => {
     assert.ok(parsed instanceof Date);
     assert.equal(parsed?.toISOString(), '2026-06-26T11:00:00.000Z');
   });
+
+  it('coerceOwnerOrderDate accepts admin-serialized Firestore timestamps', () => {
+    const parsed = coerceOwnerOrderDate({ _seconds: 1_752_000_000, _nanoseconds: 500_000_000 });
+    assert.ok(parsed instanceof Date);
+    assert.equal(parsed?.getTime(), 1_752_000_000_000 + 500);
+  });
 });

@@ -89,9 +89,51 @@ describe('OB unified location (last-mile)', () => {
     assert.doesNotMatch(cart, /openWizard/);
   });
 
-  it('checkout flow requires ready delivery location', () => {
-    const checkout = readFileSync(join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'), 'utf8');
-    assert.match(checkout, /hasReadyDeliveryLocation\(activeLocation\)/);
-    assert.match(checkout, /Confirm your flat or house number/);
+  it('profile addresses tile opens unified location selector', () => {
+    const profile = readFileSync(
+      join(root, 'src/presentation/profile/OrderBhojanProfilePage.tsx'),
+      'utf8',
+    );
+
+    assert.match(profile, /openSelector/);
+    assert.doesNotMatch(profile, /AddressFormSheet/);
+    assert.doesNotMatch(profile, /openWizard/);
+  });
+
+  it('v2ToSavedAddressInput maps flat/building into IndiaAddress street', async () => {
+    const { v2ToSavedAddressInput } = await import(
+      '../src/features/location/application/obLocationFlowService.ts'
+    );
+    const { normalizeAddressText } = await import('@bhojan/location-core');
+
+    const input = v2ToSavedAddressInput({
+      version: 2,
+      coordinates: {
+        lat: 18.5362,
+        lng: 73.8958,
+        source: 'gps',
+        capturedAt: Date.now(),
+      },
+      text: normalizeAddressText({
+        flat: '402',
+        building: 'Green Valley',
+        landmark: 'Near gate',
+        formatted: 'Koregaon Park, Pune, Maharashtra 411001',
+        shortLabel: 'Koregaon Park, Pune',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411001',
+      }),
+      meta: {
+        provider: 'nominatim',
+        precision: 'exact',
+        capturedAt: Date.now(),
+      },
+    });
+
+    assert.equal(input.address.street, '402, Green Valley');
+    assert.equal(input.address.landmark, 'Near gate');
+    assert.equal(input.address.pincode, '411001');
+    assert.equal(input.address.formattedAddress, 'Koregaon Park, Pune, Maharashtra 411001');
   });
 });

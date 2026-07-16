@@ -4,6 +4,23 @@ function readString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function composeStructuredAddressLine(input: Record<string, unknown>): string | undefined {
+  const flat = readString(input.flat);
+  const building = readString(input.building);
+  const landmark = readString(input.landmark);
+  const area = readString(input.area) ?? readString(input.suburb);
+  const city = readString(input.city) ?? readString(input.cityName);
+  const detailParts = [flat, building, landmark].filter(Boolean);
+  const areaParts = [area, city].filter(Boolean);
+
+  if (detailParts.length > 0) {
+    const line = detailParts.join(', ');
+    return areaParts.length > 0 ? `${line}, ${areaParts.join(', ')}` : line;
+  }
+
+  return undefined;
+}
+
 function readNumber(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return value;
@@ -30,6 +47,7 @@ export function normalizeDeliveryAddressFields(
 
   const addressLine1 =
     readString(input.addressLine1) ??
+    composeStructuredAddressLine(input) ??
     readString(input.displayLabel) ??
     readString(input.formattedAddress) ??
     readString(input.fullAddress) ??

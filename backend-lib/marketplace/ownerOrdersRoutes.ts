@@ -20,8 +20,14 @@ function parseLimit(raw: unknown): number {
 function createdAtMillis(value: unknown): number {
   if (!value) return 0;
   if (typeof value === 'object') {
-    const record = value as { seconds?: number; toDate?: () => Date };
-    if (typeof record.seconds === 'number') return record.seconds * 1000;
+    const record = value as { seconds?: number; _seconds?: number; toDate?: () => Date };
+    const seconds =
+      typeof record.seconds === 'number'
+        ? record.seconds
+        : typeof record._seconds === 'number'
+          ? record._seconds
+          : undefined;
+    if (typeof seconds === 'number') return seconds * 1000;
     if (typeof record.toDate === 'function') {
       const date = record.toDate();
       return Number.isNaN(date.getTime()) ? 0 : date.getTime();

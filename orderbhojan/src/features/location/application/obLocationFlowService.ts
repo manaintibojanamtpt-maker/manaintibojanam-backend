@@ -20,6 +20,16 @@ import type { CustomerLocation, GeoCoordinates, SavedAddress } from '../domain/l
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
 import { applySessionLocation, loadRecentLocationEntries } from '../application/locationService';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
+import type { SavedAddressInput } from '../domain/location.schema';
+import {
+  DEFAULT_ADDRESS_CASCADE,
+  ensureValidCascade,
+  inferCascadeFromDisplayLabel,
+  listAreas,
+  listCities,
+  listDistricts,
+  listStates,
+} from '../data/india/reference';
 
 function locationStore() {
   return useLocationSessionStore.getState();
@@ -106,8 +116,10 @@ export async function captureObGpsLocationDraft(geocodeEnabled: boolean): Promis
   }
 
   try {
-    const geo = await reverseGeocodeCoords(gps.coords.lat, gps.coords.lng, geocodeEnabled);
-    const serviceability = await resolveServiceability(gps.coords.lat, gps.coords.lng);
+    const [geo, serviceability] = await Promise.all([
+      reverseGeocodeCoords(gps.coords.lat, gps.coords.lng, geocodeEnabled),
+      resolveServiceability(gps.coords.lat, gps.coords.lng),
+    ]);
 
     if (serviceability && !serviceability.isServiceable) {
       trackOutOfRadius(
@@ -160,6 +172,56 @@ export function confirmObLocationDraft(input: {
   const obLocation = syncObStoreFromV2(finalAddress);
   locationStore().setRecentLocations(loadRecentLocationEntries());
   return obLocation;
+}
+
+export function v2ToSavedAddressInput(
+  address: DeliveryAddressV2,
+  label: SavedAddressInput['label'] = 'home',
+): SavedAddressInput {
+  const lookupLabel = [address.text.formatted, address.text.shortLabel, address.text.area, address.text.city]
+    .filter(Boolean)
+    .join(' ');
+  const inferred = inferCascadeFromDisplayLabel(lookupLabel);
+  const cascade = ensureValidCascade(inferred ?? DEFAULT_ADDRESS_CASCADE);
+
+  const states = listStates();
+  const districts = listDistricts(cascade.stateCode);
+  const cities = listCities(cascade.districtCode);
+  const areas = listAreas(cascade.cityCode);
+
+  const state = states.find((entry) => entry.code === cascade.stateCode) ?? states[0]!;
+  const district = districts.find((entry) => entry.code === cascade.districtCode) ?? districts[0]!;
+  const city = cities.find((entry) => entry.code === cascade.cityCode) ?? cities[0]!;
+  const area = areas.find((entry) => entry.code === cascade.areaCode) ?? areas[0]!;
+
+  const pincode =
+    address.text.pincode && /^[1-9][0-9]{5}$/.test(address.text.pincode)
+      ? address.text.pincode
+      : cascade.pincode;
+
+  const street = [address.text.flat, address.text.building].filter(Boolean).join(', ').trim();
+  const formattedAddress = address.text.formatted || address.text.shortLabel;
+
+  return {
+    label,
+    isDefault: false,
+    address: {
+      country: 'IN',
+      stateCode: cascade.stateCode,
+      stateName: state.name,
+      districtCode: cascade.districtCode,
+      districtName: district.name,
+      cityCode: cascade.cityCode,
+      cityName: city.name,
+      areaCode: cascade.areaCode,
+      areaName: area.name,
+      pincode,
+      street: street || formattedAddress,
+      landmark: address.text.landmark,
+      coordinates: toGeoCoordinates(address.coordinates),
+      formattedAddress,
+    },
+  };
 }
 
 export function savedAddressToV2(saved: SavedAddress): DeliveryAddressV2 {

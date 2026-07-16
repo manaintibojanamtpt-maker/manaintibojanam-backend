@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { setActiveTenantId } from '../services/api';
 import { ensureFirestoreNetwork, getDb, getDoc, getDocs } from '../lib/firebase-db';
@@ -180,6 +180,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [tenantNotFound, setTenantNotFound] = useState(false);
   const [tenantError, setTenantError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const resolveInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     if (tenantInfo?.name && typeof document !== 'undefined') {
@@ -209,6 +210,11 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [tenantId]);
 
   const resolveTenant = useCallback(async () => {
+    if (resolveInFlightRef.current) {
+      await resolveInFlightRef.current;
+      return;
+    }
+
     const path = window.location.pathname;
     const storefrontSlug = parseStorefrontSlug(path);
     const isOwnerPanel = path.startsWith('/owner');
@@ -263,6 +269,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTenantNotFound(false);
     setTenantError(null);
 
+    const resolveTask = (async () => {
     try {
       const networkReady = await ensureFirestoreNetwork();
       if (!networkReady) {
@@ -338,6 +345,16 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setLoading(false);
       setRetrying(false);
+    }
+    })();
+
+    resolveInFlightRef.current = resolveTask;
+    try {
+      await resolveTask;
+    } finally {
+      if (resolveInFlightRef.current === resolveTask) {
+        resolveInFlightRef.current = null;
+      }
     }
   }, [ownerTenantId, authLoading]);
 

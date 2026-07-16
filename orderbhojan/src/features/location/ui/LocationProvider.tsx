@@ -38,7 +38,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             open={confirmationOpen}
             address={v2Address}
             onClose={closeConfirmation}
-            onConfirm={(input) => confirmAddress(input)}
+            onConfirm={(input) => void confirmAddress(input)}
           />
         </>
       ) : null}

@@ -22,4 +22,11 @@
   a {
     color: inherit;
   }
+
+  /* iOS Safari zooms focused inputs below 16px — keep form fields readable without zoom. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

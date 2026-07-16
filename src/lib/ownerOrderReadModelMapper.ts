@@ -37,6 +37,40 @@ function normalizeLineItems(rawItems: unknown, modelItems: OrderReadModel['items
   return [];
 }
 
+function composeOwnerAddressLine(record: {
+  addressLine1?: unknown;
+  displayLabel?: unknown;
+  formattedAddress?: unknown;
+  fullAddress?: unknown;
+  flat?: unknown;
+  building?: unknown;
+  landmark?: unknown;
+  city?: unknown;
+  cityName?: unknown;
+  area?: unknown;
+  suburb?: unknown;
+}): string | undefined {
+  const flat = safeText(record.flat);
+  const building = safeText(record.building);
+  const landmark = safeText(record.landmark);
+  const area = safeText(record.area) ?? safeText(record.suburb);
+  const city = safeText(record.city) ?? safeText(record.cityName);
+  const detailParts = [flat, building, landmark].filter(Boolean);
+  const areaParts = [area, city].filter(Boolean);
+
+  if (detailParts.length > 0) {
+    const line = detailParts.join(', ');
+    return areaParts.length > 0 ? `${line}, ${areaParts.join(', ')}` : line;
+  }
+
+  return (
+    safeText(record.addressLine1) ??
+    safeText(record.displayLabel) ??
+    safeText(record.formattedAddress) ??
+    safeText(record.fullAddress)
+  );
+}
+
 function normalizeDeliveryAddress(
   value: unknown,
 ): OwnerOrderSnapshot['deliveryAddress'] | undefined {
@@ -46,14 +80,15 @@ function normalizeDeliveryAddress(
     displayLabel?: unknown;
     formattedAddress?: unknown;
     fullAddress?: unknown;
+    flat?: unknown;
+    building?: unknown;
+    landmark?: unknown;
     city?: unknown;
     cityName?: unknown;
+    area?: unknown;
+    suburb?: unknown;
   };
-  const addressLine1 =
-    safeText(record.addressLine1) ??
-    safeText(record.displayLabel) ??
-    safeText(record.formattedAddress) ??
-    safeText(record.fullAddress);
+  const addressLine1 = composeOwnerAddressLine(record);
   const city = safeText(record.city) ?? safeText(record.cityName);
   if (!addressLine1 && !city) return undefined;
   return { addressLine1: addressLine1 || 'Address', city: city || '' };
@@ -64,15 +99,20 @@ function resolveOwnerOrderAddress(
   deliveryAddress: unknown,
 ): string | undefined {
   const normalized = normalizeDeliveryAddress(deliveryAddress);
-  if (normalized?.addressLine1) return normalized.addressLine1;
+  if (normalized?.addressLine1 && normalized.addressLine1 !== 'Address') {
+    return normalized.city
+      ? `${normalized.addressLine1}, ${normalized.city}`
+      : normalized.addressLine1;
+  }
   if (typeof address === 'string') {
     const trimmed = address.trim();
     if (trimmed) return trimmed;
   }
   if (address && typeof address === 'object' && !Array.isArray(address)) {
-    return normalizeDeliveryAddress(address)?.addressLine1;
+    const fromAddress = normalizeDeliveryAddress(address)?.addressLine1;
+    if (fromAddress && fromAddress !== 'Address') return fromAddress;
   }
-  return undefined;
+  return normalized?.addressLine1;
 }
 
 export const readModelToOwnerOrder = (
@@ -126,13 +166,31 @@ export const coerceOwnerOrderDate = (value: unknown): Date | null => {
     return Number.isNaN(value.getTime()) ? null : value;
   }
   if (typeof value === 'object') {
-    const record = value as { seconds?: number; toDate?: () => Date };
+    const record = value as {
+      seconds?: number;
+      _seconds?: number;
+      nanoseconds?: number;
+      _nanoseconds?: number;
+      toDate?: () => Date;
+    };
     if (typeof record.toDate === 'function') {
       const parsed = record.toDate();
       return parsed instanceof Date && !Number.isNaN(parsed.getTime()) ? parsed : null;
     }
-    if (typeof record.seconds === 'number') {
-      return new Date(record.seconds * 1000);
+    const seconds =
+      typeof record.seconds === 'number'
+        ? record.seconds
+        : typeof record._seconds === 'number'
+          ? record._seconds
+          : undefined;
+    if (typeof seconds === 'number') {
+      const nanos =
+        typeof record.nanoseconds === 'number'
+          ? record.nanoseconds
+          : typeof record._nanoseconds === 'number'
+            ? record._nanoseconds
+            : 0;
+      return new Date(seconds * 1000 + Math.floor(nanos / 1_000_000));
     }
   }
   if (typeof value === 'string' || typeof value === 'number') {

@@ -25,28 +25,28 @@ describe('checkout location recovery (batch 2)', () => {
     assert.doesNotMatch(checkout, /openWizard/);
   });
 
-  it('location selector manual entry opens AddressFormSheet', () => {
+  it('location selector add address uses unified GPS + confirmation flow', () => {
     const selector = readFileSync(
       join(root, 'src/features/location/ui/LocationSelectorSheet.tsx'),
       'utf8',
     );
 
-    assert.match(selector, /setShowAddressForm\(true\)/);
+    assert.match(selector, /startAddSavedAddress/);
+    assert.match(selector, /requestCurrentLocation/);
     assert.match(selector, /Enter address manually/);
     assert.match(selector, /Add new address/);
+    assert.doesNotMatch(selector, /AddressFormSheet/);
     assert.doesNotMatch(selector, /openWizard/);
   });
 
-  it('address form supports guest session via setManualSession', () => {
-    const form = readFileSync(
-      join(root, 'src/features/location/ui/AddressFormSheet.tsx'),
+  it('confirm address can persist saved addresses from DeliveryAddressV2', () => {
+    const actions = readFileSync(
+      join(root, 'src/features/location/hooks/useLocationActions.ts'),
       'utf8',
     );
 
-    assert.match(form, /setManualSession/);
-    assert.match(form, /House \/ Flat No\./);
-    assert.match(form, /Building \/ Apartment/);
-    assert.match(form, /Landmark \(optional\)/);
-    assert.match(form, /isAuthenticated/);
+    assert.match(actions, /pendingSavedAddress/);
+    assert.match(actions, /v2ToSavedAddressInput/);
+    assert.match(actions, /startAddSavedAddress/);
   });
 });

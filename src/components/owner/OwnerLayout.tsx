@@ -27,7 +27,7 @@ import {
 } from '../../lib/ownerActiveTenant';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, userProfile, logout, refreshProfile } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
   const { tenantInfo, tenantSlug, tenantId: contextTenantId, refreshTenant } = useTenant();
   const entitlements = useEntitlements();
   const { pendingCount, soundEnabled, showSoundPrompt, setSoundEnabled, enableSoundAlerts } = useOrderAlerts();
@@ -117,12 +117,11 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
     void syncOwnerTenantsViaApi()
       .then((ids) => {
         if (ids.length > 0) cacheOwnerTenantIds(ids);
-        return refreshProfile();
       })
       .catch((error) => {
         console.warn('Owner tenant sync on layout mount failed:', error);
       });
-  }, [currentUser?.uid, refreshProfile]);
+  }, [currentUser?.uid]);
 
   const copyStoreLink = () => {
     const link = orderBhojanUrl || storeUrl;

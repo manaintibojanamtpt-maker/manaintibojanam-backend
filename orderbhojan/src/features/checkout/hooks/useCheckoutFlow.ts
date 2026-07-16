@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { getLocationStoreAddress, buildDeliveryAddressLine } from '@bhojan/location-core';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
@@ -62,7 +63,11 @@ function buildCheckoutPayload(
   const coords = activeLocation?.coordinates
     ? { lat: activeLocation.coordinates.lat, lng: activeLocation.coordinates.lng }
     : { lat: 0, lng: 0 };
-  const displayLabel = activeLocation?.displayLabel?.trim() ?? '';
+  const v2Address = getLocationStoreAddress();
+  const addressLine =
+    (v2Address ? buildDeliveryAddressLine(v2Address.text) : '') ||
+    activeLocation?.displayLabel?.trim() ||
+    '';
   const distanceKm = activeLocation?.serviceability?.distanceKm;
 
   return {
@@ -76,7 +81,10 @@ function buildCheckoutPayload(
     deliveryAddress: {
       lat: coords.lat,
       lng: coords.lng,
-      ...(displayLabel ? { addressLine1: displayLabel, displayLabel } : {}),
+      ...(addressLine ? { addressLine1: addressLine, displayLabel: addressLine } : {}),
+      ...(v2Address?.text?.flat ? { flat: v2Address.text.flat } : {}),
+      ...(v2Address?.text?.building ? { building: v2Address.text.building } : {}),
+      ...(v2Address?.text?.landmark ? { landmark: v2Address.text.landmark } : {}),
       ...(typeof distanceKm === 'number' ? { distanceKm } : {}),
     },
   };

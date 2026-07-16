@@ -56,8 +56,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      const { getDb } = await import('../lib/firebase-db');
-      const { doc, getDoc } = await import('firebase/firestore');
+      const { getDb, getDoc } = await import('../lib/firebase-db');
+      const { doc } = await import('firebase/firestore');
       const snap = await Promise.race([
         getDoc(doc(getDb(), 'users', user.uid)),
         new Promise<never>((_, reject) => {
@@ -127,11 +127,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       void (async () => {
         try {
+          let ownerApiProfile: UserProfile | null = null;
           if (isOwnerPortalPath()) {
-            const apiProfile = await hydrateOwnerProfileViaApi(user, null);
-            if (!cancelled && apiProfile) {
-              setUserProfile(apiProfile);
+            ownerApiProfile = await hydrateOwnerProfileViaApi(user, null);
+            if (!cancelled && ownerApiProfile) {
+              setUserProfile(ownerApiProfile);
             }
+          }
+
+          if (isOwnerPortalPath() && ownerApiProfile) {
+            return;
           }
 
           try {

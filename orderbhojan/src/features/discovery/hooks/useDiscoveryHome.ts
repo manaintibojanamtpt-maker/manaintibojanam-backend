@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
 import { loadDiscoveryHome, resolveDiscoveryCoords } from '../engine/discoveryEngine';
-import { discoveryKeys } from './discoveryQueryKeys';
+import { discoveryKeys, DISCOVERY_GC_TIME_MS, DISCOVERY_STALE_TIME_MS } from './discoveryQueryKeys';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { useDiscoveryFeatureEnabled } from './useDiscoveryFeature';
 
@@ -23,8 +23,9 @@ export function useDiscoveryHome() {
         filters,
       }),
     enabled,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    staleTime: DISCOVERY_STALE_TIME_MS,
+    gcTime: DISCOVERY_GC_TIME_MS,
+    placeholderData: (previous) => previous,
     refetchOnWindowFocus: false,
     refetchInterval: false,
     retry: 2,

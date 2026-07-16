@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import { subscribeOwnerOrders, type OwnerOrder } from '../../lib/ownerOrdersReads';
-import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
+import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
 import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
-import { format } from 'date-fns';
+import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
 import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
@@ -50,10 +50,7 @@ const OwnerOrders: React.FC = () => {
 
   const tenantId = useOwnerTenantId();
 
-  const formatOrderTime = (createdAt: unknown) => {
-    const created = coerceOwnerOrderDate(createdAt);
-    return created ? format(created, 'h:mm a') : 'Just now';
-  };
+  const formatOrderTime = (createdAt: unknown) => formatOwnerOrderTime(createdAt);
 
   const parseTrialDate = (value: unknown): Date | null => coerceOwnerOrderDate(value);
 

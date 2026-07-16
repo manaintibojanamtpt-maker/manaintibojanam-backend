@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { getDb, handleFirestoreError, OperationType } from './firebase-db';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getDb, getDoc, handleFirestoreError, OperationType } from './firebase-db';
 import { UserProfile } from '../types';
 
 const generateReferralCode = (name: string) => {

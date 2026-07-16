@@ -47,19 +47,19 @@ export function AddressConfirmationSheet({
             value={flat}
             onChange={(e) => setFlat(e.target.value)}
             placeholder="Flat / House no. (required)"
-            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-base"
           />
           <input
             value={building}
             onChange={(e) => setBuilding(e.target.value)}
             placeholder="Building / Society"
-            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-base"
           />
           <input
             value={landmark}
             onChange={(e) => setLandmark(e.target.value)}
             placeholder="Landmark"
-            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-base"
           />
         </div>
 

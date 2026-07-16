@@ -47,4 +47,19 @@ describe('normalize', () => {
   it('builds rounded cache keys', () => {
     assert.equal(toRoundedCacheKey(18.531234, 73.891234), 'rev:18.53123:73.89123');
   });
+
+  it('rebuilds shortLabel when flat, building, and landmark are confirmed', () => {
+    const text = normalizeAddressText({
+      shortLabel: 'Koregaon Park',
+      formatted: 'Koregaon Park, Pune',
+      area: 'Koregaon Park',
+      city: 'Pune',
+      flat: '402',
+      building: 'Green Valley',
+      landmark: 'Near gate',
+    });
+
+    assert.equal(text.shortLabel, '402, Green Valley, Near gate, Koregaon Park, Pune');
+    assert.equal(text.formatted, '402, Green Valley, Near gate, Koregaon Park, Pune');
+  });
 });

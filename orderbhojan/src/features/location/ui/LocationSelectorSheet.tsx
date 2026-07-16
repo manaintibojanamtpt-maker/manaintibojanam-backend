@@ -11,18 +11,24 @@ import { useActiveLocation, useRecentLocationsList, useSavedAddressesList } from
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationUiState } from '../hooks/useActiveLocation';
 import { useLocationSessionStore } from '../store/locationSessionStore';
-import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
   const open = useLocationSessionStore((s) => s.selectorOpen);
-  const { closeSelector, requestCurrentLocation, selectSavedAddress, selectRecentLocation } = useLocationActions();
+  const {
+    closeSelector,
+    requestCurrentLocation,
+    selectSavedAddress,
+    selectRecentLocation,
+    startAddSavedAddress,
+  } = useLocationActions();
   const { uiStatus, uiError } = useLocationUiState();
+  const captureInFlight = useLocationSessionStore((s) => s.locationCaptureInFlight);
+  const isDetecting = uiStatus === 'loading' || captureInFlight;
   const active = useActiveLocation();
   const saved = useSavedAddressesList();
   const recent = useRecentLocationsList();
   const { isAuthenticated } = useAuth();
   const [search, setSearch] = useState('');
-  const [showAddressForm, setShowAddressForm] = useState(false);
 
   const filteredSaved = saved.filter((a) => {
     const label = `${a.label} ${a.customLabel ?? ''} ${a.address.formattedAddress ?? ''}`.toLowerCase();
@@ -39,19 +45,19 @@ export function LocationSelectorSheet() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search saved addresses"
             aria-label="Search addresses"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#FF7A00]/50"
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none placeholder:text-white/40 focus:border-[#FF7A00]/50"
           />
 
           <SoftButton
             type="button"
             fullWidth
-            disabled={uiStatus === 'loading'}
+            disabled={isDetecting}
             onClick={() => {
               void requestCurrentLocation();
             }}
           >
             <LocateFixed className="h-4 w-4" aria-hidden />
-            {uiStatus === 'loading' ? 'Detecting…' : 'Use current location'}
+            {isDetecting ? 'Detecting…' : 'Use current location'}
           </SoftButton>
 
           {uiError ? (
@@ -94,9 +100,9 @@ export function LocationSelectorSheet() {
             type="button"
             tone="secondary"
             fullWidth
+            disabled={isDetecting}
             onClick={() => {
-              closeSelector();
-              setShowAddressForm(true);
+              void requestCurrentLocation();
             }}
           >
             Enter address manually
@@ -132,9 +138,9 @@ export function LocationSelectorSheet() {
                 type="button"
                 tone="secondary"
                 fullWidth
+                disabled={isDetecting}
                 onClick={() => {
-                  closeSelector();
-                  setShowAddressForm(true);
+                  void startAddSavedAddress();
                 }}
               >
                 Add new address
@@ -152,11 +158,6 @@ export function LocationSelectorSheet() {
           )}
         </div>
       </BottomSheet>
-
-      <AddressFormSheet
-        open={showAddressForm}
-        onClose={() => setShowAddressForm(false)}
-      />
     </>
   );
 }

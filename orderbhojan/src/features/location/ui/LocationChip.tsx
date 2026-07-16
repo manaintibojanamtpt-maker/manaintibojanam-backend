@@ -20,6 +20,8 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
   const active = useActiveLocation();
   const [v2Address, setV2Address] = useState(() => getLocationStoreAddress());
   const { uiStatus, uiError } = useLocationUiState();
+  const captureInFlight = useLocationSessionStore((s) => s.locationCaptureInFlight);
+  const isDetecting = uiStatus === 'loading' || captureInFlight;
   const { openSelector, requestCurrentLocation } = useLocationActions();
   const selectorOpen = useLocationSessionStore((s) => s.selectorOpen);
 
@@ -27,13 +29,14 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
 
   const hasCoordsReady = hasActiveDeliveryLocation(active);
   const label =
-    uiStatus === 'loading'
+    isDetecting
       ? 'Detecting location…'
       : v2Address?.text?.shortLabel?.trim() ||
         (hasCoordsReady ? active?.displayLabel : undefined) ||
         PLACEHOLDER;
 
   const handleClick = () => {
+    if (isDetecting) return;
     if (uiStatus === 'error' && uiError?.retryable) {
       void requestCurrentLocation();
       return;
@@ -46,13 +49,14 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       type="button"
       tone="ghost"
       fullWidth={variant !== 'compact'}
+      disabled={isDetecting}
       className={`!justify-start gap-2 ${variant === 'compact' ? 'w-full max-w-full !px-2 !py-1.5' : ''} ${className}`.trim()}
       aria-label={hasCoordsReady ? `Delivery location: ${label}` : USE_CURRENT_LABEL}
       aria-expanded={selectorOpen}
       onClick={handleClick}
     >
       <MapPin className="h-4 w-4 shrink-0 text-[#FF7A00]" aria-hidden />
-      {uiStatus === 'loading' ? (
+      {isDetecting ? (
         <Skeleton className="h-4 w-3/5" />
       ) : (
         <span className="truncate text-sm text-white/80">

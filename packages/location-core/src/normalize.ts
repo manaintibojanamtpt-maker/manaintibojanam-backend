@@ -39,12 +39,33 @@ export function normalizeCoordinates(input: Partial<Coordinates> | null | undefi
   };
 }
 
+export function buildDeliveryAddressLine(text: Partial<AddressText> | null | undefined): string {
+  if (!text) return '';
+
+  const flat = text.flat?.trim();
+  const building = text.building?.trim();
+  const landmark = text.landmark?.trim();
+  const area = text.area?.trim() || text.suburb?.trim();
+  const city = text.city?.trim();
+  const detailParts = [flat, building, landmark].filter(Boolean);
+  const areaParts = [area, city].filter(Boolean);
+
+  if (detailParts.length > 0) {
+    const line = detailParts.join(', ');
+    return areaParts.length > 0 ? `${line}, ${areaParts.join(', ')}` : line;
+  }
+
+  return text.formatted?.trim() || text.shortLabel?.trim() || areaParts.join(', ') || '';
+}
+
 export function normalizeAddressText(input: Partial<AddressText> | null | undefined): AddressText {
   const area = input?.area?.trim() || input?.suburb?.trim() || undefined;
   const city = input?.city?.trim() || undefined;
   const formatted = String(input?.formatted ?? '').trim();
   const shortLabel = String(input?.shortLabel ?? '').trim();
   const derivedShortLabel = [area, city].filter(Boolean).join(', ');
+  const builtLine = buildDeliveryAddressLine(input);
+  const hasFlat = Boolean(input?.flat?.trim());
 
   return {
     flat: input?.flat?.trim() || undefined,
@@ -58,8 +79,14 @@ export function normalizeAddressText(input: Partial<AddressText> | null | undefi
     state: input?.state?.trim() || undefined,
     pincode: input?.pincode?.trim() || undefined,
     country: input?.country?.trim() || undefined,
-    formatted: formatted || derivedShortLabel || shortLabel || 'Current location',
-    shortLabel: shortLabel || derivedShortLabel || formatted || 'Current location',
+    formatted:
+      hasFlat && builtLine
+        ? builtLine
+        : formatted || derivedShortLabel || shortLabel || 'Current location',
+    shortLabel:
+      hasFlat && builtLine
+        ? builtLine
+        : shortLabel || derivedShortLabel || formatted || 'Current location',
   };
 }
 
