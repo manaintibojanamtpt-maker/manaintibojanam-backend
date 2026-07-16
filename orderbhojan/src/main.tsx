@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
+import { seedDiscoveryQueryCacheFromSession, warmDefaultDiscoveryHome } from '@/features/discovery/engine/discoveryBootstrap';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
@@ -41,6 +42,9 @@ function renderApp(): void {
 async function bootstrap() {
   markPerf('app_start');
   suppressFirestorePermissionRejections();
+
+  seedDiscoveryQueryCacheFromSession();
+  warmDefaultDiscoveryHome();
 
   const config = await ensureAppConfig();
   renderApp();

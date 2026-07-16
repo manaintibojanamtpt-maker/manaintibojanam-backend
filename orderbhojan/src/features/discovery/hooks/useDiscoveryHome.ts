@@ -3,6 +3,10 @@ import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
 import { markPerf } from '@/lib/perfMarks';
 import { loadDiscoveryHome, resolveDiscoveryCoords } from '../engine/discoveryEngine';
+import {
+  getDiscoverySessionCacheUpdatedAt,
+  readDiscoverySessionCache,
+} from '../engine/discoverySessionCache';
 import { discoveryKeys, DISCOVERY_GC_TIME_MS, DISCOVERY_STALE_TIME_MS } from './discoveryQueryKeys';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { useDiscoveryFeatureEnabled } from './useDiscoveryFeature';
@@ -30,10 +34,14 @@ export function useDiscoveryHome() {
     enabled,
     staleTime: DISCOVERY_STALE_TIME_MS,
     gcTime: DISCOVERY_GC_TIME_MS,
-    placeholderData: (previous) => previous,
+    initialData: () => readDiscoverySessionCache(coords.lat, coords.lng, filters),
+    initialDataUpdatedAt: () =>
+      getDiscoverySessionCacheUpdatedAt(coords.lat, coords.lng, filters) ?? undefined,
+    placeholderData: (previous) =>
+      previous ?? readDiscoverySessionCache(coords.lat, coords.lng, filters),
     refetchOnWindowFocus: false,
     refetchInterval: false,
-    retry: 2,
+    retry: 1,
   });
 }
 
@@ -50,7 +58,9 @@ export function useDiscoveryLocationInvalidation() {
     if (!enabled || lat == null || lng == null) return;
     const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
     if (previousCoordsRef.current === key) return;
+    const hadPreviousCoords = previousCoordsRef.current != null;
     previousCoordsRef.current = key;
+    if (!hadPreviousCoords) return;
     void queryClient.invalidateQueries({ queryKey: discoveryKeys.all });
   }, [enabled, lat, lng, queryClient]);
 }

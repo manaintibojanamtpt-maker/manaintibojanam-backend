@@ -4,7 +4,7 @@ import type { DiscoveryFilters } from '@/types/marketplace-discovery';
 export const CONSUMER_MAX_DISCOVERY_DISTANCE_KM = 18;
 
 export const DEFAULT_DISCOVERY_FILTERS: DiscoveryFilters = {
-  sort: 'distance',
+  sort: 'popularity',
   maxDistanceKm: CONSUMER_MAX_DISCOVERY_DISTANCE_KM,
 };
 
