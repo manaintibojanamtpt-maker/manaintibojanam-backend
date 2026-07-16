@@ -161,10 +161,18 @@ async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<Map<st
   return map;
 }
 
-export async function buildMarketplaceQuote(
+type MenuPriceMap = Map<string, { price: number; name: string }>;
+
+interface MarketplaceQuoteContext {
+  tenantId: string;
+  quote: BillQuote;
+  menuPrices: MenuPriceMap;
+}
+
+async function buildMarketplaceQuoteContext(
   db: Firestore,
   request: MarketplaceQuoteRequest,
-): Promise<{ tenantId: string; quote: BillQuote }> {
+): Promise<MarketplaceQuoteContext> {
   const restaurantId = request.restaurantId?.trim();
   if (!restaurantId) throw Object.assign(new Error('restaurantId is required'), { statusCode: 400 });
   if (!Array.isArray(request.lines) || request.lines.length === 0) {
@@ -235,6 +243,7 @@ export async function buildMarketplaceQuote(
 
   return {
     tenantId: loaded.id,
+    menuPrices,
     quote: {
       subtotal: Math.round(subtotal),
       gstAmount,
@@ -248,6 +257,14 @@ export async function buildMarketplaceQuote(
       lineItems,
     },
   };
+}
+
+export async function buildMarketplaceQuote(
+  db: Firestore,
+  request: MarketplaceQuoteRequest,
+): Promise<{ tenantId: string; quote: BillQuote }> {
+  const { tenantId, quote } = await buildMarketplaceQuoteContext(db, request);
+  return { tenantId, quote };
 }
 
 export function enabledPaymentMethods(tenant: TenantRaw): string[] {
@@ -280,13 +297,11 @@ export type MarketplacePlaceResult =
       amountInPaise: number;
     };
 
-async function buildResolvedOrderItems(
-  db: Firestore,
-  tenantId: string,
+function buildResolvedOrderItems(
   request: MarketplacePlaceRequest,
   quote: BillQuote,
+  menuPrices: MenuPriceMap,
 ) {
-  const menuPrices = await loadMenuPriceMap(db, tenantId);
   return request.lines.map((line) => {
     const itemId = String(line.itemId);
     const quantity = Math.max(1, Math.floor(Number(line.quantity ?? 1)));
@@ -360,12 +375,12 @@ export async function placeMarketplaceOrder(
   }
 
   const paymentMethod = request.paymentMethod === 'razorpay' ? 'razorpay' : 'cod';
-  const { tenantId, quote } = await buildMarketplaceQuote(db, request);
-  const loaded = await loadTenantByRestaurantId(db, request.restaurantId);
-  if (!loaded) throw Object.assign(new Error('Restaurant not found'), { statusCode: 404 });
+  const [{ tenantId, quote, menuPrices }, orderNumber] = await Promise.all([
+    buildMarketplaceQuoteContext(db, request),
+    allocateMarketplaceOrderNumber(db, fieldValue),
+  ]);
 
-  const orderItems = await buildResolvedOrderItems(db, tenantId, request, quote);
-  const orderNumber = await allocateMarketplaceOrderNumber(db, fieldValue);
+  const orderItems = buildResolvedOrderItems(request, quote, menuPrices);
   const orderPayload = buildOrderPayload(tenantId, request, quote, orderItems, paymentMethod, orderNumber);
 
   if (paymentMethod === 'razorpay') {
