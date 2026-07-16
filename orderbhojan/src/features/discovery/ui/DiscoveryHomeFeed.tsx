@@ -10,10 +10,7 @@ import { hasDiscoveryFilterOverrides } from '../domain/filterState';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
 import { useActiveLocation, useLocationFeatureEnabled, useLocationActions } from '@/features/location';
 import { DEFAULT_MARKETPLACE_CITY_LABEL } from '@/lib/marketplaceDefaults';
-import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
-import {
-  OrderBhojanHomeFeedSkeleton,
-} from '@/presentation/discovery';
+import { OrderBhojanHomeCategories, OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
 import {
   OrderBhojanDiscoveryOfflineNotice,
   OrderBhojanDiscoveryUxState,
@@ -21,22 +18,48 @@ import {
 } from '@/presentation/states';
 import { PullToRefresh } from '@/presentation/ui/PullToRefresh';
 
-function DiscoveryActiveFilterBanner() {
-  const filters = useDiscoveryFilterStore((s) => s.filters);
-  const resetFilters = useDiscoveryFilterStore((s) => s.resetFilters);
-  const hasKitchenFilter = Boolean(filters.kitchenFormat);
-
-  if (!hasKitchenFilter) return null;
+function DiscoveryNearbyHeader({
+  kitchenCount,
+  locationLabel,
+  hasActiveLocation,
+}: {
+  readonly kitchenCount: number;
+  readonly locationLabel?: string;
+  readonly hasActiveLocation: boolean;
+}) {
+  const contextLine = hasActiveLocation
+    ? locationLabel
+      ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${locationLabel}`
+      : `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`
+    : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location`;
 
   return (
-    <div
-      className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
-      role="status"
-    >
-      <p className="text-sm text-white/70">Showing selected kitchen type only.</p>
-      <SoftButton type="button" tone="ghost" size="compact" onClick={resetFilters}>
-        Clear filters
-      </SoftButton>
+    <header className="space-y-1">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
+          <p className="text-xs text-white/50">{contextLine}</p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-[#FF7A00]">
+          {kitchenCount} {kitchenCount === 1 ? 'kitchen' : 'kitchens'}
+        </span>
+      </div>
+    </header>
+  );
+}
+
+function DiscoveryCategoriesStrip() {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
+      <OrderBhojanHomeCategories compact />
+    </div>
+  );
+}
+
+function DiscoveryFeedControls() {
+  return (
+    <div className="space-y-3">
+      <DiscoveryFiltersBar />
     </div>
   );
 }
@@ -56,8 +79,8 @@ export function DiscoveryHomeFeed() {
 
   if (showInitialSkeleton) {
     return (
-      <div aria-busy="true">
-        <DiscoveryFiltersBar />
+      <div className="space-y-4" aria-busy="true">
+        <DiscoveryFeedControls />
         <OrderBhojanHomeFeedSkeleton />
       </div>
     );
@@ -65,8 +88,8 @@ export function DiscoveryHomeFeed() {
 
   if (!online) {
     return (
-      <div>
-        <DiscoveryFiltersBar />
+      <div className="space-y-4">
+        <DiscoveryFeedControls />
         <OrderBhojanDiscoveryOfflineNotice onRetry={() => void query.refetch()} />
         <OrderBhojanDiscoveryUxState
           variant="offline"
@@ -79,8 +102,8 @@ export function DiscoveryHomeFeed() {
 
   if (query.isError) {
     return (
-      <div>
-        <DiscoveryFiltersBar />
+      <div className="space-y-4">
+        <DiscoveryFeedControls />
         <OrderBhojanDiscoveryUxState
           variant="error"
           title="Could not load restaurants"
@@ -96,6 +119,9 @@ export function DiscoveryHomeFeed() {
   const visibleCollections = collections.filter((c) => c.restaurants.length > 0);
   const spotlightPlan = buildDiscoverySpotlightFeed(visibleCollections);
   const railsToRender = spotlightPlan.kitchenCollections.filter((c) => c.restaurants.length > 0);
+  const primaryRail = railsToRender[0] ?? null;
+  const secondaryRails = railsToRender.slice(1);
+  const totalKitchenCount = spotlightPlan.uniqueKitchenCount;
 
   if (visibleCollections.length === 0) {
     const usingPuneFallback = !activeLocation;
@@ -155,9 +181,8 @@ export function DiscoveryHomeFeed() {
           : undefined;
 
     return (
-      <div>
-        <DiscoveryFiltersBar />
-        <DiscoveryActiveFilterBanner />
+      <div className="space-y-4">
+        <DiscoveryFeedControls />
         <OrderBhojanDiscoveryUxState
           variant={usingPuneFallback && locationEnabled ? 'location-disabled' : 'no-restaurants'}
           title={title}
@@ -178,33 +203,48 @@ export function DiscoveryHomeFeed() {
         await query.refetch();
       }}
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {query.isFetching && query.data ? (
           <p className="text-xs text-white/45" aria-live="polite">
             Refreshing kitchens…
           </p>
         ) : null}
-        {query.data?.locationLabel ? (
-          <p className="text-xs font-medium uppercase tracking-widest text-white/50">
-            {activeLocation
-              ? `Kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${query.data.locationLabel}`
-              : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location`}
-          </p>
-        ) : null}
-        <DiscoveryFiltersBar />
-        <DiscoveryActiveFilterBanner />
+
+        <DiscoveryFeedControls />
+
+        <DiscoveryNearbyHeader
+          kitchenCount={totalKitchenCount}
+          locationLabel={query.data?.locationLabel}
+          hasActiveLocation={Boolean(activeLocation)}
+        />
+
         {spotlightPlan.sparseCopy ? (
           <p className="text-sm text-white/60">{spotlightPlan.sparseCopy}</p>
         ) : null}
+
         {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
           <>
             <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
+            <DiscoveryCategoriesStrip />
             {!discoveryEnabled ? <TrendingFoodsSection /> : null}
           </>
         ) : (
-          railsToRender.map((collection) => (
-            <DiscoveryCollectionRail key={collection.id} collection={collection} />
-          ))
+          <>
+            {primaryRail ? (
+              <DiscoveryCollectionRail
+                key={primaryRail.id}
+                collection={primaryRail}
+                compact
+                showHeader={primaryRail.id !== 'nearby'}
+              />
+            ) : null}
+
+            <DiscoveryCategoriesStrip />
+
+            {secondaryRails.map((collection) => (
+              <DiscoveryCollectionRail key={collection.id} collection={collection} compact />
+            ))}
+          </>
         )}
       </div>
     </PullToRefresh>

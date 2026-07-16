@@ -3,17 +3,21 @@ import type { DiscoveryCollection } from '@/types/marketplace-discovery';
 import { loadDiscoveryCollection, resolveDiscoveryCoords } from '../engine/discoveryEngine';
 import { useActiveLocation } from '@/features/location';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
-import { Section } from '@bhojan/storefront-design-system/primitives/Section';
-import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { OrderBhojanKitchenCard } from '@/presentation/discovery/OrderBhojanKitchenCard';
 import { OrderBhojanDiscoveryUxState } from '@/presentation/states';
 
 export interface DiscoveryCollectionRailProps {
   readonly collection: DiscoveryCollection;
+  readonly compact?: boolean;
+  readonly showHeader?: boolean;
 }
 
-export function DiscoveryCollectionRail({ collection }: DiscoveryCollectionRailProps) {
+export function DiscoveryCollectionRail({
+  collection,
+  compact = false,
+  showHeader = true,
+}: DiscoveryCollectionRailProps) {
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
   const coords = resolveDiscoveryCoords(activeLocation);
@@ -59,27 +63,32 @@ export function DiscoveryCollectionRail({ collection }: DiscoveryCollectionRailP
   }
 
   return (
-    <Section density="comfortable" background="default" className="!py-8">
-      <SectionHeader
-        title={collection.title}
-        description={collection.subtitle}
-        align="left"
-        className="!mb-6 !text-left"
-      />
+    <section className={compact ? 'space-y-3' : 'space-y-4'} aria-label={collection.title}>
+      {showHeader ? (
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-white">{collection.title}</h2>
+            {collection.subtitle ? (
+              <p className="mt-0.5 text-xs text-white/50">{collection.subtitle}</p>
+            ) : null}
+          </div>
+          <span className="text-xs font-medium text-white/45">{restaurants.length} kitchens</span>
+        </div>
+      ) : null}
 
-      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar lg:grid lg:grid-cols-2 lg:gap-4 lg:overflow-visible xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         {restaurants.map((restaurant) => (
           <OrderBhojanKitchenCard
             key={restaurant.restaurantId}
             restaurant={restaurant}
-            width="17.5rem"
-            className="lg:w-full lg:min-w-0 lg:max-w-full"
+            variant="grid"
+            className="w-full"
           />
         ))}
       </div>
 
       {hasMore ? (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-3 pt-1">
           {loadError ? (
             <OrderBhojanDiscoveryUxState
               variant="load-more-error"
@@ -101,6 +110,6 @@ export function DiscoveryCollectionRail({ collection }: DiscoveryCollectionRailP
           </div>
         </div>
       ) : null}
-    </Section>
+    </section>
   );
 }
