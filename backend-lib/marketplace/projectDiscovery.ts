@@ -23,6 +23,13 @@ import {
 } from './discoveryProfileWriter.js';
 import { isMarketplaceGeoIndexEnabled } from './marketplaceGeoIndexPolicy.js';
 import { resolveNearbyTenantIds } from './geoIndexFirestore.js';
+import {
+  getCachedDiscoveryPool,
+  getInFlightDiscoveryPool,
+  setCachedDiscoveryPool,
+  setInFlightDiscoveryPool,
+  toDiscoveryPoolCacheKey,
+} from './discoveryCache.js';
 
 export type RestaurantBadge = 'veg' | 'pure_veg' | 'cloud_kitchen' | 'new' | 'offer';
 
@@ -248,15 +255,16 @@ function mergeSyncRevisionStrings(...revisions: readonly (string | undefined)[])
   );
 }
 
-export async function loadMarketplaceRestaurants(
+async function loadMarketplaceRestaurantsUncached(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
-  const geoIndexed = isMarketplaceGeoIndexEnabled()
-    ? await loadMarketplaceRestaurantsFromGeoIndex(db, coords)
-    : { restaurants: [] as RestaurantPublic[], poolSyncRevision: undefined };
+  const geoPromise = isMarketplaceGeoIndexEnabled()
+    ? loadMarketplaceRestaurantsFromGeoIndex(db, coords)
+    : Promise.resolve({ restaurants: [] as RestaurantPublic[], poolSyncRevision: undefined });
+  const profilesPromise = loadMarketplaceRestaurantsFromProfiles(db, coords);
 
-  const indexed = await loadMarketplaceRestaurantsFromProfiles(db, coords);
+  const [geoIndexed, indexed] = await Promise.all([geoPromise, profilesPromise]);
   const scanned =
     indexed.restaurants.length > 0
       ? { restaurants: [] as RestaurantPublic[], poolSyncRevision: undefined }
@@ -276,6 +284,36 @@ export async function loadMarketplaceRestaurants(
       scanned.poolSyncRevision,
     ),
   };
+}
+
+export async function loadMarketplaceRestaurants(
+  db: Firestore,
+  coords: { lat: number; lng: number },
+): Promise<{ restaurants: RestaurantPublic[]; poolSyncRevision?: string }> {
+  const cacheKey = toDiscoveryPoolCacheKey(coords.lat, coords.lng);
+  const cached = getCachedDiscoveryPool(cacheKey);
+  if (cached) {
+    return {
+      restaurants: [...cached.restaurants],
+      poolSyncRevision: cached.poolSyncRevision,
+    };
+  }
+
+  const inFlight = getInFlightDiscoveryPool(cacheKey);
+  if (inFlight) {
+    const shared = await inFlight;
+    return {
+      restaurants: [...shared.restaurants],
+      poolSyncRevision: shared.poolSyncRevision,
+    };
+  }
+
+  const promise = loadMarketplaceRestaurantsUncached(db, coords).then((result) => {
+    setCachedDiscoveryPool(cacheKey, result);
+    return result;
+  });
+  setInFlightDiscoveryPool(cacheKey, promise);
+  return promise;
 }
 
 async function loadMarketplaceRestaurantsFromGeoIndex(

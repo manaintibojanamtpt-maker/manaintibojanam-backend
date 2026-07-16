@@ -71,8 +71,19 @@ function success<T>(
   };
 }
 
-function sendMarketplaceJson(res: Response, payload: unknown): void {
-  res.set('Cache-Control', 'no-store, max-age=0');
+function sendMarketplaceJson(
+  res: Response,
+  payload: unknown,
+  options?: { cacheMaxAgeSec?: number },
+): void {
+  if (options?.cacheMaxAgeSec != null && options.cacheMaxAgeSec > 0) {
+    res.set(
+      'Cache-Control',
+      `public, max-age=${options.cacheMaxAgeSec}, stale-while-revalidate=60`,
+    );
+  } else {
+    res.set('Cache-Control', 'no-store, max-age=0');
+  }
   res.json(payload);
 }
 
@@ -174,6 +185,8 @@ export function registerMarketplaceRoutes(
     return { params, pool: restaurants, poolSyncRevision };
   }
 
+  const DISCOVERY_CACHE_MAX_AGE_SEC = Number(process.env.DISCOVERY_HTTP_CACHE_MAX_AGE_SEC || 60);
+
   const registerDiscoveryRoute = (path: string, collectionId?: DiscoveryCollectionId) => {
     app.get(path, async (req: Request, res: Response) => {
       try {
@@ -185,11 +198,13 @@ export function registerMarketplaceRoutes(
               { collection: buildDiscoveryCollection(collectionId, pool, params) },
               { tenantSyncRevision: poolSyncRevision },
             ),
+            { cacheMaxAgeSec: DISCOVERY_CACHE_MAX_AGE_SEC },
           );
         }
         return sendMarketplaceJson(
           res,
           success(buildDiscoveryHome(pool, params), { tenantSyncRevision: poolSyncRevision }),
+          { cacheMaxAgeSec: DISCOVERY_CACHE_MAX_AGE_SEC },
         );
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to load discovery';
@@ -216,6 +231,7 @@ export function registerMarketplaceRoutes(
           { collection: buildDiscoveryCollection(collectionId, pool, params) },
           { tenantSyncRevision: poolSyncRevision },
         ),
+        { cacheMaxAgeSec: DISCOVERY_CACHE_MAX_AGE_SEC },
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load discovery collection';

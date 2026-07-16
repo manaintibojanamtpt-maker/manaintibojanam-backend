@@ -46,15 +46,19 @@ export async function queryGeoIndexByPrefixes(
 ): Promise<GeoIndexReadRecord[]> {
   if (prefixes.length === 0) return [];
 
-  const matches: GeoIndexReadRecord[] = [];
-  for (const prefix of prefixes) {
-    const snapshot = await db
-      .collection('geoIndex')
-      .where('geohashPrefix', '==', prefix)
-      .where('status', '==', 'active')
-      .limit(50)
-      .get();
+  const snapshots = await Promise.all(
+    prefixes.map((prefix) =>
+      db
+        .collection('geoIndex')
+        .where('geohashPrefix', '==', prefix)
+        .where('status', '==', 'active')
+        .limit(50)
+        .get(),
+    ),
+  );
 
+  const matches: GeoIndexReadRecord[] = [];
+  for (const snapshot of snapshots) {
     for (const doc of snapshot.docs) {
       const parsed = parseGeoIndexDoc(doc.id, doc.data() as Record<string, unknown>);
       if (parsed) matches.push(parsed);
