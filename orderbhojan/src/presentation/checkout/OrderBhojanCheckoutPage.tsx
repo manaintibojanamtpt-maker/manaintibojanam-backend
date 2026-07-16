@@ -20,6 +20,7 @@ import { cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
+import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { markPerf } from '@/lib/perfMarks';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set delivery location';
@@ -48,6 +49,7 @@ export function OrderBhojanCheckoutPage() {
     canCheckout,
     placeCodOrder,
     placeRazorpayOrder,
+    placingMethod,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
 
@@ -60,8 +62,10 @@ export function OrderBhojanCheckoutPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | null>(null);
 
-  const isBusy = status === 'preparing' || status === 'placing';
-  const billRefreshing = isBusy && Boolean(quote);
+  const isPreparing = status === 'preparing';
+  const isPlacing = status === 'placing';
+  const isBusy = isPreparing || isPlacing;
+  const billRefreshing = isPreparing && Boolean(quote);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const showBothPaymentOptions = supportsCod && supportsRazorpay;
@@ -91,6 +95,12 @@ export function OrderBhojanCheckoutPage() {
     markPerf('cart_to_checkout');
   }, []);
 
+  useEffect(() => {
+    if (supportsRazorpay) {
+      prefetchRazorpayCheckoutScript();
+    }
+  }, [supportsRazorpay]);
+
   const validatePhone = (): boolean => {
     const parsed = phoneNumberSchema.safeParse(phone.trim());
     if (!parsed.success) {
@@ -102,12 +112,14 @@ export function OrderBhojanCheckoutPage() {
   };
 
   const handlePlaceCod = async () => {
+    if (isPlacing) return;
     if (!validatePhone()) return;
     setLastPaymentMethod('cod');
     await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined);
   };
 
   const handlePlaceRazorpay = async () => {
+    if (isPlacing) return;
     if (!validatePhone()) return;
     setLastPaymentMethod('razorpay');
     await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined);
@@ -246,8 +258,8 @@ export function OrderBhojanCheckoutPage() {
       onBack={() => navigate('/cart')}
       codLabel="Pay on delivery"
       razorpayLabel="Pay online"
-      codBusy={status === 'placing' && lastPaymentMethod === 'cod'}
-      razorpayBusy={status === 'placing' && lastPaymentMethod === 'razorpay'}
+      codBusy={placingMethod === 'cod'}
+      razorpayBusy={placingMethod === 'razorpay'}
       showCod={supportsCod}
       showRazorpay={supportsRazorpay}
       actionsDisabled={isBusy || !quote}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
@@ -54,6 +54,7 @@ export interface CheckoutFlowState {
   readonly orderNumber: string | null;
   readonly itemCount: number;
   readonly canCheckout: boolean;
+  readonly placingMethod: 'cod' | 'razorpay' | null;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
   placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
@@ -77,6 +78,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | null>(null);
+  const placeInFlightRef = useRef(false);
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
@@ -170,7 +173,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const placeCodOrder = useCallback(
     async (phone: string, customerName?: string) => {
+      if (placeInFlightRef.current) return null;
+      placeInFlightRef.current = true;
       markPerf('pay_tap', 'cod');
+      setPlacingMethod('cod');
       setPlaceStatus('placing');
       setPlaceError(null);
       try {
@@ -199,6 +205,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlaceStatus('error');
         setPlaceError(err instanceof Error ? err.message : 'Unable to place order');
         return null;
+      } finally {
+        placeInFlightRef.current = false;
+        setPlacingMethod(null);
       }
     },
     [getPayload, sessionUser],
@@ -206,7 +215,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const placeRazorpayOrder = useCallback(
     async (phone: string, customerName?: string) => {
+      if (placeInFlightRef.current) return null;
+      placeInFlightRef.current = true;
       markPerf('pay_tap', 'razorpay');
+      setPlacingMethod('razorpay');
       setPlaceStatus('placing');
       setPlaceError(null);
       try {
@@ -248,12 +260,17 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlaceStatus('error');
         setPlaceError(err instanceof Error ? err.message : 'Unable to complete payment');
         return null;
+      } finally {
+        placeInFlightRef.current = false;
+        setPlacingMethod(null);
       }
     },
     [getPayload, sessionUser],
   );
 
   const reset = useCallback(() => {
+    placeInFlightRef.current = false;
+    setPlacingMethod(null);
     setPlaceStatus('idle');
     setPlaceError(null);
     setOrderId(null);
@@ -272,6 +289,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     orderNumber,
     itemCount,
     canCheckout,
+    placingMethod,
     refreshQuote,
     prepareCheckout,
     placeCodOrder,

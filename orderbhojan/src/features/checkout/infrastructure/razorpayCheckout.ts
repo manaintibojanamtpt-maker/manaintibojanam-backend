@@ -8,6 +8,12 @@ const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
 let loadPromise: Promise<boolean> | null = null;
 let checkoutOpen = false;
 
+/** Warm Razorpay SDK while checkout quote loads — COD path never awaits this. */
+export function prefetchRazorpayCheckoutScript(): void {
+  if (typeof window === 'undefined') return;
+  void loadRazorpayScript();
+}
+
 function uniqueRazorpayModalId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
