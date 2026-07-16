@@ -795,6 +795,32 @@ export function registerMarketplaceRoutes(
           });
         }
 
+        const tenantId = String(orderData.tenantId ?? '').trim();
+        let tenantRatingUpdate: Record<string, unknown> | undefined;
+        if (tenantId) {
+          const tenantSnap = await db.collection('tenants').doc(tenantId).get();
+          if (tenantSnap.exists) {
+            const tenantData = tenantSnap.data() as Record<string, unknown>;
+            const marketplace =
+              tenantData.marketplace && typeof tenantData.marketplace === 'object'
+                ? (tenantData.marketplace as Record<string, unknown>)
+                : {};
+            const prevCount = Number(marketplace.ratingCount ?? 0);
+            const prevRating = Number(marketplace.rating ?? 0);
+            const newCount = prevCount + 1;
+            const newRating =
+              prevCount === 0 ? rating : (prevRating * prevCount + rating) / newCount;
+            tenantRatingUpdate = {
+              marketplace: {
+                ...marketplace,
+                rating: Math.round(newRating * 10) / 10,
+                ratingCount: newCount,
+              },
+              updatedAt: FieldValue.serverTimestamp(),
+            };
+          }
+        }
+
         const batch = db.batch();
         batch.update(orderRef, {
           rating,
@@ -812,6 +838,9 @@ export function registerMarketplaceRoutes(
           tenantId: orderData.tenantId ?? null,
           createdAt: FieldValue.serverTimestamp(),
         });
+        if (tenantId && tenantRatingUpdate) {
+          batch.set(db.collection('tenants').doc(tenantId), tenantRatingUpdate, { merge: true });
+        }
         await batch.commit();
 
         const updated = await getMarketplaceOrderForUser(db, orderId, req.user.uid, FieldValue);
