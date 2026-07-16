@@ -28,6 +28,19 @@ describe('backend serviceability', () => {
 
   it('maps to marketplace response shape', () => {
     const mapped = toMarketplaceServiceabilityResult({
+      isServiceable: true,
+      distanceKm: 4,
+      deliveryFee: 30,
+      currency: 'INR',
+      reason: 'OK',
+    }, 25);
+
+    assert.equal(mapped.delivery, true);
+    assert.equal(mapped.etaMinutes?.min, 37);
+  });
+
+  it('maps unserviceable locations without ETA', () => {
+    const mapped = toMarketplaceServiceabilityResult({
       isServiceable: false,
       distanceKm: 12,
       deliveryFee: 0,
@@ -36,6 +49,7 @@ describe('backend serviceability', () => {
     });
 
     assert.equal(mapped.delivery, false);
+    assert.equal(mapped.etaMinutes, undefined);
     assert.match(mapped.message ?? '', /Outside delivery area/i);
   });
 });

@@ -4,6 +4,10 @@ import {
   type KitchenDeliveryConfig,
 } from '../../packages/location-core/src/serviceability.js';
 import type { Serviceability } from '../../packages/location-core/src/types.js';
+import {
+  DEFAULT_PREP_TIME_MINUTES,
+  estimateDeliveryEtaMinutes,
+} from '../marketplace/etaEstimate.js';
 
 export type ServiceabilityInput = {
   lat: number;
@@ -11,12 +15,14 @@ export type ServiceabilityInput = {
   kitchenId?: string;
   kitchenLat?: number;
   kitchenLng?: number;
+  prepTime?: number;
   deliveryConfig?: {
     freeRadius?: number;
     paidRadius?: number;
     maxRadius?: number;
     baseFee?: number;
     perKmCharge?: number;
+    prepTime?: number;
   } | null;
 };
 
@@ -56,7 +62,15 @@ export function checkLocationServiceability(input: ServiceabilityInput): Service
   return computeServiceability(config, input.lat, input.lng);
 }
 
-export function toMarketplaceServiceabilityResult(serviceability: Serviceability) {
+export function toMarketplaceServiceabilityResult(
+  serviceability: Serviceability,
+  prepTimeMinutes: number = DEFAULT_PREP_TIME_MINUTES,
+) {
+  const prepTime =
+    Number.isFinite(prepTimeMinutes) && prepTimeMinutes > 0
+      ? prepTimeMinutes
+      : DEFAULT_PREP_TIME_MINUTES;
+
   return {
     delivery: serviceability.isServiceable,
     pickup: true,
@@ -67,6 +81,8 @@ export function toMarketplaceServiceabilityResult(serviceability: Serviceability
         : 'Location required',
     distanceKm: serviceability.distanceKm,
     deliveryFee: serviceability.deliveryFee,
-    etaMinutes: serviceability.isServiceable ? { min: 25, max: 35 } : undefined,
+    etaMinutes: serviceability.isServiceable
+      ? estimateDeliveryEtaMinutes(prepTime, serviceability.distanceKm)
+      : undefined,
   };
 }

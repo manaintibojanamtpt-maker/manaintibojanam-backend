@@ -19,6 +19,10 @@ import {
   type KitchenFormat,
 } from './kitchenFormat.js';
 import {
+  DEFAULT_PREP_TIME_MINUTES,
+  estimateDeliveryEtaMinutes,
+} from './etaEstimate.js';
+import {
   loadVisibleDiscoveryProfiles,
 } from './discoveryProfileWriter.js';
 import { isMarketplaceGeoIndexEnabled } from './marketplaceGeoIndexPolicy.js';
@@ -174,7 +178,7 @@ export function projectRestaurantPublic(
   const mp = tenant.marketplace;
   const timing = resolveStoreTiming(tenant, raw);
   const storeOpen = isStoreOpenNow(timing);
-  const prepTime = tenant.deliveryConfig?.prepTime ?? 30;
+  const prepTime = tenant.deliveryConfig?.prepTime ?? DEFAULT_PREP_TIME_MINUTES;
   const cuisines = [...(mp?.cuisineTags ?? tenant.cuisineTags ?? [])];
   const kitchenDietary = menuTypes?.length
     ? resolveKitchenDietaryFromMenuTypes(menuTypes)
@@ -199,7 +203,7 @@ export function projectRestaurantPublic(
     );
     if (!isImplausibleCustomerDistance(computed)) {
       distanceKm = Math.round(computed * 10) / 10;
-      etaMinutes = { min: prepTime, max: prepTime + 10 };
+      etaMinutes = estimateDeliveryEtaMinutes(prepTime, distanceKm);
       const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, computed);
       if (resolvedFee !== undefined) deliveryFee = resolvedFee;
     }

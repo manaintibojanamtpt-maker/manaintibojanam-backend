@@ -2,6 +2,10 @@ import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { allocateMarketplaceOrderNumber } from './orderNumberAllocator.js';
 import { normalizeDeliveryAddressFields } from './deliveryAddressFields.js';
+import {
+  DEFAULT_PREP_TIME_MINUTES,
+  estimateDeliveryEtaMinutes,
+} from './etaEstimate.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -167,6 +171,25 @@ interface MarketplaceQuoteContext {
   tenantId: string;
   quote: BillQuote;
   menuPrices: MenuPriceMap;
+  etaMinutes: { min: number; max: number };
+}
+
+function resolveDeliveryDistanceKm(
+  tenant: TenantRaw,
+  deliveryAddress?: { lat?: number; lng?: number; distanceKm?: number },
+): number | undefined {
+  let distanceKm = Number(deliveryAddress?.distanceKm ?? 0);
+  const kitchen = (tenant.location ?? {}) as { lat?: number; lng?: number };
+  if (
+    (!Number.isFinite(distanceKm) || distanceKm <= 0) &&
+    kitchen.lat &&
+    kitchen.lng &&
+    typeof deliveryAddress?.lat === 'number' &&
+    typeof deliveryAddress?.lng === 'number'
+  ) {
+    distanceKm = haversineKm(kitchen.lat, kitchen.lng, deliveryAddress.lat, deliveryAddress.lng);
+  }
+  return Number.isFinite(distanceKm) && distanceKm > 0 ? distanceKm : undefined;
 }
 
 async function buildMarketplaceQuoteContext(
@@ -241,9 +264,15 @@ async function buildMarketplaceQuoteContext(
   if (packagingFee > 0) lineItems.push({ label: 'Packaging', amount: packagingFee });
   if (deliveryFee > 0) lineItems.push({ label: 'Delivery', amount: deliveryFee });
 
+  const delivery = (loaded.raw.deliveryConfig ?? {}) as Record<string, unknown>;
+  const prepTime = Number(delivery.prepTime ?? DEFAULT_PREP_TIME_MINUTES);
+  const distanceKm = resolveDeliveryDistanceKm(loaded.raw, request.deliveryAddress);
+  const etaMinutes = estimateDeliveryEtaMinutes(prepTime, distanceKm);
+
   return {
     tenantId: loaded.id,
     menuPrices,
+    etaMinutes,
     quote: {
       subtotal: Math.round(subtotal),
       gstAmount,
@@ -330,6 +359,7 @@ function buildOrderPayload(
   orderItems: Awaited<ReturnType<typeof buildResolvedOrderItems>>,
   paymentMethod: 'cod' | 'razorpay',
   orderNumber: number,
+  etaMinutes: { min: number; max: number },
 ) {
   const { address, deliveryAddress } = normalizeDeliveryAddressFields(
     request.deliveryAddress as Record<string, unknown> | undefined,
@@ -359,7 +389,8 @@ function buildOrderPayload(
     isCOD: paymentMethod === 'cod',
     instructions: request.instructions ?? null,
     deliveryTimeSlot: 'ASAP',
-    eta: 30 + Math.floor(Math.random() * 15),
+    eta: etaMinutes.min,
+    etaMinutes,
     source: 'marketplace_checkout_v1',
     contextToken: request.contextToken ?? null,
   };
@@ -375,13 +406,21 @@ export async function placeMarketplaceOrder(
   }
 
   const paymentMethod = request.paymentMethod === 'razorpay' ? 'razorpay' : 'cod';
-  const [{ tenantId, quote, menuPrices }, orderNumber] = await Promise.all([
+  const [{ tenantId, quote, menuPrices, etaMinutes }, orderNumber] = await Promise.all([
     buildMarketplaceQuoteContext(db, request),
     allocateMarketplaceOrderNumber(db, fieldValue),
   ]);
 
   const orderItems = buildResolvedOrderItems(request, quote, menuPrices);
-  const orderPayload = buildOrderPayload(tenantId, request, quote, orderItems, paymentMethod, orderNumber);
+  const orderPayload = buildOrderPayload(
+    tenantId,
+    request,
+    quote,
+    orderItems,
+    paymentMethod,
+    orderNumber,
+    etaMinutes,
+  );
 
   if (paymentMethod === 'razorpay') {
     const draftRef = db.collection('order_drafts').doc();

@@ -50,6 +50,8 @@ export async function handleLocationServiceability(
       deliveryConfig = (loaded.raw.deliveryConfig ?? {}) as typeof deliveryConfig;
     }
 
+    const prepTime = Number(deliveryConfig?.prepTime ?? 25);
+
     const serviceability = checkLocationServiceability({
       lat: Number(body.lat),
       lng: Number(body.lng),
@@ -62,7 +64,7 @@ export async function handleLocationServiceability(
     res.json({
       ok: true,
       value: {
-        ...toMarketplaceServiceabilityResult(serviceability),
+        ...toMarketplaceServiceabilityResult(serviceability, prepTime),
         serviceability,
       },
     });
