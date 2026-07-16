@@ -1,4 +1,5 @@
 export * from './types';
+export * from './invoicePresentation';
 export { CourierTrackingTimelineView } from './CourierTrackingTimelineView';
 export { TrackingDeliveryPanelView, TrackingMapPlaceholderView } from './TrackingDeliveryPanelView';
 export { TrackingHeroView } from './TrackingHeroView';

@@ -13,6 +13,10 @@ import {
   trackingStepIndex,
   trackingStepLabel,
 } from '@/features/tracking/utils/trackingSteps';
+import {
+  computeInvoiceGrandTotal,
+  resolveInvoicePaymentPresentation,
+} from '@bhojan/storefront-design-system/orders/tracking';
 
 function formatTimelineAt(iso: string): string {
   try {
@@ -106,24 +110,6 @@ function formatMoney(value: number): string {
   return `₹${Math.round(value)}`;
 }
 
-function paymentStatusLabel(invoice: NonNullable<OrderTrackingResponse['invoice']>): {
-  label: string;
-  tone: 'paid' | 'pending' | 'failed';
-} {
-  const status = (invoice.paymentStatus ?? '').toLowerCase();
-  const method = (invoice.paymentMethod ?? '').toLowerCase();
-  if (['paid', 'success', 'verified'].includes(status)) {
-    return { label: 'Paid', tone: 'paid' };
-  }
-  if (['failed', 'expired'].includes(status)) {
-    return { label: 'Failed', tone: 'failed' };
-  }
-  if (method === 'cod') {
-    return { label: 'Cash on delivery', tone: 'pending' };
-  }
-  return { label: 'Pending', tone: 'pending' };
-}
-
 export function mapTrackingInvoice(invoice: NonNullable<OrderTrackingResponse['invoice']>): TrackingInvoiceViewModel {
   const created = new Date(invoice.createdAt).toLocaleString('en-IN', {
     day: 'numeric',
@@ -132,8 +118,20 @@ export function mapTrackingInvoice(invoice: NonNullable<OrderTrackingResponse['i
     hour: '2-digit',
     minute: '2-digit',
   });
-  const payment = paymentStatusLabel(invoice);
+  const payment = resolveInvoicePaymentPresentation({
+    paymentStatus: invoice.paymentStatus,
+    paymentMethod: invoice.paymentMethod,
+    codCollected: true,
+  });
   const gstPercent = invoice.gstPercent ?? 0;
+  const grandTotal = computeInvoiceGrandTotal({
+    subtotal: invoice.subtotal,
+    gstAmount: invoice.gstAmount,
+    packingFee: invoice.packingFee,
+    deliveryFee: invoice.deliveryFee,
+    discountAmount: invoice.discountAmount,
+    grandTotal: invoice.grandTotal,
+  });
 
   const totals = [
     { label: 'Subtotal', amountLabel: formatMoney(invoice.subtotal) },
@@ -146,8 +144,8 @@ export function mapTrackingInvoice(invoice: NonNullable<OrderTrackingResponse['i
     ...(invoice.packingFee > 0 ? [{ label: 'Packaging', amountLabel: formatMoney(invoice.packingFee) }] : []),
     ...(invoice.deliveryFee > 0 ? [{ label: 'Delivery', amountLabel: formatMoney(invoice.deliveryFee) }] : []),
     {
-      label: payment.tone === 'paid' ? 'Total paid' : 'Amount due',
-      amountLabel: formatMoney(invoice.grandTotal),
+      label: payment.totalLabel,
+      amountLabel: formatMoney(grandTotal),
       emphasis: true,
     },
   ];
@@ -157,8 +155,8 @@ export function mapTrackingInvoice(invoice: NonNullable<OrderTrackingResponse['i
     orderNumberLabel: `Digital invoice • Order #${invoice.orderNumber}`,
     customerName: invoice.customerName ?? 'Customer',
     createdLabel: `Date: ${created}`,
-    paymentBadgeLabel: payment.label,
-    paymentBadgeTone: payment.tone,
+    paymentBadgeLabel: payment.badgeLabel,
+    paymentBadgeTone: payment.badgeTone,
     phoneLabel: invoice.phone ? `Phone: ${invoice.phone}` : undefined,
     addressLabel: invoice.address ? `Delivery address: ${invoice.address}` : undefined,
     paymentMethodLabel: invoice.paymentMethod

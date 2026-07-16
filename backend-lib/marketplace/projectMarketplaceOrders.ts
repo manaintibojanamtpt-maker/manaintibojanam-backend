@@ -243,7 +243,7 @@ export function projectOrderTracking(
           gstAmount: Number(data.gstAmount ?? 0),
           gstPercent: Number(data.gst ?? 0),
           deliveryFee: Number(data.deliveryFee ?? 0),
-          packingFee: Number(data.packingFee ?? 0),
+          packingFee: Number(data.packingFee ?? data.packagingFee ?? 0),
           discountAmount: Number(data.discountAmount ?? 0),
           grandTotal,
         }

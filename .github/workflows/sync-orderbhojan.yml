@@ -7,6 +7,7 @@ on:
       - 'orderbhojan/**'
       - 'packages/marketplace-contracts/**'
       - 'packages/design-system/**'
+      - 'packages/location-core/**'
       - 'src/**'
       - 'scripts/sync-orderbhojan-repo.mjs'
       - 'scripts/e2e/**'

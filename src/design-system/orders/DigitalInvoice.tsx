@@ -2,9 +2,14 @@ import React from 'react';
 import { m } from 'framer-motion';
 import { Download, Printer, X, CheckCircle2, MapPin, Phone, User, ShoppingBag, Clock } from 'lucide-react';
 
-import { Order, OrderStatus } from '../../types';
+import { Order } from '../../types';
 
 import { useTenant } from '../../context/TenantContext';
+import {
+  computeInvoiceGrandTotal,
+  resolveInvoiceGstAmount,
+  resolveInvoicePaymentPresentation,
+} from './tracking/invoicePresentation';
 
 interface InvoiceProps {
   order: Order;
@@ -13,6 +18,24 @@ interface InvoiceProps {
 
 const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
   const { tenantInfo } = useTenant();
+  const gstAmount = resolveInvoiceGstAmount({
+    subtotal: order.subtotal,
+    gst: order.gst,
+    gstAmount: (order as Order & { gstAmount?: number }).gstAmount,
+  });
+  const grandTotal = computeInvoiceGrandTotal({
+    subtotal: order.subtotal,
+    gstAmount,
+    packingFee: order.packingFee,
+    deliveryFee: order.deliveryFee,
+    discountAmount: order.discountAmount,
+    grandTotal: order.totalAmount,
+  });
+  const payment = resolveInvoicePaymentPresentation({
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    orderStatus: order.status,
+  });
 
   const handlePrint = () => {
     window.print();
@@ -61,11 +84,11 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
               <p className="text-sm text-gray-500 font-medium">Date: {new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-              {['paid', 'success', 'verified'].includes(order.paymentStatus) || (order.paymentMethod === 'cod' && order.status === OrderStatus.DELIVERED) ? (
+              {payment.badgeTone === 'paid' ? (
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-200">
                   <CheckCircle2 size={14} /> PAID
                 </div>
-              ) : ['failed', 'expired'].includes(order.paymentStatus) ? (
+              ) : payment.badgeTone === 'failed' ? (
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-200">
                   <X size={14} /> FAILED
                 </div>
@@ -149,7 +172,7 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
               </div>
               <div className="flex justify-between text-sm font-medium text-gray-500">
                 <span>GST</span>
-                <span>₹{order.gst?.toFixed(2)}</span>
+                <span>₹{gstAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-medium text-gray-500">
                 <span>Packing Fee</span>
@@ -170,13 +193,13 @@ const DigitalInvoice: React.FC<InvoiceProps> = ({ order, onClose }) => {
             <div className="border-t-2 border-dashed border-gray-300 pt-6 mt-4">
               <div className="flex justify-between items-center">
                 <span className="text-xl font-black text-gray-900 flex items-center gap-2">
-                  {['paid', 'success', 'verified'].includes(order.paymentStatus) || (order.paymentMethod === 'cod' && order.status === OrderStatus.DELIVERED) ? (
+                  {payment.totalLabel === 'Total paid' ? (
                     <>Total Paid <CheckCircle2 size={20} className="text-green-500" /></>
                   ) : (
                     'Amount Due'
                   )}
                 </span>
-                <span className="text-4xl font-black text-red-600 whitespace-nowrap">₹{order.totalAmount?.toFixed(2)}</span>
+                <span className="text-4xl font-black text-red-600 whitespace-nowrap">₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>

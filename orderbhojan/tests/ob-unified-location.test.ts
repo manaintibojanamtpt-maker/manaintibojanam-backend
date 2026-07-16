@@ -134,6 +134,7 @@ describe('OB unified location (last-mile)', () => {
     assert.equal(input.address.street, '402, Green Valley');
     assert.equal(input.address.landmark, 'Near gate');
     assert.equal(input.address.pincode, '411001');
-    assert.equal(input.address.formattedAddress, 'Koregaon Park, Pune, Maharashtra 411001');
+    // normalizeAddressText rebuilds formatted from flat/building/landmark when flat is set.
+    assert.equal(input.address.formattedAddress, '402, Green Valley, Near gate, Pune');
   });
 });

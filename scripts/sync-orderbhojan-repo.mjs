@@ -88,7 +88,10 @@ function patchStandaloneText(content) {
     .replaceAll('file:../packages/', 'file:packages/')
     .replaceAll('"../packages/design-system"', '"packages/design-system"')
     .replaceAll('"../packages/marketplace-contracts"', '"packages/marketplace-contracts"')
+    .replaceAll('"../packages/location-core"', '"packages/location-core"')
     .replaceAll('--prefix ../packages/', '--prefix packages/')
+    .replaceAll('../packages/location-core/src/index.ts', 'packages/location-core/src/index.ts')
+    .replaceAll('../src/features/location-v2', 'storefront-src/features/location-v2')
     .replaceAll('tsx ../scripts/e2e/', 'tsx scripts/e2e/')
     .replaceAll("resolve(root, '../packages/design-system')", "resolve(root, 'packages/design-system')")
     .replaceAll(
@@ -237,6 +240,11 @@ function buildExport() {
     path.join(REPO_ROOT, 'packages', 'marketplace-contracts'),
     path.join(EXPORT_DIR, 'packages', 'marketplace-contracts'),
     { rootLabel: 'packages/marketplace-contracts' },
+  );
+  copyTree(
+    path.join(REPO_ROOT, 'packages', 'location-core'),
+    path.join(EXPORT_DIR, 'packages', 'location-core'),
+    { rootLabel: 'packages/location-core' },
   );
   copyTree(path.join(REPO_ROOT, 'scripts', 'e2e'), path.join(EXPORT_DIR, 'scripts', 'e2e'), {
     rootLabel: 'scripts/e2e (harness)',
