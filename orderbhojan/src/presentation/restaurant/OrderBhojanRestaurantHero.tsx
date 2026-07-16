@@ -9,6 +9,7 @@ import {
 } from '@/features/restaurant/domain/formatters';
 import { OrderBhojanRestaurantMeta } from './OrderBhojanRestaurantMeta';
 import { OrderBhojanRestaurantActions } from './OrderBhojanRestaurantActions';
+import { kitchenFormatLabel } from '@/features/discovery/utils/restaurantDisplay';
 
 export interface OrderBhojanRestaurantHeroProps {
   readonly data: RestaurantExperienceResponse;
@@ -99,9 +100,9 @@ export function OrderBhojanRestaurantHero({
               <div className="mb-2 flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#FF7A00]/20 bg-[#FF7A00]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-100">
                   <Sparkles className="h-3 w-3" aria-hidden />
-                  {experience.cloudKitchen ? 'Cloud kitchen' : 'Home kitchen'}
+                  {kitchenFormatLabel(experience.kitchenFormat)}
                 </span>
-                {!experience.cloudKitchen ? (
+                {experience.kitchenFormat === 'home_kitchen' ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-white/70">
                     <ShieldCheck className="h-3 w-3 text-green-400" aria-hidden />
                     Verified

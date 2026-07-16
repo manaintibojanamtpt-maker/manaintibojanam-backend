@@ -5,6 +5,7 @@ export interface OwnerStorefrontPayload {
   storeOperations?: Record<string, unknown>;
   branding?: Record<string, unknown>;
   name?: string;
+  businessType?: string;
   contact?: Record<string, unknown>;
   deliveryNotes?: string;
   location?: Record<string, unknown>;
@@ -18,6 +19,7 @@ export interface OwnerStorefrontResponse {
   success: boolean;
   tenantId: string;
   name?: string;
+  businessType?: string;
   contact?: Record<string, unknown>;
   deliveryNotes?: string;
   location?: Record<string, unknown>;

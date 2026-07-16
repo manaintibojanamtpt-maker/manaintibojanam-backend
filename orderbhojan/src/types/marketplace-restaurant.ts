@@ -1,4 +1,4 @@
-import type { RestaurantPublic } from './marketplace';
+import type { RestaurantPublic, KitchenFormat } from './marketplace';
 
 export type RestaurantOpenStatus = 'open' | 'closed' | 'closing_soon';
 
@@ -57,6 +57,8 @@ export interface RestaurantExperiencePublic {
   readonly priceRange?: string;
   readonly veg: boolean;
   readonly kitchenDietary?: 'pure_veg' | 'veg_friendly' | 'non_veg' | 'unknown';
+  readonly kitchenFormat: KitchenFormat;
+  /** @deprecated Prefer kitchenFormat — kept for older clients. */
   readonly cloudKitchen: boolean;
   readonly openStatus: RestaurantOpenStatus;
   readonly todayHours?: string;
@@ -123,6 +125,7 @@ export function mapRestaurantPublicToExperience(
   | 'cuisines'
   | 'veg'
   | 'cloudKitchen'
+  | 'kitchenFormat'
   | 'openStatus'
   | 'badges'
 > {
@@ -141,7 +144,8 @@ export function mapRestaurantPublicToExperience(
     eta: restaurant.etaMinutes,
     cuisines: restaurant.cuisines,
     veg,
-    cloudKitchen: restaurant.badges.includes('cloud_kitchen'),
+    kitchenFormat: restaurant.kitchenFormat,
+    cloudKitchen: restaurant.kitchenFormat === 'cloud_kitchen',
     openStatus: restaurant.isOpen ? 'open' : 'closed',
     badges: restaurant.badges.map(String),
   };

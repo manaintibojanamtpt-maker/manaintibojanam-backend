@@ -43,6 +43,7 @@ export function registerOwnerStorefrontRoutes(
         success: true,
         tenantId,
         name: data.name ?? '',
+        businessType: typeof data.businessType === 'string' ? data.businessType : 'home_kitchen',
         contact: data.contact ?? {},
         deliveryNotes: data.deliveryNotes ?? '',
         location: data.location ?? {},
@@ -84,6 +85,10 @@ export function registerOwnerStorefrontRoutes(
       };
 
       if (typeof body.name === 'string') updates.name = body.name;
+      if (typeof body.businessType === 'string') {
+        const allowed = new Set(['home_kitchen', 'cloud_kitchen', 'restaurant', 'chef_kitchen']);
+        if (allowed.has(body.businessType)) updates.businessType = body.businessType;
+      }
       if (body.contact) mergeObject('contact', body.contact);
       if (typeof body.deliveryNotes === 'string') updates.deliveryNotes = body.deliveryNotes;
       if (body.location) mergeObject('location', body.location);

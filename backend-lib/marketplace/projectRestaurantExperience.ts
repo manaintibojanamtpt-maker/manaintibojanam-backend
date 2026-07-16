@@ -13,6 +13,14 @@ import {
   shouldShowKitchenDietaryBadge,
   type KitchenDietaryProfile,
 } from './tenantProjectionHelpers.js';
+import {
+  resolveKitchenFormat,
+  type KitchenFormat,
+} from './kitchenFormat.js';
+import {
+  DEFAULT_PREP_TIME_MINUTES,
+  estimateDeliveryEtaMinutes,
+} from './etaEstimate.js';
 
 export interface RestaurantExperiencePayload {
   readonly experience: {
@@ -31,6 +39,8 @@ export interface RestaurantExperiencePayload {
     readonly priceRange?: string;
     readonly veg: boolean;
     readonly kitchenDietary?: KitchenDietaryProfile;
+    readonly kitchenFormat: KitchenFormat;
+    /** @deprecated Prefer kitchenFormat — kept for older clients. */
     readonly cloudKitchen: boolean;
     readonly openStatus: 'open' | 'closed' | 'closing_soon';
     readonly todayHours?: string;
@@ -149,8 +159,8 @@ export function projectRestaurantExperience(
 
     if (!isImplausibleCustomerDistance(distanceKm)) {
       distance = Math.round(distanceKm * 10) / 10;
-      const prepTime = tenant.deliveryConfig?.prepTime ?? 30;
-      eta = { min: prepTime, max: prepTime + 10 };
+      const prepTime = tenant.deliveryConfig?.prepTime ?? DEFAULT_PREP_TIME_MINUTES;
+      eta = estimateDeliveryEtaMinutes(prepTime, distance);
 
       const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, distanceKm);
       if (resolvedFee === undefined) {
@@ -181,6 +191,8 @@ export function projectRestaurantExperience(
       : undefined;
   const subscriptionEnabled = features?.subscriptionEnabled === true;
 
+  const kitchenFormat = resolveKitchenFormat(tenant.businessType);
+
   return {
     experience: {
       restaurantId,
@@ -198,7 +210,8 @@ export function projectRestaurantExperience(
       priceRange: mp?.priceBandLabel ?? formatPriceRange(mp?.priceForTwo),
       veg: isVegKitchen(kitchenDietary),
       kitchenDietary: shouldShowKitchenDietaryBadge(kitchenDietary) ? kitchenDietary : undefined,
-      cloudKitchen: tenant.businessType === 'cloud_kitchen',
+      kitchenFormat,
+      cloudKitchen: kitchenFormat === 'cloud_kitchen',
       openStatus: storeOpen ? 'open' : 'closed',
       todayHours,
       gallery,

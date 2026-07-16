@@ -1,8 +1,10 @@
 import React from 'react';
 import { Clock, MapPin, ShieldCheck, Sparkles, Star, Truck } from 'lucide-react';
+import { kitchenFormatLabel, resolveKitchenFormat } from '../lib/kitchenFormat';
 
 interface MobileRestaurantHeaderProps {
   restaurantName: string;
+  businessType?: string;
   rating?: string;
   showRating?: boolean;
   deliveryAddress?: string;
@@ -13,6 +15,7 @@ interface MobileRestaurantHeaderProps {
 
 const MobileRestaurantHeader: React.FC<MobileRestaurantHeaderProps> = ({
   restaurantName,
+  businessType,
   rating = '4.3',
   showRating = true,
   deliveryAddress,
@@ -20,6 +23,8 @@ const MobileRestaurantHeader: React.FC<MobileRestaurantHeaderProps> = ({
   deliveryMessage,
   showDeliveryDetails = true
 }) => {
+  const kitchenLabel = kitchenFormatLabel(resolveKitchenFormat(businessType));
+
   return (
     <section className="bg-transparent px-3 pb-2 pt-3 sm:px-4">
       <div className="mib-food-card overflow-hidden rounded-[1.75rem]">
@@ -36,7 +41,7 @@ const MobileRestaurantHeader: React.FC<MobileRestaurantHeaderProps> = ({
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="mib-soft-pill border-orange-400/20 bg-orange-400/10 text-orange-100">
                     <Sparkles size={11} />
-                    Home kitchen
+                    {kitchenLabel}
                   </span>
                   <span className="mib-soft-pill text-white/70">
                     <ShieldCheck size={11} />

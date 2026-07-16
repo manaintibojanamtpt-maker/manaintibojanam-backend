@@ -219,7 +219,9 @@ function applySearchFilters(
     );
   }
   if (filters.cloudKitchenOnly) {
-    result = result.filter((r) => r.badges.includes('cloud_kitchen'));
+    result = result.filter(
+      (r) => r.kitchenFormat === 'cloud_kitchen' || r.badges.includes('cloud_kitchen'),
+    );
   }
   if (filters.openNowOnly) {
     result = result.filter((r) => r.isOpen);

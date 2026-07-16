@@ -39,6 +39,7 @@ import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { useDeliveryState } from '../lib/useDeliveryState';
 import { useTimeBasedSection } from '../hooks/useTimeBasedSection';
 import { useTenant } from '../context/TenantContext';
+import { kitchenFormatHeadline, kitchenFormatLabel, resolveKitchenFormat } from '../lib/kitchenFormat';
 import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { useStorefrontPath } from '../hooks/useStorefrontPath';
 import { activeTenantId as fallbackTenantId } from '../services/api';
@@ -422,7 +423,9 @@ const Home: React.FC = () => {
               className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-orange-500/10 border border-orange-500/20 rounded-full"
             >
               <Sparkles size={14} className="text-orange-500 shrink-0" />
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-orange-400 whitespace-nowrap">Authentic Andhra Home Kitchen</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-orange-400 whitespace-nowrap">
+                Authentic Andhra {kitchenFormatHeadline(tenantInfo?.businessType)}
+              </span>
             </m.div>
 
             <m.h1
@@ -482,7 +485,7 @@ const Home: React.FC = () => {
                   { id: 'verified_merchant', icon: ShieldCheck, title: "Verified Merchant", show: tenantInfo?.kyc?.verificationLevel && tenantInfo.kyc.verificationLevel > 0 },
                   { id: 'fssai_verified', icon: ShieldCheck, title: "FSSAI Verified", show: tenantInfo?.fssai?.verificationStatus === 'verified' },
                   { id: 'premium_verified', icon: Star, title: "Premium Verified", show: ['pro', 'enterprise'].includes(tenantInfo?.subscription?.planId || '') },
-                  { id: 'homemade', icon: ChefHat, title: "Homemade", show: !tenantInfo?.businessType || tenantInfo?.businessType === 'home_kitchen' },
+                  { id: 'kitchen_format', icon: ChefHat, title: kitchenFormatLabel(resolveKitchenFormat(tenantInfo?.businessType)), show: true },
                   { id: 'fresh', icon: Clock, title: "Fresh Daily", show: true }
                 ].filter(b => b.show).slice(0, 4).map((badge, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-black/40 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-xl">

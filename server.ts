@@ -3280,6 +3280,7 @@ app.post('/api/owner/provision', strictLimiter, verifyFirebaseToken, async (req:
         name: restaurantName.trim(),
         slug,
         ownerId: userId,
+        businessType: 'home_kitchen',
         status: 'draft',
         storeStatus: 'draft',
         subscription: {
