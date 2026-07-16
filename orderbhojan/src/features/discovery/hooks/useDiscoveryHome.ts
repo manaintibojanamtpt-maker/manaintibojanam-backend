@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
+import { markPerf } from '@/lib/perfMarks';
 import { loadDiscoveryHome, resolveDiscoveryCoords } from '../engine/discoveryEngine';
 import { discoveryKeys, DISCOVERY_GC_TIME_MS, DISCOVERY_STALE_TIME_MS } from './discoveryQueryKeys';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
@@ -14,14 +15,18 @@ export function useDiscoveryHome() {
 
   return useQuery({
     queryKey: discoveryKeys.home(coords.lat, coords.lng, filters),
-    queryFn: () =>
-      loadDiscoveryHome({
+    queryFn: async () => {
+      markPerf('discovery_fetch_start');
+      const result = await loadDiscoveryHome({
         lat: coords.lat,
         lng: coords.lng,
         page: 1,
         limit: 24,
         filters,
-      }),
+      });
+      markPerf('discovery_fetch_end');
+      return result;
+    },
     enabled,
     staleTime: DISCOVERY_STALE_TIME_MS,
     gcTime: DISCOVERY_GC_TIME_MS,

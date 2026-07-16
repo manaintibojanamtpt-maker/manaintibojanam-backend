@@ -37,7 +37,7 @@ export function HomeExperiencePage() {
 
   useEffect(() => {
     if (!locationEnabled || !discoveryEnabled || locationPromptedRef.current) return;
-    if (activeLocation || discoveryQuery.isLoading || discoveryQuery.isFetching) return;
+    if (activeLocation || discoveryQuery.isPending || discoveryQuery.isFetching) return;
     const collections = discoveryQuery.data?.collections ?? [];
     const hasKitchens = collections.some((collection) => collection.restaurants.length > 0);
     if (hasKitchens) return;
@@ -48,7 +48,7 @@ export function HomeExperiencePage() {
     discoveryEnabled,
     discoveryQuery.data?.collections,
     discoveryQuery.isFetching,
-    discoveryQuery.isLoading,
+    discoveryQuery.isPending,
     locationEnabled,
     openSelector,
   ]);

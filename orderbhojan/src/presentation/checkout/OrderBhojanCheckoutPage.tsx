@@ -16,8 +16,11 @@ import {
   useLocationFeatureEnabled,
   useLocationUiState,
 } from '@/features/location';
+import { cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
+import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
+import { markPerf } from '@/lib/perfMarks';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set delivery location';
 
@@ -43,10 +46,13 @@ export function OrderBhojanCheckoutPage() {
     orderNumber,
     itemCount,
     canCheckout,
-    prepareCheckout,
     placeCodOrder,
     placeRazorpayOrder,
   } = useCheckoutFlow();
+  useCheckoutPrefetch(canCheckout);
+
+  const lines = useCartStore((s) => s.lines);
+  const estimatedSubtotal = cartSubtotal(lines);
 
   const sessionPhone = normalizePhoneFromSession(sessionUser?.phoneNumber);
   const [phoneOverride, setPhoneOverride] = useState('');
@@ -54,7 +60,8 @@ export function OrderBhojanCheckoutPage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | null>(null);
 
-  const isBusy = status === 'quoting' || status === 'preparing' || status === 'placing';
+  const isBusy = status === 'preparing' || status === 'placing';
+  const billRefreshing = isBusy && Boolean(quote);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const showBothPaymentOptions = supportsCod && supportsRazorpay;
@@ -81,9 +88,8 @@ export function OrderBhojanCheckoutPage() {
   }, [showBothPaymentOptions, supportsCod, supportsRazorpay]);
 
   useEffect(() => {
-    if (!canCheckout) return;
-    void prepareCheckout();
-  }, [canCheckout, prepareCheckout]);
+    markPerf('cart_to_checkout');
+  }, []);
 
   const validatePhone = (): boolean => {
     const parsed = phoneNumberSchema.safeParse(phone.trim());
@@ -189,6 +195,25 @@ export function OrderBhojanCheckoutPage() {
       ? 'Detecting location…'
       : v2Address?.text?.shortLabel?.trim() || activeLocation?.displayLabel || DELIVERY_ADDRESS_PLACEHOLDER;
 
+  const billView = quote
+    ? {
+        lines: quote.lineItems.map((item) => ({
+          label: item.label,
+          amountLabel: `₹${item.amount}`,
+        })),
+        totalLabel: `₹${quote.grandTotal}`,
+        deliveryPendingNote: quote.deliveryPending
+          ? 'Delivery fee pending address confirmation'
+          : undefined,
+      }
+    : estimatedSubtotal > 0
+      ? {
+          lines: [{ label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` }],
+          totalLabel: `₹${estimatedSubtotal}`,
+          deliveryPendingNote: 'Calculating taxes and delivery…',
+        }
+      : undefined;
+
   return (
     <CheckoutPageView
       title="Checkout"
@@ -204,21 +229,9 @@ export function OrderBhojanCheckoutPage() {
           : undefined
       }
       onAddressAction={locationEnabled ? handleAddressAction : undefined}
-      bill={
-        quote
-          ? {
-              lines: quote.lineItems.map((item) => ({
-                label: item.label,
-                amountLabel: `₹${item.amount}`,
-              })),
-              totalLabel: `₹${quote.grandTotal}`,
-              deliveryPendingNote: quote.deliveryPending
-                ? 'Delivery fee pending address confirmation'
-                : undefined,
-            }
-          : undefined
-      }
-      quoteLoading={isBusy && !quote}
+      bill={billView}
+      quoteLoading={isBusy && !billView}
+      billRefreshing={billRefreshing}
       contact={{
         value: phone,
         error: phoneError ?? undefined,

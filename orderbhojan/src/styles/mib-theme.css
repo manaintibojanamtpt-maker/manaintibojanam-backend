@@ -5,7 +5,10 @@
   --ob-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ob-safe-left: env(safe-area-inset-left, 0px);
   --ob-safe-right: env(safe-area-inset-right, 0px);
-  --ob-chrome-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  --bottom-bar-height: 72px;
+  --ob-fixed-cta-height: 132px;
+  --ob-chrome-bottom: calc(var(--bottom-bar-height) + var(--ob-safe-bottom) + 16px);
+  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 16px);
   --mib-bg: #070504;
   --mib-surface: #120d0a;
   --mib-surface-strong: #1a1410;
@@ -162,4 +165,23 @@
   );
   background-size: 200% 100%;
   animation: ob-shimmer 1.4s ease-in-out infinite;
+}
+
+.ob-app-shell {
+  padding-top: var(--ob-safe-top);
+  padding-left: var(--ob-safe-left);
+  padding-right: var(--ob-safe-right);
+}
+
+.ob-fixed-cta-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 5, 4, 0.95);
+  padding: 1rem 1rem max(1rem, var(--ob-safe-bottom));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }

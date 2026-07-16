@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
+import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
 import '@/styles/globals.css';
 
@@ -18,10 +19,7 @@ function suppressFirestorePermissionRejections(): void {
   });
 }
 
-async function bootstrap() {
-  suppressFirestorePermissionRejections();
-  const config = await ensureAppConfig();
-
+function renderApp(): void {
   const rootElement = document.getElementById('root');
   if (!rootElement) {
     throw new Error('Root element #root not found');
@@ -34,6 +32,18 @@ async function bootstrap() {
       </BrowserRouter>
     </StrictMode>,
   );
+
+  requestAnimationFrame(() => {
+    markPerfOnce('first_paint');
+  });
+}
+
+async function bootstrap() {
+  markPerf('app_start');
+  suppressFirestorePermissionRejections();
+
+  const config = await ensureAppConfig();
+  renderApp();
 
   if (config.features.mswEnabled) {
     try {

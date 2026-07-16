@@ -52,8 +52,9 @@ export function DiscoveryHomeFeed() {
   const { openSelector } = useLocationActions();
   const online = useOnlineStatus();
   const filtersActive = hasDiscoveryFilterOverrides(filters);
+  const showInitialSkeleton = query.isPending && !query.data;
 
-  if (query.isLoading) {
+  if (showInitialSkeleton) {
     return (
       <div aria-busy="true">
         <DiscoveryFiltersBar />
@@ -172,12 +173,17 @@ export function DiscoveryHomeFeed() {
 
   return (
     <PullToRefresh
-      disabled={query.isFetching}
+      disabled={query.isFetching && !query.data}
       onRefresh={async () => {
         await query.refetch();
       }}
     >
       <div className="space-y-6">
+        {query.isFetching && query.data ? (
+          <p className="text-xs text-white/45" aria-live="polite">
+            Refreshing kitchens…
+          </p>
+        ) : null}
         {query.data?.locationLabel ? (
           <p className="text-xs font-medium uppercase tracking-widest text-white/50">
             {activeLocation

@@ -5,10 +5,9 @@ import { validateAppConfig } from './validation';
 let cached: AppConfig | null = null;
 
 export async function ensureAppConfig(): Promise<AppConfig> {
-  if (!cached) {
-    cached = await hydrateFirebaseConfig(loadAppConfig());
-    validateAppConfig(cached);
-  }
+  const base = cached ?? loadAppConfig();
+  cached = await hydrateFirebaseConfig(base);
+  validateAppConfig(cached);
   return cached;
 }
 

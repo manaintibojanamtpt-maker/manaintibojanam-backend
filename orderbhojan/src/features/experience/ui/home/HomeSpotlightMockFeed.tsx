@@ -18,7 +18,7 @@ export interface HomeSpotlightMockFeedProps {
 export function HomeSpotlightMockFeed({ categoryId }: HomeSpotlightMockFeedProps) {
   const query = useFeaturedRestaurants();
 
-  if (query.isLoading) {
+  if (query.isPending && !query.data) {
     return <OrderBhojanHomeFeedSkeleton />;
   }
 

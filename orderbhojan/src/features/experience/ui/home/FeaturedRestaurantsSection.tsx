@@ -14,7 +14,7 @@ export interface FeaturedRestaurantsSectionProps {
 export function FeaturedRestaurantsSection({ categoryId = null }: FeaturedRestaurantsSectionProps) {
   const query = useFeaturedRestaurants();
 
-  if (query.isLoading) {
+  if (query.isPending && !query.data) {
     return <OrderBhojanHomeFeedSkeleton />;
   }
 

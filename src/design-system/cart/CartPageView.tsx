@@ -42,7 +42,7 @@ export function CartPageView({
 }: CartPageViewProps) {
   return (
     <div className="relative">
-      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-40" embedded>
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-[var(--ob-focus-bottom)]" embedded>
         {restaurant && onMenu ? (
           <CartRestaurantBannerView restaurant={restaurant} onMenu={onMenu} />
         ) : null}
@@ -72,10 +72,7 @@ export function CartPageView({
         ) : null}
       </TransactionalPageShell>
 
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#070504]/95 px-4 py-4 backdrop-blur-xl"
-        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-      >
+      <div className="ob-fixed-cta-bar">
         <div className="mx-auto flex max-w-lg flex-col gap-2">
           <SoftButton type="button" fullWidth disabled={checkoutBusy} onClick={onCheckout}>
             {checkoutLabel}

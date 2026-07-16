@@ -1,13 +1,20 @@
-import { useCallback, useState } from 'react';
-import { getLocationStoreAddress, buildDeliveryAddressLine } from '@bhojan/location-core';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
+import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
+import { markPerf } from '@/lib/perfMarks';
+import {
+  checkoutKeys,
+  CHECKOUT_PREPARE_GC_MS,
+  CHECKOUT_PREPARE_STALE_MS,
+} from './checkoutQueryKeys';
 import type { BillQuote } from '@/types/marketplace';
 
 export interface CheckoutPlaceResponse {
@@ -54,43 +61,8 @@ export interface CheckoutFlowState {
   reset: () => void;
 }
 
-function buildCheckoutPayload(
-  lines: ReturnType<typeof useCartStore.getState>['lines'],
-  restaurantId: string,
-  contextToken: string,
-  activeLocation: ReturnType<typeof useActiveLocation>,
-) {
-  const coords = activeLocation?.coordinates
-    ? { lat: activeLocation.coordinates.lat, lng: activeLocation.coordinates.lng }
-    : { lat: 0, lng: 0 };
-  const v2Address = getLocationStoreAddress();
-  const addressLine =
-    (v2Address ? buildDeliveryAddressLine(v2Address.text) : '') ||
-    activeLocation?.displayLabel?.trim() ||
-    '';
-  const distanceKm = activeLocation?.serviceability?.distanceKm;
-
-  return {
-    restaurantId,
-    contextToken,
-    orderType: 'delivery' as const,
-    lines: lines.map((line) => ({
-      itemId: line.foodId,
-      quantity: line.quantity,
-    })),
-    deliveryAddress: {
-      lat: coords.lat,
-      lng: coords.lng,
-      ...(addressLine ? { addressLine1: addressLine, displayLabel: addressLine } : {}),
-      ...(v2Address?.text?.flat ? { flat: v2Address.text.flat } : {}),
-      ...(v2Address?.text?.building ? { building: v2Address.text.building } : {}),
-      ...(v2Address?.text?.landmark ? { landmark: v2Address.text.landmark } : {}),
-      ...(typeof distanceKm === 'number' ? { distanceKm } : {}),
-    },
-  };
-}
-
 export function useCheckoutFlow(): CheckoutFlowState {
+  const queryClient = useQueryClient();
   const lines = useCartStore((s) => s.lines);
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
@@ -99,11 +71,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const { sessionUser } = useAuth();
 
   const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
+  const coords = activeLocation?.coordinates;
 
-  const [quote, setQuote] = useState<BillQuote | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<readonly string[]>([]);
-  const [status, setStatus] = useState<CheckoutFlowStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [placeStatus, setPlaceStatus] = useState<'idle' | 'placing' | 'success' | 'error'>('idle');
+  const [placeError, setPlaceError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
@@ -114,6 +85,17 @@ export function useCheckoutFlow(): CheckoutFlowState {
     Boolean(contextToken) &&
     hasReadyDeliveryLocation(activeLocation);
 
+  const prepareSignature = useMemo(() => {
+    if (!resolvedRestaurantId || !contextToken || !coords) return null;
+    return buildCheckoutPrepareSignature({
+      restaurantId: resolvedRestaurantId,
+      contextToken,
+      lines,
+      lat: coords.lat,
+      lng: coords.lng,
+    });
+  }, [contextToken, coords, lines, resolvedRestaurantId]);
+
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {
       throw new Error('Restaurant context is missing. Re-open the menu and try again.');
@@ -121,7 +103,6 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (lines.length === 0) {
       throw new Error('Your cart is empty.');
     }
-    const coords = activeLocation?.coordinates;
     if (!coords) {
       throw new Error('Delivery address is required. Add your address before checkout.');
     }
@@ -129,41 +110,69 @@ export function useCheckoutFlow(): CheckoutFlowState {
       throw new Error('Confirm your flat or house number before checkout.');
     }
     return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
-  }, [activeLocation, contextToken, lines, resolvedRestaurantId]);
+  }, [activeLocation, contextToken, coords, lines, resolvedRestaurantId]);
+
+  const prepareQuery = useQuery({
+    queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
+    queryFn: async () => {
+      markPerf('checkout_prepare_start', 'checkout-page');
+      const payload = getPayload();
+      const response = await getMarketplaceApiClient().checkoutPrepare(payload);
+      markPerf('checkout_prepare_end', 'checkout-page');
+      markPerf('checkout_bill_ready', 'checkout-page');
+      return response;
+    },
+    enabled: canCheckout && Boolean(prepareSignature),
+    staleTime: CHECKOUT_PREPARE_STALE_MS,
+    gcTime: CHECKOUT_PREPARE_GC_MS,
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  const quote = prepareQuery.data?.quote ?? null;
+  const paymentMethods = prepareQuery.data?.paymentMethods ?? [];
+
+  const status: CheckoutFlowStatus = useMemo(() => {
+    if (placeStatus === 'placing') return 'placing';
+    if (placeStatus === 'success') return 'success';
+    if (placeStatus === 'error') return 'error';
+    if (prepareQuery.isFetching && !prepareQuery.data) return 'preparing';
+    if (prepareQuery.isError) return 'error';
+    return 'idle';
+  }, [placeStatus, prepareQuery.data, prepareQuery.isError, prepareQuery.isFetching]);
+
+  const error =
+    placeError ??
+    (prepareQuery.error instanceof Error ? prepareQuery.error.message : null);
 
   const refreshQuote = useCallback(async () => {
-    setStatus('quoting');
-    setError(null);
+    markPerf('checkout_prepare_start', 'refresh-quote');
     try {
       const payload = getPayload();
       const nextQuote = await getMarketplaceApiClient().quote(payload);
-      setQuote(nextQuote);
-      setStatus('idle');
+      if (prepareSignature) {
+        queryClient.setQueryData(checkoutKeys.prepare(prepareSignature), (current: { quote: BillQuote; paymentMethods: string[] } | undefined) => ({
+          paymentMethods: current?.paymentMethods ?? [],
+          quote: nextQuote,
+        }));
+      }
+      markPerf('checkout_bill_ready', 'refresh-quote');
     } catch (err) {
-      setStatus('error');
-      setError(err instanceof Error ? err.message : 'Unable to fetch quote');
+      setPlaceStatus('error');
+      setPlaceError(err instanceof Error ? err.message : 'Unable to fetch quote');
     }
-  }, [getPayload]);
+  }, [getPayload, prepareSignature, queryClient]);
 
   const prepareCheckout = useCallback(async () => {
-    setStatus('preparing');
-    setError(null);
-    try {
-      const payload = getPayload();
-      const response = await getMarketplaceApiClient().checkoutPrepare(payload);
-      setQuote(response.quote);
-      setPaymentMethods(response.paymentMethods);
-      setStatus('idle');
-    } catch (err) {
-      setStatus('error');
-      setError(err instanceof Error ? err.message : 'Unable to prepare checkout');
-    }
-  }, [getPayload]);
+    await prepareQuery.refetch();
+  }, [prepareQuery]);
 
   const placeCodOrder = useCallback(
     async (phone: string, customerName?: string) => {
-      setStatus('placing');
-      setError(null);
+      markPerf('pay_tap', 'cod');
+      setPlaceStatus('placing');
+      setPlaceError(null);
       try {
         const payload = {
           ...getPayload(),
@@ -182,12 +191,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
         }
         setOrderId(placed.orderId);
         setOrderNumber(placed.orderNumber);
-        setStatus('success');
+        setPlaceStatus('success');
+        markPerf('pay_next_step', 'cod-success');
         useCartStore.getState().clear();
         return placed;
       } catch (err) {
-        setStatus('error');
-        setError(err instanceof Error ? err.message : 'Unable to place order');
+        setPlaceStatus('error');
+        setPlaceError(err instanceof Error ? err.message : 'Unable to place order');
         return null;
       }
     },
@@ -196,8 +206,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const placeRazorpayOrder = useCallback(
     async (phone: string, customerName?: string) => {
-      setStatus('placing');
-      setError(null);
+      markPerf('pay_tap', 'razorpay');
+      setPlaceStatus('placing');
+      setPlaceError(null);
       try {
         const payload = {
           ...getPayload(),
@@ -226,15 +237,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
         setOrderId(confirmed.orderId);
         setOrderNumber(confirmed.orderNumber);
-        setStatus('success');
+        setPlaceStatus('success');
+        markPerf('pay_next_step', 'razorpay-success');
         useCartStore.getState().clear();
         return {
           orderId: confirmed.orderId,
           orderNumber: confirmed.orderNumber,
         };
       } catch (err) {
-        setStatus('error');
-        setError(err instanceof Error ? err.message : 'Unable to complete payment');
+        setPlaceStatus('error');
+        setPlaceError(err instanceof Error ? err.message : 'Unable to complete payment');
         return null;
       }
     },
@@ -242,13 +254,14 @@ export function useCheckoutFlow(): CheckoutFlowState {
   );
 
   const reset = useCallback(() => {
-    setQuote(null);
-    setPaymentMethods([]);
-    setStatus('idle');
-    setError(null);
+    setPlaceStatus('idle');
+    setPlaceError(null);
     setOrderId(null);
     setOrderNumber(null);
-  }, []);
+    if (prepareSignature) {
+      void queryClient.removeQueries({ queryKey: checkoutKeys.prepare(prepareSignature) });
+    }
+  }, [prepareSignature, queryClient]);
 
   return {
     quote,

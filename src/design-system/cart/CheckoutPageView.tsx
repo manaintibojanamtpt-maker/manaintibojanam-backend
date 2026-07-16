@@ -17,6 +17,7 @@ export interface CheckoutPageViewProps {
   readonly onAddressAction?: () => void;
   readonly bill?: CheckoutBillSummaryViewModel;
   readonly quoteLoading: boolean;
+  readonly billRefreshing?: boolean;
   readonly contact: CheckoutContactViewModel;
   readonly onContactChange: (value: string) => void;
   readonly errorMessage?: string;
@@ -41,6 +42,7 @@ export function CheckoutPageView({
   onAddressAction,
   bill,
   quoteLoading,
+  billRefreshing = false,
   contact,
   onContactChange,
   errorMessage,
@@ -61,7 +63,7 @@ export function CheckoutPageView({
 
   return (
     <div className="relative">
-      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-36" embedded>
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-[var(--ob-focus-bottom)]" embedded>
         {address && onAddressAction ? (
           <button
             type="button"
@@ -75,12 +77,22 @@ export function CheckoutPageView({
 
         {quoteLoading && !bill ? (
           <div aria-busy="true" className="space-y-2">
-            <Skeleton className="h-48 w-full rounded-2xl ob-shimmer" />
+            <Skeleton className="h-10 w-full rounded-xl ob-shimmer" />
+            <Skeleton className="h-10 w-full rounded-xl ob-shimmer" />
             <p className="text-sm text-white/55">Calculating your bill…</p>
           </div>
         ) : null}
 
-        {bill ? <CheckoutBillSummaryView bill={bill} /> : null}
+        {bill ? (
+          <div className={billRefreshing ? 'opacity-80 transition-opacity' : undefined}>
+            <CheckoutBillSummaryView bill={bill} />
+            {billRefreshing ? (
+              <p className="mt-2 text-xs text-white/50" aria-live="polite">
+                Updating final bill…
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <CheckoutContactView contact={contact} onChange={onContactChange} />
 
@@ -97,10 +109,7 @@ export function CheckoutPageView({
         </SoftButton>
       </TransactionalPageShell>
 
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#070504]/95 px-4 py-4 backdrop-blur-xl"
-        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-      >
+      <div className="ob-fixed-cta-bar">
         <div className="mx-auto flex max-w-lg flex-col gap-2">
           {showRazorpay && onPlaceRazorpay ? (
             <SoftButton type="button" fullWidth disabled={actionsDisabled} onClick={onPlaceRazorpay}>

@@ -10,7 +10,9 @@ import {
   useCartStore,
 } from '@/features/cart/store/cartStore';
 import { useCartValidation } from '@/features/cart/hooks/useCartValidation';
+import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, useActiveLocation, useLocationActions } from '@/features/location';
+import { markPerf } from '@/lib/perfMarks';
 
 const DELIVERY_LOCATION_GATE_MESSAGE =
   'Set your delivery location to see delivery options and continue to checkout.';
@@ -48,6 +50,7 @@ export function OrderBhojanCartExperience() {
   const { openSelector, openConfirmation } = useLocationActions();
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
   const isCheckoutReady = hasReadyDeliveryLocation(activeLocation);
+  useCheckoutPrefetch(itemCount > 0);
 
   const restaurantLabel = useMemo(
     () =>
@@ -77,6 +80,7 @@ export function OrderBhojanCartExperience() {
       if (!validation.valid) {
         return;
       }
+      markPerf('cart_to_checkout', 'navigate');
       navigate('/checkout');
     } catch {
       // error surfaced via hook

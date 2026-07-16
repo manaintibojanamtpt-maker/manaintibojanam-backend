@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { MarketplaceLayout, AuthLayout, FullScreenLayout } from '@/shared/layouts';
 import { HomePage } from '@/app/pages/HomePage';
 import { RequireAuth } from '@/features/auth';
+import { CartExperiencePage } from '@/features/experience';
+import { CheckoutPage } from '@/features/checkout';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
 
 const FoundationPage = lazy(() =>
@@ -12,14 +14,8 @@ const FoundationPage = lazy(() =>
 const SearchExperiencePage = lazy(() =>
   import('@/features/experience').then((m) => ({ default: m.SearchExperiencePage })),
 );
-const CartExperiencePage = lazy(() =>
-  import('@/features/experience').then((m) => ({ default: m.CartExperiencePage })),
-);
 const OrdersExperiencePage = lazy(() =>
   import('@/features/experience').then((m) => ({ default: m.OrdersExperiencePage })),
-);
-const CheckoutPage = lazy(() =>
-  import('@/features/checkout').then((m) => ({ default: m.CheckoutPage })),
 );
 const TrackingPage = lazy(() =>
   import('@/features/tracking').then((m) => ({ default: m.TrackingPage })),
@@ -115,22 +111,8 @@ export function AppRouter() {
             </LazyRoute>
           }
         />
-        <Route
-          path="cart"
-          element={
-            <LazyRoute>
-              <CartExperiencePage />
-            </LazyRoute>
-          }
-        />
-        <Route
-          path="checkout"
-          element={
-            <LazyRoute>
-              <CheckoutPage />
-            </LazyRoute>
-          }
-        />
+        <Route path="cart" element={<CartExperiencePage />} />
+        <Route path="checkout" element={<CheckoutPage />} />
         <Route
           path="orders"
           element={

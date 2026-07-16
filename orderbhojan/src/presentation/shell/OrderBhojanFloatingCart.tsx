@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MarketplaceFloatingCartView } from '@bhojan/storefront-design-system/adapters/marketplace/MarketplaceFloatingCartView';
 import { cartItemCount, cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
+import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 
 function formatInr(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
@@ -14,6 +15,7 @@ export function OrderBhojanFloatingCart() {
   const setQuantity = useCartStore((s) => s.setQuantity);
   const count = cartItemCount(lines);
   const total = cartSubtotal(lines);
+  useCheckoutPrefetch(count > 0);
 
   const viewLines = useMemo(
     () =>
