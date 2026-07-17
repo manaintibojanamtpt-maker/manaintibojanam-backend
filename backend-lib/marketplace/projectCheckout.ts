@@ -11,6 +11,11 @@ import {
   isValidUpiId,
   UPI_PAYMENT_EXPIRY_MS,
 } from './upiPayUrl.js';
+import {
+  computeTenantDeliveryFee,
+  haversineKm,
+  readTenantDeliveryConfig,
+} from './tenantProjectionHelpers.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -65,7 +70,6 @@ function resolveDeliveryFee(
 ): { fee: number; pending: boolean } {
   if (orderType === 'pickup') return { fee: 0, pending: false };
 
-  const delivery = (tenant.deliveryConfig ?? {}) as Record<string, unknown>;
   const kitchen = (tenant.location ?? {}) as { lat?: number; lng?: number };
 
   const hasCoords =
@@ -83,36 +87,22 @@ function resolveDeliveryFee(
     return { fee: 0, pending: false };
   }
 
-  const baseFee = Number(delivery.baseFee ?? 0);
-  const freeRadius = Number(delivery.freeRadius ?? 0);
-  const perKmCharge = Number(delivery.perKmCharge ?? 0);
-  const paidRadius = Number(delivery.paidRadius ?? delivery.maxRadius ?? 0);
+  const deliveryConfig = readTenantDeliveryConfig(tenant);
+  if (!deliveryConfig) {
+    return { fee: 0, pending: false };
+  }
 
   let distanceKm = Number(deliveryAddress?.distanceKm ?? 0);
   if ((!Number.isFinite(distanceKm) || distanceKm <= 0) && kitchen.lat && kitchen.lng) {
     distanceKm = haversineKm(kitchen.lat, kitchen.lng, deliveryAddress!.lat!, deliveryAddress!.lng!);
   }
 
-  if (paidRadius > 0 && distanceKm > paidRadius) {
+  const computed = computeTenantDeliveryFee(distanceKm, deliveryConfig);
+  if (computed < 0) {
     return { fee: 0, pending: false };
   }
 
-  if (distanceKm <= freeRadius) {
-    return { fee: 0, pending: false };
-  }
-
-  const extraKm = Math.max(0, distanceKm - freeRadius);
-  return { fee: Math.round(baseFee + extraKm * perKmCharge), pending: false };
-}
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return { fee: Math.round(computed), pending: false };
 }
 
 function formatTaxLabel(gstPercent: number, packagingFee: number): string {

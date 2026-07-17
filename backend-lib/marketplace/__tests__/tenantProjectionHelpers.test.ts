@@ -73,6 +73,21 @@ describe('tenantProjectionHelpers', () => {
     assert.equal(computeTenantDeliveryFee(12, config), -1);
   });
 
+  it('mana-inti: base fee within paid radius, per-km beyond 7 km', () => {
+    const config = {
+      enabled: true,
+      feesConfigured: true,
+      freeRadius: 2,
+      paidRadius: 7,
+      maxRadius: 15,
+      baseFee: 40,
+      perKmCharge: 10,
+    };
+    assert.equal(computeTenantDeliveryFee(1.5, config), 0);
+    assert.equal(computeTenantDeliveryFee(5.9, config), 40);
+    assert.equal(computeTenantDeliveryFee(10, config), 70);
+  });
+
   it('extracts tenant sync revision from storeOperations.updatedAt first', () => {
     const raw = {
       updatedAt: '2026-06-01T10:00:00.000Z',
