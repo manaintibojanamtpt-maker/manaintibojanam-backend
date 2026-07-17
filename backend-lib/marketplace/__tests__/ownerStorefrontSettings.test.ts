@@ -13,7 +13,8 @@ describe('owner storefront settings API contract', () => {
     assert.match(source, /pricingConfig/);
     assert.match(source, /paymentConfig/);
     assert.match(source, /publishTenantDomainEvent/);
-    assert.match(source, /mergeObject/);
+    assert.match(source, /mergePaymentConfig/);
+    assert.match(source, /providers: mergedProviders/);
   });
 
   it('exposes tenant profile fields on GET', () => {

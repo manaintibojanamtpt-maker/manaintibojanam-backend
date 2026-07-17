@@ -210,6 +210,14 @@ export const marketplaceHandlers = [
     if (body.paymentMethod === 'razorpay') {
       return success({ draftId: 'ob_draft_mock_001', orderNumber: 463577 });
     }
+    if (body.paymentMethod === 'upi') {
+      return success({
+        orderId: 'ob_ord_upi_mock_001',
+        orderNumber: 463577,
+        paymentMethod: 'upi',
+        upiUrl: 'upi://pay?pa=kitchen@paytm&pn=Mock&am=299&tr=ob_ord_upi_mock_001&cu=INR',
+      });
+    }
     return success({ orderId: 'ob_ord_mock_001', orderNumber: 463577 });
   }),
 

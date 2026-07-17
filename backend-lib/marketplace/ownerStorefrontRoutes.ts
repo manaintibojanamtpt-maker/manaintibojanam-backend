@@ -84,6 +84,27 @@ export function registerOwnerStorefrontRoutes(
         };
       };
 
+      const mergePaymentConfig = (incoming: unknown) => {
+        if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return;
+        const existingPayment = (existing.paymentConfig as Record<string, unknown> | undefined) ?? {};
+        const incomingPayment = incoming as Record<string, unknown>;
+        const existingProviders = (existingPayment.providers as Record<string, unknown> | undefined) ?? {};
+        const incomingProviders = incomingPayment.providers;
+        const mergedProviders =
+          incomingProviders && typeof incomingProviders === 'object' && !Array.isArray(incomingProviders)
+            ? {
+                ...existingProviders,
+                ...(incomingProviders as Record<string, unknown>),
+              }
+            : existingProviders;
+
+        updates.paymentConfig = {
+          ...existingPayment,
+          ...incomingPayment,
+          ...(Object.keys(mergedProviders).length > 0 ? { providers: mergedProviders } : {}),
+        };
+      };
+
       if (typeof body.name === 'string') updates.name = body.name;
       if (typeof body.businessType === 'string') {
         const allowed = new Set(['home_kitchen', 'cloud_kitchen', 'restaurant', 'chef_kitchen']);
@@ -94,7 +115,7 @@ export function registerOwnerStorefrontRoutes(
       if (body.location) mergeObject('location', body.location);
       if (body.deliveryConfig) mergeObject('deliveryConfig', body.deliveryConfig);
       if (body.pricingConfig) mergeObject('pricingConfig', body.pricingConfig);
-      if (body.paymentConfig) mergeObject('paymentConfig', body.paymentConfig);
+      if (body.paymentConfig) mergePaymentConfig(body.paymentConfig);
       if (body.features) mergeObject('features', body.features);
       if (body.marketplace) {
         const sanitizedMarketplace = sanitizeMarketplacePayload(body.marketplace);

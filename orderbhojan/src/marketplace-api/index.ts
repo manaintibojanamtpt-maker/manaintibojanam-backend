@@ -73,6 +73,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryHomeResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -82,6 +83,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/nearby`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -91,6 +93,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/featured`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -100,6 +103,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/trending`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -109,6 +113,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/cloud-kitchens`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -118,6 +123,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/top-rated`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -127,6 +133,7 @@ export class MarketplaceApiClient {
     return this.http.request<DiscoveryCollectionResponse>({
       path: `${MARKETPLACE_PREFIX}/discovery/offers`,
       query,
+      bypassHttpCache: false,
     });
   }
 
@@ -145,7 +152,11 @@ export class MarketplaceApiClient {
     const path =
       dedicated[collectionId] ??
       `${MARKETPLACE_PREFIX}/discovery/${encodeURIComponent(collectionId)}`;
-    return this.http.request<DiscoveryCollectionResponse>({ path, query });
+    return this.http.request<DiscoveryCollectionResponse>({
+      path,
+      query,
+      bypassHttpCache: false,
+    });
   }
 
   search(params: {
@@ -320,6 +331,8 @@ export class MarketplaceApiClient {
     orderId?: string;
     draftId?: string;
     orderNumber?: number | string;
+    upiUrl?: string;
+    paymentMethod?: string;
   }> {
     return this.http.request({
       method: 'POST',

@@ -9,6 +9,51 @@ describe('projectCheckout', () => {
     assert.deepEqual(enabledPaymentMethods({}), ['cod']);
   });
 
+  it('returns UPI when direct UPI is enabled with a valid upiId', () => {
+    assert.deepEqual(
+      enabledPaymentMethods({
+        paymentConfig: {
+          providers: {
+            cod: { enabled: true },
+            razorpay: { enabled: false },
+            upi: { enabled: true, upiId: 'kitchen@paytm' },
+          },
+        },
+      }),
+      ['cod', 'upi'],
+    );
+  });
+
+  it('omits UPI when razorpay is disabled but upiId is missing', () => {
+    assert.deepEqual(
+      enabledPaymentMethods({
+        paymentConfig: {
+          providers: {
+            cod: { enabled: true },
+            razorpay: { enabled: false },
+            upi: { enabled: true, upiId: '' },
+          },
+        },
+      }),
+      ['cod'],
+    );
+  });
+
+  it('returns only UPI when COD is disabled and razorpay is off', () => {
+    assert.deepEqual(
+      enabledPaymentMethods({
+        paymentConfig: {
+          providers: {
+            cod: { enabled: false },
+            razorpay: { enabled: false },
+            upi: { enabled: true, upiId: 'kitchen@paytm' },
+          },
+        },
+      }),
+      ['upi'],
+    );
+  });
+
   it('registers marketplace quote and checkout routes', () => {
     const source = fs.readFileSync(
       path.join(process.cwd(), 'backend-lib/marketplace/marketplaceRoutes.ts'),
@@ -40,13 +85,21 @@ describe('projectCheckout', () => {
 });
 
 describe('marketplace checkout frontend contract', () => {
-  it('OrderBhojan checkout supports COD and Razorpay flows', () => {
+  it('OrderBhojan checkout supports COD, Razorpay, and direct UPI flows', () => {
     const checkout = fs.readFileSync(
       path.join(process.cwd(), 'orderbhojan/src/features/checkout/hooks/useCheckoutFlow.ts'),
       'utf8',
     );
-    assert.match(checkout, /placeRazorpayOrder|placeCodOrder/);
+    assert.match(checkout, /placeRazorpayOrder|placeCodOrder|placeUpiOrder/);
     assert.match(checkout, /draftId/);
+    assert.match(checkout, /upiUrl/);
+    const checkoutPage = fs.readFileSync(
+      path.join(process.cwd(), 'orderbhojan/src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
+      'utf8',
+    );
+    assert.match(checkoutPage, /supportsUpi/);
+    assert.match(checkoutPage, /Pay via UPI/);
+    assert.match(checkoutPage, /handlePlaceUpi/);
     const razorpay = fs.readFileSync(
       path.join(process.cwd(), 'orderbhojan/src/features/checkout/infrastructure/razorpayCheckout.ts'),
       'utf8',
