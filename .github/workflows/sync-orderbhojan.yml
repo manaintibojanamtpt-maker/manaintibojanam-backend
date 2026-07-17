@@ -20,6 +20,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
@@ -29,13 +30,21 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Skip sync when ORDERBHOJAN_SYNC_TOKEN is not configured
-        if: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN == '' }}
+      - name: Detect sync token
+        id: sync
+        env:
+          ORDERBHOJAN_SYNC_TOKEN: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN }}
         run: |
-          echo "::notice title=Sync skipped::Add repository secret ORDERBHOJAN_SYNC_TOKEN (PAT with contents:write on manaintibojanamtpt-maker/orderbhojan) to enable automatic standalone repo sync."
+          if [ -z "$ORDERBHOJAN_SYNC_TOKEN" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Sync skipped::Add repository secret ORDERBHOJAN_SYNC_TOKEN (PAT with contents:write on manaintibojanamtpt-maker/orderbhojan) to enable automatic standalone repo sync."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Sync and push to orderbhojan repo
-        if: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN != '' }}
+        if: steps.sync.outputs.enabled == 'true'
         env:
+          CI: 'true'
           ORDERBHOJAN_SYNC_TOKEN: ${{ secrets.ORDERBHOJAN_SYNC_TOKEN }}
         run: node scripts/sync-orderbhojan-repo.mjs --push

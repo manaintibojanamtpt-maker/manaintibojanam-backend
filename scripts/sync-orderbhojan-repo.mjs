@@ -27,7 +27,7 @@ function authenticatedRemoteUrl() {
   if (!token) return ORDERBHOJAN_REMOTE_BASE;
   return ORDERBHOJAN_REMOTE_BASE.replace(
     'https://github.com/',
-    `https://x-access-token:${token}@github.com/`,
+    `https://x-access-token:${encodeURIComponent(token)}@github.com/`,
   );
 }
 const EXPORT_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-export');
@@ -35,7 +35,8 @@ const CLONE_DIR = path.join(REPO_ROOT, '.sync-work', 'orderbhojan-remote');
 
 /** Vendored monorepo src/ (storefront design-system + shared lib). */
 function copyStorefrontSrc(exportRoot) {
-  copyTree(path.join(REPO_ROOT, 'src'), path.join(exportRoot, 'storefront-src'), {
+  copyGitTrackedTree('src', path.join(exportRoot, 'storefront-src'), {
+    stripPrefix: 'src/',
     rootLabel: 'storefront-src/ (monorepo src/)',
   });
 }
@@ -62,6 +63,47 @@ const commitMessage =
 
 function log(step, detail = '') {
   console.log(`[sync-orderbhojan] ${step}${detail ? ` — ${detail}` : ''}`);
+}
+
+function listGitTrackedFiles(gitPrefix) {
+  const prefix = gitPrefix.replace(/\\/g, '/').replace(/\/$/, '');
+  try {
+    const out = execSync(`git ls-files -- "${prefix}"`, {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return out.trim().split(/\r?\n/).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function shouldSkipGitFile(relPath) {
+  return relPath.split('/').some((part) => SKIP_NAMES.has(part));
+}
+
+/** Copy only git-tracked files so local proof artifacts never leak into the standalone repo. */
+function copyGitTrackedTree(gitPrefix, destRoot, { stripPrefix, rootLabel } = {}) {
+  const prefix = gitPrefix.replace(/\\/g, '/').replace(/\/$/, '');
+  const strip = stripPrefix ?? `${prefix}/`;
+  const files = listGitTrackedFiles(prefix).filter((rel) => !shouldSkipGitFile(rel));
+  if (!files.length) {
+    if (!fs.existsSync(path.join(REPO_ROOT, prefix))) {
+      console.warn(`[sync-orderbhojan] skip missing source: ${prefix}`);
+    }
+    return;
+  }
+  for (const rel of files) {
+    const from = path.join(REPO_ROOT, rel);
+    if (!fs.existsSync(from) || !fs.statSync(from).isFile()) continue;
+    if (!rel.startsWith(strip)) continue;
+    const relDest = rel.slice(strip.length);
+    const to = path.join(destRoot, relDest);
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.copyFileSync(from, to);
+  }
+  if (rootLabel) log('copied', `${rootLabel} (${files.length} git-tracked files)`);
 }
 
 function copyTree(src, dest, { rootLabel } = {}) {
@@ -189,7 +231,14 @@ function patchStandaloneGitignore(exportRoot) {
   const lines = fs.existsSync(gitignorePath)
     ? fs.readFileSync(gitignorePath, 'utf8').split(/\r?\n/)
     : [];
-  for (const line of ['storefront-src/node_modules', 'packages/node_modules']) {
+  for (const line of [
+    'storefront-src/node_modules',
+    'packages/node_modules',
+    '*-proof/',
+    '*-proof-report.json',
+    'validation-screenshots/',
+    '_prod-*.js',
+  ]) {
     if (!lines.includes(line)) lines.push(line);
   }
   fs.writeFileSync(gitignorePath, `${lines.filter(Boolean).join('\n')}\n`, 'utf8');
@@ -230,23 +279,28 @@ function buildExport() {
   rimraf(EXPORT_DIR);
   fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
-  copyTree(path.join(REPO_ROOT, 'orderbhojan'), EXPORT_DIR, { rootLabel: 'orderbhojan/' });
+  copyGitTrackedTree('orderbhojan', EXPORT_DIR, {
+    stripPrefix: 'orderbhojan/',
+    rootLabel: 'orderbhojan/',
+  });
   copyStorefrontSrc(EXPORT_DIR);
 
-  copyTree(path.join(REPO_ROOT, 'packages', 'design-system'), path.join(EXPORT_DIR, 'packages', 'design-system'), {
+  copyGitTrackedTree('packages/design-system', path.join(EXPORT_DIR, 'packages', 'design-system'), {
+    stripPrefix: 'packages/design-system/',
     rootLabel: 'packages/design-system (BDS test fixtures)',
   });
-  copyTree(
-    path.join(REPO_ROOT, 'packages', 'marketplace-contracts'),
+  copyGitTrackedTree(
+    'packages/marketplace-contracts',
     path.join(EXPORT_DIR, 'packages', 'marketplace-contracts'),
-    { rootLabel: 'packages/marketplace-contracts' },
+    { stripPrefix: 'packages/marketplace-contracts/', rootLabel: 'packages/marketplace-contracts' },
   );
-  copyTree(
-    path.join(REPO_ROOT, 'packages', 'location-core'),
+  copyGitTrackedTree(
+    'packages/location-core',
     path.join(EXPORT_DIR, 'packages', 'location-core'),
-    { rootLabel: 'packages/location-core' },
+    { stripPrefix: 'packages/location-core/', rootLabel: 'packages/location-core' },
   );
-  copyTree(path.join(REPO_ROOT, 'scripts', 'e2e'), path.join(EXPORT_DIR, 'scripts', 'e2e'), {
+  copyGitTrackedTree('scripts/e2e', path.join(EXPORT_DIR, 'scripts', 'e2e'), {
+    stripPrefix: 'scripts/e2e/',
     rootLabel: 'scripts/e2e (harness)',
   });
 
@@ -254,7 +308,9 @@ function buildExport() {
 
   log('install', 'regenerating package-lock.json for standalone CI');
   execSync('npm install --package-lock-only', { cwd: EXPORT_DIR, stdio: 'inherit' });
-  execSync('npm install', { cwd: EXPORT_DIR, stdio: 'inherit' });
+  if (process.env.CI !== 'true') {
+    execSync('npm install', { cwd: EXPORT_DIR, stdio: 'inherit' });
+  }
 
   return EXPORT_DIR;
 }
@@ -346,18 +402,19 @@ function ensureMonorepoRemote() {
   }
 }
 
+if (shouldPush && process.env.CI === 'true' && !process.env.ORDERBHOJAN_SYNC_TOKEN?.trim()) {
+  console.error(
+    '[sync-orderbhojan] ORDERBHOJAN_SYNC_TOKEN secret is required in CI for --push',
+  );
+  console.error(
+    'Add a fine-grained GitHub PAT with contents:write on manaintibojanamtpt-maker/orderbhojan',
+  );
+  console.error('Repository secret name: ORDERBHOJAN_SYNC_TOKEN');
+  process.exit(1);
+}
+
 const exportRoot = buildExport();
 if (shouldPush) {
-  if (process.env.CI === 'true' && !process.env.ORDERBHOJAN_SYNC_TOKEN?.trim()) {
-    console.error(
-      '[sync-orderbhojan] ORDERBHOJAN_SYNC_TOKEN secret is required in CI for --push',
-    );
-    console.error(
-      'Add a fine-grained GitHub PAT with contents:write on manaintibojanamtpt-maker/orderbhojan',
-    );
-    console.error('Repository secret name: ORDERBHOJAN_SYNC_TOKEN');
-    process.exit(1);
-  }
   syncIntoClone(exportRoot);
   pushClone();
   ensureMonorepoRemote();
