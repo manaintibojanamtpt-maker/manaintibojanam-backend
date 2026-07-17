@@ -1,7 +1,7 @@
 import express from "express";
 import dns from "dns";
 import rateLimit from "express-rate-limit";
-import cors from "cors";
+import { createCorsMiddleware } from "./backend-lib/shared/corsPolicy.js";
 import bodyParser from "body-parser";
 import path from "path";
 import fs from "fs";
@@ -527,6 +527,9 @@ const verifyRazorpaySignature = (orderId: string, paymentId: string, signature: 
 const app = express();
 app.set('trust proxy', 1);
 
+// CORS must run before rate limiters/auth so 429/401/500 responses still include ACAO.
+app.use(createCorsMiddleware());
+
 // ================= MIDDLEWARE =================
 // Rate Limiting
 const isProductionApi = process.env.NODE_ENV === 'production';
@@ -545,6 +548,7 @@ const globalLimiter = rateLimit({
     return (
       url.includes('/marketplace/sync/revision') ||
       url.includes('/marketplace/health') ||
+      url.startsWith('/api/client-config') ||
       url === '/api/health'
     );
   },
@@ -906,8 +910,6 @@ const expireUnpaidPayments = async (): Promise<{ draftsExpired: number; ordersEx
 
   return { draftsExpired, ordersExpired };
 };
-
-app.use(cors());
 
 // Webhook Scaffold (Must be before bodyParser.json)
 app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), async (req, res) => {
