@@ -6,8 +6,6 @@ import {
   resolveDeliveryFeeForDisplay,
   resolveKitchenDietaryFromMenuTypes,
   resolveStoreTiming,
-  roadDistanceKm,
-  isImplausibleCustomerDistance,
   extractTenantSyncRevision,
   mergeSyncRevisions,
 } from './tenantProjectionHelpers.js';
@@ -27,6 +25,7 @@ import {
 } from './discoveryProfileWriter.js';
 import { isMarketplaceGeoIndexEnabled } from './marketplaceGeoIndexPolicy.js';
 import { resolveNearbyTenantIds } from './geoIndexFirestore.js';
+import { resolveCustomerDistanceKm } from './customerDistance.js';
 import {
   getCachedDiscoveryPool,
   getInFlightDiscoveryPool,
@@ -195,16 +194,11 @@ export function projectRestaurantPublic(
   let etaMinutes: RestaurantPublic['etaMinutes'];
 
   if (tenant.location) {
-    const computed = roadDistanceKm(
-      coords.lat,
-      coords.lng,
-      tenant.location.lat,
-      tenant.location.lng,
-    );
-    if (!isImplausibleCustomerDistance(computed)) {
-      distanceKm = Math.round(computed * 10) / 10;
-      etaMinutes = estimateDeliveryEtaMinutes(prepTime, distanceKm);
-      const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, computed);
+    const { rawKm, displayKm } = resolveCustomerDistanceKm(coords, tenant.location);
+    if (rawKm != null && displayKm != null) {
+      distanceKm = displayKm;
+      etaMinutes = estimateDeliveryEtaMinutes(prepTime, rawKm);
+      const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, rawKm);
       if (resolvedFee !== undefined) deliveryFee = resolvedFee;
     }
   }

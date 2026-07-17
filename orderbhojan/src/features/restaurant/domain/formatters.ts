@@ -1,4 +1,5 @@
 import type { RestaurantExperiencePublic } from '@/types/marketplace-restaurant';
+import { isDisplayableDistanceKm } from '@/features/discovery/utils/distanceDisplay';
 
 export function formatEtaLabel(eta?: { min: number; max: number }): string {
   if (!eta) return '—';
@@ -6,7 +7,7 @@ export function formatEtaLabel(eta?: { min: number; max: number }): string {
 }
 
 export function formatDistanceLabel(km?: number): string {
-  if (km == null) return '—';
+  if (!isDisplayableDistanceKm(km)) return '—';
   return `${km.toFixed(1)} km`;
 }
 

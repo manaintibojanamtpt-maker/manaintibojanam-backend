@@ -3,6 +3,14 @@ import { Link } from 'react-router-dom';
 import { Clock, MapPin, Star, ChevronRight, IndianRupee } from 'lucide-react';
 import type { MarketplaceKitchenCard } from '../../lib/marketplace/types';
 
+const MIN_DISPLAY_DISTANCE_KM = 0.1;
+
+function isDisplayableDistanceKm(km: number | undefined | null): km is number {
+  if (km == null || !Number.isFinite(km)) return false;
+  if (km === 0) return true;
+  return km >= MIN_DISPLAY_DISTANCE_KM;
+}
+
 export interface MarketplaceKitchenCardViewProps {
   readonly kitchen: MarketplaceKitchenCard;
   readonly variant?: 'default' | 'spotlight';
@@ -55,7 +63,7 @@ function KitchenThumbnail({
 
 function KitchenMetadata({ kitchen }: { kitchen: MarketplaceKitchenCard }) {
   const distanceKm = kitchen.distanceKm;
-  const showDistance = distanceKm != null && Number.isFinite(distanceKm);
+  const showDistance = isDisplayableDistanceKm(distanceKm);
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/60">

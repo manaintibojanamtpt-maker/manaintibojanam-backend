@@ -1,4 +1,3 @@
-import { DEFAULT_MARKETPLACE_COORDS } from '@/lib/marketplaceDefaults';
 import { getRestaurantApiClient } from '../infrastructure/restaurantApiClient';
 import type {
   RestaurantExperienceApiPayload,
@@ -9,19 +8,10 @@ import type {
   RestaurantOffersResponse,
 } from '@/types/marketplace-restaurant';
 
-export const DEFAULT_RESTAURANT_COORDS = DEFAULT_MARKETPLACE_COORDS;
-
-export function resolveRestaurantCoords(activeLocation?: {
-  coordinates: { lat: number; lng: number };
-} | null): { lat: number; lng: number } {
-  if (activeLocation?.coordinates) {
-    return {
-      lat: activeLocation.coordinates.lat,
-      lng: activeLocation.coordinates.lng,
-    };
-  }
-  return { ...DEFAULT_RESTAURANT_COORDS };
-}
+export {
+  DEFAULT_DISCOVERY_COORDS as DEFAULT_RESTAURANT_COORDS,
+  resolveRestaurantCoords,
+} from '@/features/location/resolveDeliveryCoords';
 
 function toPublicResponse(payload: RestaurantExperienceApiPayload): RestaurantExperienceResponse {
   return {

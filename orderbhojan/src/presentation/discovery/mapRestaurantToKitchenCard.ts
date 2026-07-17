@@ -8,15 +8,18 @@ import {
   kitchenFormatLabel,
   shouldShowKitchenBadge,
 } from '@/features/discovery/utils/restaurantDisplay';
+import { isDisplayableDistanceKm } from '@/features/discovery/utils/distanceDisplay';
 
 function parseEtaMinutes(eta: string): number | undefined {
   const match = eta.match(/(\d+)/);
   return match ? Number.parseInt(match[1], 10) : undefined;
 }
 
-function parseDistanceKm(distance: string): number {
+function parseDistanceKm(distance: string): number | undefined {
   const match = distance.match(/([\d.]+)/);
-  return match ? Number.parseFloat(match[1]) : 0;
+  if (!match) return undefined;
+  const parsed = Number.parseFloat(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function buildBadges(restaurant: RestaurantPublic): MarketplaceBadge[] {
@@ -48,7 +51,9 @@ export function mapRestaurantPublicToKitchenCard(restaurant: RestaurantPublic): 
     tenantId: restaurant.restaurantId,
     slug: restaurant.restaurantSlug,
     name: restaurant.displayName,
-    distanceKm: restaurant.distanceKm,
+    distanceKm: isDisplayableDistanceKm(restaurant.distanceKm)
+      ? restaurant.distanceKm
+      : undefined,
     etaMins,
     rating: restaurant.rating,
     cuisineTags: restaurant.cuisines.slice(0, 2),
@@ -82,7 +87,10 @@ export function mapMockRestaurantToKitchenCard(restaurant: MockRestaurant): Mark
     tenantId: restaurant.id,
     slug: restaurant.slug,
     name: restaurant.name,
-    distanceKm: parseDistanceKm(restaurant.distance),
+    distanceKm: (() => {
+      const parsed = parseDistanceKm(restaurant.distance);
+      return isDisplayableDistanceKm(parsed) ? parsed : undefined;
+    })(),
     etaMins: parseEtaMinutes(restaurant.eta),
     rating: restaurant.rating,
     cuisineTags: [restaurant.cuisine],

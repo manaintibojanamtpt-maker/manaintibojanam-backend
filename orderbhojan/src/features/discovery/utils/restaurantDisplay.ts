@@ -1,4 +1,5 @@
 import type { KitchenFormat, RestaurantPublic } from '@/types/marketplace';
+import { isDisplayableDistanceKm } from '@/features/discovery/utils/distanceDisplay';
 
 export function kitchenFormatLabel(format: KitchenFormat): string {
   switch (format) {
@@ -35,7 +36,7 @@ export function formatEta(restaurant: RestaurantPublic): string {
 }
 
 export function formatDistance(restaurant: RestaurantPublic): string {
-  if (restaurant.distanceKm == null) return '—';
+  if (!isDisplayableDistanceKm(restaurant.distanceKm)) return '—';
   return `${restaurant.distanceKm.toFixed(1)} km`;
 }
 

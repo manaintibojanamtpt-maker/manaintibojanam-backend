@@ -7,6 +7,7 @@ import type { RestaurantPublic } from '@/types/marketplace';
 import { useRestaurantFeatureEnabled } from '@/features/restaurant';
 import { useFavoritesStore } from '@/features/experience/store/favoritesStore';
 import { mapRestaurantPublicToKitchenCard } from './mapRestaurantToKitchenCard';
+import { formatDistanceKmLabel } from '@/features/discovery/utils/distanceDisplay';
 import { useActiveLocation } from '@/features/location';
 import {
   loadRestaurantExperience,
@@ -118,7 +119,7 @@ export function OrderBhojanKitchenCard({
 
   if (variant === 'grid') {
     const distanceKm = kitchen.distanceKm;
-    const showDistance = distanceKm != null && Number.isFinite(distanceKm);
+    const distanceLabel = formatDistanceKmLabel(distanceKm);
 
     return (
       <div
@@ -156,10 +157,10 @@ export function OrderBhojanKitchenCard({
               {kitchen.name}
             </h3>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/60">
-              {showDistance ? (
+              {distanceLabel ? (
                 <span className="inline-flex items-center gap-0.5">
                   <MapPin className="h-3 w-3" aria-hidden />
-                  {distanceKm.toFixed(1)} km
+                  {distanceLabel}
                 </span>
               ) : null}
               {kitchen.etaMins !== undefined ? (

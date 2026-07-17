@@ -2,14 +2,12 @@ import type { FirestoreTenantRecord } from './projectFoodMenuV1.js';
 import {
   buildWeeklyHours,
   formatHoursLabel,
-  isImplausibleCustomerDistance,
   isStoreOpenNow,
   isVegKitchen,
   kitchenDietaryToBadges,
   resolveDeliveryFeeForDisplay,
   resolveKitchenDietaryFromMenuTypes,
   resolveStoreTiming,
-  roadDistanceKm,
   shouldShowKitchenDietaryBadge,
   type KitchenDietaryProfile,
 } from './tenantProjectionHelpers.js';
@@ -17,6 +15,7 @@ import {
   resolveKitchenFormat,
   type KitchenFormat,
 } from './kitchenFormat.js';
+import { resolveCustomerDistanceKm } from './customerDistance.js';
 import {
   DEFAULT_PREP_TIME_MINUTES,
   estimateDeliveryEtaMinutes,
@@ -150,19 +149,14 @@ export function projectRestaurantExperience(
     : timing.offlineMessage || 'Currently closed for delivery';
 
   if (tenant.location && customerCoords) {
-    const distanceKm = roadDistanceKm(
-      customerCoords.lat,
-      customerCoords.lng,
-      tenant.location.lat,
-      tenant.location.lng,
-    );
+    const { rawKm, displayKm } = resolveCustomerDistanceKm(customerCoords, tenant.location);
 
-    if (!isImplausibleCustomerDistance(distanceKm)) {
-      distance = Math.round(distanceKm * 10) / 10;
+    if (rawKm != null && displayKm != null) {
+      distance = displayKm;
       const prepTime = tenant.deliveryConfig?.prepTime ?? DEFAULT_PREP_TIME_MINUTES;
-      eta = estimateDeliveryEtaMinutes(prepTime, distance);
+      eta = estimateDeliveryEtaMinutes(prepTime, rawKm);
 
-      const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, distanceKm);
+      const resolvedFee = resolveDeliveryFeeForDisplay(tenant.deliveryConfig, rawKm);
       if (resolvedFee === undefined) {
         deliveryFeeKnown = false;
         deliveryFee = undefined;

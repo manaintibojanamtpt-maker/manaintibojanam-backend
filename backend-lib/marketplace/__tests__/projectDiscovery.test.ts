@@ -30,6 +30,7 @@ describe('projectDiscovery', () => {
     );
     assert.equal(restaurant.restaurantSlug, 'hari-mess');
     assert.equal(restaurant.displayName, 'Hari Mess');
+    assert.equal(restaurant.distanceKm, undefined);
   });
 
   it('builds home collections from live tenant pool', () => {

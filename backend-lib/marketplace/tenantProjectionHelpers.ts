@@ -220,8 +220,9 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** Straight-line km (haversine). Kept as roadDistanceKm for call-site compatibility. */
 export function roadDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  return haversineKm(lat1, lng1, lat2, lng2) * 1.2;
+  return haversineKm(lat1, lng1, lat2, lng2);
 }
 
 export function computeTenantDeliveryFee(

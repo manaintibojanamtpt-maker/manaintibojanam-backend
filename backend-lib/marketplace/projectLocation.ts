@@ -1,4 +1,7 @@
-import { roadDistanceKm } from './tenantProjectionHelpers.js';
+import {
+  computeCustomerDistanceKm,
+  toDisplayDistanceKm,
+} from './customerDistance.js';
 
 export function reverseGeocodeMarketplace(lat: number, lng: number) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -45,8 +48,14 @@ export function checkMarketplaceServiceability(body: {
   const delivery = body.lat !== 0 && body.lng !== 0;
   let distanceKm: number | undefined;
   if (delivery && body.restaurantCoords) {
-    distanceKm = Math.round(roadDistanceKm(body.lat, body.lng, body.restaurantCoords.lat, body.restaurantCoords.lng) * 10) / 10;
-    if (body.maxRadiusKm != null && distanceKm > body.maxRadiusKm) {
+    const rawKm = computeCustomerDistanceKm(
+      body.lat,
+      body.lng,
+      body.restaurantCoords.lat,
+      body.restaurantCoords.lng,
+    );
+    distanceKm = toDisplayDistanceKm(rawKm);
+    if (body.maxRadiusKm != null && rawKm != null && rawKm > body.maxRadiusKm) {
       return {
         delivery: false,
         pickup: true,
@@ -77,14 +86,15 @@ export function computeMarketplaceDistance(body: {
   origin: { lat: number; lng: number };
   destination: { lat: number; lng: number };
 }) {
-  const distanceKm = roadDistanceKm(
+  const rawKm = computeCustomerDistanceKm(
     body.origin.lat,
     body.origin.lng,
     body.destination.lat,
     body.destination.lng,
   );
+  const distanceKm = toDisplayDistanceKm(rawKm);
   return {
-    distanceKm: Math.round(distanceKm * 10) / 10,
+    distanceKm: distanceKm ?? 0,
     durationMinutes: { min: 20, max: 40 },
   };
 }

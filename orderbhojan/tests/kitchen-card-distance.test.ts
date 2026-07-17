@@ -31,6 +31,11 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
     assert.equal(card.distanceKm, undefined);
   });
 
+  it('hides sub-100m distance artifacts from mapper output', () => {
+    const card = mapRestaurantPublicToKitchenCard(baseRestaurant({ distanceKm: 0.05 }));
+    assert.equal(card.distanceKm, undefined);
+  });
+
   it('preserves known distanceKm values', () => {
     const card = mapRestaurantPublicToKitchenCard(baseRestaurant({ distanceKm: 2.4 }));
     assert.equal(card.distanceKm, 2.4);
@@ -55,13 +60,13 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
 });
 
 describe('MarketplaceKitchenCardView distance rendering', () => {
-  it('conditionally renders distance only when distanceKm is known', () => {
+  it('conditionally renders distance only when distanceKm is displayable', () => {
     const source = readFileSync(
       join(repoRoot, 'src/design-system/marketplace/MarketplaceKitchenCard.tsx'),
       'utf8',
     );
     assert.match(source, /showDistance/);
-    assert.match(source, /Number\.isFinite\(distanceKm\)/);
+    assert.match(source, /isDisplayableDistanceKm/);
     assert.doesNotMatch(source, /kitchen\.distanceKm\.toFixed/);
   });
 });
