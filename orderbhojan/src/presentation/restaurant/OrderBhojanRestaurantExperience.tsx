@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { isFeatureEnabled, loadFeatureFlags } from '@/featureFlags';
 import { useFoodFeatureEnabled } from '@/features/food/hooks/useFoodFeature';
 import {
   pictureSources,
@@ -31,9 +32,15 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
   const collapsed = useRestaurantScrollChrome();
   const { experience } = data;
   const slug = restaurantSlugFromString(experience.slug);
+  const liveFirestore = isFeatureEnabled(loadFeatureFlags(), 'FF_OB_FIRESTORE');
   const manifestCover = resolveRestaurantCover(slug, 88);
   const manifestLogo = resolveRestaurantLogo(slug, 82);
-  const coverSrc = experience.coverImage || manifestCover.src;
+  const hasOwnerCover = Boolean(experience.coverImage);
+  const coverSrc = hasOwnerCover
+    ? experience.coverImage
+    : liveFirestore
+      ? undefined
+      : manifestCover.src;
   const logoSrc = experience.logo || manifestLogo.src;
   const enterFromPoster = Boolean((location.state as { fromPoster?: boolean } | null)?.fromPoster);
 
@@ -46,10 +53,10 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
         collapsed={collapsed}
         enterFromPoster={enterFromPoster}
         coverSrc={coverSrc}
-        coverSrcSet={experience.coverImage ? undefined : manifestCover.webpSrcSet}
+        coverSrcSet={hasOwnerCover || liveFirestore ? undefined : manifestCover.webpSrcSet}
         coverSizes="100vw"
-        coverBlurDataURL={experience.coverImage ? undefined : manifestCover.blurDataURL}
-        coverSources={experience.coverImage ? undefined : pictureSources(manifestCover, '100vw')}
+        coverBlurDataURL={hasOwnerCover || liveFirestore ? undefined : manifestCover.blurDataURL}
+        coverSources={hasOwnerCover || liveFirestore ? undefined : pictureSources(manifestCover, '100vw')}
         logoSrc={logoSrc}
       />
       </div>

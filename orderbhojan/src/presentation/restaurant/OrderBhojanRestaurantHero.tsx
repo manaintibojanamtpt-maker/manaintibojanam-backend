@@ -15,7 +15,7 @@ export interface OrderBhojanRestaurantHeroProps {
   readonly data: RestaurantExperienceResponse;
   readonly collapsed: boolean;
   readonly enterFromPoster: boolean;
-  readonly coverSrc: string;
+  readonly coverSrc?: string;
   readonly coverSrcSet?: string;
   readonly coverSizes: string;
   readonly coverBlurDataURL?: string;
@@ -46,21 +46,28 @@ export function OrderBhojanRestaurantHero({
           collapsed ? 'h-28' : 'h-[46vh] min-h-[220px]'
         } ${enterFromPoster && !collapsed ? 'origin-top scale-[1.02]' : ''}`}
       >
-        <picture>
-          {coverSources?.map((source) => (
-            <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
-          ))}
-          <img
-            src={coverSrc}
-            srcSet={coverSrcSet}
-            sizes={coverSizes}
-            alt={`${experience.displayName} — cover`}
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover"
-            style={coverBlurDataURL ? { backgroundImage: `url(${coverBlurDataURL})`, backgroundSize: 'cover' } : undefined}
+        {coverSrc ? (
+          <picture>
+            {coverSources?.map((source) => (
+              <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
+            ))}
+            <img
+              src={coverSrc}
+              srcSet={coverSrcSet}
+              sizes={coverSizes}
+              alt={`${experience.displayName} — cover`}
+              fetchPriority="high"
+              decoding="async"
+              className="h-full w-full object-cover"
+              style={coverBlurDataURL ? { backgroundImage: `url(${coverBlurDataURL})`, backgroundSize: 'cover' } : undefined}
+            />
+          </picture>
+        ) : (
+          <div
+            className="h-full w-full bg-gradient-to-br from-[#141414] via-[#0a0a0a] to-[#050505]"
+            aria-hidden
           />
-        </picture>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/35 to-transparent" />
 
         <div className="absolute left-4 right-4 top-[max(1rem,env(safe-area-inset-top))] flex justify-end">

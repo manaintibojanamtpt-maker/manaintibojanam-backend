@@ -17,6 +17,7 @@ import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../..
 import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
+import { OwnerOrderPrepTimer } from '../../lib/ownerOrderPrepTimer';
 
 interface Order extends OwnerOrder {}
 
@@ -313,6 +314,7 @@ const OwnerOrders: React.FC = () => {
                           <Clock className="w-3 h-3 mr-1" />
                           {formatOrderTime(order.createdAt)}
                         </span>
+                        <OwnerOrderPrepTimer order={order} />
                       </div>
                       
                       <h3 className="text-lg font-semibold text-white">

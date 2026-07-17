@@ -92,6 +92,36 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     return uploadStorefrontMediaViaApi(file, tenantId, kind);
   };
 
+  const persistStorefront = async (
+    nextGallery: GalleryItem[],
+    nextTheme: ThemeForm,
+    toastId?: string,
+  ) => {
+    if (!tenantId) return;
+    const coverUrl = nextTheme.coverUrl || nextGallery[0]?.url || undefined;
+    await updateOwnerStorefront(tenantId, {
+      marketplace: {
+        gallery: nextGallery.map((item, index) => ({
+          galleryId: item.galleryId,
+          url: item.url,
+          caption: item.caption.trim() || undefined,
+          sortOrder: index,
+        })),
+        theme: {
+          primaryColor: nextTheme.primaryColor,
+          secondaryColor: nextTheme.secondaryColor,
+          highlightColor: nextTheme.highlightColor,
+          coverUrl,
+        },
+        tagline: nextTheme.tagline.trim() || undefined,
+        description: nextTheme.description.trim() || undefined,
+      },
+    });
+    if (toastId) {
+      toast.success('Synced to OrderBhojan', { id: toastId });
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !tenantId) return;
@@ -104,16 +134,17 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     const toastId = toast.loading('Uploading photo…');
     try {
       const downloadUrl = await uploadImage(file, 'gallery');
-      setGallery((prev) => [
-        ...prev,
+      const nextGallery = [
+        ...gallery,
         {
           galleryId: `gallery_${Date.now()}`,
           url: downloadUrl,
           caption: '',
-          sortOrder: prev.length,
+          sortOrder: gallery.length,
         },
-      ]);
-      toast.success('Photo uploaded — save to sync on OrderBhojan', { id: toastId });
+      ];
+      setGallery(nextGallery);
+      await persistStorefront(nextGallery, theme, toastId);
     } catch (error) {
       console.error('Image upload failed:', error);
       const message = error instanceof Error ? error.message : 'Failed to upload image';
@@ -131,8 +162,9 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     const toastId = toast.loading('Uploading cover…');
     try {
       const downloadUrl = await uploadImage(file, 'cover');
-      setTheme((prev) => ({ ...prev, coverUrl: downloadUrl }));
-      toast.success('Cover uploaded', { id: toastId });
+      const nextTheme = { ...theme, coverUrl: downloadUrl };
+      setTheme(nextTheme);
+      await persistStorefront(gallery, nextTheme, toastId);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to upload cover image';
       toast.error(message, { id: toastId });
@@ -147,26 +179,7 @@ export const OwnerGalleryThemePanel: React.FC = () => {
     setSaving(true);
     const toastId = toast.loading('Saving gallery and theme…');
     try {
-      const coverUrl = theme.coverUrl || gallery[0]?.url || undefined;
-      await updateOwnerStorefront(tenantId, {
-        marketplace: {
-          gallery: gallery.map((item, index) => ({
-            galleryId: item.galleryId,
-            url: item.url,
-            caption: item.caption.trim() || undefined,
-            sortOrder: index,
-          })),
-          theme: {
-            primaryColor: theme.primaryColor,
-            secondaryColor: theme.secondaryColor,
-            highlightColor: theme.highlightColor,
-            coverUrl,
-          },
-          tagline: theme.tagline.trim() || undefined,
-          description: theme.description.trim() || undefined,
-        },
-      });
-      toast.success('Gallery and theme saved — syncing to OrderBhojan', { id: toastId });
+      await persistStorefront(gallery, theme, toastId);
     } catch (error) {
       console.error('Failed to save gallery/theme:', error);
       const message = error instanceof Error ? error.message : 'Failed to save gallery and theme';
@@ -187,7 +200,7 @@ export const OwnerGalleryThemePanel: React.FC = () => {
   return (
     <div className="p-6 md:p-8 space-y-8">
       <p className="text-xs text-white/50">
-        Theme colors and text save instantly. Photos upload through the API (no Firebase Storage billing required).
+        Cover and gallery photos auto-sync to OrderBhojan after upload. Theme colors and text save when you tap Save.
       </p>
       <section className="space-y-4">
         <div className="flex items-center gap-2">

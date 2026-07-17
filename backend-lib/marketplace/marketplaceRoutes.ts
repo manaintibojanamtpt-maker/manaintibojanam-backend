@@ -130,16 +130,35 @@ async function loadTenantDocBySlug(db: Firestore, slug: string) {
   return query.docs[0];
 }
 
+const MENU_DIETARY_CACHE_TTL_MS = 60_000;
+const menuDietaryCache = new Map<
+  string,
+  { types: ('veg' | 'non-veg')[]; expiresAt: number }
+>();
+
 async function loadMenuDietaryTypes(
   db: Firestore,
   tenantId: string,
   tenantSlug?: string,
 ): Promise<('veg' | 'non-veg')[]> {
+  const cacheKey = tenantId || tenantSlug || '';
+  const cached = menuDietaryCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.types;
+  }
+
   const snapshot = await queryMenuForTenant(db, tenantId, tenantSlug);
   const types: ('veg' | 'non-veg')[] = [];
   for (const doc of snapshot.docs) {
     const type = doc.data().type;
     types.push(type === 'veg' ? 'veg' : 'non-veg');
+  }
+
+  if (cacheKey) {
+    menuDietaryCache.set(cacheKey, {
+      types,
+      expiresAt: Date.now() + MENU_DIETARY_CACHE_TTL_MS,
+    });
   }
   return types;
 }
