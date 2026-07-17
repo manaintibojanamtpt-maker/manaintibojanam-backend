@@ -37,7 +37,7 @@ export function useCheckoutState() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [addressText, setAddressText] = useState(loadStored('checkout_address', ''));
 
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'upi'>('cod');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
   const [specialInstructions, setSpecialInstructions] = useState('');
@@ -148,7 +148,12 @@ export function useCheckoutState() {
     if (!liveTenant?.paymentConfig || paymentInitialized.current) return;
     const codOn = liveTenant.paymentConfig.providers?.cod?.enabled !== false;
     const onlineOn = liveTenant.paymentConfig.providers?.razorpay?.enabled === true;
-    if (onlineOn && !codOn) {
+    const upiOn =
+      liveTenant.paymentConfig.providers?.upi?.enabled === true &&
+      !!liveTenant.paymentConfig.providers?.upi?.upiId;
+    if (upiOn && !codOn && !onlineOn) {
+      setPaymentMethod('upi');
+    } else if (onlineOn && !codOn) {
       setPaymentMethod('online');
     } else {
       setPaymentMethod('cod');

@@ -49,6 +49,7 @@ export function OrderBhojanCheckoutPage() {
     canCheckout,
     placeCodOrder,
     placeRazorpayOrder,
+    placeUpiOrder,
     placingMethod,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
@@ -60,7 +61,7 @@ export function OrderBhojanCheckoutPage() {
   const [phoneOverride, setPhoneOverride] = useState('');
   const phone = phoneOverride || sessionPhone;
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | null>(null);
+  const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
 
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
@@ -68,7 +69,10 @@ export function OrderBhojanCheckoutPage() {
   const billRefreshing = isPreparing && Boolean(quote);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
-  const showBothPaymentOptions = supportsCod && supportsRazorpay;
+  const supportsUpi = paymentMethods.includes('upi');
+  const showRazorpayButton = supportsRazorpay;
+  const showUpiButton = supportsUpi && !supportsRazorpay;
+  const showBothPaymentOptions = (showRazorpayButton || showUpiButton) && supportsCod;
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
   const requiresFlatConfirmation = needsFlatConfirmation(activeLocation);
   const [v2Address, setV2Address] = useState(() => getLocationStoreAddress());
@@ -77,19 +81,23 @@ export function OrderBhojanCheckoutPage() {
 
   const paymentSubtitle = useMemo(() => {
     if (showBothPaymentOptions) return 'Choose how you want to pay';
-    if (supportsRazorpay) return 'Pay online securely';
+    if (showRazorpayButton) return 'Pay online securely';
+    if (showUpiButton) return 'Pay via UPI';
     return 'Cash on delivery';
-  }, [showBothPaymentOptions, supportsRazorpay]);
+  }, [showBothPaymentOptions, showRazorpayButton, showUpiButton]);
 
   const paymentHint = useMemo(() => {
     if (supportsCod && !showBothPaymentOptions) {
       return 'Pay with cash when your order arrives.';
     }
-    if (supportsRazorpay && showBothPaymentOptions) {
+    if (showUpiButton) {
+      return 'Opens GPay, PhonePe, or Paytm with the kitchen UPI ID pre-filled.';
+    }
+    if (showRazorpayButton && showBothPaymentOptions) {
       return 'Pay online with UPI, cards, or net banking. COD remains available if you prefer cash on delivery.';
     }
     return undefined;
-  }, [showBothPaymentOptions, supportsCod, supportsRazorpay]);
+  }, [showBothPaymentOptions, showRazorpayButton, showUpiButton, supportsCod]);
 
   useEffect(() => {
     markPerf('cart_to_checkout');
@@ -125,8 +133,15 @@ export function OrderBhojanCheckoutPage() {
     await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined);
   };
 
+  const handlePlaceUpi = async () => {
+    if (isPlacing) return;
+    if (!validatePhone()) return;
+    setLastPaymentMethod('upi');
+    await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined);
+  };
+
   if (orderId) {
-    const isOnlinePayment = lastPaymentMethod === 'razorpay';
+    const isOnlinePayment = lastPaymentMethod === 'razorpay' || lastPaymentMethod === 'upi';
     const orderLabel = orderNumber ?? orderId;
     return (
       <CheckoutSuccessView
@@ -257,15 +272,21 @@ export function OrderBhojanCheckoutPage() {
       backLabel="Back to cart"
       onBack={() => navigate('/cart')}
       codLabel="Pay on delivery"
-      razorpayLabel="Pay online"
+      razorpayLabel={showUpiButton ? 'Pay via UPI' : 'Pay online'}
       codBusy={placingMethod === 'cod'}
-      razorpayBusy={placingMethod === 'razorpay'}
+      razorpayBusy={placingMethod === 'razorpay' || placingMethod === 'upi'}
       showCod={supportsCod}
-      showRazorpay={supportsRazorpay}
+      showRazorpay={showRazorpayButton || showUpiButton}
       actionsDisabled={isBusy || !quote}
       hint={paymentHint}
       onPlaceCod={supportsCod ? () => void handlePlaceCod() : undefined}
-      onPlaceRazorpay={supportsRazorpay ? () => void handlePlaceRazorpay() : undefined}
+      onPlaceRazorpay={
+        showRazorpayButton
+          ? () => void handlePlaceRazorpay()
+          : showUpiButton
+            ? () => void handlePlaceUpi()
+            : undefined
+      }
     />
   );
 }

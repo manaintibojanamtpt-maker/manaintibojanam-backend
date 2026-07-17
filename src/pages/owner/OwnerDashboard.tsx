@@ -40,9 +40,15 @@ import { useNotifications } from '../../modules/notifications/hooks/useNotificat
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
 import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
+import { fetchOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
 import { fetchLatestReleaseNote, updateOwnerTenantPreferences } from '../../lib/ownerPortalApi';
 import { DashboardProductionMetrics } from '../../components/owner/DashboardProductionMetrics';
+import {
+  isOwnerDeliveryConfigured,
+  isOwnerOnlinePaymentEnabled,
+  isOwnerPayoutsConfigured,
+} from '../../lib/ownerDashboardStatus';
 
 const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
 
@@ -114,6 +120,29 @@ const OwnerDashboard = () => {
       setTenantInfo((prev: any) => (prev ? { ...prev, ...contextTenant } : contextTenant));
     }
   }, [contextTenant]);
+
+  React.useEffect(() => {
+    if (!tenantId || profileLoading || tenantContextLoading) return;
+
+    let cancelled = false;
+    fetchOwnerStorefront(tenantId)
+      .then((storefront) => {
+        if (cancelled) return;
+        setTenantInfo((prev: any) => ({
+          ...(prev ?? contextTenant ?? {}),
+          deliveryConfig: storefront.deliveryConfig ?? prev?.deliveryConfig,
+          paymentConfig: storefront.paymentConfig ?? prev?.paymentConfig,
+          location: storefront.location ?? prev?.location,
+        }));
+      })
+      .catch((error) => {
+        console.warn('Owner dashboard storefront settings refresh failed:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, profileLoading, tenantContextLoading, contextTenant]);
 
   React.useEffect(() => {
     const migrateTenant = async () => {
@@ -248,11 +277,14 @@ const OwnerDashboard = () => {
   // --- Sandbox Mode ---
   const isSandboxActive = tenantInfo?.storeStatus === 'published' && tenantInfo?.sandboxMode;
 
+  const effectiveTenant = tenantInfo ?? contextTenant;
   const priorityActions = getDashboardPriorityActions({
-    storeStatus: tenantInfo?.storeStatus,
-    sandboxMode: tenantInfo?.sandboxMode,
+    storeStatus: effectiveTenant?.storeStatus,
+    sandboxMode: effectiveTenant?.sandboxMode,
     isSandboxActive,
-    deliveryFreeRadius: tenantInfo?.deliveryConfig?.freeRadius,
+    deliveryFreeRadius: isOwnerDeliveryConfigured(effectiveTenant)
+      ? effectiveTenant?.deliveryConfig?.freeRadius ?? 1
+      : 0,
     menuCount: ownerMenuCount,
     totalOrders: analytics?.totalOrders,
   });
@@ -348,8 +380,8 @@ const OwnerDashboard = () => {
         : prev
     );
   };
-  const deliveryActive = !!(tenantInfo?.deliveryConfig?.freeRadius || tenantInfo?.deliveryConfig?.maxRadius);
-  const payoutsActive = tenantInfo?.kyc?.verificationLevel !== undefined && tenantInfo?.kyc?.verificationLevel >= 0;
+  const deliveryActive = isOwnerDeliveryConfigured(effectiveTenant);
+  const payoutsActive = isOwnerPayoutsConfigured(effectiveTenant);
   const urgentCount = countUrgentAttentionItems(
     priorityActions,
     inventoryAlerts.filter((a) => a.isCritical).length,
@@ -377,7 +409,7 @@ const OwnerDashboard = () => {
         metrics={orderMetrics}
         analyticsRevenue={analytics?.totalRevenue}
         analyticsOrders={analytics?.totalOrders}
-        paymentOnlineEnabled={tenantInfo?.paymentConfig?.razorpayEnabled}
+        paymentOnlineEnabled={isOwnerOnlinePaymentEnabled(effectiveTenant)}
       />
 
       <StoreLiveControl variant="compact" />

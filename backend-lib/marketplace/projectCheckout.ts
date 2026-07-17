@@ -298,15 +298,16 @@ export async function buildMarketplaceQuote(
 
 export function enabledPaymentMethods(tenant: TenantRaw): string[] {
   const paymentConfig = (tenant.paymentConfig ?? {}) as Record<string, unknown>;
-  const providers = (paymentConfig.providers ?? {}) as Record<string, { enabled?: boolean }>;
+  const providers = (paymentConfig.providers ?? {}) as Record<string, { enabled?: boolean; upiId?: string }>;
   const methods: string[] = [];
   if (providers.cod?.enabled !== false) methods.push('cod');
   if (providers.razorpay?.enabled === true) methods.push('razorpay');
+  if (providers.upi?.enabled === true && providers.upi.upiId) methods.push('upi');
   return methods.length > 0 ? methods : ['cod'];
 }
 
 export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
-  paymentMethod: 'cod' | 'razorpay';
+  paymentMethod: 'cod' | 'razorpay' | 'upi';
   phone: string;
   customerName?: string;
   userId?: string | null;
@@ -317,6 +318,7 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
 
 export type MarketplacePlaceResult =
   | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote }
+  | { kind: 'upi'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote; upiUrl: string }
   | {
       kind: 'razorpay';
       draftId: string;
@@ -357,7 +359,7 @@ function buildOrderPayload(
   request: MarketplacePlaceRequest,
   quote: BillQuote,
   orderItems: Awaited<ReturnType<typeof buildResolvedOrderItems>>,
-  paymentMethod: 'cod' | 'razorpay',
+  paymentMethod: 'cod' | 'razorpay' | 'upi',
   orderNumber: number,
   etaMinutes: { min: number; max: number },
 ) {
@@ -385,7 +387,7 @@ function buildOrderPayload(
     total: quote.grandTotal,
     status: paymentMethod === 'cod' ? 'PLACED' : 'PENDING_PAYMENT',
     paymentMethod,
-    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
+    paymentStatus: 'pending',
     isCOD: paymentMethod === 'cod',
     instructions: request.instructions ?? null,
     deliveryTimeSlot: 'ASAP',
@@ -405,7 +407,12 @@ export async function placeMarketplaceOrder(
     throw Object.assign(new Error('phone is required'), { statusCode: 400 });
   }
 
-  const paymentMethod = request.paymentMethod === 'razorpay' ? 'razorpay' : 'cod';
+  const paymentMethod =
+    request.paymentMethod === 'razorpay'
+      ? 'razorpay'
+      : request.paymentMethod === 'upi'
+        ? 'upi'
+        : 'cod';
   const [{ tenantId, quote, menuPrices, etaMinutes }, orderNumber] = await Promise.all([
     buildMarketplaceQuoteContext(db, request),
     allocateMarketplaceOrderNumber(db, fieldValue),
@@ -421,6 +428,43 @@ export async function placeMarketplaceOrder(
     orderNumber,
     etaMinutes,
   );
+
+  if (paymentMethod === 'upi') {
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    const tenantRaw = (tenantDoc.data() ?? {}) as Record<string, unknown>;
+    const paymentConfig = (tenantRaw.paymentConfig ?? {}) as Record<string, unknown>;
+    const providers = (paymentConfig.providers ?? {}) as Record<string, { upiId?: string; merchantName?: string }>;
+    const upiId = providers.upi?.upiId;
+    if (!upiId) {
+      throw Object.assign(new Error('Direct UPI is not configured for this kitchen'), { statusCode: 400 });
+    }
+
+    const ref = await db.collection('orders').add({
+      ...orderPayload,
+      createdAt: fieldValue.serverTimestamp(),
+      updatedAt: fieldValue.serverTimestamp(),
+    });
+
+    const merchantName =
+      typeof providers.upi?.merchantName === 'string'
+        ? providers.upi.merchantName
+        : typeof tenantRaw.name === 'string'
+          ? tenantRaw.name
+          : 'Merchant';
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${quote.grandTotal}&tr=${encodeURIComponent(ref.id)}&cu=INR`;
+
+    const batch = db.batch();
+    for (const item of orderItems) {
+      if (item.menuItemId) {
+        batch.update(db.collection('menu').doc(item.menuItemId), {
+          itemOrderCount: fieldValue.increment(item.quantity),
+        });
+      }
+    }
+    await batch.commit().catch(() => undefined);
+
+    return { kind: 'upi', orderId: ref.id, orderNumber, tenantId, quote, upiUrl };
+  }
 
   if (paymentMethod === 'razorpay') {
     const draftRef = db.collection('order_drafts').doc();

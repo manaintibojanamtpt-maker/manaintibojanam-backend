@@ -9,7 +9,7 @@ export class PaymentFactory {
       case 'razorpay':
         return new RazorpayProvider();
       case 'upi':
-        throw new Error('Direct UPI is not enabled. Use Razorpay checkout.');
+        return new DirectUPIProvider();
       case 'cod':
         return new CODProvider();
       case 'phonepe':

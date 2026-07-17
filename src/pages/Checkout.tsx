@@ -27,6 +27,7 @@ import { Skeleton, SoftButton } from '../design-system';
 import { getUpsellRecommendations } from '../services/RecommendationEngine';
 import { ensureRazorpayLoaded, loadRazorpay } from '../utils/loadRazorpay';
 import { formatTenantPickupAddress, getEnabledPaymentMethods } from '../lib/tenantCheckoutConfig';
+import { buildUpiPayUrl } from '../lib/upiValidation';
 import { buildDeliveryTimeSlots, isAsapSlot } from '../lib/deliveryTimeSlots';
 import { getStoreClosedMessage, type ResolvedStoreSettings } from '../lib/tenantStoreOperations';
 
@@ -62,6 +63,7 @@ const Checkout: React.FC = () => {
   const pickupAddress = formatTenantPickupAddress(tenantInfo?.location);
   const codEnabled = enabledPaymentMethods.includes('cod');
   const onlineEnabled = enabledPaymentMethods.includes('online');
+  const upiEnabled = enabledPaymentMethods.includes('upi');
   const fssaiNumber = tenantInfo?.fssai?.licenseNumber || tenantInfo?.fssai?.number;
 
   useEffect(() => {
@@ -371,7 +373,12 @@ const Checkout: React.FC = () => {
       totalAmount: state.finalTotal,
       status: hasSubscription ? OrderStatus.ACTIVE : OrderStatus.PLACED,
       createdAt: Date.now(),
-      paymentMethod: state.paymentMethod === 'online' ? 'razorpay' : 'cod',
+      paymentMethod:
+        state.paymentMethod === 'online'
+          ? 'razorpay'
+          : state.paymentMethod === 'upi'
+            ? 'upi'
+            : 'cod',
       paymentStatus: 'pending',
       feedbackStatus: 'NOT_ELIGIBLE',
       deliveryType: isASAP ? 'asap' : 'scheduled',
@@ -413,14 +420,14 @@ const Checkout: React.FC = () => {
       return;
     }
     
-    // COD Kill Switch / Leak Prevention
-    if (state.paymentMethod === 'cod') {
+    // COD / UPI restrictions
+    if (state.paymentMethod === 'cod' || state.paymentMethod === 'upi') {
       if (hasSubscription) {
-        toast.error("Subscription orders cannot be processed with Cash on Delivery.");
+        toast.error('Subscription orders require online payment.');
         return;
       }
       if (state.total > 1000) {
-        toast.error("Orders exceeding ₹1,000 require a digital payment method.");
+        toast.error('Orders exceeding ₹1,000 require a digital payment method.');
         return;
       }
     }
@@ -656,8 +663,43 @@ const Checkout: React.FC = () => {
           setIsPlacingOrder(false);
         }
         
+      } else if (state.paymentMethod === 'upi') {
+        const upiConfig = tenantInfo?.paymentConfig?.providers?.upi;
+        if (!upiConfig?.upiId) {
+          throw new Error('Direct UPI is not configured for this store.');
+        }
+
+        const orderId = await createOrder(orderData);
+        if (!orderId) throw new Error('Order creation failed');
+        if (!state.currentUser) {
+          saveGuestOrder(orderId);
+          rememberGuestCheckoutPhone(state.phone || orderData.phone || '');
+        }
+
+        if (state.currentUser) {
+          await updateDoc(doc(getDb(), 'users', state.currentUser.uid), {
+            'preferences.lastPaymentMethod': state.paymentMethod,
+          });
+        }
+
+        const upiUrl = buildUpiPayUrl({
+          upiId: upiConfig.upiId,
+          merchantName: upiConfig.merchantName || tenantInfo?.name || 'Merchant',
+          amount: state.finalTotal,
+          orderId,
+        });
+
+        state.clearCart();
+        if (state.aiAssisted) logEvent('ai_assisted_checkout', { orderId, method: 'upi' });
+        toast.success('Complete payment in your UPI app.');
+        navigate(`${basePath}/order-success?orderId=${encodeURIComponent(orderId)}`, {
+          state: { orderId, guestPhone: state.phone || orderData.phone || '', upiPending: true },
+        });
+        window.setTimeout(() => {
+          window.location.href = upiUrl;
+        }, 300);
+        setIsPlacingOrder(false);
       } else {
-        // COD Flow
         const orderId = await createOrder(orderData);
         if (!orderId) throw new Error('Order creation failed');
         if (!state.currentUser) {
@@ -1271,6 +1313,12 @@ const Checkout: React.FC = () => {
               <p className="text-xs text-gray-500">UPI, Cards, Wallets via Razorpay</p>
             </button>
             )}
+            {upiEnabled && (
+            <button type="button" onClick={() => state.setPaymentMethod('upi')} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'upi' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'}`}>
+              <div className="flex justify-between items-center mb-1"><span className="font-bold text-gray-900 dark:text-white">UPI / GPay / PhonePe</span>{state.paymentMethod === 'upi' && <Check size={16} className="text-red-600" />}</div>
+              <p className="text-xs text-gray-500">Pay directly to the kitchen UPI ID</p>
+            </button>
+            )}
             {codEnabled && (
             <button type="button" onClick={() => !hasSubscription && state.setPaymentMethod('cod')} disabled={hasSubscription} className={`p-4 rounded-xl border-2 text-left transition-all ${state.paymentMethod === 'cod' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-gray-800'} ${hasSubscription ? 'opacity-50' : ''}`}>
               <div className="flex justify-between items-center mb-1"><span className="font-bold text-gray-900 dark:text-white">Cash on Delivery</span>{state.paymentMethod === 'cod' && <Check size={16} className="text-red-600" />}</div>
@@ -1302,7 +1350,7 @@ const Checkout: React.FC = () => {
       <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-lg mx-auto flex items-center gap-4">
            <div className="flex flex-col">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod === 'cod' ? 'COD' : 'ONLINE'}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod === 'cod' ? 'COD' : state.paymentMethod === 'upi' ? 'UPI' : 'ONLINE'}</p>
               <p className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{formatPrice(state.finalTotal)}</p>
            </div>
            

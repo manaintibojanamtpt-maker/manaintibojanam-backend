@@ -5,7 +5,7 @@ import {
   isDeliveryFeeEnabled,
 } from './deliveryFee';
 
-export type CheckoutPaymentMethod = 'online' | 'cod';
+export type CheckoutPaymentMethod = 'online' | 'cod' | 'upi';
 
 export function formatTenantPickupAddress(
   location?: TenantInfo['location'] & { address?: string; city?: string; state?: string; pincode?: string }
@@ -25,6 +25,9 @@ export function getEnabledPaymentMethods(
   const methods: CheckoutPaymentMethod[] = [];
   if (paymentConfig?.providers?.cod?.enabled) methods.push('cod');
   if (paymentConfig?.providers?.razorpay?.enabled) methods.push('online');
+  if (paymentConfig?.providers?.upi?.enabled === true && paymentConfig.providers.upi.upiId) {
+    methods.push('upi');
+  }
   if (methods.length === 0) return ['cod'];
   return methods;
 }
@@ -36,6 +39,7 @@ export function resolveDefaultPaymentMethod(
   const preferred = paymentConfig?.defaultProvider;
   if (preferred === 'cod' && enabled.includes('cod')) return 'cod';
   if (preferred === 'razorpay' && enabled.includes('online')) return 'online';
+  if (preferred === 'upi' && enabled.includes('upi')) return 'upi';
   return enabled[0];
 }
 

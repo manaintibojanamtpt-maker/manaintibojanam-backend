@@ -94,7 +94,7 @@ export const DashboardStatusBar: React.FC<DashboardStatusBarProps> = ({
           value={payoutsActive ? 'Active' : 'Setup needed'}
           ok={payoutsActive}
           icon={<CreditCard size={14} />}
-          onClick={() => navigate('/owner/subscription')}
+          onClick={() => navigate('/owner/settings?tab=payments')}
         />
         <StatusPill
           label="Delivery"

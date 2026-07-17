@@ -732,11 +732,18 @@ export function registerMarketplaceRoutes(
               quote: result.quote,
               amountInPaise: result.amountInPaise,
             }
-          : {
-              orderId: result.orderId,
-              orderNumber: result.orderNumber,
-              paymentMethod: 'cod',
-            };
+          : result.kind === 'upi'
+            ? {
+                orderId: result.orderId,
+                orderNumber: result.orderNumber,
+                paymentMethod: 'upi',
+                upiUrl: result.upiUrl,
+              }
+            : {
+                orderId: result.orderId,
+                orderNumber: result.orderNumber,
+                paymentMethod: 'cod',
+              };
         sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
       } catch (error: unknown) {
         const status = (error as { statusCode?: number }).statusCode ?? 500;

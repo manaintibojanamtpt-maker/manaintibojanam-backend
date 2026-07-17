@@ -21,6 +21,8 @@ export interface CheckoutPlaceResponse {
   readonly orderId?: string;
   readonly draftId?: string;
   readonly orderNumber?: number | string;
+  readonly upiUrl?: string;
+  readonly paymentMethod?: string;
 }
 
 export interface PlacedOrderConfirmation {
@@ -54,11 +56,12 @@ export interface CheckoutFlowState {
   readonly orderNumber: string | null;
   readonly itemCount: number;
   readonly canCheckout: boolean;
-  readonly placingMethod: 'cod' | 'razorpay' | null;
+  readonly placingMethod: 'cod' | 'razorpay' | 'upi' | null;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
   placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   placeRazorpayOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
+  placeUpiOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   reset: () => void;
 }
 
@@ -78,7 +81,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | null>(null);
+  const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
   const placeInFlightRef = useRef(false);
 
   const itemCount = cartItemCount(lines);
@@ -268,6 +271,51 @@ export function useCheckoutFlow(): CheckoutFlowState {
     [getPayload, sessionUser],
   );
 
+  const placeUpiOrder = useCallback(
+    async (phone: string, customerName?: string) => {
+      if (placeInFlightRef.current) return null;
+      placeInFlightRef.current = true;
+      markPerf('pay_tap', 'upi');
+      setPlacingMethod('upi');
+      setPlaceStatus('placing');
+      setPlaceError(null);
+      try {
+        const payload = {
+          ...getPayload(),
+          paymentMethod: 'upi' as const,
+          phone: phone.trim(),
+          customerName: customerName?.trim() || undefined,
+          userId: sessionUser?.uid ?? null,
+          userEmail: sessionUser?.email ?? null,
+        };
+        const response = (await getMarketplaceApiClient().checkoutPlace(
+          payload,
+        )) as CheckoutPlaceResponse;
+        const placed = resolvePlacedOrder(response);
+        if (!placed) {
+          throw new Error('Order confirmation is missing an order id');
+        }
+        if (response.upiUrl && typeof window !== 'undefined') {
+          window.location.href = response.upiUrl;
+        }
+        setOrderId(placed.orderId);
+        setOrderNumber(placed.orderNumber);
+        setPlaceStatus('success');
+        markPerf('pay_next_step', 'upi-success');
+        useCartStore.getState().clear();
+        return placed;
+      } catch (err) {
+        setPlaceStatus('error');
+        setPlaceError(err instanceof Error ? err.message : 'Unable to place UPI order');
+        return null;
+      } finally {
+        placeInFlightRef.current = false;
+        setPlacingMethod(null);
+      }
+    },
+    [getPayload, sessionUser],
+  );
+
   const reset = useCallback(() => {
     placeInFlightRef.current = false;
     setPlacingMethod(null);
@@ -294,6 +342,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     prepareCheckout,
     placeCodOrder,
     placeRazorpayOrder,
+    placeUpiOrder,
     reset,
   };
 }

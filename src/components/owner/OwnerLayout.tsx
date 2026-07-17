@@ -20,7 +20,7 @@ import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 import { syncOwnerTenantsViaApi } from '../../lib/ownerProvisioning';
 import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
-import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../../config/founder';
+import { FOUNDER_TENANT_ID, hasFounderTenantEntitlements, isFounderOwnerEmail } from '../../config/founder';
 import {
   resolvePreferredOwnerTenantId,
   writeOwnerActiveTenantId,
@@ -52,10 +52,21 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const navItems = ownerNavItems
     .filter((item) => !item.ownerBranchFlag || isOwnerBranchEnabledDefault())
-    .map((item) => ({
-      ...item,
-      disabled: item.featureGate ? !entitlements.features[item.featureGate] : false,
-    }));
+    .map((item) => {
+      const founderBypass = hasFounderTenantEntitlements(
+        currentUser?.email,
+        tenantInfo?.id || contextTenantId,
+        tenantInfo?.slug || tenantSlug,
+      );
+      return {
+        ...item,
+        disabled: founderBypass
+          ? false
+          : item.featureGate
+            ? !entitlements.features[item.featureGate]
+            : false,
+      };
+    });
 
   const ownerMenuCount = useOwnerMenuCount();
 

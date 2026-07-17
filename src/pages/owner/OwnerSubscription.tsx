@@ -33,13 +33,36 @@ import {
 } from '../../config/pricing';
 
 const OwnerSubscription = () => {
-  const { tenantInfo, refreshTenant } = useTenant();
+  const { tenantInfo, loading: tenantLoading, refreshTenant } = useTenant();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState<PaidPlanId | null>(null);
   const copy = pricingPageCopy.owner;
 
-  if (!tenantInfo) return null;
+  if (tenantLoading && !tenantInfo) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />
+        Loading plans &amp; billing…
+      </div>
+    );
+  }
+
+  if (!tenantInfo) {
+    return (
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center max-w-lg mx-auto">
+        <p className="text-lg font-bold text-white">Could not load your kitchen profile</p>
+        <p className="mt-2 text-sm text-white/60">Check your connection and try again.</p>
+        <button
+          type="button"
+          onClick={() => void refreshTenant()}
+          className="mt-6 rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const isEmailVerified = currentUser?.emailVerified || tenantInfo.kyc?.emailVerificationStatus === 'verified';
   const isMerchantAgreementAccepted = !!tenantInfo.legal?.merchantDeclarationAcceptedAt;
