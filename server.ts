@@ -59,6 +59,7 @@ import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrders
 import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
 import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
 import { registerPlatformTenantSubscriptionRoutes } from "./backend-lib/marketplace/platformTenantSubscriptionRoutes.js";
+import { registerPlatformKycReviewRoutes } from "./backend-lib/marketplace/platformKycReviewRoutes.js";
 import {
   registerOwnerRecipesRoutes,
   maybeDeductInventoryOnOrderStatus,
@@ -3117,6 +3118,7 @@ registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantA
   verifyRazorpaySignature,
 });
 registerPlatformTenantSubscriptionRoutes(app, db, requireSuperadmin, FieldValue);
+registerPlatformKycReviewRoutes(app, db, requireSuperadmin, FieldValue);
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);

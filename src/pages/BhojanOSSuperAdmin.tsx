@@ -26,6 +26,7 @@ import { auth } from '../firebase';
 import { ReleaseCenter } from '../components/admin/ReleaseCenter';
 import { InvestorDataRoomPanel } from '../components/admin/InvestorDataRoomPanel';
 import { TenantsCrmPanel } from '../components/admin/TenantsCrmPanel';
+import { KycReviewPanel } from '../components/admin/KycReviewPanel';
 import { exportInvestorReportPdf } from '../lib/exportInvestorReportPdf';
 
 type SuperAdminTab = 'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'settings';
@@ -326,7 +327,9 @@ export default function BhojanOSSuperAdmin() {
   const ordersProcessed = activeTenantsCount * 1240 + trialTenantsCount * 120; // Simulated
   const churnRisk = Math.max(0, activeTenantsCount - 2); // Simulated
 
-  const verifiedMerchants = tenants.filter(t => t.kyc?.verificationLevel > 0).length;
+  const verifiedMerchants = tenants.filter(
+    (t) => (t.kyc?.verificationLevel ?? 0) >= 2 || t.kyc?.status === 'verified',
+  ).length;
   const fssaiVerified = tenants.filter(t => t.fssai?.verificationStatus === 'verified' || t.fssai?.verificationStatus === 'submitted').length;
   const complianceOverdue = tenants.filter(t => t.fssai?.verificationStatus === 'compliance_overdue').length;
   const activeSubscriptions = tenants.filter(t => t.subscription?.status === 'active').length;
@@ -398,6 +401,18 @@ export default function BhojanOSSuperAdmin() {
 
   const alerts = useMemo((): PlatformAlert[] => {
     const a: PlatformAlert[] = [];
+    const pendingKyc = tenants.filter(
+      (t) => t.kyc?.status === 'pending_verification' || t.kyc?.verificationLevel === 1,
+    );
+    if (pendingKyc.length > 0) {
+      a.push({
+        id: 'pending-kyc',
+        message: `${pendingKyc.length} KYC submissions awaiting review`,
+        type: 'warning',
+        targetTab: 'overview',
+      });
+    }
+
     const pending = tenants.filter(t => t.status === 'pending');
     if (pending.length > 0) {
       a.push({
@@ -770,6 +785,10 @@ export default function BhojanOSSuperAdmin() {
                       </m.div>
                     )}
                   </AnimatePresence>
+
+                  <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}>
+                    <KycReviewPanel />
+                  </m.div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     

@@ -437,7 +437,17 @@ export interface Tenant {
     pincode?: string;
     gstNumber?: string;
     panNumber?: string;
+    bankAccountHolder?: string;
+    bankAccountNumber?: string;
+    bankIfsc?: string;
+    bankName?: string;
+    status?: 'draft' | 'pending_verification' | 'verified' | 'rejected';
     verificationLevel: 0 | 1 | 2 | 3;
+    verifiedAt?: any;
+    verifiedBy?: string;
+    rejectedAt?: any;
+    rejectedBy?: string;
+    rejectionReason?: string;
     documents?: {
       businessProof?: { url: string; uploadedAt: any; status: string };
       identityProof?: { url: string; uploadedAt: any; status: string };

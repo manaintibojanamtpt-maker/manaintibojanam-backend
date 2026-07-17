@@ -510,6 +510,7 @@ const notifyOrderStatusChange = async (orderId: string, status: OrderStatus) => 
 };
 
 const buildOrderStatusUpdatePayload = (
+  orderId: string,
   targetStatus: OrderStatus,
   currentStatus: OrderStatus,
   trackingData?: Record<string, any>,
@@ -523,6 +524,17 @@ const buildOrderStatusUpdatePayload = (
       description: `Order moved from ${currentStatus} to ${targetStatus}`,
       metadata: trackingData || {},
     }),
+    timeline: arrayUnion(
+      buildTimelineEvent(
+        orderId,
+        'status_change',
+        `Order moved from ${currentStatus} to ${targetStatus}`,
+        targetStatus,
+        currentStatus,
+        'admin',
+        trackingData || {},
+      ),
+    ),
   };
 
   if (trackingData) {
@@ -557,7 +569,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
 
     if (currentStatus === targetStatus) {
       if (trackingData && Object.keys(trackingData).length > 0) {
-        await updateDoc(doc(getDb(), 'orders', orderId), buildOrderStatusUpdatePayload(targetStatus, currentStatus, trackingData));
+        await updateDoc(doc(getDb(), 'orders', orderId), buildOrderStatusUpdatePayload(orderId, targetStatus, currentStatus, trackingData));
       }
       return;
     }
@@ -619,7 +631,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
 
     await updateDoc(
       doc(getDb(), 'orders', orderId),
-      buildOrderStatusUpdatePayload(targetStatus, currentStatus, trackingData),
+      buildOrderStatusUpdatePayload(orderId, targetStatus, currentStatus, trackingData),
     );
 
     notifyOrderStatusChange(orderId, targetStatus).catch(() => {});
@@ -986,4 +998,67 @@ export const updatePlatformTenantSubscription = async (params: {
 
 export const updateLeadStage = async (leadId: string, stage: string) => {
   return updateDoc(doc(getDb(), 'salesPipeline', leadId), { stage, updatedAt: serverTimestamp() });
+};
+
+export type PendingKycTenant = {
+  tenantId: string;
+  slug: string;
+  name: string;
+  status: string;
+  kyc: {
+    ownerName?: string;
+    businessName?: string;
+    email?: string;
+    phone?: string;
+    gstNumber?: string;
+    panNumber?: string;
+    status?: string;
+    verificationLevel?: number;
+    documents?: Record<string, unknown>;
+  };
+  fssai?: unknown;
+  updatedAt?: unknown;
+};
+
+async function platformSuperadminFetch(path: string, init?: RequestInit) {
+  const { auth } = await import('../firebase');
+  const user = auth.currentUser;
+  if (!user) throw new Error('You must be signed in.');
+
+  const token = await user.getIdToken(true);
+  const apiBase =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
+      ? window.location.origin
+      : API_BASE_URL;
+
+  const res = await fetch(`${apiBase}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(init?.headers ?? {}),
+    },
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) {
+    throw new Error(payload.error || 'Platform request failed');
+  }
+  return payload;
+}
+
+export const fetchPendingKyc = async (): Promise<PendingKycTenant[]> => {
+  const payload = await platformSuperadminFetch('/api/platform/kyc/pending');
+  return Array.isArray(payload.pending) ? payload.pending : [];
+};
+
+export const reviewTenantKyc = async (params: {
+  tenantId: string;
+  action: 'approve' | 'reject';
+  reason?: string;
+}) => {
+  return platformSuperadminFetch('/api/platform/kyc/review', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 };
