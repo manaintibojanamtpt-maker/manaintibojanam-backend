@@ -20,6 +20,7 @@ export interface MarketplaceRequestOptions {
   readonly contextToken?: string | null;
   readonly correlationId?: string;
   readonly signal?: AbortSignal;
+  readonly bypassHttpCache?: boolean;
 }
 
 export interface MarketplaceClientConfig {
@@ -89,7 +90,7 @@ export class MarketplaceHttpClient {
       'Content-Type': 'application/json',
       'X-Correlation-Id': correlationId,
       'X-Marketplace-API-Version': this.config.apiVersion,
-      ...(shouldBypassMarketplaceHttpCache()
+      ...(options.bypassHttpCache ?? shouldBypassMarketplaceHttpCache()
         ? { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
         : {}),
       ...options.headers,
