@@ -38,6 +38,25 @@ export interface BillQuote {
   readonly lineItems: readonly { readonly label: string; readonly amount: number }[];
 }
 
+export interface CheckoutSchedulingContext {
+  readonly isStoreOpen: boolean;
+  readonly storeTiming: {
+    readonly openTime: string;
+    readonly closeTime: string;
+    readonly businessHoursEnabled: boolean;
+    readonly offlineMessage?: string;
+  };
+  readonly prepMinutes: number;
+  readonly deliverySlots: readonly string[];
+  readonly closedMessage?: string;
+}
+
+export interface CheckoutPrepareResponse {
+  readonly paymentMethods: readonly string[];
+  readonly quote: BillQuote;
+  readonly scheduling?: CheckoutSchedulingContext;
+}
+
 export interface ApiMeta {
   readonly correlationId: string;
   readonly cached?: boolean;
@@ -125,14 +144,18 @@ export interface OrderSummary {
   readonly restaurantId: string;
   readonly displayName: string;
   readonly status: string;
+  readonly paymentStatus?: string;
   readonly grandTotal: number;
   readonly createdAt: string;
+  readonly expiresAt?: string;
 }
 
 export interface OrderTrackingResponse {
   readonly orderId: string;
   readonly orderNumber: string;
   readonly status: string;
+  readonly paymentStatus?: string;
+  readonly expiresAt?: string;
   readonly timeline: readonly { readonly status: string; readonly at: string; readonly message?: string }[];
   readonly etaMinutes?: { readonly min: number; readonly max: number };
   readonly restaurant?: {

@@ -15,7 +15,14 @@ import {
   computeTenantDeliveryFee,
   haversineKm,
   readTenantDeliveryConfig,
+  resolveStoreTiming,
+  isStoreOpenNow,
 } from './tenantProjectionHelpers.js';
+import {
+  buildDeliveryTimeSlots,
+  getStoreClosedMessage,
+  validateMarketplaceSchedule,
+} from './deliveryTimeSlots.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -31,6 +38,9 @@ export interface MarketplaceQuoteRequest {
   lines: MarketplaceQuoteLine[];
   deliveryAddress?: { lat?: number; lng?: number; distanceKm?: number };
   couponCode?: string;
+  deliveryType?: 'asap' | 'scheduled';
+  scheduledFor?: string;
+  deliveryTimeSlot?: string;
 }
 
 export interface BillQuote {
@@ -44,6 +54,19 @@ export interface BillQuote {
   grandTotal: number;
   taxLabel: string;
   lineItems: { label: string; amount: number }[];
+}
+
+export interface CheckoutSchedulingContext {
+  isStoreOpen: boolean;
+  storeTiming: {
+    openTime: string;
+    closeTime: string;
+    businessHoursEnabled: boolean;
+    offlineMessage?: string;
+  };
+  prepMinutes: number;
+  deliverySlots: string[];
+  closedMessage?: string;
 }
 
 type TenantRaw = Record<string, unknown>;
@@ -291,6 +314,34 @@ export async function buildMarketplaceQuote(
   return { tenantId, quote };
 }
 
+export async function buildCheckoutSchedulingContext(
+  db: Firestore,
+  tenantId: string,
+): Promise<CheckoutSchedulingContext> {
+  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+  const raw = (tenantDoc.data() ?? {}) as TenantRaw;
+  const storeTiming = resolveStoreTiming(raw as never, raw);
+  const delivery = (raw.deliveryConfig ?? {}) as Record<string, unknown>;
+  const prepMinutes = Number(delivery.prepTime ?? DEFAULT_PREP_TIME_MINUTES);
+  const now = new Date();
+  const isStoreOpen = isStoreOpenNow(storeTiming, now);
+  const deliverySlots = buildDeliveryTimeSlots({ storeTiming, now, prepMinutes });
+  const closedMessage = isStoreOpen ? undefined : getStoreClosedMessage(storeTiming, now);
+
+  return {
+    isStoreOpen,
+    storeTiming: {
+      openTime: storeTiming.openTime,
+      closeTime: storeTiming.closeTime,
+      businessHoursEnabled: storeTiming.businessHoursEnabled,
+      offlineMessage: storeTiming.offlineMessage,
+    },
+    prepMinutes,
+    deliverySlots,
+    closedMessage: closedMessage || undefined,
+  };
+}
+
 export function enabledPaymentMethods(tenant: TenantRaw): string[] {
   const paymentConfig = (tenant.paymentConfig ?? {}) as Record<string, unknown>;
   const providers = (paymentConfig.providers ?? {}) as Record<string, { enabled?: boolean; upiId?: string }>;
@@ -366,10 +417,12 @@ function buildOrderPayload(
   paymentMethod: 'cod' | 'razorpay' | 'upi',
   orderNumber: number,
   etaMinutes: { min: number; max: number },
+  schedule: { deliveryType: 'asap' | 'scheduled'; scheduledFor: string | null; deliveryTimeSlot: string },
 ) {
   const { address, deliveryAddress } = normalizeDeliveryAddressFields(
     request.deliveryAddress as Record<string, unknown> | undefined,
   );
+  const isAsap = schedule.deliveryType === 'asap';
 
   return {
     tenantId,
@@ -394,7 +447,12 @@ function buildOrderPayload(
     paymentStatus: 'pending',
     isCOD: paymentMethod === 'cod',
     instructions: request.instructions ?? null,
-    deliveryTimeSlot: 'ASAP',
+    deliveryType: schedule.deliveryType,
+    orderType: isAsap ? 'instant' : 'scheduled',
+    deliveryTimeSlot: schedule.deliveryTimeSlot,
+    scheduledFor: schedule.scheduledFor,
+    scheduledTime: schedule.scheduledFor,
+    prepAlertSent: isAsap ? null : false,
     eta: etaMinutes.min,
     etaMinutes,
     source: 'marketplace_checkout_v1',
@@ -422,6 +480,13 @@ export async function placeMarketplaceOrder(
     allocateMarketplaceOrderNumber(db, fieldValue),
   ]);
 
+  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+  const tenantRaw = (tenantDoc.data() ?? {}) as TenantRaw;
+  const storeTiming = resolveStoreTiming(tenantRaw as never, tenantRaw);
+  const delivery = (tenantRaw.deliveryConfig ?? {}) as Record<string, unknown>;
+  const prepMinutes = Number(delivery.prepTime ?? DEFAULT_PREP_TIME_MINUTES);
+  const schedule = validateMarketplaceSchedule(request, storeTiming, prepMinutes);
+
   const orderItems = buildResolvedOrderItems(request, quote, menuPrices);
   const orderPayload = buildOrderPayload(
     tenantId,
@@ -431,11 +496,10 @@ export async function placeMarketplaceOrder(
     paymentMethod,
     orderNumber,
     etaMinutes,
+    schedule,
   );
 
   if (paymentMethod === 'upi') {
-    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-    const tenantRaw = (tenantDoc.data() ?? {}) as Record<string, unknown>;
     const paymentConfig = (tenantRaw.paymentConfig ?? {}) as Record<string, unknown>;
     const providers = (paymentConfig.providers ?? {}) as Record<string, { upiId?: string; merchantName?: string }>;
     const upiId = providers.upi?.upiId;

@@ -23,6 +23,10 @@ import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefet
 import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { UpiPaymentPendingView } from '@/presentation/checkout/UpiPaymentPendingView';
 import { markPerf } from '@/lib/perfMarks';
+import {
+  formatDeliverySlotLabel,
+  isAsapSlot,
+} from '@/features/checkout/domain/deliveryTimeSlots';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set delivery location';
 
@@ -41,6 +45,9 @@ export function OrderBhojanCheckoutPage() {
   const { openSelector, openConfirmation } = useLocationActions();
   const {
     quote,
+    scheduling,
+    deliveryTimeSlot,
+    setDeliveryTimeSlot,
     paymentMethods,
     status,
     error,
@@ -249,10 +256,15 @@ export function OrderBhojanCheckoutPage() {
 
   const billView = quote
     ? {
-        lines: quote.lineItems.map((item) => ({
-          label: item.label,
-          amountLabel: `₹${item.amount}`,
-        })),
+        lines: [
+          ...quote.lineItems.map((item) => ({
+            label: item.label,
+            amountLabel: `₹${item.amount}`,
+          })),
+          ...(deliveryTimeSlot && !isAsapSlot(deliveryTimeSlot)
+            ? [{ label: 'Delivery slot', amountLabel: formatDeliverySlotLabel(deliveryTimeSlot) }]
+            : []),
+        ],
         totalLabel: `₹${quote.grandTotal}`,
         deliveryPendingNote: quote.deliveryPending
           ? 'Delivery fee pending address confirmation'
@@ -263,6 +275,21 @@ export function OrderBhojanCheckoutPage() {
           lines: [{ label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` }],
           totalLabel: `₹${estimatedSubtotal}`,
           deliveryPendingNote: 'Calculating taxes and delivery…',
+        }
+      : undefined;
+
+  const deliverySlotView =
+    scheduling && scheduling.deliverySlots.length > 0
+      ? {
+          slots: scheduling.deliverySlots,
+          selectedSlot: deliveryTimeSlot,
+          selectedIsAsap: isAsapSlot(deliveryTimeSlot),
+          selectedSummary: isAsapSlot(deliveryTimeSlot)
+            ? undefined
+            : deliveryTimeSlot.replace(/^(Today|Tomorrow), /, '$1 · '),
+          closedMessage: scheduling.closedMessage,
+          isAsap: isAsapSlot,
+          formatLabel: formatDeliverySlotLabel,
         }
       : undefined;
 
@@ -281,6 +308,8 @@ export function OrderBhojanCheckoutPage() {
           : undefined
       }
       onAddressAction={locationEnabled ? handleAddressAction : undefined}
+      deliverySlot={deliverySlotView}
+      onDeliverySlotChange={setDeliveryTimeSlot}
       bill={billView}
       quoteLoading={isBusy && !billView}
       billRefreshing={billRefreshing}

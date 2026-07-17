@@ -319,7 +319,22 @@ export class MarketplaceApiClient {
     });
   }
 
-  checkoutPrepare(body: Record<string, unknown>): Promise<{ paymentMethods: string[]; quote: BillQuote }> {
+  checkoutPrepare(body: Record<string, unknown>): Promise<{
+    paymentMethods: string[];
+    quote: BillQuote;
+    scheduling?: {
+      isStoreOpen: boolean;
+      storeTiming: {
+        openTime: string;
+        closeTime: string;
+        businessHoursEnabled: boolean;
+        offlineMessage?: string;
+      };
+      prepMinutes: number;
+      deliverySlots: string[];
+      closedMessage?: string;
+    };
+  }> {
     return this.http.request({
       method: 'POST',
       path: `${MARKETPLACE_PREFIX}/checkout/prepare`,
@@ -333,6 +348,9 @@ export class MarketplaceApiClient {
     orderNumber?: number | string;
     upiUrl?: string;
     paymentMethod?: string;
+    paymentStatus?: string;
+    amount?: number;
+    expiresAt?: string;
   }> {
     return this.http.request({
       method: 'POST',

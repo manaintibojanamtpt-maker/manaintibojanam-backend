@@ -2,6 +2,7 @@ import type { Express, Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
+  buildCheckoutSchedulingContext,
   buildMarketplaceQuote,
   createCheckoutCorrelationId,
   enabledPaymentMethods,
@@ -692,7 +693,10 @@ export function registerMarketplaceRoutes(
     try {
       const body = (req.body ?? {}) as MarketplaceQuoteRequest;
       const loaded = await buildMarketplaceQuote(db, body);
-      const tenantDoc = await db.collection('tenants').doc(loaded.tenantId).get();
+      const [scheduling, tenantDoc] = await Promise.all([
+        buildCheckoutSchedulingContext(db, loaded.tenantId),
+        db.collection('tenants').doc(loaded.tenantId).get(),
+      ]);
       const methods = tenantDoc.exists && tenantDoc.data()
         ? enabledPaymentMethods(tenantDoc.data() as Record<string, unknown>)
         : ['cod'];
@@ -700,7 +704,7 @@ export function registerMarketplaceRoutes(
       sendMarketplaceJson(
         res,
         success(
-          { paymentMethods: methods, quote: loaded.quote },
+          { paymentMethods: methods, quote: loaded.quote, scheduling },
           { correlationId: createCheckoutCorrelationId() },
         ),
       );

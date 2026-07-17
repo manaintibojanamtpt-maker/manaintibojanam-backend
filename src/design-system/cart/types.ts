@@ -49,3 +49,13 @@ export interface CheckoutContactViewModel {
   readonly error?: string;
   readonly hint: string;
 }
+
+export interface CheckoutDeliverySlotViewModel {
+  readonly slots: readonly string[];
+  readonly selectedSlot: string;
+  readonly selectedIsAsap: boolean;
+  readonly selectedSummary?: string;
+  readonly closedMessage?: string;
+  readonly isAsap: (slot: string) => boolean;
+  readonly formatLabel: (slot: string) => string;
+}

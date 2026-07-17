@@ -123,6 +123,17 @@ describe('marketplace checkout frontend contract', () => {
     );
     assert.match(source, /kind: 'razorpay'/);
     assert.match(source, /order_drafts/);
+    assert.match(source, /deliveryType: schedule\.deliveryType/);
+    assert.match(source, /scheduledFor: schedule\.scheduledFor/);
+  });
+
+  it('checkout prepare exposes scheduling context', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'backend-lib/marketplace/marketplaceRoutes.ts'),
+      'utf8',
+    );
+    assert.match(source, /buildCheckoutSchedulingContext/);
+    assert.match(source, /scheduling/);
   });
 });
 

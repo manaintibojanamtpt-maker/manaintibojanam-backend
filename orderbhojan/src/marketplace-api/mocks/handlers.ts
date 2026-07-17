@@ -37,6 +37,21 @@ import {
 
 const prefix = '/api/marketplace';
 
+const MOCK_SCHEDULING = {
+  isStoreOpen: true,
+  storeTiming: {
+    openTime: '09:00',
+    closeTime: '22:00',
+    businessHoursEnabled: true,
+  },
+  prepMinutes: 20,
+  deliverySlots: [
+    'Standard Delivery (ASAP)',
+    'Today, 7:00 PM - 8:00 PM',
+    'Tomorrow, 12:00 PM - 1:00 PM',
+  ],
+};
+
 function success<T>(value: T, correlationId = 'mock-correlation-id') {
   return HttpResponse.json({
     ok: true,
@@ -202,6 +217,7 @@ export const marketplaceHandlers = [
     success({
       paymentMethods: ['cod', 'razorpay'],
       quote: MOCK_QUOTE,
+      scheduling: MOCK_SCHEDULING,
     }),
   ),
 
@@ -215,7 +231,10 @@ export const marketplaceHandlers = [
         orderId: 'ob_ord_upi_mock_001',
         orderNumber: 463577,
         paymentMethod: 'upi',
-        upiUrl: 'upi://pay?pa=kitchen@paytm&pn=Mock&am=299&tr=ob_ord_upi_mock_001&cu=INR',
+        paymentStatus: 'pending',
+        amount: MOCK_QUOTE.grandTotal,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        upiUrl: 'upi://pay?pa=kitchen@paytm&pn=Mock&am=299.00&tr=ob_ord_upi_mock_001&tn=Order%20ob_ord_upi_mock_001&cu=INR',
       });
     }
     return success({ orderId: 'ob_ord_mock_001', orderNumber: 463577 });

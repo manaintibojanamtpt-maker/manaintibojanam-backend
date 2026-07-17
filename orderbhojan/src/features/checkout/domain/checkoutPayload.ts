@@ -1,12 +1,14 @@
 import { getLocationStoreAddress, buildDeliveryAddressLine } from '@bhojan/location-core';
 import type { CartLine } from '@/features/cart/store/cartStore';
 import type { CustomerLocation } from '@/features/location/domain/location.types';
+import { buildScheduleFields } from './deliveryTimeSlots';
 
 export function buildCheckoutPayload(
   lines: readonly CartLine[],
   restaurantId: string,
   contextToken: string,
   activeLocation: CustomerLocation | null,
+  deliveryTimeSlot = 'ASAP',
 ) {
   const coords = activeLocation?.coordinates
     ? { lat: activeLocation.coordinates.lat, lng: activeLocation.coordinates.lng }
@@ -17,6 +19,7 @@ export function buildCheckoutPayload(
     activeLocation?.displayLabel?.trim() ||
     '';
   const distanceKm = activeLocation?.serviceability?.distanceKm;
+  const schedule = buildScheduleFields(deliveryTimeSlot);
 
   return {
     restaurantId,
@@ -35,6 +38,7 @@ export function buildCheckoutPayload(
       ...(v2Address?.text?.landmark ? { landmark: v2Address.text.landmark } : {}),
       ...(typeof distanceKm === 'number' ? { distanceKm } : {}),
     },
+    ...schedule,
   };
 }
 

@@ -11,6 +11,9 @@ import {
 } from '../infrastructure/upiCheckout';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
+import {
+  resolveDefaultDeliverySlot,
+} from '../domain/deliveryTimeSlots';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
@@ -19,7 +22,7 @@ import {
   CHECKOUT_PREPARE_GC_MS,
   CHECKOUT_PREPARE_STALE_MS,
 } from './checkoutQueryKeys';
-import type { BillQuote } from '@/types/marketplace';
+import type { BillQuote, CheckoutPrepareResponse, CheckoutSchedulingContext } from '@/types/marketplace';
 
 export interface CheckoutPlaceResponse {
   readonly orderId?: string;
@@ -66,6 +69,8 @@ export type CheckoutFlowStatus =
 
 export interface CheckoutFlowState {
   readonly quote: BillQuote | null;
+  readonly scheduling: CheckoutSchedulingContext | null;
+  readonly deliveryTimeSlot: string;
   readonly paymentMethods: readonly string[];
   readonly status: CheckoutFlowStatus;
   readonly error: string | null;
@@ -77,6 +82,7 @@ export interface CheckoutFlowState {
   readonly itemCount: number;
   readonly canCheckout: boolean;
   readonly placingMethod: 'cod' | 'razorpay' | 'upi' | null;
+  setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
   placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
@@ -108,6 +114,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [upiVerifying, setUpiVerifying] = useState(false);
   const [upiPollMessage, setUpiPollMessage] = useState<string | null>(null);
   const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
+  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
   const placeInFlightRef = useRef(false);
   const upiPollAbortRef = useRef<AbortController | null>(null);
 
@@ -142,8 +149,14 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (!hasReadyDeliveryLocation(activeLocation)) {
       throw new Error('Confirm your flat or house number before checkout.');
     }
-    return buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
-  }, [activeLocation, contextToken, coords, lines, resolvedRestaurantId]);
+    return buildCheckoutPayload(
+      lines,
+      resolvedRestaurantId,
+      contextToken,
+      activeLocation,
+      deliveryTimeSlot,
+    );
+  }, [activeLocation, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
 
   const prepareQuery = useQuery({
     queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
@@ -164,7 +177,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
   });
 
   const quote = prepareQuery.data?.quote ?? null;
+  const scheduling = prepareQuery.data?.scheduling ?? null;
   const paymentMethods = prepareQuery.data?.paymentMethods ?? [];
+
+  useEffect(() => {
+    if (!scheduling?.deliverySlots?.length) return;
+    setDeliveryTimeSlot((current) => {
+      if (scheduling.deliverySlots.includes(current)) return current;
+      return resolveDefaultDeliverySlot(scheduling.deliverySlots);
+    });
+  }, [scheduling]);
 
   const status: CheckoutFlowStatus = useMemo(() => {
     if (placeStatus === 'placing') return 'placing';
@@ -186,9 +208,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
       const payload = getPayload();
       const nextQuote = await getMarketplaceApiClient().quote(payload);
       if (prepareSignature) {
-        queryClient.setQueryData(checkoutKeys.prepare(prepareSignature), (current: { quote: BillQuote; paymentMethods: string[] } | undefined) => ({
+        queryClient.setQueryData(checkoutKeys.prepare(prepareSignature), (current: CheckoutPrepareResponse | undefined) => ({
           paymentMethods: current?.paymentMethods ?? [],
           quote: nextQuote,
+          scheduling: current?.scheduling,
         }));
       }
       markPerf('checkout_bill_ready', 'refresh-quote');
@@ -483,6 +506,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     setUpiSession(null);
     setUpiVerifying(false);
     setUpiPollMessage(null);
+    setDeliveryTimeSlot('ASAP');
     if (prepareSignature) {
       void queryClient.removeQueries({ queryKey: checkoutKeys.prepare(prepareSignature) });
     }
@@ -490,6 +514,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   return {
     quote,
+    scheduling,
+    deliveryTimeSlot,
     paymentMethods,
     status,
     error,
@@ -501,6 +527,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     itemCount,
     canCheckout,
     placingMethod,
+    setDeliveryTimeSlot,
     refreshQuote,
     prepareCheckout,
     placeCodOrder,

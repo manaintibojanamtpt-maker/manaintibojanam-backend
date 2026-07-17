@@ -3,11 +3,13 @@ import { SoftButton } from '../primitives/SoftButton';
 import { CheckoutBillSummaryView } from './CheckoutBillSummaryView';
 import { CheckoutContactView } from './CheckoutContactView';
 import { CheckoutDeliveryAddressView } from './CheckoutDeliveryAddressView';
+import { CheckoutDeliverySlotView } from './CheckoutDeliverySlotView';
 import { TransactionalPageShell } from './TransactionalPageShell';
 import type {
   CheckoutBillSummaryViewModel,
   CheckoutContactViewModel,
   CheckoutDeliveryAddressViewModel,
+  CheckoutDeliverySlotViewModel,
 } from './types';
 
 export interface CheckoutPageViewProps {
@@ -15,6 +17,8 @@ export interface CheckoutPageViewProps {
   readonly subtitle: string;
   readonly address?: CheckoutDeliveryAddressViewModel;
   readonly onAddressAction?: () => void;
+  readonly deliverySlot?: CheckoutDeliverySlotViewModel;
+  readonly onDeliverySlotChange?: (slot: string) => void;
   readonly bill?: CheckoutBillSummaryViewModel;
   readonly quoteLoading: boolean;
   readonly billRefreshing?: boolean;
@@ -40,6 +44,8 @@ export function CheckoutPageView({
   subtitle,
   address,
   onAddressAction,
+  deliverySlot,
+  onDeliverySlotChange,
   bill,
   quoteLoading,
   billRefreshing = false,
@@ -73,6 +79,10 @@ export function CheckoutPageView({
           >
             <CheckoutDeliveryAddressView address={address} />
           </button>
+        ) : null}
+
+        {deliverySlot && onDeliverySlotChange ? (
+          <CheckoutDeliverySlotView slot={deliverySlot} onSelectSlot={onDeliverySlotChange} />
         ) : null}
 
         {quoteLoading && !bill ? (
