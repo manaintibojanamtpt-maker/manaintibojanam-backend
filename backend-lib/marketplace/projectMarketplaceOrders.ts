@@ -195,14 +195,23 @@ export interface OrderTrackingMeta {
 
 export function projectOrderSummary(orderId: string, data: OrderRecord, displayName: string) {
   const orderNumber = readOrderNumber(data);
+  const expiresAtRaw = data.expiresAt;
+  const expiresAt =
+    expiresAtRaw == null
+      ? undefined
+      : typeof expiresAtRaw === 'string'
+        ? expiresAtRaw
+        : readTimestamp(expiresAtRaw);
   return {
     orderId,
     orderNumber: formatOrderNumberLabel(orderNumber, orderId),
     restaurantId: String(data.tenantId ?? ''),
     displayName,
     status: String(data.status ?? 'PLACED'),
+    paymentStatus: String(data.paymentStatus ?? 'pending'),
     grandTotal: Number(data.totalAmount ?? data.total ?? 0),
     createdAt: readTimestamp(data.createdAt),
+    expiresAt,
   };
 }
 
@@ -249,10 +258,20 @@ export function projectOrderTracking(
         }
       : undefined;
 
+  const expiresAtRaw = data.expiresAt;
+  const expiresAt =
+    expiresAtRaw == null
+      ? undefined
+      : typeof expiresAtRaw === 'string'
+        ? expiresAtRaw
+        : readTimestamp(expiresAtRaw);
+
   return {
     orderId,
     orderNumber,
     status,
+    paymentStatus: String(data.paymentStatus ?? 'pending'),
+    expiresAt,
     timeline,
     etaMinutes: isTerminal
       ? undefined

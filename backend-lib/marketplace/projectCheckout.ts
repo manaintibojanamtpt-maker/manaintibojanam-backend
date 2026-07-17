@@ -6,6 +6,11 @@ import {
   DEFAULT_PREP_TIME_MINUTES,
   estimateDeliveryEtaMinutes,
 } from './etaEstimate.js';
+import {
+  buildUpiPayUrl,
+  isValidUpiId,
+  UPI_PAYMENT_EXPIRY_MS,
+} from './upiPayUrl.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -318,7 +323,16 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
 
 export type MarketplacePlaceResult =
   | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote }
-  | { kind: 'upi'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote; upiUrl: string }
+  | {
+      kind: 'upi';
+      orderId: string;
+      orderNumber: number;
+      tenantId: string;
+      quote: BillQuote;
+      upiUrl: string;
+      paymentStatus: 'pending';
+      expiresAt: string;
+    }
   | {
       kind: 'razorpay';
       draftId: string;
@@ -435,12 +449,14 @@ export async function placeMarketplaceOrder(
     const paymentConfig = (tenantRaw.paymentConfig ?? {}) as Record<string, unknown>;
     const providers = (paymentConfig.providers ?? {}) as Record<string, { upiId?: string; merchantName?: string }>;
     const upiId = providers.upi?.upiId;
-    if (!upiId) {
+    if (!upiId || !isValidUpiId(upiId)) {
       throw Object.assign(new Error('Direct UPI is not configured for this kitchen'), { statusCode: 400 });
     }
 
+    const expiresAt = new Date(Date.now() + UPI_PAYMENT_EXPIRY_MS).toISOString();
     const ref = await db.collection('orders').add({
       ...orderPayload,
+      expiresAt,
       createdAt: fieldValue.serverTimestamp(),
       updatedAt: fieldValue.serverTimestamp(),
     });
@@ -451,7 +467,13 @@ export async function placeMarketplaceOrder(
         : typeof tenantRaw.name === 'string'
           ? tenantRaw.name
           : 'Merchant';
-    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${quote.grandTotal}&tr=${encodeURIComponent(ref.id)}&cu=INR`;
+    const upiUrl = buildUpiPayUrl({
+      upiId,
+      merchantName,
+      amount: quote.grandTotal,
+      orderId: ref.id,
+      transactionNote: `OrderBhojan #${orderNumber}`,
+    });
 
     const batch = db.batch();
     for (const item of orderItems) {
@@ -463,7 +485,16 @@ export async function placeMarketplaceOrder(
     }
     await batch.commit().catch(() => undefined);
 
-    return { kind: 'upi', orderId: ref.id, orderNumber, tenantId, quote, upiUrl };
+    return {
+      kind: 'upi',
+      orderId: ref.id,
+      orderNumber,
+      tenantId,
+      quote,
+      upiUrl,
+      paymentStatus: 'pending',
+      expiresAt,
+    };
   }
 
   if (paymentMethod === 'razorpay') {

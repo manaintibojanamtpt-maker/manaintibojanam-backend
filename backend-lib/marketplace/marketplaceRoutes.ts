@@ -738,6 +738,9 @@ export function registerMarketplaceRoutes(
                 orderNumber: result.orderNumber,
                 paymentMethod: 'upi',
                 upiUrl: result.upiUrl,
+                paymentStatus: result.paymentStatus,
+                amount: result.quote.grandTotal,
+                expiresAt: result.expiresAt,
               }
             : {
                 orderId: result.orderId,
