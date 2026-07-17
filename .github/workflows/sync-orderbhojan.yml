@@ -11,6 +11,7 @@ on:
       - 'src/**'
       - 'scripts/sync-orderbhojan-repo.mjs'
       - 'scripts/e2e/**'
+      - '.github/workflows/sync-orderbhojan.yml'
   workflow_dispatch:
 
 concurrency:
