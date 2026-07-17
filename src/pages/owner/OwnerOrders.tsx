@@ -615,8 +615,7 @@ const OwnerOrders: React.FC = () => {
                 <p className="text-white/50 mt-1">When customers place orders, they will appear here.</p>
               </div>
             )}
-          </div>
-            
+
             {orders.length > 0 && hasMore && (
               <div className="flex justify-center mt-6">
                 <button
