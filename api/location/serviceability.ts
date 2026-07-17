@@ -25,6 +25,7 @@ export async function handleLocationServiceability(
         maxRadius?: number;
         baseFee?: number;
         perKmCharge?: number;
+        prepTime?: number;
       };
     };
 
