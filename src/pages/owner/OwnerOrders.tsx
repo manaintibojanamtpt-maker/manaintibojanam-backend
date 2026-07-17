@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
-import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle, CalendarClock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
@@ -18,6 +18,11 @@ import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
 import { OwnerOrderPrepTimer } from '../../lib/ownerOrderPrepTimer';
+import {
+  formatOwnerScheduleSlotLabel,
+  resolveOwnerDeliveryType,
+  splitOwnerOrdersBySchedule,
+} from '../../lib/ownerOrderQueue';
 
 interface Order extends OwnerOrder {}
 
@@ -42,6 +47,7 @@ const OwnerOrders: React.FC = () => {
     notifyCustomer: true
   });
   const remindedDeliveriesRef = useRef<Set<string>>(new Set());
+  const prepAlertCacheRef = useRef<Set<string>>(new Set());
   const ordersErrorToastRef = useRef(false);
 
   // Quick Stock Modal State
@@ -104,6 +110,30 @@ const OwnerOrders: React.FC = () => {
       );
     });
   }, [orders]);
+
+  useEffect(() => {
+    for (const order of orders) {
+      if (
+        resolveOwnerDeliveryType(order) === 'scheduled' &&
+        order.status === OrderStatus.PREPARING &&
+        !prepAlertCacheRef.current.has(order.id)
+      ) {
+        prepAlertCacheRef.current.add(order.id);
+        const displayNumber = order.orderNumber
+          ? String(order.orderNumber)
+          : order.id.slice(-6).toUpperCase();
+        toast(`Time to prepare scheduled order #${displayNumber}!`, {
+          duration: 8000,
+          icon: '⏰',
+        });
+      }
+    }
+  }, [orders]);
+
+  const { activeOrders, scheduledOrders } = useMemo(
+    () => splitOwnerOrdersBySchedule(orders),
+    [orders],
+  );
 
   const loadMoreOrders = () => {
     setOrderLimit(prev => prev + 50);
@@ -190,6 +220,270 @@ const OwnerOrders: React.FC = () => {
 
   const pendingOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'CREATED' || o.status === 'PLACED');
 
+  const renderOrderCard = (order: Order, orderIndex: number, section: 'active' | 'scheduled') => {
+    const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
+    const displayOrderNumber = order.orderNumber
+      ? String(order.orderNumber)
+      : orderKey.slice(-6).toUpperCase();
+    const lineItems = Array.isArray(order.items) ? order.items : [];
+    const deliveryPartnerName = deliveryPartnerLabel(order.deliveryPartner);
+    const orderStatus = safeText(order.status, 'UNKNOWN');
+    const customerName = safeText(order.customerName, 'Guest Customer');
+    const customerPhone = safeText(order.customerPhone || order.phone, 'Phone unavailable');
+    const customerAddress = safeText(
+      order.deliveryAddress?.addressLine1 || order.address,
+      'No address provided',
+    );
+    const riderName = safeText(order.riderName, 'Assigned');
+    const riderPhone = safeText(order.riderPhone);
+    const orderTotal = safeNumber(order.totalAmount, 0);
+    const isScheduledOrder = resolveOwnerDeliveryType(order) === 'scheduled';
+    const scheduleLabel = isScheduledOrder ? formatOwnerScheduleSlotLabel(order) : null;
+    const scheduledAt = coerceOwnerOrderDate(order.scheduledFor ?? order.scheduledTime);
+    const showPrepWindowAlert =
+      section === 'active' &&
+      isScheduledOrder &&
+      orderStatus !== 'PREPARING' &&
+      !['DELIVERED', 'CANCELLED', 'REJECTED', 'OUT_FOR_DELIVERY'].includes(orderStatus);
+
+    return (
+      <m.div
+        key={orderKey}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className={`bg-[#0f0f11] rounded-2xl border p-4 sm:p-6 ${
+          isScheduledOrder && section === 'active'
+            ? 'border-amber-500/30'
+            : isScheduledOrder
+              ? 'border-blue-500/20'
+              : 'border-white/10'
+        }`}
+      >
+        <div className="flex flex-col xl:flex-row xl:justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+              <span className="text-sm font-mono text-white/40">#{displayOrderNumber}</span>
+              <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
+                ${orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                ${orderStatus === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                ${orderStatus === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
+                ${orderStatus === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                ${orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                ${orderStatus === 'REJECTED' || orderStatus === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
+              `}>
+                {orderStatus}
+              </span>
+              {isScheduledOrder && scheduleLabel && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/25">
+                  <CalendarClock className="w-3 h-3" />
+                  {scheduleLabel}
+                </span>
+              )}
+              {!isScheduledOrder && (
+                <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  ASAP
+                </span>
+              )}
+              <span className="text-sm text-gray-400 flex items-center">
+                <Clock className="w-3 h-3 mr-1" />
+                {formatOrderTime(order.createdAt)}
+              </span>
+              <OwnerOrderPrepTimer order={order} />
+            </div>
+
+            {showPrepWindowAlert && (
+              <div className="mb-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  Prep window open — start preparing for{' '}
+                  {scheduledAt
+                    ? scheduledAt.toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })
+                    : scheduleLabel}
+                  .
+                </span>
+              </div>
+            )}
+
+            <h3 className="text-lg font-semibold text-white">{customerName}</h3>
+            <p className="text-sm text-white/50 mt-1 break-words">
+              {customerPhone} • {customerAddress}
+            </p>
+
+            {orderStatus === 'OUT_FOR_DELIVERY' && (
+              <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Truck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white">
+                      {deliveryPartnerName || 'Delivery'} • Out for delivery
+                    </p>
+                    {(riderName || riderPhone) && (
+                      <p className="text-xs text-white/50 mt-1">
+                        Rider: {riderName}{riderPhone ? ` • ${riderPhone}` : ''}
+                      </p>
+                    )}
+                    {isThirdPartyDeliveryPartner(order.deliveryPartner) && (
+                      <p className="text-xs text-amber-300/90 mt-2 flex items-start gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        Partner apps (Rapido/Uber/Porter/Dunzo/Shadowfox) do not auto-update BhojanOS. Confirm in their app, then mark delivered here.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {getTrackingUrl(order) && (
+                    <a
+                      href={getTrackingUrl(order)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Open tracking
+                    </a>
+                  )}
+                  {riderPhone && (
+                    <a
+                      href={`tel:${riderPhone}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white/5 text-blue-300 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" /> Call rider
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(orderStatus) && phoneDigits(order.customerPhone || order.phone) && (
+              <div className="flex items-center gap-3 mt-3">
+                <a
+                  href={`tel:${phoneDigits(order.customerPhone || order.phone)}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/15 transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5" /> Call Customer
+                </a>
+                <a
+                  href={`https://wa.me/${phoneDigits(order.customerPhone || order.phone)}?text=Hi%20${encodeURIComponent(customerName)}!%20This%20is%20regarding%20your%20recent%20order%20%23${displayOrderNumber}.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                </a>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full xl:w-[340px] shrink-0 flex flex-col gap-4">
+            <div className="w-full bg-black/30 rounded-xl p-4 border border-white/10 space-y-3">
+              <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest">Order Items</h4>
+              {lineItems.map((item: any, idx: number) => {
+                const itemQty = safeNumber(item.quantity, 1);
+                const itemName = safeText(item.name, 'Item');
+                const itemNote = safeText(item.specialInstructions);
+                const unitPrice = safeNumber(item.unitPrice ?? item.price, 0);
+                return (
+                  <div key={idx} className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-[#FF6B00]">{itemQty}x</span>
+                        <span className="font-medium text-white break-words">{itemName}</span>
+                      </div>
+                      {itemNote && (
+                        <p className="text-sm text-yellow-500/80 mt-1">Note: {itemNote}</p>
+                      )}
+                    </div>
+                    <span className="text-white/70 shrink-0">₹{unitPrice * itemQty}</span>
+                  </div>
+                );
+              })}
+              <div className="pt-3 border-t border-white/10 flex justify-between items-center">
+                <span className="text-sm font-semibold text-white/60">Total</span>
+                <span className="text-lg font-bold text-white">₹{orderTotal}</span>
+              </div>
+            </div>
+
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              {isSuspended ? (
+                <div className="text-sm text-red-500 font-medium px-3 py-1.5 border border-red-200 bg-red-50 rounded-md">
+                  Action Disabled (Trial Expired)
+                </div>
+              ) : (
+                <>
+                  {(orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED') && (
+                    <>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
+                        disabled={updatingOrderId === order.id}
+                        className="flex items-center justify-center px-4 py-3 sm:py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'REJECTED')}
+                        disabled={updatingOrderId === order.id}
+                        className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" /> Reject
+                      </button>
+                    </>
+                  )}
+
+                  {orderStatus === 'ACCEPTED' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'PREPARING')}
+                      disabled={updatingOrderId === order.id}
+                      className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <ChefHat className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Preparing'}
+                    </button>
+                  )}
+
+                  {orderStatus === 'PREPARING' && (
+                    <button
+                      onClick={() => {
+                        setDispatchOrder(order.id);
+                        setDispatchModalOpen(true);
+                      }}
+                      className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Truck className="w-4 h-4 mr-2" /> Dispatch Order
+                    </button>
+                  )}
+
+                  {orderStatus === 'OUT_FOR_DELIVERY' && (
+                    <>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
+                        disabled={updatingOrderId === order.id}
+                        className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Delivered'}
+                      </button>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'FAILED_DELIVERY')}
+                        disabled={updatingOrderId === order.id}
+                        className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+                      >
+                        <PackageX className="w-4 h-4 mr-2" /> Delivery failed / returned
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </m.div>
+    );
+  };
+
   const trialEndsAt = parseTrialDate(
     tenantInfo?.subscription?.trialExpiresAt || tenantInfo?.trialEndsAt
   );
@@ -267,240 +561,61 @@ const OwnerOrders: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
           </div>
         ) : (
-          <div className="grid gap-4 sm:gap-6">
-            <AnimatePresence>
-              {orders.map((order, orderIndex) => {
-                const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
-                const displayOrderNumber = order.orderNumber
-                  ? String(order.orderNumber)
-                  : orderKey.slice(-6).toUpperCase();
-                const lineItems = Array.isArray(order.items) ? order.items : [];
-                const deliveryPartnerName = deliveryPartnerLabel(order.deliveryPartner);
-                const orderStatus = safeText(order.status, 'UNKNOWN');
-                const customerName = safeText(order.customerName, 'Guest Customer');
-                const customerPhone = safeText(order.customerPhone || order.phone, 'Phone unavailable');
-                const customerAddress = safeText(
-                  order.deliveryAddress?.addressLine1 || order.address,
-                  'No address provided',
-                );
-                const riderName = safeText(order.riderName, 'Assigned');
-                const riderPhone = safeText(order.riderPhone);
-                const orderTotal = safeNumber(order.totalAmount, 0);
-
-                return (
-                <m.div
-                  key={orderKey}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-[#0f0f11] rounded-2xl border border-white/10 p-4 sm:p-6"
-                >
-                  <div className="flex flex-col xl:flex-row xl:justify-between gap-6">
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                        <span className="text-sm font-mono text-white/40">#{displayOrderNumber}</span>
-                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
-                          ${orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
-                          ${orderStatus === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                          ${orderStatus === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
-                          ${orderStatus === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                          ${orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
-                          ${orderStatus === 'REJECTED' || orderStatus === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
-                        `}>
-                          {orderStatus}
-                        </span>
-                        <span className="text-sm text-gray-400 flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {formatOrderTime(order.createdAt)}
-                        </span>
-                        <OwnerOrderPrepTimer order={order} />
-                      </div>
-                      
-                      <h3 className="text-lg font-semibold text-white">
-                        {customerName}
-                      </h3>
-                      <p className="text-sm text-white/50 mt-1 break-words">
-                        {customerPhone} • {customerAddress}
-                      </p>
-
-                      {orderStatus === 'OUT_FOR_DELIVERY' && (
-                        <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
-                          <div className="flex items-start gap-2">
-                            <Truck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-white">
-                                {deliveryPartnerName || 'Delivery'} • Out for delivery
-                              </p>
-                              {(riderName || riderPhone) && (
-                                <p className="text-xs text-white/50 mt-1">
-                                  Rider: {riderName}{riderPhone ? ` • ${riderPhone}` : ''}
-                                </p>
-                              )}
-                              {isThirdPartyDeliveryPartner(order.deliveryPartner) && (
-                                <p className="text-xs text-amber-300/90 mt-2 flex items-start gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                  Partner apps (Rapido/Uber/Porter/Dunzo/Shadowfox) do not auto-update BhojanOS. Confirm in their app, then mark delivered here.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {getTrackingUrl(order) && (
-                              <a
-                                href={getTrackingUrl(order)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" /> Open tracking
-                              </a>
-                            )}
-                            {riderPhone && (
-                              <a
-                                href={`tel:${riderPhone}`}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white/5 text-blue-300 border border-white/10 hover:bg-white/10 transition-colors"
-                              >
-                                <Phone className="w-3.5 h-3.5" /> Call rider
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* LIVE SUPPORT CONTACT BUTTONS */}
-                      {!['DELIVERED', 'CANCELLED', 'REJECTED'].includes(orderStatus) && phoneDigits(order.customerPhone || order.phone) && (
-                        <div className="flex items-center gap-3 mt-3">
-                          <a 
-                            href={`tel:${phoneDigits(order.customerPhone || order.phone)}`} 
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/15 transition-colors"
-                          >
-                            <Phone className="w-3.5 h-3.5" /> Call Customer
-                          </a>
-                          <a 
-                            href={`https://wa.me/${phoneDigits(order.customerPhone || order.phone)}?text=Hi%20${encodeURIComponent(customerName)}!%20This%20is%20regarding%20your%20recent%20order%20%23${displayOrderNumber}.`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/15 transition-colors"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="w-full xl:w-[340px] shrink-0 flex flex-col gap-4">
-                      <div className="w-full bg-black/30 rounded-xl p-4 border border-white/10 space-y-3">
-                        <h4 className="text-sm font-bold text-white/50 uppercase tracking-widest">Order Items</h4>
-                        {lineItems.map((item: any, idx: number) => {
-                          const itemQty = safeNumber(item.quantity, 1);
-                          const itemName = safeText(item.name, 'Item');
-                          const itemNote = safeText(item.specialInstructions);
-                          const unitPrice = safeNumber(item.unitPrice ?? item.price, 0);
-                          return (
-                          <div key={idx} className="flex justify-between items-start gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-[#FF6B00]">{itemQty}x</span>
-                                <span className="font-medium text-white break-words">{itemName}</span>
-                              </div>
-                              {itemNote && (
-                                <p className="text-sm text-yellow-500/80 mt-1">Note: {itemNote}</p>
-                              )}
-                            </div>
-                            <span className="text-white/70 shrink-0">₹{unitPrice * itemQty}</span>
-                          </div>
-                          );
-                        })}
-                        <div className="pt-3 border-t border-white/10 flex justify-between items-center">
-                          <span className="text-sm font-semibold text-white/60">Total</span>
-                          <span className="text-lg font-bold text-white">₹{orderTotal}</span>
-                        </div>
-                      </div>
-
-                      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                        {isSuspended ? (
-                          <div className="text-sm text-red-500 font-medium px-3 py-1.5 border border-red-200 bg-red-50 rounded-md">
-                            Action Disabled (Trial Expired)
-                          </div>
-                        ) : (
-                          <>
-                            {(orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED') && (
-                              <>
-                                <button 
-                                  onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
-                                  disabled={updatingOrderId === order.id}
-                                  className="flex items-center justify-center px-4 py-3 sm:py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Accept'}
-                                </button>
-                                <button 
-                                  onClick={() => updateOrderStatus(order.id, 'REJECTED')}
-                                  disabled={updatingOrderId === order.id}
-                                  className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" /> Reject
-                                </button>
-                              </>
-                            )}
-                            
-                            {orderStatus === 'ACCEPTED' && (
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'PREPARING')}
-                                disabled={updatingOrderId === order.id}
-                                className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                              >
-                                <ChefHat className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Preparing'}
-                              </button>
-                            )}
-
-                            {orderStatus === 'PREPARING' && (
-                              <button 
-                                onClick={() => {
-                                  setDispatchOrder(order.id);
-                                  setDispatchModalOpen(true);
-                                }}
-                                className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                              >
-                                <Truck className="w-4 h-4 mr-2" /> Dispatch Order
-                              </button>
-                            )}
-
-                            {orderStatus === 'OUT_FOR_DELIVERY' && (
-                              <>
-                                <button 
-                                  onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                                  disabled={updatingOrderId === order.id}
-                                  className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Delivered'}
-                                </button>
-                                <button
-                                  onClick={() => updateOrderStatus(order.id, 'FAILED_DELIVERY')}
-                                  disabled={updatingOrderId === order.id}
-                                  className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
-                                >
-                                  <PackageX className="w-4 h-4 mr-2" /> Delivery failed / returned
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </m.div>
-                );
-              })}
-              
-              {orders.length === 0 && (
-                <div className="text-center py-16 sm:py-20 px-4 bg-[#0f0f11] rounded-2xl border border-white/10">
-                  <Bell className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white">No orders yet</h3>
-                  <p className="text-white/50 mt-1">When customers place orders, they will appear here.</p>
+          <div className="space-y-8 sm:space-y-10">
+            <section>
+              <div className="flex items-center gap-3 mb-4 sm:mb-5">
+                <div className="w-2 h-8 bg-red-500 rounded-full" />
+                <h2 className="text-lg sm:text-xl font-bold text-white">Active Queue</h2>
+                <span className="px-2.5 py-1 bg-red-500/15 text-red-300 rounded-full text-xs font-semibold border border-red-500/20">
+                  {activeOrders.length}
+                </span>
+              </div>
+              <p className="text-sm text-white/45 mb-4">ASAP orders and scheduled orders within the 60-minute prep window.</p>
+              <AnimatePresence>
+                <div className="grid gap-4 sm:gap-6">
+                  {activeOrders.map((order, orderIndex) => renderOrderCard(order, orderIndex, 'active'))}
+                </div>
+              </AnimatePresence>
+              {activeOrders.length === 0 && (
+                <div className="text-center py-12 sm:py-16 px-4 bg-[#0f0f11] rounded-2xl border border-dashed border-white/10">
+                  <Bell className="w-10 h-10 text-white/20 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-white">No active orders</h3>
+                  <p className="text-white/50 mt-1 text-sm">New ASAP orders and scheduled prep-window orders will show here.</p>
                 </div>
               )}
-            </AnimatePresence>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-3 mb-4 sm:mb-5">
+                <div className="w-2 h-8 bg-blue-500 rounded-full" />
+                <h2 className="text-lg sm:text-xl font-bold text-white">Scheduled Orders</h2>
+                <span className="px-2.5 py-1 bg-blue-500/15 text-blue-300 rounded-full text-xs font-semibold border border-blue-500/20">
+                  {scheduledOrders.length}
+                </span>
+              </div>
+              <p className="text-sm text-white/45 mb-4">Future slots move to Active Queue about 60 minutes before delivery time.</p>
+              <AnimatePresence>
+                <div className="grid gap-4 sm:gap-6">
+                  {scheduledOrders.map((order, orderIndex) => renderOrderCard(order, orderIndex, 'scheduled'))}
+                </div>
+              </AnimatePresence>
+              {scheduledOrders.length === 0 && (
+                <div className="text-center py-12 sm:py-16 px-4 bg-[#0f0f11] rounded-2xl border border-dashed border-white/10">
+                  <CalendarClock className="w-10 h-10 text-white/20 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-white">No scheduled orders</h3>
+                  <p className="text-white/50 mt-1 text-sm">Orders scheduled for later will appear here until prep time.</p>
+                </div>
+              )}
+            </section>
+
+            {orders.length === 0 && (
+              <div className="text-center py-16 sm:py-20 px-4 bg-[#0f0f11] rounded-2xl border border-white/10">
+                <Bell className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white">No orders yet</h3>
+                <p className="text-white/50 mt-1">When customers place orders, they will appear here.</p>
+              </div>
+            )}
+          </div>
             
             {orders.length > 0 && hasMore && (
               <div className="flex justify-center mt-6">

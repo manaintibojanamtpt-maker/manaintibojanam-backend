@@ -29,6 +29,10 @@ export interface OwnerOrderSnapshot {
   tenantId?: string;
   timeline?: unknown;
   statusHistory?: unknown;
+  deliveryType?: string;
+  scheduledFor?: unknown;
+  scheduledTime?: unknown;
+  deliveryTimeSlot?: string;
 }
 
 function normalizeLineItems(rawItems: unknown, modelItems: OrderReadModel['items']): unknown[] {
@@ -145,6 +149,11 @@ export const readModelToOwnerOrder = (
   deliveryAssignedAt: safeText(raw?.deliveryAssignedAt, undefined) || undefined,
   timeline: raw?.timeline,
   statusHistory: raw?.statusHistory,
+  deliveryType: safeText(raw?.deliveryType ?? model.deliveryType, undefined) || undefined,
+  scheduledFor: raw?.scheduledFor ?? model.scheduledFor,
+  scheduledTime: raw?.scheduledTime ?? model.scheduledTime,
+  deliveryTimeSlot:
+    safeText(raw?.deliveryTimeSlot ?? model.deliveryTimeSlot, undefined) || undefined,
 });
 
 export const apiRecordToOwnerOrder = (record: ApiOrderRecord): OwnerOrderSnapshot =>

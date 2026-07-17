@@ -31,6 +31,9 @@ const ownerOrderRecord = {
   deliveryAddress: { addressLine1: '12 MG Road', city: 'Hyderabad' },
   deliveryAssignedAt: '2026-06-26T11:15:00.000Z',
   timeline: [{ id: 'evt-1', eventType: 'status_change' }],
+  deliveryType: 'scheduled',
+  scheduledFor: '2026-07-18T19:00:00.000Z',
+  deliveryTimeSlot: 'Today, 7:00 PM - 8:00 PM',
 };
 
 const createOwnerMockPort = (overrides: Partial<OrderApiPort> = {}): OrderApiPort => ({
@@ -58,6 +61,9 @@ describe('Owner Orders SDK read parity (M1B PR-1)', () => {
     assert.equal(ownerOrder.deliveryAddress?.addressLine1, '12 MG Road');
     assert.equal(ownerOrder.deliveryAssignedAt, '2026-06-26T11:15:00.000Z');
     assert.ok(ownerOrder.timeline);
+    assert.equal(ownerOrder.deliveryType, 'scheduled');
+    assert.equal(ownerOrder.deliveryTimeSlot, 'Today, 7:00 PM - 8:00 PM');
+    assert.equal(ownerOrder.scheduledFor, '2026-07-18T19:00:00.000Z');
   });
 
   it('listOrdersForTenant filters by tenant and applies limit', async () => {
