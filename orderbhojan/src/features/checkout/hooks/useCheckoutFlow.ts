@@ -1,10 +1,14 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { cartItemCount, useCartStore } from '@/features/cart/store/cartStore';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
+import {
+  fetchOrderPaymentSnapshot,
+  pollUpiPaymentStatus,
+} from '../infrastructure/upiCheckout';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
 import { useAuth } from '@/shared/providers/AuthProvider';
@@ -23,6 +27,18 @@ export interface CheckoutPlaceResponse {
   readonly orderNumber?: number | string;
   readonly upiUrl?: string;
   readonly paymentMethod?: string;
+  readonly paymentStatus?: string;
+  readonly amount?: number;
+  readonly expiresAt?: string;
+}
+
+export interface UpiPaymentSession {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly upiUrl: string;
+  readonly amount: number;
+  readonly expiresAt?: string;
+  readonly phone: string;
 }
 
 export interface PlacedOrderConfirmation {
@@ -44,6 +60,7 @@ export type CheckoutFlowStatus =
   | 'quoting'
   | 'preparing'
   | 'placing'
+  | 'awaiting_payment'
   | 'success'
   | 'error';
 
@@ -54,6 +71,9 @@ export interface CheckoutFlowState {
   readonly error: string | null;
   readonly orderId: string | null;
   readonly orderNumber: string | null;
+  readonly upiSession: UpiPaymentSession | null;
+  readonly upiVerifying: boolean;
+  readonly upiPollMessage: string | null;
   readonly itemCount: number;
   readonly canCheckout: boolean;
   readonly placingMethod: 'cod' | 'razorpay' | 'upi' | null;
@@ -62,6 +82,7 @@ export interface CheckoutFlowState {
   placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   placeRazorpayOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   placeUpiOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
+  checkUpiPayment: () => Promise<void>;
   reset: () => void;
 }
 
@@ -77,12 +98,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
   const coords = activeLocation?.coordinates;
 
-  const [placeStatus, setPlaceStatus] = useState<'idle' | 'placing' | 'success' | 'error'>('idle');
+  const [placeStatus, setPlaceStatus] = useState<
+    'idle' | 'placing' | 'awaiting_payment' | 'success' | 'error'
+  >('idle');
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [upiSession, setUpiSession] = useState<UpiPaymentSession | null>(null);
+  const [upiVerifying, setUpiVerifying] = useState(false);
+  const [upiPollMessage, setUpiPollMessage] = useState<string | null>(null);
   const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
   const placeInFlightRef = useRef(false);
+  const upiPollAbortRef = useRef<AbortController | null>(null);
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
@@ -141,6 +168,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const status: CheckoutFlowStatus = useMemo(() => {
     if (placeStatus === 'placing') return 'placing';
+    if (placeStatus === 'awaiting_payment') return 'awaiting_payment';
     if (placeStatus === 'success') return 'success';
     if (placeStatus === 'error') return 'error';
     if (prepareQuery.isFetching && !prepareQuery.data) return 'preparing';
@@ -271,6 +299,90 @@ export function useCheckoutFlow(): CheckoutFlowState {
     [getPayload, sessionUser],
   );
 
+  const finalizeUpiPaymentSuccess = useCallback((placed: PlacedOrderConfirmation) => {
+    upiPollAbortRef.current?.abort();
+    upiPollAbortRef.current = null;
+    setUpiSession(null);
+    setUpiVerifying(false);
+    setUpiPollMessage(null);
+    setOrderId(placed.orderId);
+    setOrderNumber(placed.orderNumber);
+    setPlaceStatus('success');
+    markPerf('pay_next_step', 'upi-success');
+    useCartStore.getState().clear();
+  }, []);
+
+  const runUpiVerification = useCallback(
+    async (session: UpiPaymentSession, options?: { immediate?: boolean }) => {
+      upiPollAbortRef.current?.abort();
+      const controller = new AbortController();
+      upiPollAbortRef.current = controller;
+      setUpiVerifying(true);
+      setPlaceError(null);
+      setUpiPollMessage(
+        options?.immediate
+          ? 'Checking payment status…'
+          : 'Waiting for payment confirmation…',
+      );
+
+      try {
+        if (options?.immediate) {
+          const snapshot = await fetchOrderPaymentSnapshot({
+            orderId: session.orderId,
+            phone: session.phone,
+            isAuthenticated: Boolean(sessionUser?.uid),
+          });
+          if (['success', 'verified', 'paid'].includes(snapshot.paymentStatus.toLowerCase())) {
+            finalizeUpiPaymentSuccess({
+              orderId: session.orderId,
+              orderNumber: session.orderNumber,
+            });
+            return;
+          }
+          if (['expired', 'failed'].includes(snapshot.paymentStatus.toLowerCase())) {
+            throw new Error('Payment expired or failed. Please place a new order.');
+          }
+        }
+
+        const result = await pollUpiPaymentStatus({
+          orderId: session.orderId,
+          phone: session.phone,
+          isAuthenticated: Boolean(sessionUser?.uid),
+          signal: controller.signal,
+          onTick: () => {
+            setUpiPollMessage('Waiting for payment confirmation…');
+          },
+        });
+
+        if (result === 'verified') {
+          finalizeUpiPaymentSuccess({
+            orderId: session.orderId,
+            orderNumber: session.orderNumber,
+          });
+          return;
+        }
+
+        if (result === 'expired') {
+          throw new Error('Payment window expired before confirmation. Please place a new order.');
+        }
+
+        setUpiPollMessage(
+          'Payment not confirmed yet. Complete UPI payment on your phone, then tap “I have paid”.',
+        );
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setPlaceError(err instanceof Error ? err.message : 'Unable to verify UPI payment');
+        setUpiPollMessage(null);
+      } finally {
+        if (upiPollAbortRef.current === controller) {
+          upiPollAbortRef.current = null;
+        }
+        setUpiVerifying(false);
+      }
+    },
+    [finalizeUpiPaymentSuccess, sessionUser?.uid],
+  );
+
   const placeUpiOrder = useCallback(
     async (phone: string, customerName?: string) => {
       if (placeInFlightRef.current) return null;
@@ -279,6 +391,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlacingMethod('upi');
       setPlaceStatus('placing');
       setPlaceError(null);
+      setUpiPollMessage(null);
       try {
         const payload = {
           ...getPayload(),
@@ -295,34 +408,81 @@ export function useCheckoutFlow(): CheckoutFlowState {
         if (!placed) {
           throw new Error('Order confirmation is missing an order id');
         }
-        if (response.upiUrl && typeof window !== 'undefined') {
-          window.location.href = response.upiUrl;
+        if (!response.upiUrl) {
+          throw new Error('UPI payment link is missing from the server response');
         }
+        if (response.paymentStatus && response.paymentStatus !== 'pending') {
+          throw new Error('Unexpected payment state from server');
+        }
+
+        const session: UpiPaymentSession = {
+          orderId: placed.orderId,
+          orderNumber: placed.orderNumber,
+          upiUrl: response.upiUrl,
+          amount: Number(response.amount ?? quote?.grandTotal ?? 0),
+          expiresAt: response.expiresAt,
+          phone: phone.trim(),
+        };
+
+        useCartStore.getState().clear();
         setOrderId(placed.orderId);
         setOrderNumber(placed.orderNumber);
-        setPlaceStatus('success');
-        markPerf('pay_next_step', 'upi-success');
-        useCartStore.getState().clear();
+        setUpiSession(session);
+        setPlaceStatus('awaiting_payment');
+        markPerf('pay_next_step', 'upi-pending');
+        void runUpiVerification(session);
         return placed;
       } catch (err) {
         setPlaceStatus('error');
-        setPlaceError(err instanceof Error ? err.message : 'Unable to place UPI order');
+        setPlaceError(err instanceof Error ? err.message : 'Unable to start UPI payment');
         return null;
       } finally {
         placeInFlightRef.current = false;
         setPlacingMethod(null);
       }
     },
-    [getPayload, sessionUser],
+    [getPayload, quote?.grandTotal, runUpiVerification, sessionUser],
+  );
+
+  const checkUpiPayment = useCallback(async () => {
+    if (!upiSession) return;
+    await runUpiVerification(upiSession, { immediate: true });
+  }, [runUpiVerification, upiSession]);
+
+  useEffect(() => {
+    if (placeStatus !== 'awaiting_payment' || !upiSession) return;
+
+    const resumePolling = () => {
+      if (document.visibilityState === 'visible' && !upiVerifying) {
+        void runUpiVerification(upiSession, { immediate: true });
+      }
+    };
+
+    document.addEventListener('visibilitychange', resumePolling);
+    return () => {
+      document.removeEventListener('visibilitychange', resumePolling);
+    };
+  }, [placeStatus, runUpiVerification, upiSession, upiVerifying]);
+
+  useEffect(
+    () => () => {
+      upiPollAbortRef.current?.abort();
+    },
+    [],
   );
 
   const reset = useCallback(() => {
+    upiPollAbortRef.current?.abort();
+    upiPollAbortRef.current = null;
     placeInFlightRef.current = false;
     setPlacingMethod(null);
     setPlaceStatus('idle');
     setPlaceError(null);
     setOrderId(null);
     setOrderNumber(null);
+    setUpiSession(null);
+    setUpiVerifying(false);
+    setUpiPollMessage(null);
     if (prepareSignature) {
       void queryClient.removeQueries({ queryKey: checkoutKeys.prepare(prepareSignature) });
     }
@@ -335,6 +495,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
     error,
     orderId,
     orderNumber,
+    upiSession,
+    upiVerifying,
+    upiPollMessage,
     itemCount,
     canCheckout,
     placingMethod,
@@ -343,6 +506,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     placeCodOrder,
     placeRazorpayOrder,
     placeUpiOrder,
+    checkUpiPayment,
     reset,
   };
 }
