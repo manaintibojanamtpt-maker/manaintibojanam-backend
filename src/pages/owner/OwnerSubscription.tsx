@@ -17,6 +17,7 @@ import {
   ownerPlanRequiresPayment,
   isOwnerPlanActionable,
   isGrowthTrialExpired,
+  isProTrialExpired,
 } from '../../lib/planStatus';
 import { upgradeOwnerSubscriptionPlan } from '../../lib/ownerSubscriptionApi';
 import { runOwnerSubscriptionPayment } from '../../lib/ownerSubscriptionPayment';
@@ -57,6 +58,10 @@ const OwnerSubscription = () => {
   const currentPlan = getPlanById(effectivePlanId) || FREE_PLAN;
 
   const getOwnerPlanActionLabelWithEnterprise = (plan: (typeof PAID_PLANS)[number]) => {
+    if (effectivePlanId === 'enterprise') {
+      if (plan.id === 'enterprise') return 'Current plan';
+      return copy.contactSales;
+    }
     if (plan.id === 'enterprise' && !canActivate) return copy.contactSales;
     return getOwnerPlanActionLabel(plan.id, plan.name, plan.ownerCta, tenantInfo);
   };
@@ -82,9 +87,8 @@ const OwnerSubscription = () => {
     }
 
     setLoadingPlan(planId);
+    const tenantDocId = tenantInfo.id || tenantInfo.slug;
     try {
-      const tenantDocId = tenantInfo.id || tenantInfo.slug;
-
       if (ownerPlanRequiresPayment(tenantInfo, planId)) {
         await runOwnerSubscriptionPayment({
           tenantId: tenantDocId,
@@ -117,6 +121,25 @@ const OwnerSubscription = () => {
         toast.success(copy.upgradeSuccess);
       }
     } catch (err: unknown) {
+      const apiErr = err as Error & { status?: number };
+      if (apiErr.status === 402 || ownerPlanRequiresPayment(tenantInfo, planId)) {
+        try {
+          await runOwnerSubscriptionPayment({
+            tenantId: tenantDocId,
+            planId,
+            customerName: currentUser?.displayName || tenantInfo.name,
+            customerEmail: currentUser?.email || tenantInfo.contact?.email,
+            customerPhone: tenantInfo.kyc?.mobileNumber || tenantInfo.contact?.phone,
+          });
+          await refreshTenant();
+          toast.success(`${plan.name} activated. ${copy.upgradeSuccess}`);
+          return;
+        } catch (paymentErr: unknown) {
+          const message = paymentErr instanceof Error ? paymentErr.message : 'Payment failed.';
+          toast.error(message);
+          return;
+        }
+      }
       const message = err instanceof Error ? err.message : 'Failed to update plan.';
       toast.error(message);
     } finally {
@@ -148,9 +171,14 @@ const OwnerSubscription = () => {
                 : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
             </p>
           )}
-          {isGrowthTrialExpired(tenantInfo) && (
+          {isGrowthTrialExpired(tenantInfo) && effectivePlanId === 'growth' && (
             <p className="text-sm text-rose-400 mt-1">
               Your Growth trial has expired. Pay ₹999/mo below to keep accepting live orders.
+            </p>
+          )}
+          {isProTrialExpired(tenantInfo) && effectivePlanId === 'pro' && (
+            <p className="text-sm text-rose-400 mt-1">
+              Your Pro trial has expired. Pay ₹2,999/mo below to keep Pro features active.
             </p>
           )}
           {effectivePlanId === 'starter' && (
@@ -184,12 +212,13 @@ const OwnerSubscription = () => {
               isCurrent={effectivePlanId === plan.id}
               loading={loadingPlan === plan.id}
               disabled={
+                effectivePlanId === 'enterprise' ||
                 (!canActivate && plan.id !== 'enterprise') ||
                 !isOwnerPlanActionable(tenantInfo, plan.id)
               }
               onSelect={() => {
                 if (plan.id === effectivePlanId) return;
-                if (plan.id === 'enterprise' && !canActivate) {
+                if (effectivePlanId === 'enterprise' || (plan.id === 'enterprise' && !canActivate)) {
                   navigate('/contact');
                   return;
                 }

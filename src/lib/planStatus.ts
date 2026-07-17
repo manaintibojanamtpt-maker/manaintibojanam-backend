@@ -47,6 +47,14 @@ export function isGrowthTrialExpired(tenant: TenantPlanSnapshot | null | undefin
   return !isTrialCurrentlyActive(tenant) && tenant.subscription?.status === 'trialing';
 }
 
+export function isProTrialExpired(tenant: TenantPlanSnapshot | null | undefined): boolean {
+  if (!tenant?.subscription?.trialExpiresAt) return false;
+  const planId = tenant.subscription?.planId || 'starter';
+  if (planId !== 'pro') return false;
+  if (tenant.subscription?.trialType && tenant.subscription.trialType !== 'pro') return false;
+  return !isTrialCurrentlyActive(tenant) && tenant.subscription?.status === 'trialing';
+}
+
 /** Paid checkout required (trial used/expired or switching paid plans). */
 export function ownerPlanRequiresPayment(
   tenant: TenantPlanSnapshot | null | undefined,
@@ -96,6 +104,9 @@ export function getOwnerPlanActionLabel(
   if (ownerPlanRequiresPayment(tenant, planId)) {
     const plan = planId === 'growth' ? '₹999/mo' : planId === 'pro' ? '₹2,999/mo' : '';
     if (isGrowthTrialExpired(tenant) && planId === 'growth') {
+      return `Pay ${plan} to continue`;
+    }
+    if (isProTrialExpired(tenant) && planId === 'pro') {
       return `Pay ${plan} to continue`;
     }
     return plan ? `Pay ${plan}` : ownerCta;
