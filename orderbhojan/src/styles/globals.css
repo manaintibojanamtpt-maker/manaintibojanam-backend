@@ -16,7 +16,22 @@
     color: #fffaf3;
     font-family: var(--bds-font-sans, "Figtree", ui-sans-serif, system-ui, sans-serif);
     overscroll-behavior-y: none;
+    touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ff7a00;
+    outline-offset: 2px;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   a {
@@ -26,7 +41,11 @@
   /* iOS Safari zooms focused inputs below 16px — keep form fields readable without zoom. */
   input,
   select,
-  textarea {
+  textarea,
+  [data-selectable='true'],
+  .selectable {
     font-size: 16px;
+    user-select: text;
+    -webkit-user-select: text;
   }
 }

@@ -48,7 +48,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'OrderBhojan',
         short_name: 'OrderBhojan',
@@ -56,19 +56,59 @@ export default defineConfig({
         theme_color: '#070504',
         background_color: '#070504',
         display: 'standalone',
+        orientation: 'portrait',
         start_url: '/',
         icons: [
           {
-            src: '/favicon.svg',
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
-        globIgnores: ['**/hero/**', '**/categories/**', '**/brand/**'],
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
+        globIgnores: ['**/hero/**', '**/categories/**'],
+        navigateFallback: '/offline.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) =>
+              request.destination === 'image' || request.destination === 'font',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ob-static-media',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' &&
+              url.pathname.startsWith('/api/marketplace/') &&
+              !url.pathname.includes('order') &&
+              !url.pathname.includes('payment') &&
+              !url.pathname.includes('auth') &&
+              !url.pathname.includes('verify'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'ob-discovery-api',
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 5 },
+            },
+          },
+        ],
       },
     }),
   ],

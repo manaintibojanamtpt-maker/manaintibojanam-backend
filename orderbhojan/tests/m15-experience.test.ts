@@ -47,7 +47,7 @@ describe('M1.5 shell routes', () => {
 
     const bottomNav = readFileSync(join(root, 'src/presentation/shell/OrderBhojanBottomNav.tsx'), 'utf8');
     assert.match(bottomNav, /Home/);
-    assert.match(bottomNav, /Search/);
+    assert.match(bottomNav, /Menu/);
     assert.match(bottomNav, /Cart/);
     assert.match(bottomNav, /Orders/);
     assert.match(bottomNav, /Profile/);

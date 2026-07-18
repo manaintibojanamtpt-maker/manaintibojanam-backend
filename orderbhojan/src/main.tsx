@@ -34,6 +34,8 @@ function renderApp(): void {
     </StrictMode>,
   );
 
+  document.getElementById('ob-boot-shell')?.remove();
+
   requestAnimationFrame(() => {
     markPerfOnce('first_paint');
   });

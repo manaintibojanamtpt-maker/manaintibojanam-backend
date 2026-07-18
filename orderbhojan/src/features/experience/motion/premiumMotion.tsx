@@ -1,6 +1,8 @@
 import type React from 'react';
 import { m } from 'framer-motion';
 
+export const OB_MOTION_EASE = [0.22, 1, 0.36, 1] as const;
+
 export const MotionPage = m.div;
 export const MotionReveal = m.div;
 export const MotionPress = m.button;
