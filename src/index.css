@@ -81,6 +81,19 @@ body {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
   }
+  input,
+  textarea,
+  select,
+  [contenteditable='true'],
+  [data-selectable='true'],
+  .selectable {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  :focus-visible {
+    outline: 2px solid #ff7a00;
+    outline-offset: 2px;
+  }
   html.dark {
     @apply bg-[#0c0c0c];
   }
