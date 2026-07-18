@@ -14,9 +14,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@bhojan/location-core": ["packages/location-core/src/index.ts"],
-      "@bhojan/location-v2": ["src/features/location-v2/index.ts"],
-      "@bhojan/location-v2/*": ["src/features/location-v2/*"]
+      "@bhojan/location-core": ["./packages/location-core/src/index.ts"],
+      "@bhojan/location-v2": ["./src/features/location-v2/index.ts"],
+      "@bhojan/location-v2/*": ["./src/features/location-v2/*"]
     }
   },
   "include": ["src", "server.ts", "backend-lib", "packages/location-core", "api"]

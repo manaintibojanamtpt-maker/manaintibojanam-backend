@@ -1,7 +1,7 @@
 # BhojanOS Production Operations
 
 **Version:** 1.0  
-**Related:** [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) · [INCIDENT_RESPONSE.md](./INCIDENT_RESPONSE.md) · [PRODUCTION_AUDIT_REPORT.md](./PRODUCTION_AUDIT_REPORT.md)
+**Related:** [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) · [INCIDENT_RESPONSE.md](./INCIDENT_RESPONSE.md) · [PRODUCTION_AUDIT_REPORT.md](./PRODUCTION_AUDIT_REPORT.md) · [docs/OBSERVABILITY-RUNBOOK.md](./docs/OBSERVABILITY-RUNBOOK.md)
 
 ---
 
@@ -45,11 +45,17 @@ node scripts/smoke-ops-health.mjs
 API_URL=https://manaintibojanam-backend.onrender.com node scripts/smoke-ops-health.mjs
 ```
 
-Validates `/api/health` and probes `/api/ops/*` route wiring.
+Validates `/api/health`, static storefront URLs (`orderbhojan.web.app`, `www.bhojanos.com`), and probes `/api/ops/*` route wiring.
+
+### GitHub Actions scheduled monitor
+
+Every **15 minutes**, `.github/workflows/prod-health-monitor.yml` runs smoke + release gate against production. See [docs/OBSERVABILITY-RUNBOOK.md](./docs/OBSERVABILITY-RUNBOOK.md) for failure handling and manual verification.
 
 ### Uptime monitoring
 
 Configure an external pinger (UptimeRobot, cron-job.org) to `GET /api/health` every 10–14 minutes. Render free tier sleeps without traffic.
+
+**Also monitor:** `https://orderbhojan.web.app`, `https://www.bhojanos.com` (see runbook for cron-job.org POST crons).
 
 ---
 
@@ -99,6 +105,17 @@ Registered in `server.ts` via `node-cron`:
 
 Free tier (`platform.tier: free`) disables AutoPilot and extended telemetry to protect Firestore quota.
 
+Set `PLATFORM_TIER=standard` on Render for production AutoPilot and cron behavior. Set `CRON_SECRET` before enabling external POST crons — see [docs/OBSERVABILITY-RUNBOOK.md](./docs/OBSERVABILITY-RUNBOOK.md).
+
+### External cron-job.org (manual)
+
+| Endpoint | Schedule | Auth |
+|----------|----------|------|
+| `POST /api/cron/founder-alerts` | Hourly | `Authorization: Bearer <CRON_SECRET>` |
+| `POST /api/cron/expire-unpaid-payments` | Every 15–30 min | Same |
+
+Full setup steps: [docs/OBSERVABILITY-RUNBOOK.md](./docs/OBSERVABILITY-RUNBOOK.md).
+
 ---
 
 ## Firestore Quota Protection
@@ -127,10 +144,11 @@ Monitor `firestore.backedOff` in health checks and Render logs.
 ## Pre-Deploy Checklist
 
 1. `npm run lint && npm run test:unit`
-2. `npm run build:server` (production bundle)
-3. `node scripts/smoke-ops-health.mjs` against staging or prod after deploy
-4. Confirm `/api/health` → `platform.build` matches deployed commit
-5. Verify UptimeRobot ping still active
+2. `npm run verify:tsconfig-baseurl`
+3. `npm run build:server` (production bundle)
+4. `node scripts/smoke-ops-health.mjs` against staging or prod after deploy
+5. Confirm `/api/health` → `platform.build` matches deployed commit
+6. Verify UptimeRobot ping still active
 
 See also: `docs/ga-2/MONITORING.md`, `scripts/pre-cutover-checklist.sh`.
 

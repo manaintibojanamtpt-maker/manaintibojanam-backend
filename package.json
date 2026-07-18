@@ -48,6 +48,7 @@
     "test:security": "npm run test:unit && npm run test:sdk && npm run test:api-security && npm run test:rules",
     "test:preprod": "npm run lint && npm run build && npm run test:smoke && npm run test:security",
     "verify:ga1-flags": "node scripts/ga1/verify-production-legacy-flags.mjs",
+    "verify:tsconfig-baseurl": "node scripts/verify-tsconfig-baseurl.mjs",
     "gate:ga1": "node scripts/ga1/pre-deploy-gate.mjs",
     "verify:ga2": "node scripts/ga2/verify-production-readiness.mjs",
     "gate:ga2": "node scripts/ga2/pre-deploy-gate.mjs",

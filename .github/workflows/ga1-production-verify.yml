@@ -27,6 +27,9 @@ jobs:
       - name: Verify projection flags OFF
         run: npm run verify:ga1-flags
 
+      - name: Verify tsconfig baseUrl (paths guard)
+        run: npm run verify:tsconfig-baseurl
+
       - name: Security test suite
         run: npm run test:security
 

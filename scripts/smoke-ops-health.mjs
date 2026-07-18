@@ -21,6 +21,12 @@ const API_URL = (process.env.API_URL || 'https://manaintibojanam-backend.onrende
   '',
 );
 
+/** Public storefronts probed in addition to API /api/health. */
+const STATIC_URLS = [
+  { label: 'OrderBhojan', url: 'https://orderbhojan.web.app' },
+  { label: 'BhojanOS', url: 'https://www.bhojanos.com' },
+];
+
 const OPS_ENDPOINTS = [
   {
     method: 'GET',
@@ -65,6 +71,17 @@ async function fetchJson(path, timeoutMs = 15_000) {
   return { url, status: response.status, body };
 }
 
+async function fetchStatic(url, timeoutMs = 15_000) {
+  const response = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    signal: AbortSignal.timeout(timeoutMs),
+    headers: { Accept: 'text/html,application/xhtml+xml' },
+  });
+  const snippet = (await response.text().catch(() => '')).slice(0, 200);
+  return { url, status: response.status, snippet };
+}
+
 async function main() {
   console.log('=== BhojanOS Ops Health Smoke ===');
   console.log(`API_URL: ${API_URL}\n`);
@@ -94,6 +111,23 @@ async function main() {
     failed = true;
   }
 
+  console.log('\n--- Static storefront URLs ---\n');
+  for (const target of STATIC_URLS) {
+    try {
+      const probe = await fetchStatic(target.url);
+      console.log(`${target.label} ${target.url} → ${probe.status}`);
+      if (probe.status < 200 || probe.status >= 400) {
+        console.error(`  FAIL: expected 2xx/3xx`);
+        failed = true;
+      }
+    } catch (err) {
+      console.error(
+        `  FAIL: ${target.label} unreachable — ${err instanceof Error ? err.message : err}`,
+      );
+      failed = true;
+    }
+  }
+
   printOpsCatalog();
 
   // Probe ops routes without auth — expect 401/403, not 404 (wiring check).
@@ -118,6 +152,7 @@ async function main() {
     checkedAt: new Date().toISOString(),
     apiUrl: API_URL,
     healthPath: '/api/health',
+    staticUrls: STATIC_URLS.map((entry) => entry.url),
     opsEndpoints: OPS_ENDPOINTS,
     passed: !failed,
   };

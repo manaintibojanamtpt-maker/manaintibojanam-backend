@@ -7,6 +7,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # --- Set in Render Dashboard (Secrets) — do NOT commit real values ---
+      # PLATFORM_TIER=standard  → enables AutoPilot crons, extended telemetry (vs default free)
+      # CRON_SECRET=<long random> → Bearer auth for POST /api/cron/* (founder-alerts, expire-unpaid-payments)
+      # RESEND_API_KEY / EMAIL_*  → founder alert emails
+      # See docs/OBSERVABILITY-RUNBOOK.md and PRODUCTION_OPERATIONS.md
       - key: ORDERBHOJAN_URL
         value: https://orderbhojan.web.app
       - key: FOUNDER_STOREFRONT_URL
