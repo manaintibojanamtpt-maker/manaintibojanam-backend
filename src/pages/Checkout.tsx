@@ -203,6 +203,7 @@ const Checkout: React.FC = () => {
         isManualOverride: state.fees?.storeTiming?.isManualOverride ?? true,
         businessHoursEnabled: state.fees?.storeTiming?.businessHoursEnabled ?? false,
       },
+      timezone: tenantInfo?.storeOperations?.timezone || 'Asia/Kolkata',
     };
 
     const prepMinutes = tenantInfo?.deliveryConfig?.prepTime || 20;

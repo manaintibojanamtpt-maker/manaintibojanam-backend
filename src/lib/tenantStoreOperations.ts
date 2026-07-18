@@ -16,6 +16,7 @@ export interface ResolvedStoreSettings {
     businessHoursEnabled: boolean;
   };
   offlineMessage?: string;
+  timezone: string;
 }
 
 const DEFAULT_OPEN = '09:00';
@@ -32,6 +33,58 @@ function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE): stri
   const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
   const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
   return `${hour}:${minute}`;
+}
+
+function getCalendarDateInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function zonedDateTimeToUtc(ymd: string, hour: number, minute: number, timeZone: string): Date {
+  const [year, month, day] = ymd.split('-').map(Number);
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const currentYmd = getCalendarDateInZone(new Date(utcMs), timeZone);
+    const currentTime = formatLocalTimeHHmm(new Date(utcMs), timeZone);
+    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+    if (currentYmd === ymd && currentHour === hour && currentMinute === minute) {
+      return new Date(utcMs);
+    }
+
+    const desiredMinutes = hour * 60 + minute;
+    let currentMinutes = currentHour * 60 + currentMinute;
+    if (currentYmd < ymd) currentMinutes -= 24 * 60;
+    if (currentYmd > ymd) currentMinutes += 24 * 60;
+    utcMs += (desiredMinutes - currentMinutes) * 60_000;
+  }
+
+  return new Date(utcMs);
+}
+
+function parseStoreTimeOnDate(time: string, base: Date, timeZone = DEFAULT_STORE_TIMEZONE): Date {
+  const [hour, minute] = time.split(':').map(Number);
+  const ymd = getCalendarDateInZone(base, timeZone);
+  return zonedDateTimeToUtc(ymd, hour, minute, timeZone);
+}
+
+function addCalendarDaysInZone(base: Date, days: number, timeZone = DEFAULT_STORE_TIMEZONE): Date {
+  const ymd = getCalendarDateInZone(base, timeZone);
+  const [year, month, day] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0, 0));
+}
+
+function formatSlotTimeInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return date.toLocaleTimeString('en-IN', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 export const DEFAULT_STORE_OPERATIONS: Required<
@@ -59,6 +112,10 @@ export function resolveStoreSettings(
         businessHoursEnabled: ops.businessHoursEnabled === true,
       },
       offlineMessage: ops.offlineMessage,
+      timezone:
+        typeof ops.timezone === 'string' && ops.timezone.trim()
+          ? ops.timezone.trim()
+          : DEFAULT_STORE_TIMEZONE,
     };
   }
 
@@ -71,6 +128,7 @@ export function resolveStoreSettings(
         isManualOverride: legacyGlobal.storeTiming?.isManualOverride ?? true,
         businessHoursEnabled: legacyGlobal.storeTiming?.isManualOverride === false,
       },
+      timezone: DEFAULT_STORE_TIMEZONE,
     };
   }
 
@@ -82,6 +140,7 @@ export function resolveStoreSettings(
       isManualOverride: true,
       businessHoursEnabled: false,
     },
+    timezone: DEFAULT_STORE_TIMEZONE,
   };
 }
 
@@ -103,7 +162,6 @@ function isWithinBusinessHours(
 export function isTenantStoreOpenNow(
   settings: ResolvedStoreSettings | null | undefined,
   currentTime: Date = new Date(),
-  timeZone = DEFAULT_STORE_TIMEZONE,
 ): boolean {
   if (!settings) return true;
   if (settings.isStoreOpen === false) return false;
@@ -111,7 +169,7 @@ export function isTenantStoreOpenNow(
   if (settings.storeTiming.businessHoursEnabled) {
     const { openTime, closeTime } = settings.storeTiming;
     if (openTime && closeTime) {
-      return isWithinBusinessHours(openTime, closeTime, currentTime, timeZone);
+      return isWithinBusinessHours(openTime, closeTime, currentTime, settings.timezone);
     }
   }
 
@@ -121,14 +179,17 @@ export function isTenantStoreOpenNow(
 export function getStoreClosedReason(
   settings: ResolvedStoreSettings | null | undefined,
   currentTime: Date = new Date(),
-  timeZone = DEFAULT_STORE_TIMEZONE,
 ): 'manual' | 'hours' | null {
   if (!settings) return null;
   if (settings.isStoreOpen === false) return 'manual';
 
   if (settings.storeTiming.businessHoursEnabled) {
     const { openTime, closeTime } = settings.storeTiming;
-    if (openTime && closeTime && !isWithinBusinessHours(openTime, closeTime, currentTime, timeZone)) {
+    if (
+      openTime &&
+      closeTime &&
+      !isWithinBusinessHours(openTime, closeTime, currentTime, settings.timezone)
+    ) {
       return 'hours';
     }
   }

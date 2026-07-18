@@ -71,6 +71,68 @@ export function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE
   return `${hour}:${minute}`;
 }
 
+export function getCalendarDateInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function zonedDateTimeToUtc(ymd: string, hour: number, minute: number, timeZone: string): Date {
+  const [year, month, day] = ymd.split('-').map(Number);
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const currentYmd = getCalendarDateInZone(new Date(utcMs), timeZone);
+    const currentTime = formatLocalTimeHHmm(new Date(utcMs), timeZone);
+    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+    if (currentYmd === ymd && currentHour === hour && currentMinute === minute) {
+      return new Date(utcMs);
+    }
+
+    const desiredMinutes = hour * 60 + minute;
+    let currentMinutes = currentHour * 60 + currentMinute;
+    if (currentYmd < ymd) currentMinutes -= 24 * 60;
+    if (currentYmd > ymd) currentMinutes += 24 * 60;
+    utcMs += (desiredMinutes - currentMinutes) * 60_000;
+  }
+
+  return new Date(utcMs);
+}
+
+/** Parse HH:mm on the calendar day of `base` in the store timezone. */
+export function parseStoreTimeOnDate(
+  time: string,
+  base: Date,
+  timeZone = DEFAULT_STORE_TIMEZONE,
+): Date {
+  const normalized = normalizeStoreTimeToHHmm(time);
+  const [hour, minute] = normalized.split(':').map(Number);
+  const ymd = getCalendarDateInZone(base, timeZone);
+  return zonedDateTimeToUtc(ymd, hour, minute, timeZone);
+}
+
+export function addCalendarDaysInZone(
+  base: Date,
+  days: number,
+  timeZone = DEFAULT_STORE_TIMEZONE,
+): Date {
+  const ymd = getCalendarDateInZone(base, timeZone);
+  const [year, month, day] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0, 0));
+}
+
+export function formatSlotTimeInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return date.toLocaleTimeString('en-IN', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 export function readTenantLocation(
   raw: Record<string, unknown>,
 ): TenantLocation | null {

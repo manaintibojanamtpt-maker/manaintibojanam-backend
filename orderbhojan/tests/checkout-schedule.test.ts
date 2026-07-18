@@ -35,8 +35,13 @@ describe('checkout delivery schedule payload', () => {
   });
 
   it('defaults to first available server slot', () => {
-    const slots = ['Standard Delivery (ASAP)', 'Tomorrow, 1:00 PM - 2:00 PM'];
+    const slots = ['Standard Delivery (ASAP)', 'Tomorrow, 1:00 PM - 1:30 PM'];
     assert.equal(resolveDefaultDeliverySlot(slots), 'Standard Delivery (ASAP)');
-    assert.ok(getScheduledForTimestamp('Tomorrow, 1:00 PM - 2:00 PM'));
+    assert.ok(getScheduledForTimestamp('Tomorrow, 1:00 PM - 1:30 PM'));
+  });
+
+  it('defaults to first valid slot when asap is unavailable', () => {
+    const slots = ['Today, 12:00 PM - 12:30 PM', 'Tomorrow, 9:00 AM - 9:30 AM'];
+    assert.equal(resolveDefaultDeliverySlot(slots), 'Today, 12:00 PM - 12:30 PM');
   });
 });

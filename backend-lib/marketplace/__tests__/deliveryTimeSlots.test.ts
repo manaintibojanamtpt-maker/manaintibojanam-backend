@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ASAP_SLOT,
+  DEFAULT_SLOT_DURATION_MINUTES,
   buildDeliveryTimeSlots,
   getScheduledForTimestamp,
   isAsapSlot,
@@ -28,6 +29,50 @@ describe('deliveryTimeSlots', () => {
     assert.ok(slots.some((slot) => slot.startsWith('Today,')));
   });
 
+  it('uses 30-minute slots aligned to kitchen open time', () => {
+    const now = new Date('2026-07-17T08:30:00+05:30');
+    const slots = buildDeliveryTimeSlots({ storeTiming: openTiming(), now, prepMinutes: 20 });
+    const firstScheduled = slots.find((slot) => !isAsapSlot(slot));
+    assert.ok(firstScheduled);
+    assert.match(firstScheduled!, /Today, 9:00 am - 9:30 am/i);
+  });
+
+  it('excludes past slots at 11:21 AM with kitchen open at 9 AM', () => {
+    const now = new Date('2026-07-18T11:21:00+05:30');
+    const slots = buildDeliveryTimeSlots({ storeTiming: openTiming(), now, prepMinutes: 20 });
+    const todaySlots = slots.filter((slot) => slot.startsWith('Today,'));
+    assert.equal(
+      todaySlots.some((slot) => /9:00 am - 10:00 am/i.test(slot) || /9:00 am - 9:30 am/i.test(slot)),
+      false,
+    );
+    assert.equal(
+      todaySlots.some((slot) => /10:00 am - 10:30 am/i.test(slot) || /10:30 am - 11:00 am/i.test(slot)),
+      false,
+    );
+    const firstScheduled = todaySlots[0];
+    assert.ok(firstScheduled);
+    assert.match(firstScheduled!, /Today, 12:00 pm - 12:30 pm/i);
+  });
+
+  it('excludes past slots when server clock is UTC but store is Asia/Kolkata', () => {
+    const now = new Date('2026-07-18T05:51:00.000Z');
+    const slots = buildDeliveryTimeSlots({ storeTiming: openTiming(), now, prepMinutes: 20 });
+    const todaySlots = slots.filter((slot) => slot.startsWith('Today,'));
+    assert.equal(todaySlots.some((slot) => /9:00 am - 9:30 am/i.test(slot)), false);
+    assert.equal(todaySlots.some((slot) => /9:00 am - 10:00 am/i.test(slot)), false);
+    const firstScheduled = todaySlots[0];
+    assert.ok(firstScheduled);
+    assert.match(firstScheduled!, /Today, 12:00 pm - 12:30 pm/i);
+  });
+
+  it('starts tomorrow slots at kitchen open time', () => {
+    const now = new Date('2026-07-17T23:00:00+05:30');
+    const slots = buildDeliveryTimeSlots({ storeTiming: openTiming(), now, prepMinutes: 20 });
+    const firstTomorrow = slots.find((slot) => slot.startsWith('Tomorrow,'));
+    assert.ok(firstTomorrow);
+    assert.match(firstTomorrow!, /Tomorrow, 9:00 am - 9:30 am/i);
+  });
+
   it('omits ASAP when kitchen is manually closed but keeps tomorrow slots', () => {
     const now = new Date('2026-07-17T12:00:00+05:30');
     const slots = buildDeliveryTimeSlots({
@@ -39,9 +84,13 @@ describe('deliveryTimeSlots', () => {
     assert.ok(slots.some((slot) => slot.startsWith('Tomorrow,')));
   });
 
+  it('defaults slot duration to 30 minutes', () => {
+    assert.equal(DEFAULT_SLOT_DURATION_MINUTES, 30);
+  });
+
   it('parses scheduled slot timestamps', () => {
     const now = new Date('2026-07-17T12:00:00+05:30');
-    const ts = getScheduledForTimestamp('Tomorrow, 7:00 PM - 8:00 PM', now);
+    const ts = getScheduledForTimestamp('Tomorrow, 7:00 PM - 7:30 PM', now);
     assert.ok(ts);
     const parsed = new Date(ts!);
     assert.equal(parsed.getDate(), 18);
@@ -75,6 +124,24 @@ describe('deliveryTimeSlots', () => {
     assert.throws(
       () => validateMarketplaceSchedule({ deliveryType: 'scheduled' }, openTiming(), 20, now),
       /scheduledFor/,
+    );
+  });
+
+  it('rejects past scheduledFor timestamps', () => {
+    const now = new Date('2026-07-18T11:21:00+05:30');
+    assert.throws(
+      () =>
+        validateMarketplaceSchedule(
+          {
+            deliveryType: 'scheduled',
+            scheduledFor: '2026-07-18T05:00:00.000Z',
+            deliveryTimeSlot: 'Today, 9:00 AM - 9:30 AM',
+          },
+          openTiming(),
+          20,
+          now,
+        ),
+      /Scheduled time must be in the future|Scheduled time must allow enough lead time|Scheduled time must fall within/,
     );
   });
 

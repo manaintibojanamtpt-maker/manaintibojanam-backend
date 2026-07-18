@@ -5,27 +5,83 @@ import {
 } from './tenantStoreOperations';
 
 export const ASAP_SLOT = 'Standard Delivery (ASAP)';
+export const DEFAULT_SLOT_DURATION_MINUTES = 30;
 
 const DEFAULT_OPEN = '09:00';
 const DEFAULT_CLOSE = '22:00';
+const DEFAULT_STORE_TIMEZONE = 'Asia/Kolkata';
 
-function parseTimeOnDate(time: string, base: Date): Date {
+function getCalendarDateInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function formatLocalTimeHHmm(now: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour}:${minute}`;
+}
+
+function zonedDateTimeToUtc(ymd: string, hour: number, minute: number, timeZone: string): Date {
+  const [year, month, day] = ymd.split('-').map(Number);
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const currentYmd = getCalendarDateInZone(new Date(utcMs), timeZone);
+    const currentTime = formatLocalTimeHHmm(new Date(utcMs), timeZone);
+    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+    if (currentYmd === ymd && currentHour === hour && currentMinute === minute) {
+      return new Date(utcMs);
+    }
+
+    const desiredMinutes = hour * 60 + minute;
+    let currentMinutes = currentHour * 60 + currentMinute;
+    if (currentYmd < ymd) currentMinutes -= 24 * 60;
+    if (currentYmd > ymd) currentMinutes += 24 * 60;
+    utcMs += (desiredMinutes - currentMinutes) * 60_000;
+  }
+
+  return new Date(utcMs);
+}
+
+function parseStoreTimeOnDate(time: string, base: Date, timeZone = DEFAULT_STORE_TIMEZONE): Date {
   const [hour, minute] = time.split(':').map(Number);
-  const d = new Date(base);
-  d.setHours(hour, minute, 0, 0);
-  return d;
+  const ymd = getCalendarDateInZone(base, timeZone);
+  return zonedDateTimeToUtc(ymd, hour, minute, timeZone);
 }
 
-function formatSlotTime(d: Date): string {
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+function addCalendarDaysInZone(base: Date, days: number, timeZone = DEFAULT_STORE_TIMEZONE): Date {
+  const ymd = getCalendarDateInZone(base, timeZone);
+  const [year, month, day] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0, 0));
 }
 
-function roundUpTo30Minutes(d: Date): Date {
-  const next = new Date(d);
-  const remainder = next.getMinutes() % 30;
-  if (remainder !== 0) next.setMinutes(next.getMinutes() + (30 - remainder));
-  next.setSeconds(0, 0);
-  return next;
+function formatSlotTimeInZone(date: Date, timeZone = DEFAULT_STORE_TIMEZONE): string {
+  return date.toLocaleTimeString('en-IN', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function isSlotBookable(
+  slotStartMs: number,
+  slotEndMs: number,
+  nowMs: number,
+  earliestStartMs: number,
+): boolean {
+  return slotStartMs >= earliestStartMs && slotEndMs > nowMs;
 }
 
 export function buildDeliveryTimeSlots(options: {
@@ -38,25 +94,29 @@ export function buildDeliveryTimeSlots(options: {
     storeSettings,
     now = new Date(),
     prepMinutes = 20,
-    slotDurationMinutes = 60,
+    slotDurationMinutes = DEFAULT_SLOT_DURATION_MINUTES,
   } = options;
 
+  const timeZone = storeSettings.timezone || DEFAULT_STORE_TIMEZONE;
   const openTime = storeSettings.storeTiming.openTime || DEFAULT_OPEN;
   const closeTime = storeSettings.storeTiming.closeTime || DEFAULT_CLOSE;
   const slotMs = slotDurationMinutes * 60 * 1000;
   const prepMs = prepMinutes * 60 * 1000;
 
-  const todayOpen = parseTimeOnDate(openTime, now);
-  const todayClose = parseTimeOnDate(closeTime, now);
-  const tomorrowOpen = parseTimeOnDate(openTime, new Date(now.getTime() + 86400000));
-  const tomorrowClose = parseTimeOnDate(closeTime, new Date(now.getTime() + 86400000));
+  const todayOpen = parseStoreTimeOnDate(openTime, now, timeZone);
+  const todayClose = parseStoreTimeOnDate(closeTime, now, timeZone);
+  const tomorrowBase = addCalendarDaysInZone(now, 1, timeZone);
+  const tomorrowOpen = parseStoreTimeOnDate(openTime, tomorrowBase, timeZone);
+  const tomorrowClose = parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
 
   const todaySlots: string[] = [];
   const tomorrowSlots: string[] = [];
 
   const addSlot = (start: Date, target: string[], prefix: string) => {
     const end = new Date(start.getTime() + slotMs);
-    target.push(`${prefix}, ${formatSlotTime(start)} - ${formatSlotTime(end)}`);
+    target.push(
+      `${prefix}, ${formatSlotTimeInZone(start, timeZone)} - ${formatSlotTimeInZone(end, timeZone)}`,
+    );
   };
 
   const nowMs = now.getTime();
@@ -64,12 +124,13 @@ export function buildDeliveryTimeSlots(options: {
   const closeMs = todayClose.getTime();
   const storeOpenNow = isTenantStoreOpenNow(storeSettings, now);
   const closedReason = getStoreClosedReason(storeSettings, now);
+  const earliestStartMs = nowMs + prepMs;
 
   const canAsap =
     storeOpenNow &&
     nowMs >= openMs &&
     nowMs < closeMs &&
-    nowMs + prepMs <= closeMs;
+    earliestStartMs <= closeMs;
 
   if (canAsap) {
     todaySlots.push(ASAP_SLOT);
@@ -78,29 +139,21 @@ export function buildDeliveryTimeSlots(options: {
   const allowTodayScheduled = closedReason !== 'manual' && nowMs < closeMs;
 
   if (allowTodayScheduled) {
-    let slotStart: Date;
-
-    if (nowMs < openMs) {
-      slotStart = new Date(todayOpen);
-    } else if (storeOpenNow) {
-      slotStart = roundUpTo30Minutes(new Date(Math.max(nowMs + prepMs, openMs)));
-    } else {
-      slotStart = new Date(todayOpen);
-      while (slotStart.getTime() <= nowMs && slotStart.getTime() + slotMs <= closeMs) {
-        slotStart = new Date(slotStart.getTime() + slotMs);
+    let slotStartMs = openMs;
+    while (slotStartMs + slotMs <= closeMs) {
+      const slotEndMs = slotStartMs + slotMs;
+      if (isSlotBookable(slotStartMs, slotEndMs, nowMs, earliestStartMs)) {
+        addSlot(new Date(slotStartMs), todaySlots, 'Today');
       }
-    }
-
-    while (slotStart.getTime() + slotMs <= closeMs) {
-      addSlot(slotStart, todaySlots, 'Today');
-      slotStart = new Date(slotStart.getTime() + slotMs);
+      slotStartMs += slotMs;
     }
   }
 
-  let tomorrowStart = new Date(tomorrowOpen);
-  while (tomorrowStart.getTime() + slotMs <= tomorrowClose.getTime()) {
-    addSlot(tomorrowStart, tomorrowSlots, 'Tomorrow');
-    tomorrowStart = new Date(tomorrowStart.getTime() + slotMs);
+  let tomorrowStartMs = tomorrowOpen.getTime();
+  const tomorrowCloseMs = tomorrowClose.getTime();
+  while (tomorrowStartMs + slotMs <= tomorrowCloseMs) {
+    addSlot(new Date(tomorrowStartMs), tomorrowSlots, 'Tomorrow');
+    tomorrowStartMs += slotMs;
   }
 
   return [...todaySlots, ...tomorrowSlots];

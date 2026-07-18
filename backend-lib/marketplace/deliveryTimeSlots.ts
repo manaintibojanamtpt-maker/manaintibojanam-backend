@@ -3,31 +3,16 @@ import {
   isStoreOpenNow,
   formatLocalTimeHHmm,
   DEFAULT_STORE_TIMEZONE,
+  parseStoreTimeOnDate,
+  addCalendarDaysInZone,
+  formatSlotTimeInZone,
 } from './tenantProjectionHelpers.js';
 
 export const ASAP_SLOT = 'Standard Delivery (ASAP)';
+export const DEFAULT_SLOT_DURATION_MINUTES = 30;
 
 const DEFAULT_OPEN = '09:00';
 const DEFAULT_CLOSE = '22:00';
-
-function parseTimeOnDate(time: string, base: Date): Date {
-  const [hour, minute] = time.split(':').map(Number);
-  const d = new Date(base);
-  d.setHours(hour, minute, 0, 0);
-  return d;
-}
-
-function formatSlotTime(d: Date): string {
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-}
-
-function roundUpTo30Minutes(d: Date): Date {
-  const next = new Date(d);
-  const remainder = next.getMinutes() % 30;
-  if (remainder !== 0) next.setMinutes(next.getMinutes() + (30 - remainder));
-  next.setSeconds(0, 0);
-  return next;
-}
 
 export function getStoreClosedReason(
   timing: ResolvedStoreTiming,
@@ -55,6 +40,15 @@ export function getStoreClosedMessage(timing: ResolvedStoreTiming, now: Date = n
   return `Kitchen closed for now • Reopens at ${timing.openTime}`;
 }
 
+function isSlotBookable(
+  slotStartMs: number,
+  slotEndMs: number,
+  nowMs: number,
+  earliestStartMs: number,
+): boolean {
+  return slotStartMs >= earliestStartMs && slotEndMs > nowMs;
+}
+
 export function buildDeliveryTimeSlots(options: {
   storeTiming: ResolvedStoreTiming;
   now?: Date;
@@ -65,25 +59,29 @@ export function buildDeliveryTimeSlots(options: {
     storeTiming,
     now = new Date(),
     prepMinutes = 20,
-    slotDurationMinutes = 60,
+    slotDurationMinutes = DEFAULT_SLOT_DURATION_MINUTES,
   } = options;
 
+  const timeZone = storeTiming.timezone || DEFAULT_STORE_TIMEZONE;
   const openTime = storeTiming.openTime || DEFAULT_OPEN;
   const closeTime = storeTiming.closeTime || DEFAULT_CLOSE;
   const slotMs = slotDurationMinutes * 60 * 1000;
   const prepMs = prepMinutes * 60 * 1000;
 
-  const todayOpen = parseTimeOnDate(openTime, now);
-  const todayClose = parseTimeOnDate(closeTime, now);
-  const tomorrowOpen = parseTimeOnDate(openTime, new Date(now.getTime() + 86400000));
-  const tomorrowClose = parseTimeOnDate(closeTime, new Date(now.getTime() + 86400000));
+  const todayOpen = parseStoreTimeOnDate(openTime, now, timeZone);
+  const todayClose = parseStoreTimeOnDate(closeTime, now, timeZone);
+  const tomorrowBase = addCalendarDaysInZone(now, 1, timeZone);
+  const tomorrowOpen = parseStoreTimeOnDate(openTime, tomorrowBase, timeZone);
+  const tomorrowClose = parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
 
   const todaySlots: string[] = [];
   const tomorrowSlots: string[] = [];
 
   const addSlot = (start: Date, target: string[], prefix: string) => {
     const end = new Date(start.getTime() + slotMs);
-    target.push(`${prefix}, ${formatSlotTime(start)} - ${formatSlotTime(end)}`);
+    target.push(
+      `${prefix}, ${formatSlotTimeInZone(start, timeZone)} - ${formatSlotTimeInZone(end, timeZone)}`,
+    );
   };
 
   const nowMs = now.getTime();
@@ -91,12 +89,13 @@ export function buildDeliveryTimeSlots(options: {
   const closeMs = todayClose.getTime();
   const storeOpenNow = isStoreOpenNow(storeTiming, now);
   const closedReason = getStoreClosedReason(storeTiming, now);
+  const earliestStartMs = nowMs + prepMs;
 
   const canAsap =
     storeOpenNow &&
     nowMs >= openMs &&
     nowMs < closeMs &&
-    nowMs + prepMs <= closeMs;
+    earliestStartMs <= closeMs;
 
   if (canAsap) {
     todaySlots.push(ASAP_SLOT);
@@ -105,29 +104,21 @@ export function buildDeliveryTimeSlots(options: {
   const allowTodayScheduled = closedReason !== 'manual' && nowMs < closeMs;
 
   if (allowTodayScheduled) {
-    let slotStart: Date;
-
-    if (nowMs < openMs) {
-      slotStart = new Date(todayOpen);
-    } else if (storeOpenNow) {
-      slotStart = roundUpTo30Minutes(new Date(Math.max(nowMs + prepMs, openMs)));
-    } else {
-      slotStart = new Date(todayOpen);
-      while (slotStart.getTime() <= nowMs && slotStart.getTime() + slotMs <= closeMs) {
-        slotStart = new Date(slotStart.getTime() + slotMs);
+    let slotStartMs = openMs;
+    while (slotStartMs + slotMs <= closeMs) {
+      const slotEndMs = slotStartMs + slotMs;
+      if (isSlotBookable(slotStartMs, slotEndMs, nowMs, earliestStartMs)) {
+        addSlot(new Date(slotStartMs), todaySlots, 'Today');
       }
-    }
-
-    while (slotStart.getTime() + slotMs <= closeMs) {
-      addSlot(slotStart, todaySlots, 'Today');
-      slotStart = new Date(slotStart.getTime() + slotMs);
+      slotStartMs += slotMs;
     }
   }
 
-  let tomorrowStart = new Date(tomorrowOpen);
-  while (tomorrowStart.getTime() + slotMs <= tomorrowClose.getTime()) {
-    addSlot(tomorrowStart, tomorrowSlots, 'Tomorrow');
-    tomorrowStart = new Date(tomorrowStart.getTime() + slotMs);
+  let tomorrowStartMs = tomorrowOpen.getTime();
+  const tomorrowCloseMs = tomorrowClose.getTime();
+  while (tomorrowStartMs + slotMs <= tomorrowCloseMs) {
+    addSlot(new Date(tomorrowStartMs), tomorrowSlots, 'Tomorrow');
+    tomorrowStartMs += slotMs;
   }
 
   return [...todaySlots, ...tomorrowSlots];
@@ -178,8 +169,15 @@ export function validateMarketplaceSchedule(
   const deliveryType =
     String(request.deliveryType || '').toLowerCase() === 'scheduled' ? 'scheduled' : 'asap';
 
+  const slotOptions = {
+    storeTiming,
+    now,
+    prepMinutes,
+    slotDurationMinutes: DEFAULT_SLOT_DURATION_MINUTES,
+  };
+
   if (deliveryType === 'asap') {
-    const slots = buildDeliveryTimeSlots({ storeTiming, now, prepMinutes });
+    const slots = buildDeliveryTimeSlots(slotOptions);
     const storeOpenNow = isStoreOpenNow(storeTiming, now);
     if (!storeOpenNow && slots.length > 0 && !isAsapSlot(slots[0])) {
       throw Object.assign(
@@ -201,13 +199,18 @@ export function validateMarketplaceSchedule(
     throw Object.assign(new Error('Invalid scheduledFor timestamp.'), { statusCode: 400 });
   }
 
+  const minScheduledMs = now.getTime() + prepMinutes * 60_000;
   if (scheduledDate.getTime() <= now.getTime()) {
     throw Object.assign(new Error('Scheduled time must be in the future.'), { statusCode: 400 });
   }
+  if (scheduledDate.getTime() < minScheduledMs) {
+    throw Object.assign(
+      new Error('Scheduled time must allow enough lead time for kitchen prep.'),
+      { statusCode: 400 },
+    );
+  }
 
-  const availableSlots = buildDeliveryTimeSlots({ storeTiming, now, prepMinutes }).filter(
-    (slot) => !isAsapSlot(slot),
-  );
+  const availableSlots = buildDeliveryTimeSlots(slotOptions).filter((slot) => !isAsapSlot(slot));
 
   if (availableSlots.length === 0) {
     throw Object.assign(new Error('No delivery slots are available for scheduling.'), {
@@ -237,6 +240,10 @@ export function validateMarketplaceSchedule(
   const normalizedScheduledFor = getScheduledForTimestamp(matchedSlot, now);
   if (!normalizedScheduledFor) {
     throw Object.assign(new Error('Unable to resolve scheduled delivery time.'), { statusCode: 400 });
+  }
+
+  if (new Date(normalizedScheduledFor).getTime() <= now.getTime()) {
+    throw Object.assign(new Error('Scheduled time must be in the future.'), { statusCode: 400 });
   }
 
   return {
