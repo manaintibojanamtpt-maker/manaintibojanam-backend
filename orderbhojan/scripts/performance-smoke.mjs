@@ -23,8 +23,9 @@ const measureMs = Math.round(performance.now() - start);
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 // M6.5+ adds framer-motion for premium spring animations (~65 KB gzip main delta)
+// PX2 + Phase 2 session cache adds ~3 KB for IDB warm paths
 const maxJsKb =
-  String(pkg.version).includes('px2') ? 1900 : String(pkg.version).includes('m65') ? 1650 : 1500;
+  String(pkg.version).includes('px2') ? 1910 : String(pkg.version).includes('m65') ? 1650 : 1500;
 const totalJsKb = Math.round(totalJs / 1024);
 
 console.log(`[test:performance] measure time: ${measureMs}ms`);

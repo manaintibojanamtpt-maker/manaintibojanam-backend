@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
-import { seedDiscoveryQueryCacheFromSession, warmDefaultDiscoveryHome } from '@/features/discovery/engine/discoveryBootstrap';
+import { seedDiscoveryQueryCacheFromSession, warmDefaultDiscoveryHome, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
+import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
@@ -45,6 +46,8 @@ async function bootstrap() {
   markPerf('app_start');
   suppressFirestorePermissionRejections();
 
+  const bootstrapCoords = resolveBootstrapDiscoveryCoords();
+  await hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng);
   seedDiscoveryQueryCacheFromSession();
   warmDefaultDiscoveryHome();
 

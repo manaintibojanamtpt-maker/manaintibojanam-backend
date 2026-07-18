@@ -42,6 +42,11 @@ import { useTenant } from '../context/TenantContext';
 import { getSmartReorderRecommendations } from '../services/RecommendationEngine';
 import { useTenantStoreStatus } from '../hooks/useTenantStoreStatus';
 import { trackEvent } from '../services/AnalyticsService';
+import {
+  hydrateMenuSessionCacheFromIdb,
+  readMenuSessionCache,
+  writeMenuSessionCache,
+} from '../lib/menuSessionCache';
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
@@ -312,7 +317,26 @@ const Menu: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     const fetchStorefrontData = async () => {
-      setLoading(true);
+      const cached = readMenuSessionCache(activeTenantId);
+      if (cached && isMounted) {
+        setMenu(cached.menu);
+        setCategories([...cached.categories]);
+        if (cached.settings) setSettings(cached.settings);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
+      if (!cached) {
+        const idbCached = await hydrateMenuSessionCacheFromIdb(activeTenantId);
+        if (idbCached && isMounted) {
+          setMenu(idbCached.menu);
+          setCategories([...idbCached.categories]);
+          if (idbCached.settings) setSettings(idbCached.settings);
+          setLoading(false);
+        }
+      }
+
       try {
         const db = getDb();
 
@@ -352,19 +376,29 @@ const Menu: React.FC = () => {
           return timeB - timeA;
         });
         
-        if (isMounted) setMenu(menuItems as MenuItem[]);
-
         const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-        if (isMounted) setCategories(cats);
+        const nextSettings = settingsSnap.exists() ? settingsSnap.data() : null;
 
-        if (settingsSnap.exists() && isMounted) {
-          setSettings(settingsSnap.data());
+        if (isMounted) {
+          setMenu(menuItems as MenuItem[]);
+          setCategories(cats);
+          if (nextSettings) setSettings(nextSettings);
+
+          writeMenuSessionCache({
+            tenantId: activeTenantId,
+            menu: menuItems as MenuItem[],
+            categories: cats,
+            settings: nextSettings,
+            fetchedAt: Date.now(),
+          });
         }
 
       } catch (err) {
         console.error("Storefront Fetch Error:", err);
-        if (isMounted) toast.error("Failed to load storefront data");
+        if (isMounted && !readMenuSessionCache(activeTenantId)) {
+          toast.error("Failed to load storefront data");
+        }
       } finally {
         if (isMounted) setLoading(false);
       }

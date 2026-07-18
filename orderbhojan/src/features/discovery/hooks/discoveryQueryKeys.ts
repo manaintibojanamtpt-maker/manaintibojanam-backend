@@ -13,5 +13,5 @@ export const discoveryKeys = {
   ) => [...discoveryKeys.all, 'collection', id, lat, lng, page, filters] as const,
 };
 
-export const DISCOVERY_STALE_TIME_MS = 60_000;
-export const DISCOVERY_GC_TIME_MS = 5 * 60_000;
+export const DISCOVERY_STALE_TIME_MS = 5 * 60_000;
+export const DISCOVERY_GC_TIME_MS = 30 * 60_000;

@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
+import { LazyMotion, domAnimation } from 'framer-motion';
 import React, { useEffect } from 'react';
 import { DiscoveryProvider } from '@/features/discovery';
 import { SearchProvider } from '@/features/search';
@@ -28,6 +29,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <div className="min-h-[100dvh] bg-[#070504] text-white">
       <TelemetryProvider>
         <FeatureFlagProvider>
@@ -53,6 +55,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </FeatureFlagProvider>
       </TelemetryProvider>
     </div>
+    </LazyMotion>
   );
 }
 

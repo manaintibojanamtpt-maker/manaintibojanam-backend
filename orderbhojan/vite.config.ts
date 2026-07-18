@@ -97,11 +97,28 @@ export default defineConfig({
           {
             urlPattern: ({ url, request }) =>
               request.method === 'GET' &&
+              /\/api\/marketplace\/restaurants\/[^/]+\/menu(?:\/|$)/.test(url.pathname) &&
+              !url.pathname.includes('auth') &&
+              !url.pathname.includes('payment') &&
+              !url.pathname.includes('order') &&
+              !url.pathname.includes('checkout') &&
+              !url.pathname.includes('prepare'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'ob-food-menu-api',
+              expiration: { maxEntries: 48, maxAgeSeconds: 60 * 10 },
+            },
+          },
+          {
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' &&
               url.pathname.startsWith('/api/marketplace/') &&
               !url.pathname.includes('order') &&
               !url.pathname.includes('payment') &&
               !url.pathname.includes('auth') &&
-              !url.pathname.includes('verify'),
+              !url.pathname.includes('verify') &&
+              !url.pathname.includes('checkout') &&
+              !url.pathname.includes('prepare'),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'ob-discovery-api',

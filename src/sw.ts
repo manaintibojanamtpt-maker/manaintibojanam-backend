@@ -8,7 +8,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v43-native-mobile-runtime-cache';
+const SW_VERSION = 'v44-native-menu-swr-cache';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates
@@ -40,11 +40,27 @@ registerRoute(
 );
 
 registerRoute(
-  ({ url }) =>
+  ({ url, request }) =>
     url.pathname.startsWith('/api/create-razorpay-order') ||
     url.pathname.startsWith('/api/verify-razorpay-payment') ||
-    url.pathname.startsWith('/api/auth'),
+    url.pathname.startsWith('/api/auth') ||
+    url.pathname.startsWith('/api/owner/') ||
+    url.pathname.includes('/checkout') ||
+    url.pathname.includes('/payment'),
   new NetworkOnly(),
+);
+
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    /\/api\/marketplace\/restaurants\/[^/]+\/menu(?:\/|$)/.test(url.pathname) &&
+    !url.pathname.includes('auth') &&
+    !url.pathname.includes('payment') &&
+    !url.pathname.includes('order'),
+  new StaleWhileRevalidate({
+    cacheName: 'bds-marketplace-menu',
+    plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 10 })],
+  }),
 );
 
 // Removed automatic skipWaiting to restore the "Update App" prompt

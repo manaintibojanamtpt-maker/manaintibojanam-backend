@@ -2,6 +2,7 @@ import { getFoodApiClient } from '../infrastructure/foodApiClient';
 import { isContractMenuPathEnabled } from '../hooks/useContractV1Feature';
 import { mapFoodMenuDTOToFoodMenuResponse } from '@/marketplace-api/mappers/v1/foodMenuV1ToLegacy';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
+import { writeFoodSessionCache } from './foodSessionCache';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
@@ -27,6 +28,14 @@ function restaurantIdFromEnvelope(envelope: FoodMenuApiEnvelopeDTO, slug: string
 }
 
 export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMenuResponse> {
+  const lat = params.lat ?? 0;
+  const lng = params.lng ?? 0;
+
+  const finalize = (menu: FoodMenuResponse): FoodMenuResponse => {
+    writeFoodSessionCache(params.slug, lat, lng, menu);
+    return menu;
+  };
+
   if (isContractMenuPathEnabled()) {
     const envelope = await getFoodApiClient().fetchMenuContractV1(params);
     persistMenuContext(
@@ -35,12 +44,12 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
       restaurantIdFromEnvelope(envelope, params.slug),
     );
     const menu = mapFoodMenuDTOToFoodMenuResponse(envelope);
-    return enrichWithRecommendations(enrichWithAiBadges(menu));
+    return finalize(enrichWithRecommendations(enrichWithAiBadges(menu)));
   }
 
   const payload = await getFoodApiClient().fetchMenu(params);
   persistMenuContext(params.slug, payload.contextToken, `obr_${params.slug}`);
-  return enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload)));
+  return finalize(enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload))));
 }
 
 export async function loadFoodRecommended(slug: string): Promise<FoodCollectionResponse> {

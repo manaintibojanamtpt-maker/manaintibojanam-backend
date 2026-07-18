@@ -1,17 +1,19 @@
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { useFeaturedRestaurants } from '../../hooks/useMockExperienceQuery';
 import { matchesHomeCategory } from '../../utils/homeCategoryFilter';
-import { Section } from '@bhojan/storefront-design-system/primitives/Section';
-import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
-import { OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
+import { OrderBhojanHomeCategories, OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
 import { OrderBhojanMockKitchenCard } from '@/presentation/discovery/OrderBhojanMockKitchenCard';
 import { OrderBhojanDiscoveryUxState } from '@/presentation/states';
 
 export interface FeaturedRestaurantsSectionProps {
   readonly categoryId?: FoodCategoryId | null;
+  readonly showCategoriesAfter?: boolean;
 }
 
-export function FeaturedRestaurantsSection({ categoryId = null }: FeaturedRestaurantsSectionProps) {
+export function FeaturedRestaurantsSection({
+  categoryId = null,
+  showCategoriesAfter = false,
+}: FeaturedRestaurantsSectionProps) {
   const query = useFeaturedRestaurants();
 
   if (query.isPending && !query.data) {
@@ -37,25 +39,35 @@ export function FeaturedRestaurantsSection({ categoryId = null }: FeaturedRestau
       <OrderBhojanDiscoveryUxState
         variant="empty"
         title="No kitchens in this category"
-        description="Try selecting a different category above."
+        description="Try selecting a different category below."
         compact
       />
     );
   }
 
   return (
-    <Section density="comfortable" background="default" className="!py-8">
-      <SectionHeader title="Near you" align="left" className="!mb-6 !text-left" />
-      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-3">
+    <section className="space-y-4" aria-label="Nearby kitchens">
+      <header className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
+          <p className="text-xs text-white/50">Home kitchens cooking for your area</p>
+        </div>
+        <span className="text-xs font-semibold text-[#FF7A00]">
+          {visible.length} {visible.length === 1 ? 'kitchen' : 'kitchens'}
+        </span>
+      </header>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         {visible.map((restaurant) => (
-          <OrderBhojanMockKitchenCard
-            key={restaurant.id}
-            restaurant={restaurant}
-            width="17.5rem"
-            className="lg:w-full lg:min-w-0"
-          />
+          <OrderBhojanMockKitchenCard key={restaurant.id} restaurant={restaurant} variant="grid" className="w-full" />
         ))}
       </div>
-    </Section>
+
+      {showCategoriesAfter ? (
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
+          <OrderBhojanHomeCategories compact />
+        </div>
+      ) : null}
+    </section>
   );
 }

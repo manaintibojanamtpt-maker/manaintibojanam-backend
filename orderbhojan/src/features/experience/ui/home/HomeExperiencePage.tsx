@@ -1,15 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed, useDiscoveryHome } from '@/features/discovery';
 import { useLocationActions, useLocationFeatureEnabled, useActiveLocation } from '@/features/location';
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
-import {
-  OrderBhojanHomeHero,
-  OrderBhojanHomeTrustStrip,
-} from '@/presentation/discovery';
+import { OrderBhojanHomeHero } from '@/presentation/discovery/OrderBhojanHomeHero';
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
+import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
+
+const OrderBhojanHomeTrustStrip = lazy(() =>
+  import('@/presentation/discovery/OrderBhojanHomeTrustStrip').then((module) => ({
+    default: module.OrderBhojanHomeTrustStrip,
+  })),
+);
 
 function MockRestaurantFeed({ categoryId }: { categoryId: FoodCategoryId | null }) {
   return <HomeSpotlightMockFeed categoryId={categoryId} />;
@@ -73,8 +77,20 @@ export function HomeExperiencePage() {
           <h2 className="text-base font-bold text-white/90">Why OrderBhojan</h2>
           <p className="text-xs text-white/45">Verified home kitchens with the warmth you expect</p>
         </div>
-        <OrderBhojanHomeTrustStrip />
+        <Suspense fallback={<TrustStripFallback />}>
+          <OrderBhojanHomeTrustStrip />
+        </Suspense>
       </section>
+    </div>
+  );
+}
+
+function TrustStripFallback() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3" aria-hidden="true">
+      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
+      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
+      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
     </div>
   );
 }

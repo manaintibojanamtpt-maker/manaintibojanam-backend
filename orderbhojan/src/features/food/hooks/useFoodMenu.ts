@@ -3,6 +3,11 @@ import { useEffect } from 'react';
 import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
+import {
+  getFoodSessionCacheUpdatedAt,
+  hydrateFoodSessionCacheFromIdb,
+  readFoodSessionCache,
+} from '../engine/foodSessionCache';
 import { loadFoodMenu } from '../engine/foodExperienceLayer';
 import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
@@ -19,6 +24,11 @@ export function useFoodMenu(slug: string | undefined) {
     if (slug) setRestaurant(slug);
   }, [slug, setRestaurant]);
 
+  useEffect(() => {
+    if (!slug) return;
+    void hydrateFoodSessionCacheFromIdb(slug, coords.lat, coords.lng);
+  }, [slug, coords.lat, coords.lng]);
+
   return useQuery({
     queryKey: foodKeys.menu(slug ?? '', coords.lat, coords.lng),
     queryFn: () =>
@@ -29,6 +39,13 @@ export function useFoodMenu(slug: string | undefined) {
       }),
     enabled: enabled && Boolean(slug),
     ...liveQuery,
+    initialData: () =>
+      slug ? readFoodSessionCache(slug, coords.lat, coords.lng) : undefined,
+    initialDataUpdatedAt: () =>
+      slug ? getFoodSessionCacheUpdatedAt(slug, coords.lat, coords.lng) : undefined,
+    placeholderData: (previous) =>
+      previous ??
+      (slug ? readFoodSessionCache(slug, coords.lat, coords.lng) : undefined),
     retry: 2,
   });
 }
