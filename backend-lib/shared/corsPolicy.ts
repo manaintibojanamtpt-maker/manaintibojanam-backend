@@ -7,6 +7,10 @@ export const DEFAULT_CORS_ALLOWED_ORIGINS = [
   'https://orderbhojan.com',
   'https://www.bhojanos.com',
   'https://bhojanos.com',
+  // Capacitor native WebView origins (Android https scheme + iOS capacitor scheme)
+  'https://localhost',
+  'http://localhost',
+  'capacitor://localhost',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5180',
@@ -14,11 +18,19 @@ export const DEFAULT_CORS_ALLOWED_ORIGINS = [
   'http://localhost:8081',
 ] as const;
 
+/** Capacitor WebView origins — always merged so native apps work even when CORS_ALLOWED_ORIGINS is set in Render. */
+export const CAPACITOR_CORS_ORIGINS = [
+  'https://localhost',
+  'http://localhost',
+  'capacitor://localhost',
+] as const;
+
 export function resolveCorsAllowedOrigins(): string[] {
   const fromEnv = process.env.CORS_ALLOWED_ORIGINS?.split(',')
     .map((value) => value.trim())
     .filter(Boolean);
-  return fromEnv?.length ? fromEnv : [...DEFAULT_CORS_ALLOWED_ORIGINS];
+  const base = fromEnv?.length ? fromEnv : [...DEFAULT_CORS_ALLOWED_ORIGINS];
+  return [...new Set([...base, ...CAPACITOR_CORS_ORIGINS])];
 }
 
 export function isCorsOriginAllowed(origin: string | undefined, allowedOrigins: string[]): boolean {

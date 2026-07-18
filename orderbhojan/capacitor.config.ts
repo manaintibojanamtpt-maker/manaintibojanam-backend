@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     scrollEnabled: true,
   },
+  server: {
+    // Android WebView origin is https://localhost (must match backend CORS allowlist).
+    androidScheme: 'https',
+    hostname: 'localhost',
+  },
   android: {
     allowMixedContent: false,
   },

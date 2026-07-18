@@ -17,6 +17,11 @@ describe('corsPolicy', () => {
     assert.ok(isCorsOriginAllowed('http://localhost:5174', [...DEFAULT_CORS_ALLOWED_ORIGINS]));
   });
 
+  it('allows Capacitor native WebView origins', () => {
+    assert.ok(isCorsOriginAllowed('https://localhost', [...DEFAULT_CORS_ALLOWED_ORIGINS]));
+    assert.ok(isCorsOriginAllowed('capacitor://localhost', [...DEFAULT_CORS_ALLOWED_ORIGINS]));
+  });
+
   it('rejects unknown browser origins', () => {
     assert.equal(isCorsOriginAllowed('https://evil.example', [...DEFAULT_CORS_ALLOWED_ORIGINS]), false);
   });
@@ -32,6 +37,9 @@ describe('corsPolicy', () => {
       assert.deepEqual(resolveCorsAllowedOrigins(), [
         'https://custom.example',
         'https://orderbhojan.web.app',
+        'https://localhost',
+        'http://localhost',
+        'capacitor://localhost',
       ]);
     } finally {
       if (previous === undefined) delete process.env.CORS_ALLOWED_ORIGINS;

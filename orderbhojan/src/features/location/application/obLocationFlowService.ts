@@ -143,8 +143,12 @@ export async function captureObGpsLocationDraft(geocodeEnabled: boolean): Promis
     syncObStoreFromV2(draft, { openConfirmation: true });
     return draft;
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Reverse geocode failed';
-    trackReverseGeocodeFailure(message, 'marketplace');
+    const raw = err instanceof Error ? err.message : 'Reverse geocode failed';
+    const message =
+      raw === 'Failed to fetch' || /networkerror/i.test(raw)
+        ? 'Could not reach the location service. Check your connection and try again.'
+        : raw;
+    trackReverseGeocodeFailure(raw, 'marketplace');
     throw new LocationError(LOCATION_ERROR_CODES.UNAVAILABLE, message, true);
   }
 }

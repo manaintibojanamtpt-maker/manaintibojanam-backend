@@ -105,5 +105,10 @@ export function configureMarketplaceLocationContext(input?: {
 }
 
 export function getMarketplaceApiBaseUrl(): string {
-  return (import.meta.env.VITE_API_URL || 'https://manaintibojanam-backend.onrender.com').replace(/\/$/, '');
+  const env = import.meta.env;
+  const url =
+    env.VITE_MARKETPLACE_API_URL ||
+    env.VITE_API_URL ||
+    'https://manaintibojanam-backend.onrender.com';
+  return url.replace(/\/$/, '');
 }
