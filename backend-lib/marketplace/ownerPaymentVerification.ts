@@ -217,12 +217,27 @@ export async function claimCustomerUpiPayment(
   }
 
   const reference = params.upiReference?.trim();
+  const claimTimestamp = new Date().toISOString();
+  const nextStatus = 'PAYMENT_VERIFICATION';
 
   await orderRef.update({
     ...(reference ? { customerUpiReference: reference } : {}),
     customerPaymentClaimedAt: fieldValue.serverTimestamp(),
     customerPaymentClaimed: true,
+    paymentStatus: 'pending_verification',
+    status: nextStatus,
     updatedAt: fieldValue.serverTimestamp(),
+    statusHistory: fieldValue.arrayUnion({
+      status: nextStatus,
+      timestamp: claimTimestamp,
+      description: reference
+        ? 'Customer reported UPI payment with transaction reference — awaiting owner verification'
+        : 'Customer reported UPI payment — awaiting owner verification',
+      metadata: {
+        source: 'customer_payment_claim',
+        customerUpiReference: reference ?? null,
+      },
+    }),
   });
 
   return { recorded: true };

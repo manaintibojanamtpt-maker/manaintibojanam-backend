@@ -8,6 +8,7 @@ export const NEW_ORDER_STATUSES = new Set([
   'PENDING',
   'CREATED',
   'PLACED',
+  'PENDING_PAYMENT',
   'PAYMENT_PENDING',
   'PAYMENT_VERIFICATION',
 ]);

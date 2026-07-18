@@ -18,11 +18,13 @@ describe('dashboardRealtimeHelpers', () => {
       { id: '1', status: 'PENDING', totalAmount: 100, createdAt: '2026-01-01T00:00:00.000Z' },
       { id: '2', status: 'PREPARING', totalAmount: 100, createdAt: '2026-01-01T00:00:00.000Z' },
       { id: '3', status: 'PLACED', totalAmount: 100, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: '4', status: 'PENDING_PAYMENT', totalAmount: 100, createdAt: '2026-01-01T00:00:00.000Z' },
     ];
 
-    assert.equal(computePendingOrderCount(orders), 2);
-    assert.deepEqual(computePendingOrders(orders).map((order) => order.id), ['1', '3']);
+    assert.equal(computePendingOrderCount(orders), 3);
+    assert.deepEqual(computePendingOrders(orders).map((order) => order.id), ['1', '3', '4']);
     assert.ok(NEW_ORDER_STATUSES.has('PAYMENT_VERIFICATION'));
+    assert.ok(NEW_ORDER_STATUSES.has('PENDING_PAYMENT'));
   });
 
   it('filters inactive terminal orders from active dashboard list', () => {

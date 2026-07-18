@@ -32,6 +32,7 @@ function readTimestamp(value: unknown): string {
 
 function normalizeTrackingStatus(status: string): string {
   const upper = status.trim().toUpperCase();
+  if (upper === 'PAYMENT_VERIFICATION') return 'PAYMENT_VERIFICATION';
   if (['PENDING', 'CREATED', 'PLACED', 'PENDING_PAYMENT', 'CONFIRMED'].includes(upper)) return 'PLACED';
   if (upper === 'ACCEPTED') return 'ACCEPTED';
   if (['PREPARING', 'READY'].includes(upper)) return 'PREPARING';
