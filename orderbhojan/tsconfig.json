@@ -15,6 +15,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@bhojan/location-core": ["../packages/location-core/src/index.ts"],

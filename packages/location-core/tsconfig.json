@@ -8,7 +8,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": "."
   },
   "include": ["src/**/*.ts"],
   "exclude": ["__tests__", "node_modules"]

@@ -171,6 +171,7 @@ function patchTsconfig(exportRoot) {
   if (!fs.existsSync(tsconfigPath)) return;
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
   tsconfig.compilerOptions ??= {};
+  tsconfig.compilerOptions.baseUrl ??= '.';
   tsconfig.compilerOptions.paths ??= {};
   tsconfig.compilerOptions.paths['@bhojan/storefront-design-system'] = [
     'storefront-src/design-system/index.ts',
