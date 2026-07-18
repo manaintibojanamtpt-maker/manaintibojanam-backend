@@ -48,4 +48,10 @@ describe('corsPolicy', () => {
     });
     assert.equal(allowed, true);
   });
+
+  it('allows Cache-Control and Pragma for live storefront cache busting', () => {
+    const options = createCorsOptions([...DEFAULT_CORS_ALLOWED_ORIGINS]);
+    assert.ok(options.allowedHeaders?.includes('Cache-Control'));
+    assert.ok(options.allowedHeaders?.includes('Pragma'));
+  });
 });

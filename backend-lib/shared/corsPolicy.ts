@@ -39,6 +39,8 @@ export function createCorsOptions(allowedOrigins = resolveCorsAllowedOrigins()):
     allowedHeaders: [
       'Content-Type',
       'Authorization',
+      'Cache-Control',
+      'Pragma',
       'X-Tenant-Id',
       'X-Correlation-Id',
       'X-Marketplace-Api-Version',
