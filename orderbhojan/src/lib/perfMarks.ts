@@ -1,3 +1,5 @@
+import { isObDebugEnabled } from './obDebug';
+
 type PerfMarkName =
   | 'app_start'
   | 'first_paint'
@@ -28,7 +30,7 @@ function record(name: PerfMarkName, detail?: string): void {
   const at = performance.now();
   marks.set(name, at);
   const entry: PerfEntry = { name, at, detail };
-  if (import.meta.env.DEV) {
+  if (isObDebugEnabled()) {
     console.debug(`[OB perf] ${name}${detail ? ` — ${detail}` : ''}`, `${at.toFixed(1)}ms`);
   }
   if (typeof window !== 'undefined') {
@@ -50,7 +52,7 @@ export function measurePerf(start: PerfMarkName, end: PerfMarkName, label?: stri
   const endAt = marks.get(end);
   if (startAt == null || endAt == null) return null;
   const duration = endAt - startAt;
-  if (import.meta.env.DEV) {
+  if (isObDebugEnabled()) {
     console.debug(`[OB perf] ${label ?? `${start}→${end}`}: ${duration.toFixed(1)}ms`);
   }
   return duration;

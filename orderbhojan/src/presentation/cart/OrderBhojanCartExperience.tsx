@@ -12,6 +12,8 @@ import {
 import { useCartValidation } from '@/features/cart/hooks/useCartValidation';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, useActiveLocation, useLocationActions } from '@/features/location';
+import { useAuth } from '@/shared/providers/AuthProvider';
+import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { markPerf } from '@/lib/perfMarks';
 
 const DELIVERY_LOCATION_GATE_MESSAGE =
@@ -39,6 +41,7 @@ function mapLineToViewModel(line: CartLine): CartLineViewModel {
 
 export function OrderBhojanCartExperience() {
   const navigate = useNavigate();
+  const { sessionUser, status: authStatus } = useAuth();
   const lines = useCartStore((s) => s.lines);
   const restaurantSlug = useCartStore((s) => s.restaurantSlug);
   const setQuantity = useCartStore((s) => s.setQuantity);
@@ -51,6 +54,11 @@ export function OrderBhojanCartExperience() {
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
   const isCheckoutReady = hasReadyDeliveryLocation(activeLocation);
   useCheckoutPrefetch(itemCount > 0);
+
+  const checkoutAuthGate = useMemo(
+    () => resolveCheckoutAuthGate({ status: authStatus, sessionUser }),
+    [authStatus, sessionUser],
+  );
 
   const restaurantLabel = useMemo(
     () =>
@@ -73,6 +81,14 @@ export function OrderBhojanCartExperience() {
     }
     if (needsFlatConfirmation(activeLocation)) {
       openConfirmation();
+      return;
+    }
+    if (!checkoutAuthGate.allowed) {
+      navigate(
+        checkoutAuthGate.reason === 'phone_verification_required'
+          ? '/auth?tab=phone&returnTo=/checkout'
+          : '/auth?returnTo=/checkout',
+      );
       return;
     }
     markPerf('cart_to_checkout', 'navigate');

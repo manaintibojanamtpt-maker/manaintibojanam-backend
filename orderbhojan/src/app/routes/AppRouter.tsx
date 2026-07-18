@@ -112,7 +112,14 @@ export function AppRouter() {
           }
         />
         <Route path="cart" element={<CartExperiencePage />} />
-        <Route path="checkout" element={<CheckoutPage />} />
+        <Route
+          path="checkout"
+          element={
+            <RequireAuth>
+              <CheckoutPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="orders"
           element={

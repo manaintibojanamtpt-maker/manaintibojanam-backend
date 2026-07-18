@@ -22,7 +22,9 @@ import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { UpiPaymentPendingView } from '@/presentation/checkout/UpiPaymentPendingView';
+import { CheckoutAuthGateView } from '@/presentation/checkout/CheckoutAuthGateView';
 import { markPerf } from '@/lib/perfMarks';
+import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import {
   formatDeliverySlotLabel,
   isAsapSlot,
@@ -38,7 +40,7 @@ function normalizePhoneFromSession(phoneNumber: string | null | undefined): stri
 
 export function OrderBhojanCheckoutPage() {
   const navigate = useNavigate();
-  const { sessionUser } = useAuth();
+  const { sessionUser, status: authStatus } = useAuth();
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
   const { uiStatus } = useLocationUiState();
@@ -66,6 +68,8 @@ export function OrderBhojanCheckoutPage() {
     notifyKitchenUpiPaid,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
+
+  const checkoutAuthGate = resolveCheckoutAuthGate({ status: authStatus, sessionUser });
 
   const lines = useCartStore((s) => s.lines);
   const estimatedSubtotal = cartSubtotal(lines);
@@ -152,6 +156,10 @@ export function OrderBhojanCheckoutPage() {
     setLastPaymentMethod('upi');
     await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined);
   };
+
+  if (!checkoutAuthGate.allowed && authStatus !== 'loading') {
+    return <CheckoutAuthGateView />;
+  }
 
   if (status === 'awaiting_payment' && upiSession) {
     return (

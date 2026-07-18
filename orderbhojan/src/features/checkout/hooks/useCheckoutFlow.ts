@@ -16,6 +16,7 @@ import {
   resolveDefaultDeliverySlot,
 } from '../domain/deliveryTimeSlots';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
 import {
@@ -101,7 +102,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
   const activeLocation = useActiveLocation();
-  const { sessionUser } = useAuth();
+  const { sessionUser, status: authStatus } = useAuth();
 
   const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
   const coords = activeLocation?.coordinates;
@@ -119,6 +120,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
   const placeInFlightRef = useRef(false);
   const upiPollAbortRef = useRef<AbortController | null>(null);
+
+  const checkoutAuthGate = useMemo(
+    () => resolveCheckoutAuthGate({ status: authStatus, sessionUser }),
+    [authStatus, sessionUser],
+  );
+
+  const assertCanPlaceOrder = useCallback(() => {
+    if (checkoutAuthGate.allowed) return;
+    throw new Error(checkoutAuthGate.message);
+  }, [checkoutAuthGate.allowed, checkoutAuthGate.message]);
 
   const itemCount = cartItemCount(lines);
   const canCheckout =
@@ -236,6 +247,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlaceStatus('placing');
       setPlaceError(null);
       try {
+        assertCanPlaceOrder();
         const payload = {
           ...getPayload(),
           paymentMethod: 'cod',
@@ -266,7 +278,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlacingMethod(null);
       }
     },
-    [getPayload, sessionUser],
+    [assertCanPlaceOrder, getPayload, sessionUser],
   );
 
   const placeRazorpayOrder = useCallback(
@@ -278,6 +290,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlaceStatus('placing');
       setPlaceError(null);
       try {
+        assertCanPlaceOrder();
         const payload = {
           ...getPayload(),
           paymentMethod: 'razorpay',
@@ -321,7 +334,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlacingMethod(null);
       }
     },
-    [getPayload, sessionUser],
+    [assertCanPlaceOrder, getPayload, sessionUser],
   );
 
   const finalizeUpiPaymentSuccess = useCallback((placed: PlacedOrderConfirmation) => {
@@ -418,6 +431,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlaceError(null);
       setUpiPollMessage(null);
       try {
+        assertCanPlaceOrder();
         const payload = {
           ...getPayload(),
           paymentMethod: 'upi' as const,
@@ -466,7 +480,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlacingMethod(null);
       }
     },
-    [getPayload, quote?.grandTotal, runUpiVerification, sessionUser],
+    [assertCanPlaceOrder, getPayload, quote?.grandTotal, runUpiVerification, sessionUser],
   );
 
   const checkUpiPayment = useCallback(async () => {

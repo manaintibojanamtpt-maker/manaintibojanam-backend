@@ -14,6 +14,8 @@ import {
   resolveRestaurantCoords,
 } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { restaurantKeys } from '@/features/restaurant/hooks/restaurantQueryKeys';
+import { loadFoodMenu } from '@/features/food/engine/foodExperienceLayer';
+import { foodKeys } from '@/features/food/hooks/foodQueryKeys';
 import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 
 export interface OrderBhojanKitchenCardProps {
@@ -92,10 +94,22 @@ export function OrderBhojanKitchenCard({
   ]);
 
   const prefetchKitchenNavigation = useCallback(() => {
+    if (!restaurant.restaurantSlug) return;
+    const coords = resolveRestaurantCoords(activeLocation);
     prefetchRestaurant();
+    void queryClient.prefetchQuery({
+      queryKey: foodKeys.menu(restaurant.restaurantSlug, coords.lat, coords.lng),
+      queryFn: () =>
+        loadFoodMenu({
+          slug: restaurant.restaurantSlug,
+          lat: coords.lat,
+          lng: coords.lng,
+        }),
+      staleTime: liveQuery.staleTime,
+    });
     void import('@/features/restaurant');
     void import('@/features/food/ui/FoodRoutePage');
-  }, [prefetchRestaurant]);
+  }, [activeLocation, liveQuery.staleTime, prefetchRestaurant, queryClient, restaurant.restaurantSlug]);
 
   const kitchen = useMemo(() => mapRestaurantPublicToKitchenCard(restaurant), [restaurant]);
   const isGridCard = variant === 'grid' || className.includes('lg:w-full');

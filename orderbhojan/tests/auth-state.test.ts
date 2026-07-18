@@ -44,6 +44,7 @@ describe('auth state machine', () => {
     assert.equal(isProtectedRoute('/profile'), false);
     assert.equal(isProtectedRoute('/orders/abc/track'), true);
     assert.equal(isProtectedRoute('/discovery'), false);
+    assert.equal(isProtectedRoute('/checkout'), false);
   });
 });
 

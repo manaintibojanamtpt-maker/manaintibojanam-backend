@@ -35,7 +35,6 @@ export function OrderBhojanScreenHeader({
   return (
     <header
       className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur-xl"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="mx-auto flex min-h-12 max-w-7xl items-center gap-2 px-3 py-2">
         <button

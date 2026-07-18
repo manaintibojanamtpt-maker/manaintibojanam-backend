@@ -175,6 +175,19 @@
   padding-right: var(--ob-safe-right);
 }
 
+.ob-fullscreen-shell.ob-app-shell {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+html.ob-native-android {
+  --ob-safe-top: max(env(safe-area-inset-top, 0px), 28px);
+}
+
+html.ob-native-ios {
+  --ob-safe-top: max(env(safe-area-inset-top, 0px), 47px);
+}
+
 .ob-press {
   transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease;
 }

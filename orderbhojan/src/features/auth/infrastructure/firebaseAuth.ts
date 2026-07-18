@@ -3,6 +3,7 @@ import {
   RecaptchaVerifier,
   getRedirectResult,
   signInAnonymously,
+  signInWithCredential,
   signInWithPhoneNumber,
   signInWithPopup,
   signInWithRedirect,
@@ -11,7 +12,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/firebase';
-import { shouldUseGoogleAuthRedirect } from '@/lib/nativePlatform';
+import { isNativePlatform, shouldUseGoogleAuthRedirect } from '@/lib/nativePlatform';
+import { obDebugLog } from '@/lib/obDebug';
 import type { AuthProviderId, AuthSessionUser } from '../domain/auth.types';
 
 export class AuthConfigurationError extends Error {
@@ -60,10 +62,39 @@ function resolveProvider(user: User): AuthProviderId {
   return 'guest';
 }
 
+async function signInWithGoogleNative(): Promise<AuthSessionUser> {
+  const auth = requireAuth();
+  try {
+    const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+    const result = await FirebaseAuthentication.signInWithGoogle();
+    obDebugLog('auth', 'Native Google sign-in completed', result.credential?.providerId);
+
+    const idToken = result.credential?.idToken;
+    if (!idToken) {
+      throw new AuthFlowError('Google sign-in did not return an ID token.');
+    }
+
+    const credential = GoogleAuthProvider.credential(idToken, result.credential?.accessToken ?? undefined);
+    const signedIn = await signInWithCredential(auth, credential);
+    return mapFirebaseUser(signedIn.user);
+  } catch (error) {
+    obDebugLog('auth', 'Native Google sign-in failed', error);
+    throw error instanceof AuthFlowError
+      ? error
+      : new AuthFlowError(
+          error instanceof Error ? error.message : 'Native Google sign-in failed. Check Firebase SHA-1 and google-services.json.',
+        );
+  }
+}
+
 export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   const auth = requireAuth();
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+
+  if (isNativePlatform()) {
+    return signInWithGoogleNative();
+  }
 
   if (shouldUseGoogleAuthRedirect()) {
     sessionStorage.setItem('auth_redirecting', 'true');

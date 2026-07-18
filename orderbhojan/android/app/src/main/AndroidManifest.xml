@@ -36,6 +36,14 @@
                 <data android:scheme="orderbhojan" />
             </intent-filter>
 
+            <!-- Captures Firebase web redirect callbacks inside the WebView (https://localhost). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="localhost" />
+            </intent-filter>
+
         </activity>
 
         <provider

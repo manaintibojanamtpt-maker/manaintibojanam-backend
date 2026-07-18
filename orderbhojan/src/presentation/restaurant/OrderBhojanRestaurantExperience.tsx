@@ -47,7 +47,7 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
   return (
     <div className="min-h-screen bg-[#030303] pb-28 text-white">
       <OrderBhojanRestaurantStickyHeader name={experience.displayName} />
-      <div style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top))' }}>
+      <div style={{ paddingTop: 'calc(3.5rem + var(--ob-safe-top))' }}>
       <OrderBhojanRestaurantHero
         data={data}
         collapsed={collapsed}

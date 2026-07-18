@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthShellView, type AuthTabId } from '@bhojan/storefront-design-system/auth';
@@ -19,6 +19,13 @@ export function OrderBhojanAuthShellPage() {
   const [tab, setTab] = useState<AuthTabId>('google');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(location.search).get('tab');
+    if (requested === 'phone' || requested === 'guest' || requested === 'google') {
+      setTab(requested);
+    }
+  }, [location.search]);
 
   const redirectTo = resolveAuthRedirect(location);
 

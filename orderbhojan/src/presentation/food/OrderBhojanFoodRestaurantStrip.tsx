@@ -23,7 +23,10 @@ export function OrderBhojanFoodRestaurantStrip({
   const logo = resolveRestaurantLogo(restaurantSlugFromString(slug), 82);
 
   return (
-    <header className="border-b border-white/10 bg-[#030303] px-4 py-3">
+    <header
+      className="sticky top-0 z-50 border-b border-white/10 bg-[#030303] px-4 backdrop-blur-md"
+      style={{ paddingTop: 'max(0.75rem, var(--ob-safe-top))', paddingBottom: '0.75rem' }}
+    >
       <div className="mx-auto flex max-w-3xl items-center gap-3">
         <SoftButton type="button" tone="ghost" size="compact" aria-label="Back to restaurant" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" aria-hidden />

@@ -67,8 +67,8 @@ export function OrderBhojanRestaurantStickyHeader({
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#030303]/92 px-4 py-3 backdrop-blur-md"
-      style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#030303]/92 px-4 backdrop-blur-md"
+      style={{ paddingTop: 'max(0.75rem, var(--ob-safe-top))', paddingBottom: '0.75rem' }}
     >
       <div className="mx-auto flex max-w-3xl items-center gap-3">
         <button
