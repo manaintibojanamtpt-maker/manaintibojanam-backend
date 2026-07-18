@@ -10,6 +10,7 @@ describe('owner orders API migration', () => {
       'utf8',
     );
     assert.match(source, /app\.get\('\/api\/owner\/orders'/);
+    assert.match(source, /app\.post\('\/api\/owner\/orders\/:orderId\/verify-payment'/);
     assert.match(source, /assertOwnerTenantAccess/);
     assert.match(source, /hasMore/);
   });
@@ -36,6 +37,8 @@ describe('owner orders API migration', () => {
 
     const orders = fs.readFileSync(path.join(process.cwd(), 'src/pages/owner/OwnerOrders.tsx'), 'utf8');
     assert.match(orders, /subscribeOwnerOrders/);
+    assert.match(orders, /verifyOwnerOrderPayment/);
+    assert.match(orders, /Payment received — Verify & Accept/);
     assert.doesNotMatch(orders, /onSnapshot\(.*orders/);
     assert.doesNotMatch(orders, /firebase\/firestore/);
 

@@ -33,6 +33,10 @@ export interface OwnerOrderSnapshot {
   scheduledFor?: unknown;
   scheduledTime?: unknown;
   deliveryTimeSlot?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  customerUpiReference?: string;
+  customerPaymentClaimed?: boolean;
 }
 
 function normalizeLineItems(rawItems: unknown, modelItems: OrderReadModel['items']): unknown[] {
@@ -154,6 +158,10 @@ export const readModelToOwnerOrder = (
   scheduledTime: raw?.scheduledTime ?? model.scheduledTime,
   deliveryTimeSlot:
     safeText(raw?.deliveryTimeSlot ?? model.deliveryTimeSlot, undefined) || undefined,
+  paymentStatus: safeText(raw?.paymentStatus, undefined)?.toLowerCase() || undefined,
+  paymentMethod: safeText(raw?.paymentMethod, undefined)?.toLowerCase() || undefined,
+  customerUpiReference: safeText(raw?.customerUpiReference, undefined) || undefined,
+  customerPaymentClaimed: raw?.customerPaymentClaimed === true,
 });
 
 export const apiRecordToOwnerOrder = (record: ApiOrderRecord): OwnerOrderSnapshot =>

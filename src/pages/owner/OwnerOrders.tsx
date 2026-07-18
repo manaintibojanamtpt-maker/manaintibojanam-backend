@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
-import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle, CalendarClock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle, CalendarClock, IndianRupee } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
@@ -23,6 +23,8 @@ import {
   resolveOwnerDeliveryType,
   splitOwnerOrdersBySchedule,
 } from '../../lib/ownerOrderQueue';
+import { verifyOwnerOrderPayment } from '../../lib/ownerOrdersApi';
+import { isAwaitingOwnerUpiVerification, isOwnerActionablePlacedOrder } from '../../lib/ownerUpiPayment';
 
 interface Order extends OwnerOrder {}
 
@@ -218,7 +220,44 @@ const OwnerOrders: React.FC = () => {
     }
   };
 
-  const pendingOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'CREATED' || o.status === 'PLACED');
+  const handleVerifyUpiPayment = async (order: Order, acceptOrder = true): Promise<boolean> => {
+    if (!tenantId) return false;
+    try {
+      setUpdatingOrderId(order.id);
+      const result = await verifyOwnerOrderPayment(tenantId, order.id, { acceptOrder });
+      setOrders((currentOrders) =>
+        currentOrders.map((current) =>
+          current.id === order.id
+            ? {
+                ...current,
+                paymentStatus: result.paymentStatus,
+                status: result.status,
+              }
+            : current,
+        ),
+      );
+      toast.success(
+        result.alreadyVerified
+          ? acceptOrder
+            ? 'Order accepted — payment was already verified'
+            : 'Payment was already verified'
+          : acceptOrder
+            ? 'Payment verified and order accepted'
+            : 'Payment verified — you can accept when ready',
+      );
+      return true;
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : 'Failed to verify payment');
+      return false;
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const pendingOrders = orders.filter(
+    (o) => isOwnerActionablePlacedOrder(o.status) || isAwaitingOwnerUpiVerification(o),
+  );
 
   const renderOrderCard = (order: Order, orderIndex: number, section: 'active' | 'scheduled') => {
     const orderKey = String(order.id ?? order.orderNumber ?? `order-${orderIndex}`);
@@ -240,6 +279,12 @@ const OwnerOrders: React.FC = () => {
     const isScheduledOrder = resolveOwnerDeliveryType(order) === 'scheduled';
     const scheduleLabel = isScheduledOrder ? formatOwnerScheduleSlotLabel(order) : null;
     const scheduledAt = coerceOwnerOrderDate(order.scheduledFor ?? order.scheduledTime);
+    const awaitingUpiVerification = isAwaitingOwnerUpiVerification(order);
+    const paymentVerified = ['success', 'verified', 'paid'].includes(
+      String(order.paymentStatus || '').toLowerCase(),
+    );
+    const canAcceptVerifiedOrder =
+      paymentVerified && isOwnerActionablePlacedOrder(orderStatus) && !awaitingUpiVerification;
     const showPrepWindowAlert =
       section === 'active' &&
       isScheduledOrder &&
@@ -266,6 +311,7 @@ const OwnerOrders: React.FC = () => {
               <span className="text-sm font-mono text-white/40">#{displayOrderNumber}</span>
               <span className={`px-2.5 py-1 text-xs font-semibold rounded-md 
                 ${orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                ${orderStatus === 'PENDING_PAYMENT' || orderStatus === 'PAYMENT_PENDING' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300' : ''}
                 ${orderStatus === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
                 ${orderStatus === 'PREPARING' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : ''}
                 ${orderStatus === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
@@ -291,6 +337,33 @@ const OwnerOrders: React.FC = () => {
               </span>
               <OwnerOrderPrepTimer order={order} />
             </div>
+
+            {awaitingUpiVerification && (
+              <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm text-amber-50 space-y-2">
+                <div className="flex items-start gap-2">
+                  <IndianRupee className="w-4 h-4 shrink-0 mt-0.5 text-amber-300" />
+                  <div>
+                    <p className="font-semibold text-amber-100">
+                      UPI payment pending — verify in your UPI app, then confirm here
+                    </p>
+                    <p className="text-xs text-amber-100/80 mt-1">
+                      Direct UPI cannot auto-confirm from the bank. After you see ₹{orderTotal} credited,
+                      tap verify to release the order to your kitchen.
+                    </p>
+                    {order.customerUpiReference && (
+                      <p className="text-xs text-amber-100/90 mt-2 font-mono">
+                        Customer UPI ref: {order.customerUpiReference}
+                      </p>
+                    )}
+                    {order.customerPaymentClaimed && !order.customerUpiReference && (
+                      <p className="text-xs text-amber-100/90 mt-2">
+                        Customer notified you they have paid — check your UPI statement.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {showPrepWindowAlert && (
               <div className="mb-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start gap-2">
@@ -416,7 +489,7 @@ const OwnerOrders: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {(orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED') && (
+                  {(orderStatus === 'PENDING' || orderStatus === 'CREATED' || orderStatus === 'PLACED') && !awaitingUpiVerification && (
                     <>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
@@ -431,6 +504,45 @@ const OwnerOrders: React.FC = () => {
                         className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                       >
                         <XCircle className="w-4 h-4 mr-2" /> Reject
+                      </button>
+                    </>
+                  )}
+
+                  {awaitingUpiVerification && (
+                    <>
+                      <button
+                        onClick={() => void handleVerifyUpiPayment(order, true)}
+                        disabled={updatingOrderId === order.id}
+                        className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                      >
+                        <IndianRupee className="w-4 h-4 mr-2" />
+                        {updatingOrderId === order.id ? 'Verifying…' : 'Payment received — Verify & Accept'}
+                      </button>
+                      <button
+                        onClick={() => void handleVerifyUpiPayment(order, false)}
+                        disabled={updatingOrderId === order.id}
+                        className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+                      >
+                        Verify only
+                      </button>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'REJECTED')}
+                        disabled={updatingOrderId === order.id}
+                        className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" /> Reject
+                      </button>
+                    </>
+                  )}
+
+                  {canAcceptVerifiedOrder && (
+                    <>
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
+                        disabled={updatingOrderId === order.id}
+                        className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Accept Order'}
                       </button>
                     </>
                   )}

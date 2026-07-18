@@ -3,13 +3,15 @@ import { FieldValue, Firestore } from 'firebase-admin/firestore';
 export type PaymentVerificationSource =
   | 'razorpay_callback'
   | 'razorpay_webhook'
-  | 'system_expiry';
+  | 'system_expiry'
+  | 'owner_manual_upi';
 
 export interface PaymentVerificationRecord {
   tenantId: string;
   orderId: string;
   action: 'verified' | 'expired';
-  actorRole: 'system';
+  actorRole: 'system' | 'owner';
+  actorUserId?: string | null;
   source: PaymentVerificationSource;
   razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
@@ -18,6 +20,8 @@ export interface PaymentVerificationRecord {
   reconciliationSource?: string;
   reconciliationEventId?: string | null;
   draftId?: string;
+  upiReference?: string | null;
+  notes?: string | null;
 }
 
 export const writePaymentVerification = async (

@@ -58,6 +58,8 @@ describe('checkout direct UPI payment', () => {
     assert.match(pending, /UPI_APP_CHOICES/);
     assert.match(pending, /launchUpiApp/);
     assert.match(pending, /Copy payment details/);
+    assert.match(pending, /I've paid — notify kitchen/);
+    assert.match(pending, /kitchen verifies payment/);
     assert.doesNotMatch(pending, /launchUpiIntent\(upiUrl\)/);
   });
 });

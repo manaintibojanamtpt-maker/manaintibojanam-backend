@@ -42,6 +42,7 @@ import {
 import { registerMarketplaceCustomerRoutes } from './marketplaceCustomerRoutes.js';
 import { registerMarketplaceLocationRoutes } from './marketplaceLocationRoutes.js';
 import { registerMarketplaceMediaPublicRoute } from './ownerStorefrontMediaRoutes.js';
+import { notifyOwnerUpiOrderPending } from './ownerOrdersRoutes.js';
 import {
   projectFoodBestsellers,
   projectFoodCategories,
@@ -190,6 +191,7 @@ export function registerMarketplaceRoutes(
   db: Firestore,
   deps?: {
     verifyFirebaseToken?: (req: Request, res: Response, next: () => void) => void;
+    sendWhatsAppNotification?: (to: string, message: string) => Promise<void>;
   },
 ): void {
   registerMarketplaceMediaPublicRoute(app, db);
@@ -727,6 +729,16 @@ export function registerMarketplaceRoutes(
           userId: resolveAuthenticatedUserId(req),
         };
         const result = await placeMarketplaceOrder(db, FieldValue, placeRequest);
+        if (result.kind === 'upi') {
+          const orderDoc = await db.collection('orders').doc(result.orderId).get();
+          if (orderDoc.exists) {
+            void notifyOwnerUpiOrderPending(
+              db,
+              { id: orderDoc.id, ...orderDoc.data() },
+              deps?.sendWhatsAppNotification,
+            );
+          }
+        }
       const value =
         result.kind === 'razorpay'
           ? {

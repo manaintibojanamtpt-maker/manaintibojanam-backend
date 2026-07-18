@@ -63,6 +63,7 @@ export function OrderBhojanCheckoutPage() {
     upiVerifying,
     upiPollMessage,
     checkUpiPayment,
+    notifyKitchenUpiPaid,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
 
@@ -155,7 +156,9 @@ export function OrderBhojanCheckoutPage() {
   if (status === 'awaiting_payment' && upiSession) {
     return (
       <UpiPaymentPendingView
+        orderId={upiSession.orderId}
         orderNumber={upiSession.orderNumber}
+        phone={upiSession.phone}
         amount={upiSession.amount}
         upiUrl={upiSession.upiUrl}
         expiresAt={upiSession.expiresAt}
@@ -163,6 +166,7 @@ export function OrderBhojanCheckoutPage() {
         pollMessage={upiPollMessage}
         errorMessage={error}
         onCheckPayment={() => void checkUpiPayment()}
+        onNotifyKitchen={(upiReference) => notifyKitchenUpiPaid(upiReference)}
         onTrack={() => navigate(`/orders/${upiSession.orderId}/track`)}
         onBrowse={() => navigate('/')}
       />

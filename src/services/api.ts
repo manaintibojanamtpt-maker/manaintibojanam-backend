@@ -485,7 +485,7 @@ const normalizeOrderStatus = (value: string | OrderStatus | undefined | null): O
   if (!normalized) return null;
 
   if (normalized === 'placed') return OrderStatus.PENDING;
-  if (normalized === 'pending_payment') return OrderStatus.PAYMENT_PENDING;
+  if (normalized === 'pending_payment' || normalized === 'PENDING_PAYMENT') return OrderStatus.PAYMENT_PENDING;
   if (normalized === 'payment_pending_verification') return OrderStatus.PAYMENT_VERIFICATION;
 
   normalized = normalized.toUpperCase().replace(/\s+/g, '_');

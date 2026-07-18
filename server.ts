@@ -2317,6 +2317,8 @@ const processOutboxBatch = async () => {
 async function notifyCustomer(order: any, status: string) {
   const statusMessages: Record<string, string> = {
     PENDING: `Your order #${order.orderNumber} has been placed successfully! We'll start preparing it soon.`,
+    PLACED: `Your order #${order.orderNumber} has been placed successfully! We'll start preparing it soon.`,
+    ACCEPTED: `Your order #${order.orderNumber} has been accepted by the kitchen. Preparation will begin shortly.`,
     PREPARING: `Good news! Our chef is now preparing your order #${order.orderNumber}. It will be ready shortly.`,
     READY: `Your order #${order.orderNumber} is ready and waiting for pickup/delivery!`,
     OUT_FOR_DELIVERY: `Your order #${order.orderNumber} is out for delivery! 🛵 Our rider is on the way to your location.`,
@@ -3103,11 +3105,15 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
 });
 
 registerLocationRoutes(app, db);
-registerMarketplaceRoutes(app, db, { verifyFirebaseToken });
+registerMarketplaceRoutes(app, db, { verifyFirebaseToken, sendWhatsAppNotification });
 registerMarketplaceReferralRoutes(app, db, FieldValue, verifyFirebaseToken);
 registerOwnerStorefrontRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerCouponsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
-registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess);
+registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, {
+  fieldValue: FieldValue,
+  sendWhatsAppNotification,
+  notifyCustomer,
+});
 registerOwnerPortalRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue, {
   sendEmailNotification,
   getTransporter,

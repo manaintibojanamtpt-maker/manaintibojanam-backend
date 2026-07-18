@@ -1,4 +1,5 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
+import { getAppConfig } from '@/config';
 import { openExternalUrl } from '@/lib/nativePlatform';
 
 const VERIFIED_PAYMENT_STATUSES = new Set(['success', 'verified', 'paid']);
@@ -254,4 +255,32 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 
 export function buildUpiQrImageUrl(upiUrl: string, size = 220): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(upiUrl)}`;
+}
+
+export async function claimCustomerUpiPayment(params: {
+  readonly orderId: string;
+  readonly phone: string;
+  readonly upiReference?: string;
+}): Promise<void> {
+  const baseUrl = getAppConfig().marketplaceApiBaseUrl.replace(/\/$/, '');
+  const response = await fetch(
+    `${baseUrl}/api/marketplace/orders/${encodeURIComponent(params.orderId)}/payment-claim`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: params.phone,
+        upiReference: params.upiReference?.trim() || undefined,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    ok?: boolean;
+    error?: { message?: string };
+  };
+
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error?.message || 'Unable to notify kitchen');
+  }
 }

@@ -6,6 +6,7 @@ import { useRestaurantContextStore } from '@/features/restaurant/store/restauran
 import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import {
+  claimCustomerUpiPayment,
   fetchOrderPaymentSnapshot,
   pollUpiPaymentStatus,
 } from '../infrastructure/upiCheckout';
@@ -89,6 +90,7 @@ export interface CheckoutFlowState {
   placeRazorpayOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   placeUpiOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
   checkUpiPayment: () => Promise<void>;
+  notifyKitchenUpiPaid: (upiReference?: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -472,6 +474,21 @@ export function useCheckoutFlow(): CheckoutFlowState {
     await runUpiVerification(upiSession, { immediate: true });
   }, [runUpiVerification, upiSession]);
 
+  const notifyKitchenUpiPaid = useCallback(
+    async (upiReference?: string) => {
+      if (!upiSession) {
+        throw new Error('Payment session is missing');
+      }
+      await claimCustomerUpiPayment({
+        orderId: upiSession.orderId,
+        phone: upiSession.phone,
+        upiReference,
+      });
+      setUpiPollMessage('Kitchen notified — waiting for them to verify your payment…');
+    },
+    [upiSession],
+  );
+
   useEffect(() => {
     if (placeStatus !== 'awaiting_payment' || !upiSession) return;
 
@@ -534,6 +551,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     placeRazorpayOrder,
     placeUpiOrder,
     checkUpiPayment,
+    notifyKitchenUpiPaid,
     reset,
   };
 }
