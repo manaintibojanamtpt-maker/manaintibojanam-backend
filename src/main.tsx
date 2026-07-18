@@ -3,11 +3,17 @@ import ReactDOM from 'react-dom/client';
 import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './lib/splashScreen';
 import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
 import { clearFirebaseProjectCacheIfChanged } from './lib/clearFirebaseProjectCache';
+import { bootstrapCapacitorNative } from './lib/capacitorBootstrap';
+import { isNativePlatform } from './lib/nativePlatform';
 
 function isOwnerAuthPath(pathname?: string): boolean {
   if (typeof window === 'undefined') return false;
   const path = pathname ?? window.location.pathname;
   return path === '/owner/login' || path === '/owner/register';
+}
+
+if (isNativePlatform()) {
+  (window as Window & { __SKIP_SPLASH__?: boolean }).__SKIP_SPLASH__ = true;
 }
 
 dismissSplash();
@@ -34,6 +40,7 @@ async function bootstrap() {
 
   clearBootFallback();
 
+  await bootstrapCapacitorNative();
   await clearFirebaseProjectCacheIfChanged();
 
   void mountPwaUpdatePrompt();

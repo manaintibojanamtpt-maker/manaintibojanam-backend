@@ -6,9 +6,15 @@ import { ensureAppConfig } from '@/config';
 import { seedDiscoveryQueryCacheFromSession, warmDefaultDiscoveryHome, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
 import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
+import { bootstrapCapacitorNative } from '@/lib/capacitorBootstrap';
+import { isNativePlatform } from '@/lib/nativePlatform';
 import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
 import '@/styles/globals.css';
+
+if (isNativePlatform()) {
+  (window as Window & { __SKIP_SPLASH__?: boolean }).__SKIP_SPLASH__ = true;
+}
 
 function suppressFirestorePermissionRejections(): void {
   if (typeof window === 'undefined') return;
@@ -45,6 +51,8 @@ function renderApp(): void {
 async function bootstrap() {
   markPerf('app_start');
   suppressFirestorePermissionRejections();
+
+  await bootstrapCapacitorNative();
 
   const bootstrapCoords = resolveBootstrapDiscoveryCoords();
   await hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng);

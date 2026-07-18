@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { skipPwaInstallPrompt } from './nativePlatform';
 
 let mounted = false;
 let pwaRoot: Root | null = null;
@@ -7,6 +8,7 @@ let pwaRoot: Root | null = null;
 /** Register service worker + show update banner on every app shell (marketing, owner auth, storefront). */
 export async function mountPwaUpdatePrompt(): Promise<void> {
   if (mounted || typeof window === 'undefined') return;
+  if (skipPwaInstallPrompt()) return;
   if (!('serviceWorker' in navigator)) return;
 
   mounted = true;

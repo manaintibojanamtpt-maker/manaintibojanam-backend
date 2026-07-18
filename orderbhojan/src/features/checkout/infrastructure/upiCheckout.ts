@@ -1,4 +1,5 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
+import { openExternalUrl } from '@/lib/nativePlatform';
 
 const VERIFIED_PAYMENT_STATUSES = new Set(['success', 'verified', 'paid']);
 const TERMINAL_FAILURE_STATUSES = new Set(['expired', 'failed']);
@@ -143,15 +144,7 @@ export function launchUpiDeepLink(deepLink: string): void {
     return;
   }
 
-  const anchor = document.createElement('a');
-  anchor.href = deepLink;
-  anchor.rel = 'noopener noreferrer';
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  window.setTimeout(() => {
-    anchor.remove();
-  }, 0);
+  void openExternalUrl(deepLink);
 }
 
 /** @deprecated Prefer `launchUpiApp('other', upiUrl)` or the app picker UI. */

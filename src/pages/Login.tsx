@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { resolvePostLoginRedirect } from '../hooks/useStorefrontPath';
 import { exitCustomerPreviewMode, isCustomerPreviewMode } from '../lib/storefrontPreview';
+import { shouldUseGoogleAuthRedirect } from '../lib/nativePlatform';
 import { SoftButton } from '../design-system';
 
 const BIOMETRIC_ONBOARDING_DISMISSED_KEY = 'biometricOnboardingDismissed';
@@ -142,17 +143,14 @@ const Login: React.FC = () => {
   const handleGoogleLogin = async () => {
     if (loading) return;
     
-    // Check if app is in standalone mode (Added to Home Screen)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       // Force "select_account" to ensure user always gets the choice
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      if (isStandalone) {
-        // Popups fail in standalone mode on many mobile browsers
+      if (shouldUseGoogleAuthRedirect()) {
+        // Popups fail in PWA standalone and Capacitor WebView shells
         sessionStorage.setItem('auth_redirecting', 'true');
         await signInWithRedirect(auth, provider);
       } else {

@@ -39,11 +39,21 @@
     "gate:px2": "node scripts/gate-px2.mjs",
     "gate:prod": "node scripts/gate-prod.mjs",
     "audit": "npm audit --audit-level=high",
-    "deploy": "npm run build && cd .. && firebase deploy --only hosting:orderbhojan --project orderbhojan"
+    "deploy": "npm run build && cd .. && firebase deploy --only hosting:orderbhojan --project orderbhojan",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run cap:sync && npx cap run android",
+    "cap:ios": "npm run cap:sync && npx cap open ios"
   },
   "dependencies": {
     "@bhojan/location-core": "file:../packages/location-core",
     "@bhojan/marketplace-contracts": "file:../packages/marketplace-contracts",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.2",
     "clsx": "^2.1.1",
@@ -59,6 +69,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^22.14.0",

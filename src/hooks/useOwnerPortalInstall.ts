@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isIosSafari } from '../lib/tenantPwaManifest';
 import { isStandalonePwa } from '../lib/pwaUtils';
+import { skipPwaInstallPrompt } from '../lib/nativePlatform';
 
 const DISMISS_KEY = 'bhojanos_owner_portal_install_dismissed';
 
@@ -25,7 +26,7 @@ export function useOwnerPortalInstall() {
   const onOwnerPortal = typeof window !== 'undefined' && isOwnerPortalPath();
   const ios = typeof window !== 'undefined' && isIosSafari();
   const canNativeInstall = Boolean(deferredPrompt);
-  const showInstallBanner = onOwnerPortal && !installed && !dismissed;
+  const showInstallBanner = onOwnerPortal && !installed && !dismissed && !skipPwaInstallPrompt();
 
   useEffect(() => {
     if (!onOwnerPortal || installed) return;

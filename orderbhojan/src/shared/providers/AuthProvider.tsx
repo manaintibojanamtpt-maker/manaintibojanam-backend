@@ -3,6 +3,7 @@ import type { User } from 'firebase/auth';
 import {
   continueAsGuest,
   completePhoneSignIn,
+  handlePendingGoogleRedirect,
   signInWithGoogle,
   signOut as signOutUser,
   startPhoneSignIn,
@@ -50,6 +51,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     initializeFirebase();
+
+    void handlePendingGoogleRedirect()
+      .then((result) => {
+        if (result.user) {
+          setSessionUser(result.user);
+        }
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.warn('[OrderBhojan] Google redirect result skipped', error);
+        }
+      });
+
     return subscribeToAuthState((nextUser) => {
       setUser(nextUser);
       const mapped = nextUser ? mapFirebaseUser(nextUser) : null;

@@ -1,13 +1,14 @@
 import { isFirebaseConfigured } from '@/firebase';
 import { bootstrapCustomerSession } from './profileBootstrapService';
 import {
+  completeGoogleRedirectSignIn,
   getCurrentIdToken,
   signInAsGuestAccount,
   signInWithGoogleAccount,
   sendPhoneOtp,
   signOutCurrentUser,
   verifyPhoneOtp,
-  type AuthFlowError,
+  AuthFlowError,
 } from '../infrastructure/firebaseAuth';
 import { useAuthSessionStore } from '../store/authSessionStore';
 import type { AuthSessionUser } from '../domain/auth.types';
@@ -38,7 +39,22 @@ export async function continueAsGuest(): Promise<AuthActionResult> {
 }
 
 export async function signInWithGoogle(): Promise<AuthActionResult> {
-  const user = await signInWithGoogleAccount();
+  try {
+    const user = await signInWithGoogleAccount();
+    return { user: await finalizeAuthenticatedSession(user) };
+  } catch (error) {
+    if (error instanceof AuthFlowError && error.message.includes('redirect')) {
+      return { user: null };
+    }
+    throw error;
+  }
+}
+
+export async function handlePendingGoogleRedirect(): Promise<AuthActionResult> {
+  const user = await completeGoogleRedirectSignIn();
+  if (!user) {
+    return { user: null };
+  }
   return { user: await finalizeAuthenticatedSession(user) };
 }
 

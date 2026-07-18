@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Mana Inti Bojanam</string>
+        <string>BhojanOS</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -49,5 +49,18 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID for secure and instant login to your account.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BhojanOS uses your location to show nearby kitchens and delivery options.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.bhojanos.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>bhojanos</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

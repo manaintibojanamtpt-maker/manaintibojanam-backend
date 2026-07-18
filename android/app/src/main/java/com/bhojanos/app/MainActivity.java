@@ -1,4 +1,4 @@
-package com.manaintibojanam.app;
+package com.bhojanos.app;
 
 import com.getcapacitor.BridgeActivity;
 

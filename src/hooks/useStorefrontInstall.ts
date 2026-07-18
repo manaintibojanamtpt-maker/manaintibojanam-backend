@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isIosSafari, isStorefrontInstallPath } from '../lib/tenantPwaManifest';
 import { isStandalonePwa } from '../lib/pwaUtils';
+import { skipPwaInstallPrompt } from '../lib/nativePlatform';
 
 const DISMISS_KEY = 'bhojanos_storefront_install_dismissed';
 
@@ -14,7 +15,7 @@ export function useStorefrontInstall() {
   const onStorefront = typeof window !== 'undefined' && isStorefrontInstallPath();
   const ios = typeof window !== 'undefined' && isIosSafari();
   const canNativeInstall = Boolean(deferredPrompt);
-  const showInstallAction = onStorefront && !installed && !dismissed;
+  const showInstallAction = onStorefront && !installed && !dismissed && !skipPwaInstallPrompt();
 
   useEffect(() => {
     if (!onStorefront) return;
