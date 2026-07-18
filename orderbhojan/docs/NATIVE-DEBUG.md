@@ -35,7 +35,7 @@ adb logcat Capacitor:V CapacitorPlugin:V chromium:V *:S
 
 | Symptom | Check |
 | --- | --- |
-| Google sign-in fails | Firebase SHA-1, `google-services.json`, Google provider enabled |
+| Google sign-in fails | `google-services.json` must be **bhojanos-prod** (`project_number` `170989397954`), SHA-1 on that Android app, Google provider enabled |
 | Header under notch | `capacitorBootstrap` ran; StatusBar overlay + `--ob-safe-top` on `<html>` |
 | OAuth `localhost` in browser | Use native Google sign-in (`@capacitor-firebase/authentication`), not web redirect |
 | Slow menu | Confirm `cap:sync` bundles `dist/` (no remote `server.url`) |
@@ -47,3 +47,17 @@ cd orderbhojan
 npm run cap:sync
 npx cap run android
 ```
+
+## Firebase Console checks (Google sign-in)
+
+Native Android Google sign-in uses `@capacitor-firebase/authentication` with `skipNativeAuth: true`. The native layer returns a Google **id_token** whose audience must match the **Web OAuth client** in the same Firebase project as the JS SDK (`bhojanos-prod`, project number `170989397954`).
+
+1. **Project:** [bhojanos-prod → Project settings](https://console.firebase.google.com/project/bhojanos-prod/settings/general)
+2. **Android app:** `com.bhojanos.orderbhojan` (`1:170989397954:android:c72d024605511a5060185b`)
+3. **SHA-1 / SHA-256:** Add debug + release keystore fingerprints under the Android app (Settings → Your apps).
+4. **Google provider:** [Authentication → Sign-in method → Google](https://console.firebase.google.com/project/bhojanos-prod/authentication/providers) — enabled.
+5. **Web client ID:** Authentication → Google → Web SDK configuration. Must match `BHOJANOS_PROD_GOOGLE_WEB_CLIENT_ID` in `src/config/clientConfig.ts` and `default_web_client_id` in `android/app/google-services.json`:
+   `170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com`
+6. **Do not use** `orderbhojan` project (`163241629968`) `google-services.json` for production builds — token audience will not match `bhojanos-prod` Auth.
+
+After replacing `google-services.json`, always run `npm run cap:sync` before rebuilding the APK.

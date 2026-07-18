@@ -22,6 +22,13 @@ export const BHOJANOS_PROD_FIREBASE_PUBLIC = {
   appId: '1:170989397954:web:9c67dbacc58329f360185b',
 } as const;
 
+/**
+ * Web OAuth client ID for native Google sign-in (Capacitor).
+ * Must match `default_web_client_id` generated from android/app/google-services.json.
+ */
+export const BHOJANOS_PROD_GOOGLE_WEB_CLIENT_ID =
+  '170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com' as const;
+
 export function isFirebaseConfigIncomplete(config: AppConfig): boolean {
   const { firebase } = config;
   return !firebase.apiKey || !firebase.authDomain || !firebase.appId || !firebase.messagingSenderId;

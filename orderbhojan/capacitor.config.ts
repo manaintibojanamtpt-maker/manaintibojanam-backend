@@ -17,6 +17,9 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
     },
     FirebaseAuthentication: {
+      // Native Google sign-in returns id_token for Firebase JS SDK (skipNativeAuth).
+      // google-services.json must be from bhojanos-prod so token audience matches web Auth.
+      authDomain: 'bhojanos-prod.firebaseapp.com',
       skipNativeAuth: true,
       providers: ['google.com', 'phone'],
     },

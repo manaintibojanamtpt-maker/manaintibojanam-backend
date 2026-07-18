@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "170989397954",
+    "project_id": "bhojanos-prod",
+    "storage_bucket": "bhojanos-prod.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:170989397954:android:c72d024605511a5060185b",
+        "android_client_info": {
+          "package_name": "com.bhojanos.orderbhojan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZhzodbZi304o30J_VRIr5LRWNU6jn_as"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
