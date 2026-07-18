@@ -91,6 +91,12 @@ export function OrderBhojanKitchenCard({
     restaurantEnabled,
   ]);
 
+  const prefetchKitchenNavigation = useCallback(() => {
+    prefetchRestaurant();
+    void import('@/features/restaurant');
+    void import('@/features/food/ui/FoodRoutePage');
+  }, [prefetchRestaurant]);
+
   const kitchen = useMemo(() => mapRestaurantPublicToKitchenCard(restaurant), [restaurant]);
   const isGridCard = variant === 'grid' || className.includes('lg:w-full');
   const offerBadge = kitchen.badges.find((badge) => badge.id === 'offer');
@@ -129,8 +135,9 @@ export function OrderBhojanKitchenCard({
         <Link
           to={kitchen.storePath}
           className="group block h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#FF7A00]/40 hover:bg-white/[0.05] hover:shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
-          onMouseEnter={prefetchRestaurant}
-          onFocus={prefetchRestaurant}
+          onMouseEnter={prefetchKitchenNavigation}
+          onFocus={prefetchKitchenNavigation}
+          onPointerDown={prefetchKitchenNavigation}
         >
           <div className="relative aspect-[5/4] overflow-hidden bg-white/5">
             <GridKitchenThumbnail
@@ -192,8 +199,9 @@ export function OrderBhojanKitchenCard({
       } ${className}`}
       style={variant === 'default' && !isGridCard ? { width, minWidth: width } : undefined}
       aria-label={`${restaurant.displayName}, rated ${restaurant.rating ?? '—'}`}
-      onMouseEnter={prefetchRestaurant}
-      onFocus={prefetchRestaurant}
+      onMouseEnter={prefetchKitchenNavigation}
+      onFocus={prefetchKitchenNavigation}
+      onPointerDown={prefetchKitchenNavigation}
     >
       <MarketplaceKitchenCardView
         kitchen={kitchen}

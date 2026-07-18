@@ -64,7 +64,7 @@ if (import.meta.env.DEV) {
 }
 
 import Home from './pages/Home';
-import Menu from './pages/Menu';
+const Menu = lazy(() => import('./pages/Menu'));
 const OnboardingWizard = lazy(() => import('./pages/owner/OnboardingWizard'));
 const OwnerLogin = lazy(() => import('./pages/owner/OwnerLogin'));
 const OwnerRegister = lazy(() => import('./pages/owner/OwnerRegister'));

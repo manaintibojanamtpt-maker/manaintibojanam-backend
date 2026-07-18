@@ -34,11 +34,13 @@ export function OrderBhojanBottomNav() {
       resolveActive={resolveActive}
       onHaptic={(kind) => triggerHaptic(kind === 'success' ? 'success' : 'light')}
       onNavigate={(path) => {
-        if (path === '/') {
-          useDiscoveryFilterStore.getState().resetFilters();
-          useCategoryStore.getState().clear();
-        }
         navigate(path);
+        if (path === '/') {
+          requestAnimationFrame(() => {
+            useDiscoveryFilterStore.getState().resetFilters();
+            useCategoryStore.getState().clear();
+          });
+        }
       }}
     />
   );

@@ -315,9 +315,19 @@ const Menu: React.FC = () => {
       setLoading(true);
       try {
         const db = getDb();
-        
-        // Fetch Menu
-        const menuSnap = await getDocs(query(collection(db, "menu"), where("tenantId", "==", activeTenantId)));
+
+        const [menuSnap, catSnap, settingsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'menu'), where('tenantId', '==', activeTenantId))),
+          getDocs(
+            query(
+              collection(db, 'categories'),
+              where('tenantId', '==', activeTenantId),
+              where('isActive', '==', true),
+            ),
+          ),
+          getDoc(doc(db, 'adminSettings', 'global')),
+        ]);
+
         const menuItems = menuSnap.docs.map(doc => {
           const data = doc.data() as any;
           return {
@@ -344,14 +354,10 @@ const Menu: React.FC = () => {
         
         if (isMounted) setMenu(menuItems as MenuItem[]);
 
-        // Fetch Categories
-        const catSnap = await getDocs(query(collection(db, "categories"), where("tenantId", "==", activeTenantId), where("isActive", "==", true)));
         const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         cats.sort((a, b) => (b.priority || 0) - (a.priority || 0));
         if (isMounted) setCategories(cats);
 
-        // Legacy global settings (fees/other) — store open state comes from tenant storeOperations
-        const settingsSnap = await getDoc(doc(db, "adminSettings", "global"));
         if (settingsSnap.exists() && isMounted) {
           setSettings(settingsSnap.data());
         }

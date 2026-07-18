@@ -34,9 +34,10 @@ describe('M12 customer surfaces', () => {
     assert.match(client, /registerNotificationToken/);
   });
 
-  it('cart page validates before checkout', () => {
+  it('cart page navigates to checkout without blocking validate', () => {
     const cart = readFileSync(join(root, 'src/presentation/cart/OrderBhojanCartExperience.tsx'), 'utf8');
     assert.match(cart, /useCartValidation/);
-    assert.match(cart, /validate\(/);
+    assert.match(cart, /navigate\(['"]\/checkout['"]\)/);
+    assert.doesNotMatch(cart, /await validate\(\)/);
   });
 });

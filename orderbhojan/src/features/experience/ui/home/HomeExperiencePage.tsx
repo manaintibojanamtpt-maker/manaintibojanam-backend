@@ -2,16 +2,14 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed, useDiscoveryHome } from '@/features/discovery';
 import { useLocationActions, useLocationFeatureEnabled, useActiveLocation } from '@/features/location';
-import { Section } from '@bhojan/storefront-design-system/primitives/Section';
-import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
 import {
   OrderBhojanHomeHero,
-  OrderBhojanHomeCategories,
   OrderBhojanHomeTrustStrip,
 } from '@/presentation/discovery';
+import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
 
 function MockRestaurantFeed({ categoryId }: { categoryId: FoodCategoryId | null }) {
   return <HomeSpotlightMockFeed categoryId={categoryId} />;
@@ -26,6 +24,10 @@ export function HomeExperiencePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedId } = useCategoryStore();
   const locationPromptedRef = useRef(false);
+
+  useEffect(() => {
+    preloadMarketplaceRouteChunks();
+  }, []);
 
   useEffect(() => {
     if (!locationEnabled || searchParams.get('openLocation') !== '1') return;
@@ -57,35 +59,22 @@ export function HomeExperiencePage() {
     <div className="bg-[#030303] pb-6 text-white">
       <OrderBhojanHomeHero />
 
-      <Section density="comfortable" background="default" className="!py-8">
-        <SectionHeader
-          label="Categories"
-          title="What's on your mind?"
-          description="Swipe to explore cuisines near you"
-          align="left"
-          className="!text-left"
-        />
-        <OrderBhojanHomeCategories />
-      </Section>
-
-      <Section density="comfortable" background="subtle" className="!py-8">
+      <div className="px-4 pt-4 sm:px-6">
         {discoveryEnabled ? (
           <DiscoveryHomeFeed />
         ) : (
           <MockRestaurantFeed categoryId={selectedId} />
         )}
-      </Section>
+      </div>
 
-      <Section density="comfortable" background="default" className="!py-8">
-        <SectionHeader
-          label="Trust"
-          title="Why OrderBhojan"
-          description="Verified home kitchens with the warmth you expect"
-          align="left"
-          className="!text-left"
-        />
+      <section className="mt-10 border-t border-white/5 px-4 pt-8 sm:px-6" aria-label="Why OrderBhojan">
+        <div className="mb-4 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35">Trust</p>
+          <h2 className="text-base font-bold text-white/90">Why OrderBhojan</h2>
+          <p className="text-xs text-white/45">Verified home kitchens with the warmth you expect</p>
+        </div>
         <OrderBhojanHomeTrustStrip />
-      </Section>
+      </section>
     </div>
   );
 }

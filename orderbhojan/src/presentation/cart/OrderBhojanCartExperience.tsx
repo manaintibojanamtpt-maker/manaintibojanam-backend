@@ -45,7 +45,7 @@ export function OrderBhojanCartExperience() {
   const clear = useCartStore((s) => s.clear);
   const itemCount = cartItemCount(lines);
   const subtotal = cartSubtotal(lines);
-  const { validate, isValidating, result, error, reset } = useCartValidation();
+  const { result, error, reset } = useCartValidation();
   const activeLocation = useActiveLocation();
   const { openSelector, openConfirmation } = useLocationActions();
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
@@ -66,7 +66,7 @@ export function OrderBhojanCartExperience() {
     }
   }, [itemCount, reset]);
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!hasDeliveryLocation) {
       openSelector();
       return;
@@ -75,16 +75,8 @@ export function OrderBhojanCartExperience() {
       openConfirmation();
       return;
     }
-    try {
-      const validation = await validate();
-      if (!validation.valid) {
-        return;
-      }
-      markPerf('cart_to_checkout', 'navigate');
-      navigate('/checkout');
-    } catch {
-      // error surfaced via hook
-    }
+    markPerf('cart_to_checkout', 'navigate');
+    navigate('/checkout');
   };
 
   if (itemCount === 0) {
@@ -125,16 +117,14 @@ export function OrderBhojanCartExperience() {
       validationMessages={validationMessages}
       errorMessage={errorMessage}
       checkoutLabel={
-        isValidating
-          ? 'Checking cart…'
-          : isCheckoutReady
-            ? 'Proceed to checkout'
-            : hasDeliveryLocation
-              ? 'Confirm delivery address'
-              : 'Set delivery location'
+        isCheckoutReady
+          ? 'Proceed to checkout'
+          : hasDeliveryLocation
+            ? 'Confirm delivery address'
+            : 'Set delivery location'
       }
-      checkoutBusy={isValidating}
-      onCheckout={() => void handleCheckout()}
+      checkoutBusy={false}
+      onCheckout={handleCheckout}
       onBrowse={() => navigate('/')}
       onClear={clear}
       onMenu={slug ? () => navigate(`/restaurant/${slug}/menu`) : undefined}
