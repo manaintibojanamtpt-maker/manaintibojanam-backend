@@ -1,4 +1,5 @@
 import { isFeatureEnabled, loadFeatureFlags } from '@/featureFlags';
+import { isNativePlatform } from '@/lib/nativePlatform';
 
 /** Mock/MSW mode — keep responses warm for dev UX. */
 export const MARKETPLACE_MOCK_STALE_TIME_MS = 60_000;
@@ -11,6 +12,8 @@ export const MARKETPLACE_MOCK_GC_TIME_MS = 10 * 60_000;
 export const MARKETPLACE_LIVE_STALE_TIME_MS = 30_000;
 export const MARKETPLACE_LIVE_GC_TIME_MS = 2 * 60_000;
 export const MARKETPLACE_LIVE_REFETCH_INTERVAL_MS = 5_000;
+/** @deprecated Native now uses live sync timings; kept for tests/docs. */
+export const MARKETPLACE_NATIVE_STALE_TIME_MS = MARKETPLACE_LIVE_STALE_TIME_MS;
 
 export function isLiveStorefrontSyncEnabled(): boolean {
   return isFeatureEnabled(loadFeatureFlags(), 'FF_OB_FIRESTORE');
@@ -37,12 +40,15 @@ export function getMarketplaceQueryBehavior(): MarketplaceQueryBehavior {
     };
   }
 
+  const native = isNativePlatform();
+
   return {
     staleTime: MARKETPLACE_LIVE_STALE_TIME_MS,
     gcTime: MARKETPLACE_LIVE_GC_TIME_MS,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchInterval: false,
+    // Native relies on revision polling + resume poll — avoid 5s interval churn in WebView.
+    refetchOnWindowFocus: !native,
+    refetchOnReconnect: !native,
+    refetchInterval: native ? false : MARKETPLACE_LIVE_REFETCH_INTERVAL_MS,
     refetchIntervalInBackground: false,
   };
 }

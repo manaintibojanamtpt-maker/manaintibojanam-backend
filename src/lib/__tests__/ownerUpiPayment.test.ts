@@ -38,4 +38,15 @@ describe('ownerUpiPayment', () => {
     assert.equal(isOwnerActionablePlacedOrder('PENDING_PAYMENT'), true);
     assert.equal(isOwnerActionablePlacedOrder('ACCEPTED'), false);
   });
+
+  it('flags payment verification queue after customer payment claim', () => {
+    assert.equal(
+      isAwaitingOwnerUpiVerification({
+        status: 'PAYMENT_VERIFICATION',
+        paymentStatus: 'pending_verification',
+        paymentMethod: 'upi',
+      }),
+      true,
+    );
+  });
 });

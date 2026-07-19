@@ -10,6 +10,7 @@ import {
   type MarketplacePlaceRequest,
   type MarketplaceQuoteRequest,
 } from './projectCheckout.js';
+import { normalizeCustomerEmail } from '../shared/resolveCustomerEmail.js';
 import {
   createMarketplaceContextToken,
   parseFirestoreMenuItem,
@@ -186,12 +187,29 @@ async function loadMenuItems(
   return { items, menuSyncRevision };
 }
 
+async function persistCustomerNotificationEmail(
+  db: Firestore,
+  userId: string | null | undefined,
+  email: string | null | undefined,
+): Promise<void> {
+  const normalized = normalizeCustomerEmail(email);
+  if (!userId || !normalized) return;
+  await db.collection('users').doc(userId).set(
+    {
+      notificationEmail: normalized,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
 export function registerMarketplaceRoutes(
   app: Express,
   db: Firestore,
   deps?: {
     verifyFirebaseToken?: (req: Request, res: Response, next: () => void) => void;
     sendWhatsAppNotification?: (to: string, message: string) => Promise<void>;
+    notifyCustomer?: (order: Record<string, unknown>, status: string) => Promise<void>;
   },
 ): void {
   registerMarketplaceMediaPublicRoute(app, db);
@@ -729,7 +747,16 @@ export function registerMarketplaceRoutes(
           userId: resolveAuthenticatedUserId(req),
         };
         const result = await placeMarketplaceOrder(db, FieldValue, placeRequest);
-        if (result.kind === 'upi') {
+        await persistCustomerNotificationEmail(db, placeRequest.userId, placeRequest.notificationEmail ?? placeRequest.userEmail);
+        if (result.kind === 'cod') {
+          const orderDoc = await db.collection('orders').doc(result.orderId).get();
+          if (orderDoc.exists) {
+            void deps?.notifyCustomer?.(
+              { id: orderDoc.id, ...orderDoc.data() },
+              String(orderDoc.data()?.status || 'PLACED'),
+            );
+          }
+        } else if (result.kind === 'upi') {
           const orderDoc = await db.collection('orders').doc(result.orderId).get();
           if (orderDoc.exists) {
             void notifyOwnerUpiOrderPending(

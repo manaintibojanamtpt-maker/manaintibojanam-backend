@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthShellView, type AuthTabId } from '@bhojan/storefront-design-system/auth';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { needsCheckoutPhoneVerification } from '@/features/auth/domain/checkoutAuth';
+import { useAuthSessionStore } from '@/features/auth/store/authSessionStore';
 import { formatAuthError } from '@/lib/authErrors';
 import { OrderBhojanPhoneOtpForm } from './OrderBhojanPhoneOtpForm';
 import { resolveAuthRedirect } from './resolveAuthRedirect';
@@ -16,6 +18,7 @@ export function OrderBhojanAuthShellPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { status, sessionUser, isAuthenticated, signInWithGoogle, continueAsGuest, signOut } = useAuth();
+  const anonymousAuthBlocked = useAuthSessionStore((state) => state.anonymousAuthBlocked);
   const [tab, setTab] = useState<AuthTabId>('google');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +31,8 @@ export function OrderBhojanAuthShellPage() {
   }, [location.search]);
 
   const redirectTo = resolveAuthRedirect(location);
+  const phoneVerificationRequired = needsCheckoutPhoneVerification({ status, sessionUser });
+  const showPhoneVerification = phoneVerificationRequired && (tab === 'phone' || redirectTo === '/checkout');
 
   const handleGoogle = async () => {
     setPending(true);
@@ -67,6 +72,19 @@ export function OrderBhojanAuthShellPage() {
         <p className="text-sm text-white/60">Firebase is not configured in this environment. Guest browsing is available.</p>
         <SoftButton type="button" tone="secondary" fullWidth disabled={pending} onClick={() => void handleGuest()}>
           Continue as Guest
+        </SoftButton>
+      </>
+    );
+  } else if (isAuthenticated && showPhoneVerification) {
+    body = (
+      <>
+        <p className="text-sm text-white/70">
+          Signed in as {sessionLabel(sessionUser?.displayName, sessionUser?.phoneNumber, sessionUser?.email)}.
+          Verify your mobile number to place orders.
+        </p>
+        <OrderBhojanPhoneOtpForm />
+        <SoftButton type="button" tone="ghost" fullWidth onClick={() => signOut()}>
+          Sign out
         </SoftButton>
       </>
     );
@@ -116,7 +134,7 @@ export function OrderBhojanAuthShellPage() {
           ? [
               { id: 'google', label: 'Google' },
               { id: 'phone', label: 'Phone' },
-              { id: 'guest', label: 'Guest' },
+              ...(anonymousAuthBlocked ? [] : [{ id: 'guest' as const, label: 'Guest' }]),
             ]
           : undefined
       }

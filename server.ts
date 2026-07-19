@@ -83,6 +83,16 @@ import {
   getCustomerAppName,
 } from "./backend-lib/shared/customerOrderLinks.js";
 import {
+  buildOrderPushNotification,
+  buildOrderStatusNotificationMessage,
+  deliveryPartnerLabel,
+  formatOrderPaymentMethodLabel,
+  isSelfPickupDelivery,
+} from "./backend-lib/shared/orderNotificationCopy.js";
+import {
+  resolveCustomerNotificationEmail,
+} from "./backend-lib/shared/resolveCustomerEmail.js";
+import {
   FirebaseAdminProvider,
   resolveFirebaseProjectId,
   resolveStorageBucket,
@@ -316,6 +326,22 @@ const promoteDraftTransaction = async (
         draftId,
       });
       logger.info({ message: "Draft successfully promoted to order", draftId, reconciliationSource });
+
+      try {
+        const promotedOrderDoc = await _db.collection('orders').doc(draftId).get();
+        if (promotedOrderDoc.exists) {
+          await notifyCustomer(
+            { id: promotedOrderDoc.id, ...promotedOrderDoc.data() },
+            String(promotedOrderDoc.data()?.status || 'PLACED'),
+          );
+        }
+      } catch (notifyErr: any) {
+        logger.warn({
+          message: 'Order placement notification skipped after Razorpay promotion',
+          draftId,
+          error: notifyErr?.message || String(notifyErr),
+        });
+      }
     }
 
     return { promoted, tenantId: resolvedTenantId };
@@ -1996,54 +2022,8 @@ async function sendWhatsAppNotification(to: string, message: string) {
   }
 }
 
-const buildOrderNotification = (order: any, status: string) => {
-  const orderLabel = order.orderNumber ? `#${order.orderNumber}` : order.id ? `#${String(order.id).slice(-6).toUpperCase()}` : "";
-  const statusKey = String(status || "").toUpperCase();
-
-  const messages: Record<string, { title: string; body: string }> = {
-    PENDING: {
-      title: "Order placed",
-      body: `Your order ${orderLabel} has been placed successfully.`
-    },
-    ACCEPTED: {
-      title: "Order accepted",
-      body: `Your order ${orderLabel} has been accepted by Mana Inti Bojanam.`
-    },
-    PREPARING: {
-      title: "Chef is preparing your order",
-      body: `Your order ${orderLabel} is now being prepared.`
-    },
-    READY: {
-      title: "Order is ready",
-      body: `Your order ${orderLabel} is ready for pickup or delivery.`
-    },
-    OUT_FOR_DELIVERY: {
-      title: "Out for delivery",
-      body: `Your order ${orderLabel} is on the way.`
-    },
-    DISPATCHED: {
-      title: "Out for delivery",
-      body: `Your order ${orderLabel} has been dispatched.`
-    },
-    DELIVERED: {
-      title: "Order delivered",
-      body: `Your order ${orderLabel} has been delivered. Enjoy your meal!`
-    },
-    CANCELLED: {
-      title: "Order cancelled",
-      body: `Your order ${orderLabel} has been cancelled.`
-    },
-    PAYMENT_VERIFICATION: {
-      title: "Payment not confirmed",
-      body: `Payment for order ${orderLabel} was not confirmed. Please complete checkout or contact support.`
-    }
-  };
-
-  return messages[statusKey] || {
-    title: "Order update",
-    body: `Your order ${orderLabel} status changed to ${statusKey || "updated"}.`
-  };
-};
+const buildOrderNotification = (order: any, status: string) =>
+  buildOrderPushNotification(order, status);
 
 async function sendPushNotificationToUser(userId: string, title: string, body: string, data: Record<string, string>) {
   try {
@@ -2315,29 +2295,25 @@ const processOutboxBatch = async () => {
 };
 
 async function notifyCustomer(order: any, status: string) {
-  const statusMessages: Record<string, string> = {
-    PENDING: `Your order #${order.orderNumber} has been placed successfully! We'll start preparing it soon.`,
-    PLACED: `Your order #${order.orderNumber} has been placed successfully! We'll start preparing it soon.`,
-    ACCEPTED: `Your order #${order.orderNumber} has been accepted by the kitchen. Preparation will begin shortly.`,
-    PREPARING: `Good news! Our chef is now preparing your order #${order.orderNumber}. It will be ready shortly.`,
-    READY: `Your order #${order.orderNumber} is ready and waiting for pickup/delivery!`,
-    OUT_FOR_DELIVERY: `Your order #${order.orderNumber} is out for delivery! 🛵 Our rider is on the way to your location.`,
-    DELIVERED: `Your order #${order.orderNumber} has been delivered. Enjoy your delicious home-cooked meal! 🍛`,
-    CANCELLED: `Your order #${order.orderNumber} has been cancelled. If you paid online, your refund will be processed within 5-7 business days.`
-  };
+  let message = buildOrderStatusNotificationMessage(order, status);
 
-  let message = statusMessages[status] || `Order #${order.orderNumber} status updated to ${status}`;
-  
-  // Add tracking info if available
-  if (status === 'OUT_FOR_DELIVERY' && order.deliveryPartner) {
-    message += `\n\n*Delivery Partner:* ${order.deliveryPartner}`;
-    if (order.riderName) message += `\n*Rider:* ${order.riderName} (${order.riderPhone || 'N/A'})`;
-    if (order.trackingUrl || order.trackingLink) message += `\n*Track here:* ${order.trackingUrl || order.trackingLink}`;
+  const statusKey = String(status || '').toUpperCase();
+  const partnerLabel = deliveryPartnerLabel(order.deliveryPartner);
+  const selfPickup = isSelfPickupDelivery(order.deliveryPartner);
+
+  if (statusKey === 'OUT_FOR_DELIVERY' && partnerLabel) {
+    message += `\n\n*Fulfillment:* ${partnerLabel}`;
+    if (!selfPickup && order.riderName) {
+      message += `\n*Rider:* ${order.riderName} (${order.riderPhone || 'N/A'})`;
+    }
+    if (!selfPickup && (order.trackingUrl || order.trackingLink)) {
+      message += `\n*Track here:* ${order.trackingUrl || order.trackingLink}`;
+    }
   }
 
   const trackingLink = buildCustomerOrderTrackingUrl(order);
   const brandName = getCustomerAppName(order);
-  const userEmail = order.userEmail || order.email;
+  const userEmail = await resolveCustomerNotificationEmail(db, order);
 
   if (userEmail) {
     const emailBody = `
@@ -2357,7 +2333,7 @@ async function notifyCustomer(order: any, status: string) {
           ${order.items.map((i: any) => `<li>${i.name} x ${i.quantity}</li>`).join('')}
         </ul>
         <p><b>Total:</b> ₹${order.totalAmount}</p>
-        <p><b>Payment Method:</b> ${order.paymentMethod === 'razorpay' || order.paymentMethod === 'online' || order.paymentMethod === 'upi' ? 'Online (Razorpay)' : 'Cash on Delivery'}</p>
+        <p><b>Payment Method:</b> ${formatOrderPaymentMethodLabel(order.paymentMethod)}</p>
         
         <div style="margin-top: 20px; text-align: center;">
           <a href="${trackingLink}" style="background-color: #ea580c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Order Status</a>
@@ -3105,7 +3081,11 @@ app.post('/api/owner/menu/seed-template', verifyFirebaseToken, async (req: any, 
 });
 
 registerLocationRoutes(app, db);
-registerMarketplaceRoutes(app, db, { verifyFirebaseToken, sendWhatsAppNotification });
+registerMarketplaceRoutes(app, db, {
+  verifyFirebaseToken,
+  sendWhatsAppNotification,
+  notifyCustomer,
+});
 registerMarketplaceReferralRoutes(app, db, FieldValue, verifyFirebaseToken);
 registerOwnerStorefrontRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerCouponsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
@@ -4248,16 +4228,21 @@ app.post("/api/orders/:id/notify-status", verifyFirebaseToken, async (req: any, 
       getOwnedTenantIds: getOwnedTenantIdsForUser,
     });
 
-    if (!notifyDecision.allowed) {
+    const mergedOrderData = { id: orderDoc.id, ...orderData };
+    const notificationStatus = String(status || mergedOrderData.status || '').toUpperCase();
+    const customerPlacementStatuses = new Set(['PLACED', 'PENDING', 'PAYMENT_PENDING']);
+    const customerOwnsOrder =
+      Boolean(orderData.userId) && String(orderData.userId) === String(req.user.uid);
+    const customerPlacementNotify =
+      customerOwnsOrder && customerPlacementStatuses.has(notificationStatus);
+
+    if (!notifyDecision.allowed && !customerPlacementNotify) {
       return res.status(notifyDecision.statusCode || 403).json({
         success: false,
         error: notifyDecision.error || "Forbidden",
         code: notifyDecision.reason,
       });
     }
-
-    const mergedOrderData = { id: orderDoc.id, ...orderData };
-    const notificationStatus = status || mergedOrderData.status;
 
     await notifyCustomer(mergedOrderData, notificationStatus);
     res.json({ success: true, message: "Order notification dispatch initiated" });

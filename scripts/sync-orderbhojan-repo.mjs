@@ -166,10 +166,15 @@ function patchFile(filePath) {
   if (next !== raw) fs.writeFileSync(filePath, next, 'utf8');
 }
 
+function readJsonNoBom(filePath) {
+  const raw = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
+  return JSON.parse(raw);
+}
+
 function patchTsconfig(exportRoot) {
   const tsconfigPath = path.join(exportRoot, 'tsconfig.json');
   if (!fs.existsSync(tsconfigPath)) return;
-  const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
+  const tsconfig = readJsonNoBom(tsconfigPath);
   tsconfig.compilerOptions ??= {};
   tsconfig.compilerOptions.baseUrl ??= '.';
   tsconfig.compilerOptions.paths ??= {};
@@ -180,6 +185,15 @@ function patchTsconfig(exportRoot) {
     'storefront-src/design-system/*',
   ];
   fs.writeFileSync(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`, 'utf8');
+
+  for (const rel of ['packages/location-core/tsconfig.json', 'packages/design-system/tsconfig.json']) {
+    const pkgPath = path.join(exportRoot, rel);
+    if (!fs.existsSync(pkgPath)) continue;
+    const pkg = readJsonNoBom(pkgPath);
+    pkg.compilerOptions ??= {};
+    pkg.compilerOptions.baseUrl ??= '.';
+    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  }
 }
 
 function patchStandaloneCi(exportRoot) {

@@ -13,6 +13,9 @@ export function formatAuthError(error: unknown): string {
   if (code === 'auth/network-request-failed') {
     return 'Network error during sign-in. Check your connection and try again.';
   }
+  if (code === 'auth/admin-restricted-operation') {
+    return 'Guest browsing is available without Firebase anonymous sign-in.';
+  }
 
   return error instanceof Error ? error.message : 'Sign-in failed. Please try again.';
 }

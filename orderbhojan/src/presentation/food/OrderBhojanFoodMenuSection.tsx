@@ -20,7 +20,7 @@ export function OrderBhojanFoodMenuSection({
 
   return (
     <Section density="comfortable" background="default" className="!py-6" id={id} aria-labelledby={`${id}-title`}>
-      <div className="mx-auto max-w-3xl px-4">
+      <div className="ob-menu-container">
         <SectionHeader title={title} align="left" className="!mb-4 !text-left" />
         <div className="overflow-hidden rounded-2xl border border-white/10">
           {items.map((food, index) => (

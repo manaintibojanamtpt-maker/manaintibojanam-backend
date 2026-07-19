@@ -20,7 +20,7 @@ export function OrderBhojanFoodCategoryRail({
 }: OrderBhojanFoodCategoryRailProps) {
   return (
     <nav
-      className="sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 px-4 py-3 backdrop-blur-md"
+      className="sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 py-3 backdrop-blur-md ob-menu-container"
       aria-label="Menu categories"
     >
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">

@@ -25,5 +25,6 @@ export function preloadMarketplaceRouteChunks(): void {
     void import('@/features/restaurant');
     void import('@/features/food/ui/FoodRoutePage');
     void import('@/features/checkout');
+    void import('@/features/experience/ui/search/SearchExperiencePage');
   });
 }

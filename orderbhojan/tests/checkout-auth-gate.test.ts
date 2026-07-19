@@ -31,13 +31,37 @@ describe('checkout auth gate', () => {
     assert.equal(canPlaceMarketplaceOrder({ status: 'guest', sessionUser: null }), false);
   });
 
-  it('blocks authenticated google users without verified phone', () => {
+  it('allows authenticated google users with verified email without phone OTP', () => {
+    const sessionUser = {
+      uid: 'g1',
+      displayName: 'Guest Google',
+      email: 'guest@example.com',
+      phoneNumber: null,
+      photoURL: null,
+      provider: 'google' as const,
+      isAnonymous: false,
+    };
+    const gate = resolveCheckoutAuthGate({
+      status: 'authenticated',
+      sessionUser,
+    });
+    assert.equal(gate.allowed, true);
+    assert.equal(
+      canPlaceMarketplaceOrder({
+        status: 'authenticated',
+        sessionUser,
+      }),
+      true,
+    );
+  });
+
+  it('blocks authenticated google users without email or phone', () => {
     const gate = resolveCheckoutAuthGate({
       status: 'authenticated',
       sessionUser: {
         uid: 'g1',
         displayName: 'Guest Google',
-        email: 'guest@example.com',
+        email: null,
         phoneNumber: null,
         photoURL: null,
         provider: 'google',
@@ -89,5 +113,6 @@ describe('checkout auth wiring', () => {
     );
     assert.match(firebaseAuth, /@capacitor-firebase\/authentication/);
     assert.match(firebaseAuth, /signInWithGoogleNative/);
+    assert.match(firebaseAuth, /sendPhoneOtpNative/);
   });
 });

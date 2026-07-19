@@ -2,6 +2,8 @@ import { getApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getMessaging, getToken, isSupported, type Messaging } from 'firebase/messaging';
 import { initializeFirebase } from './init';
 import { getAppConfig } from '@/config';
+import { isNativePlatform } from '@/lib/nativePlatform';
+import { createNativeMessagingPort } from '@/lib/nativePushNotifications';
 
 export interface MessagingPort {
   requestPermission(): Promise<NotificationPermission>;
@@ -17,7 +19,7 @@ async function resolveMessaging(app: FirebaseApp): Promise<Messaging | null> {
   return messagingInstance;
 }
 
-export function createMessagingPort(): MessagingPort {
+function createWebMessagingPort(): MessagingPort {
   return {
     async requestPermission() {
       if (typeof Notification === 'undefined') {
@@ -51,4 +53,11 @@ export function createMessagingPort(): MessagingPort {
       return token || null;
     },
   };
+}
+
+export function createMessagingPort(): MessagingPort {
+  if (isNativePlatform()) {
+    return createNativeMessagingPort();
+  }
+  return createWebMessagingPort();
 }

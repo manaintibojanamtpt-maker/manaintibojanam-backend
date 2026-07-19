@@ -24,10 +24,10 @@ export function OrderBhojanFoodRestaurantStrip({
 
   return (
     <header
-      className="sticky top-0 z-50 border-b border-white/10 bg-[#030303] px-4 backdrop-blur-md"
+      className="sticky top-0 z-50 border-b border-white/10 bg-[#030303] backdrop-blur-md ob-menu-container"
       style={{ paddingTop: 'max(0.75rem, var(--ob-safe-top))', paddingBottom: '0.75rem' }}
     >
-      <div className="mx-auto flex max-w-3xl items-center gap-3">
+      <div className="flex items-center gap-3">
         <SoftButton type="button" tone="ghost" size="compact" aria-label="Back to restaurant" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" aria-hidden />
         </SoftButton>

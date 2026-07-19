@@ -3,12 +3,14 @@ import { bootstrapCustomerSession } from './profileBootstrapService';
 import {
   completeGoogleRedirectSignIn,
   getCurrentIdToken,
+  isAnonymousAuthDisabled,
   signInAsGuestAccount,
   signInWithGoogleAccount,
   sendPhoneOtp,
   signOutCurrentUser,
   verifyPhoneOtp,
   AuthFlowError,
+  AnonymousAuthDisabledError,
 } from '../infrastructure/firebaseAuth';
 import { useAuthSessionStore } from '../store/authSessionStore';
 import type { AuthSessionUser } from '../domain/auth.types';
@@ -34,8 +36,16 @@ export async function continueAsGuest(): Promise<AuthActionResult> {
   if (!isFirebaseConfigured()) {
     return { user: null };
   }
-  const user = await signInAsGuestAccount();
-  return { user };
+  try {
+    const user = await signInAsGuestAccount();
+    return { user };
+  } catch (error) {
+    if (error instanceof AnonymousAuthDisabledError || isAnonymousAuthDisabled(error)) {
+      useAuthSessionStore.getState().setAnonymousAuthBlocked(true);
+      return { user: null };
+    }
+    throw error;
+  }
 }
 
 export async function signInWithGoogle(): Promise<AuthActionResult> {

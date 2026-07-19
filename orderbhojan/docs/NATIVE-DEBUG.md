@@ -54,7 +54,9 @@ Native Android Google sign-in uses `@capacitor-firebase/authentication` with `sk
 
 1. **Project:** [bhojanos-prod → Project settings](https://console.firebase.google.com/project/bhojanos-prod/settings/general)
 2. **Android app:** `com.bhojanos.orderbhojan` (`1:170989397954:android:c72d024605511a5060185b`)
-3. **SHA-1 / SHA-256:** Add debug + release keystore fingerprints under the Android app (Settings → Your apps).
+3. **SHA-1 / SHA-256:** Add debug + release keystore fingerprints under the Android app (Settings → Your apps). Debug SHA-1 from `orderbhojan/android` (`./gradlew signingReport`):
+   `9A:0E:E4:A5:84:5D:72:B5:8D:71:E3:82:BE:0E:7E:A4:79:1B:30:5F`
+   After adding SHA-1, re-download `google-services.json` — it should include an `oauth_client` entry with `client_type` **1** (Android), not just type **3** (Web).
 4. **Google provider:** [Authentication → Sign-in method → Google](https://console.firebase.google.com/project/bhojanos-prod/authentication/providers) — enabled.
 5. **Web client ID:** Authentication → Google → Web SDK configuration. Must match `BHOJANOS_PROD_GOOGLE_WEB_CLIENT_ID` in `src/config/clientConfig.ts` and `default_web_client_id` in `android/app/google-services.json`:
    `170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com`

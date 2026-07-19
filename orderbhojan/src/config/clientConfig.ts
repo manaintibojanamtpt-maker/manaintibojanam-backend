@@ -29,6 +29,10 @@ export const BHOJANOS_PROD_FIREBASE_PUBLIC = {
 export const BHOJANOS_PROD_GOOGLE_WEB_CLIENT_ID =
   '170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com' as const;
 
+/** Debug keystore SHA-1 for `orderbhojan/android` — register in Firebase Console for native Google sign-in. */
+export const ORDERBHOJAN_ANDROID_DEBUG_SHA1 =
+  '9A:0E:E4:A5:84:5D:72:B5:8D:71:E3:82:BE:0E:7E:A4:79:1B:30:5F' as const;
+
 export function isFirebaseConfigIncomplete(config: AppConfig): boolean {
   const { firebase } = config;
   return !firebase.apiKey || !firebase.authDomain || !firebase.appId || !firebase.messagingSenderId;

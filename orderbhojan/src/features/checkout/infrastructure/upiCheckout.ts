@@ -277,10 +277,16 @@ export async function claimCustomerUpiPayment(params: {
 
   const payload = (await response.json().catch(() => ({}))) as {
     ok?: boolean;
-    error?: { message?: string };
+    error?: { message?: string } | string;
+    value?: { recorded?: boolean };
   };
 
-  if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error?.message || 'Unable to notify kitchen');
+  const errorMessage =
+    typeof payload.error === 'string'
+      ? payload.error
+      : payload.error?.message;
+
+  if (!response.ok || payload.ok !== true || payload.value?.recorded !== true) {
+    throw new Error(errorMessage || 'Unable to notify kitchen');
   }
 }

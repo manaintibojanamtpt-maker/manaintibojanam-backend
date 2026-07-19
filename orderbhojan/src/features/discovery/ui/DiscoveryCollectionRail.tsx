@@ -77,12 +77,13 @@ export function DiscoveryCollectionRail({
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
-        {restaurants.map((restaurant) => (
+        {restaurants.map((restaurant, index) => (
           <OrderBhojanKitchenCard
             key={restaurant.restaurantId}
             restaurant={restaurant}
             variant="grid"
             className="w-full"
+            imageLoading={index < 2 ? 'eager' : 'lazy'}
           />
         ))}
       </div>

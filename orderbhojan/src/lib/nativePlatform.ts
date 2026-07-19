@@ -3,7 +3,10 @@ import { Capacitor } from '@capacitor/core';
 const EXTERNAL_SCHEME = /^(https?:|mailto:|tel:|tez:|phonepe:|paytmmp:|upi:|intent:)/i;
 
 export function isNativePlatform(): boolean {
-  return typeof window !== 'undefined' && Capacitor.isNativePlatform();
+  if (typeof window === 'undefined') return false;
+  const platform = Capacitor.getPlatform();
+  if (platform === 'android' || platform === 'ios') return true;
+  return Capacitor.isNativePlatform();
 }
 
 export function skipPwaInstallPrompt(): boolean {

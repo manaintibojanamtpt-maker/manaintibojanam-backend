@@ -11,6 +11,7 @@ import {
 } from '@/features/auth/domain/auth.types';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { isAuthFlowError } from '@/features/auth/application/authService';
+import { isNativePlatform } from '@/lib/nativePlatform';
 import { resolveAuthRedirect } from './resolveAuthRedirect';
 
 const RECAPTCHA_CONTAINER_ID = 'ob-phone-recaptcha';
@@ -76,7 +77,7 @@ export function OrderBhojanPhoneOtpForm() {
               onPhoneChange={field.onChange}
               onSubmit={() => void onSendOtp()}
               recaptchaContainerId={RECAPTCHA_CONTAINER_ID}
-              showRecaptcha
+              showRecaptcha={!isNativePlatform()}
             />
           )}
         />

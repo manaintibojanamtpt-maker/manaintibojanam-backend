@@ -5,7 +5,10 @@ export { useCustomerProfile } from './hooks/useCustomerProfile';
 export * from './domain/auth.types';
 export {
   canPlaceMarketplaceOrder,
+  hasVerifiedCheckoutEmail,
+  hasVerifiedCheckoutIdentity,
   hasVerifiedCheckoutPhone,
+  needsCheckoutPhoneVerification,
   resolveCheckoutAuthGate,
 } from './domain/checkoutAuth';
 export { useAuthSessionStore } from './store/authSessionStore';

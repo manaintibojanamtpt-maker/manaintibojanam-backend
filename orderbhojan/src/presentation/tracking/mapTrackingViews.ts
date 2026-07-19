@@ -35,6 +35,7 @@ function stepIcon(stepId: string): TrackingTimelineIcon {
   if (normalized === 'OUT_FOR_DELIVERY') return 'delivery';
   if (normalized === 'PREPARING') return 'preparing';
   if (normalized === 'ACCEPTED') return 'accepted';
+  if (normalized === 'PAYMENT_VERIFICATION') return 'placed';
   return 'placed';
 }
 

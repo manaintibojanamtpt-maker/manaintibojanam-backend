@@ -152,6 +152,7 @@ export function OrderBhojanKitchenCard({
           onMouseEnter={prefetchKitchenNavigation}
           onFocus={prefetchKitchenNavigation}
           onPointerDown={prefetchKitchenNavigation}
+          onTouchStart={prefetchKitchenNavigation}
         >
           <div className="relative aspect-[5/4] overflow-hidden bg-white/5">
             <GridKitchenThumbnail
@@ -216,6 +217,7 @@ export function OrderBhojanKitchenCard({
       onMouseEnter={prefetchKitchenNavigation}
       onFocus={prefetchKitchenNavigation}
       onPointerDown={prefetchKitchenNavigation}
+      onTouchStart={prefetchKitchenNavigation}
     >
       <MarketplaceKitchenCardView
         kitchen={kitchen}

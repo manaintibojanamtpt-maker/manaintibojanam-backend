@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { phoneNumberSchema, type AuthPhase, type AuthSessionUser } from './auth.types';
 
 export type CheckoutAuthBlockReason = 'sign_in_required' | 'phone_verification_required';
@@ -26,6 +27,25 @@ export function hasVerifiedCheckoutPhone(sessionUser: AuthSessionUser | null): b
   return linkedPhone ? phoneNumberSchema.safeParse(linkedPhone).success : false;
 }
 
+/** Google sign-in with a verified email satisfies checkout identity (phone collected on checkout). */
+export function hasVerifiedCheckoutEmail(sessionUser: AuthSessionUser | null): boolean {
+  if (!sessionUser || sessionUser.provider !== 'google') return false;
+  const email = sessionUser.email?.trim();
+  if (!email) return false;
+  return z.string().email().safeParse(email).success;
+}
+
+export function hasVerifiedCheckoutIdentity(sessionUser: AuthSessionUser | null): boolean {
+  return hasVerifiedCheckoutPhone(sessionUser) || hasVerifiedCheckoutEmail(sessionUser);
+}
+
+export function needsCheckoutPhoneVerification(input: {
+  status: AuthPhase;
+  sessionUser: AuthSessionUser | null;
+}): boolean {
+  return resolveCheckoutAuthGate(input).reason === 'phone_verification_required';
+}
+
 /** Guests may browse and fill cart; only authenticated users with verified phone may place orders. */
 export function resolveCheckoutAuthGate(input: {
   status: AuthPhase;
@@ -47,7 +67,7 @@ export function resolveCheckoutAuthGate(input: {
     };
   }
 
-  if (!hasVerifiedCheckoutPhone(input.sessionUser)) {
+  if (!hasVerifiedCheckoutIdentity(input.sessionUser)) {
     return {
       allowed: false,
       reason: 'phone_verification_required',

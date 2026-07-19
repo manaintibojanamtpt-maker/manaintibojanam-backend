@@ -1,5 +1,10 @@
 export const TRACKING_STEPS = [
   { id: 'PLACED', label: 'Order placed', message: 'We received your order' },
+  {
+    id: 'PAYMENT_VERIFICATION',
+    label: 'Payment verification',
+    message: 'Kitchen is verifying your UPI payment',
+  },
   { id: 'ACCEPTED', label: 'Restaurant accepted', message: 'Kitchen confirmed your order' },
   { id: 'PREPARING', label: 'Preparing your meal', message: 'Chef is preparing your meal' },
   { id: 'OUT_FOR_DELIVERY', label: 'Out for delivery', message: 'Your order is on the way' },
@@ -11,6 +16,7 @@ export type TrackingStepId = (typeof TRACKING_STEPS)[number]['id'];
 export function normalizeTrackingStatus(status: string): TrackingStepId | 'CANCELLED' | 'REJECTED' {
   const upper = status.trim().toUpperCase();
   if (['CANCELLED', 'REJECTED', 'EXPIRED', 'FAILED_DELIVERY'].includes(upper)) return 'CANCELLED';
+  if (upper === 'PAYMENT_VERIFICATION') return 'PAYMENT_VERIFICATION';
   if (['PENDING', 'CREATED', 'PLACED', 'PENDING_PAYMENT', 'CONFIRMED'].includes(upper)) return 'PLACED';
   if (upper === 'ACCEPTED') return 'ACCEPTED';
   if (['PREPARING', 'READY'].includes(upper)) return 'PREPARING';

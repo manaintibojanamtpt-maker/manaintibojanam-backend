@@ -358,6 +358,7 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
   customerName?: string;
   userId?: string | null;
   userEmail?: string | null;
+  notificationEmail?: string | null;
   deliveryAddress?: Record<string, unknown>;
   instructions?: string;
 }
@@ -423,13 +424,18 @@ function buildOrderPayload(
     request.deliveryAddress as Record<string, unknown> | undefined,
   );
   const isAsap = schedule.deliveryType === 'asap';
+  const resolvedEmail =
+    (typeof request.notificationEmail === 'string' && request.notificationEmail.trim()) ||
+    (typeof request.userEmail === 'string' && request.userEmail.trim()) ||
+    null;
 
   return {
     tenantId,
     orderNumber,
     userId: request.userId ?? null,
     customerName: request.customerName ?? null,
-    userEmail: request.userEmail ?? null,
+    userEmail: resolvedEmail,
+    notificationEmail: resolvedEmail,
     phone: request.phone.trim(),
     address,
     deliveryAddress,

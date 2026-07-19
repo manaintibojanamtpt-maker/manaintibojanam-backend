@@ -10,6 +10,7 @@ import { AuthProvider } from './AuthProvider';
 import { BdsToastProvider, registerToastHandler, useBdsToast } from './BdsToastProvider';
 import { FeatureFlagProvider } from '@/featureFlags';
 import { MarketplaceRevisionSync } from '@/features/marketplace/MarketplaceRevisionSync';
+import { NativeAppResumeSync } from '@/features/marketplace/NativeAppResumeSync';
 import { FavoritesSyncBootstrap } from '@/features/favorites/hooks/FavoritesSyncBootstrap';
 import { TelemetryProvider } from '@/telemetry';
 import { sanitizeLiveRestaurantContext } from '@/lib/sanitizeLiveRestaurantContext';
@@ -37,6 +38,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             <LocationProvider>
               <QueryClientProvider client={queryClient}>
                 <MarketplaceRevisionSync />
+                <NativeAppResumeSync />
                 <FavoritesSyncBootstrap />
                 <DiscoveryProvider>
                   <SearchProvider>

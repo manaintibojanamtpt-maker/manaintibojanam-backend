@@ -3,8 +3,10 @@ import { persist } from 'zustand/middleware';
 
 interface AuthSessionStore {
   guestBrowsing: boolean;
+  anonymousAuthBlocked: boolean;
   deviceId: string;
   setGuestBrowsing: (value: boolean) => void;
+  setAnonymousAuthBlocked: (value: boolean) => void;
   ensureDeviceId: () => string;
   resetSession: () => void;
 }
@@ -20,8 +22,10 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
   persist(
     (set, get) => ({
       guestBrowsing: true,
+      anonymousAuthBlocked: false,
       deviceId: createDeviceId(),
       setGuestBrowsing: (value) => set({ guestBrowsing: value }),
+      setAnonymousAuthBlocked: (value) => set({ anonymousAuthBlocked: value }),
       ensureDeviceId: () => {
         const current = get().deviceId;
         if (current) return current;
@@ -39,6 +43,7 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
       name: 'ob-auth-session',
       partialize: (state) => ({
         guestBrowsing: state.guestBrowsing,
+        anonymousAuthBlocked: state.anonymousAuthBlocked,
         deviceId: state.deviceId,
       }),
     },

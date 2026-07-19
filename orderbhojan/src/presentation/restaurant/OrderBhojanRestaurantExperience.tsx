@@ -1,13 +1,20 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { isFeatureEnabled, loadFeatureFlags } from '@/featureFlags';
 import { useFoodFeatureEnabled } from '@/features/food/hooks/useFoodFeature';
+import { loadFoodMenu } from '@/features/food/engine/foodExperienceLayer';
+import { foodKeys } from '@/features/food/hooks/foodQueryKeys';
+import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
+import { useActiveLocation } from '@/features/location';
 import {
   pictureSources,
   resolveRestaurantCover,
   resolveRestaurantLogo,
   restaurantSlugFromString,
 } from '@/features/restaurant/data/restaurant-photo-manifest';
+import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { useRestaurantScrollChrome } from '@/features/restaurant/hooks/useRestaurantScrollChrome';
 import { useRestaurantExperience } from '@/features/restaurant/hooks/useRestaurantExperience';
 import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
@@ -25,7 +32,13 @@ import { OrderBhojanRestaurantInfoSections } from './OrderBhojanRestaurantInfoSe
 import { OrderBhojanRestaurantStickyHeader } from './OrderBhojanRestaurantActions';
 import type { RestaurantExperienceResponse } from '@/types/marketplace-restaurant';
 
-function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResponse }) {
+function OrderBhojanRestaurantContent({
+  data,
+  onPrefetchMenu,
+}: {
+  data: RestaurantExperienceResponse;
+  onPrefetchMenu: () => void;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const menuEnabled = useFoodFeatureEnabled();
@@ -70,12 +83,14 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
       ) : null}
 
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#030303]/95 p-4 backdrop-blur-md pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#030303]/95 backdrop-blur-md ob-menu-container pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
       >
         <SoftButton
           type="button"
           className="w-full"
           disabled={!menuEnabled || experience.openStatus === 'closed'}
+          onPointerDown={onPrefetchMenu}
+          onFocus={onPrefetchMenu}
           onClick={() =>
             navigate(`/restaurant/${experience.slug}/menu`, { state: { fromRestaurant: true } })
           }
@@ -94,11 +109,35 @@ function OrderBhojanRestaurantContent({ data }: { data: RestaurantExperienceResp
 
 export function OrderBhojanRestaurantExperience() {
   const { restaurantSlug } = useParams<{ restaurantSlug: string }>();
+  const queryClient = useQueryClient();
+  const activeLocation = useActiveLocation();
+  const liveQuery = getMarketplaceQueryBehavior();
   useTenantRevisionSync(restaurantSlug);
   const online = useOnlineStatus();
   const query = useRestaurantExperience(restaurantSlug);
 
-  if (query.isLoading) {
+  const prefetchMenu = useCallback(() => {
+    if (!restaurantSlug) return;
+    const coords = resolveRestaurantCoords(activeLocation);
+    void queryClient.prefetchQuery({
+      queryKey: foodKeys.menu(restaurantSlug, coords.lat, coords.lng),
+      queryFn: () =>
+        loadFoodMenu({
+          slug: restaurantSlug,
+          lat: coords.lat,
+          lng: coords.lng,
+        }),
+      staleTime: liveQuery.staleTime,
+    });
+    void import('@/features/food/ui/FoodRoutePage');
+  }, [activeLocation, liveQuery.staleTime, queryClient, restaurantSlug]);
+
+  useEffect(() => {
+    if (!query.data || !restaurantSlug) return;
+    prefetchMenu();
+  }, [prefetchMenu, query.data, restaurantSlug]);
+
+  if (query.isPending && !query.data) {
     return <OrderBhojanRestaurantSkeleton />;
   }
 
@@ -114,5 +153,5 @@ export function OrderBhojanRestaurantExperience() {
     );
   }
 
-  return <OrderBhojanRestaurantContent data={query.data} />;
+  return <OrderBhojanRestaurantContent data={query.data} onPrefetchMenu={prefetchMenu} />;
 }

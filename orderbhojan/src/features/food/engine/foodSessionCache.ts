@@ -117,3 +117,8 @@ export function clearFoodSessionCacheForTests(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(STORAGE_KEY);
 }
+
+export function clearFoodSessionCacheForSlug(slug: string): void {
+  const filtered = readAllEntries().filter((entry) => entry.slug !== slug);
+  writeAllEntries(filtered);
+}

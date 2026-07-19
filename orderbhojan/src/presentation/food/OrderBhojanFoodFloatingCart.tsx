@@ -17,7 +17,7 @@ export function OrderBhojanFoodFloatingCart() {
       role="status"
       aria-live="polite"
     >
-      <GlassCard hoverEffect={false} className="mx-auto flex max-w-3xl items-center justify-between gap-4 !rounded-2xl !p-3">
+      <GlassCard hoverEffect={false} className="ob-menu-container flex items-center justify-between gap-4 !rounded-2xl !p-3">
         <div>
           <p className="text-sm font-semibold text-white">
             {count} item{count === 1 ? '' : 's'}

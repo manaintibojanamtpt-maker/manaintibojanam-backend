@@ -31,6 +31,7 @@ import {
 } from '@/features/checkout/domain/deliveryTimeSlots';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set delivery location';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizePhoneFromSession(phoneNumber: string | null | undefined): string {
   if (!phoneNumber) return '';
@@ -75,8 +76,12 @@ export function OrderBhojanCheckoutPage() {
   const estimatedSubtotal = cartSubtotal(lines);
 
   const sessionPhone = normalizePhoneFromSession(sessionUser?.phoneNumber);
+  const sessionEmail = sessionUser?.email?.trim().toLowerCase() || '';
   const [phoneOverride, setPhoneOverride] = useState('');
+  const [emailOverride, setEmailOverride] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const phone = phoneOverride || sessionPhone;
+  const notificationEmail = sessionEmail || emailOverride.trim().toLowerCase() || undefined;
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
 
@@ -136,25 +141,39 @@ export function OrderBhojanCheckoutPage() {
     return true;
   };
 
+  const validateEmail = (): boolean => {
+    if (sessionEmail || !emailOverride.trim()) {
+      setEmailError(null);
+      return true;
+    }
+    const normalized = emailOverride.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(normalized)) {
+      setEmailError('Enter a valid email address or leave blank');
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
   const handlePlaceCod = async () => {
     if (isPlacing) return;
-    if (!validatePhone()) return;
+    if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('cod');
-    await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined);
+    await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceRazorpay = async () => {
     if (isPlacing) return;
-    if (!validatePhone()) return;
+    if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('razorpay');
-    await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined);
+    await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceUpi = async () => {
     if (isPlacing) return;
-    if (!validatePhone()) return;
+    if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('upi');
-    await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined);
+    await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   if (!checkoutAuthGate.allowed && authStatus !== 'loading') {
@@ -329,11 +348,24 @@ export function OrderBhojanCheckoutPage() {
         value: phone,
         error: phoneError ?? undefined,
         hint: 'Required for order updates and delivery coordination',
+        emailValue: sessionEmail ? sessionEmail : emailOverride,
+        emailHint: sessionEmail
+          ? 'Order updates will be sent to your signed-in email'
+          : 'Optional — recommended for email order updates',
+        emailError: emailError ?? undefined,
       }}
       onContactChange={(value) => {
         setPhoneOverride(value);
         if (phoneError) setPhoneError(null);
       }}
+      onContactEmailChange={
+        sessionEmail
+          ? undefined
+          : (value) => {
+              setEmailOverride(value);
+              if (emailError) setEmailError(null);
+            }
+      }
       errorMessage={error ?? undefined}
       backLabel="Back to cart"
       onBack={() => navigate('/cart')}

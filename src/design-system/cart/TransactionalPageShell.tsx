@@ -18,7 +18,7 @@ export function TransactionalPageShell({
 }: TransactionalPageShellProps) {
   return (
     <div
-      className={`flex flex-col gap-4 bg-[#070504] px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white md:mx-auto md:max-w-lg ${
+      className={`ob-transactional-shell flex flex-col gap-4 bg-[#070504] pt-[max(1rem,env(safe-area-inset-top))] text-white md:mx-auto md:max-w-lg ${
         embedded ? 'min-h-0' : 'min-h-[100dvh] pb-[var(--ob-chrome-bottom)]'
       } ${className}`.trim()}
       style={{

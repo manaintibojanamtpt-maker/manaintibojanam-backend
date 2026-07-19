@@ -1,4 +1,5 @@
 import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
+import { usePrefetchDiscoveryKitchens } from '../hooks/usePrefetchDiscoveryKitchens';
 import { readDiscoverySessionCache } from '../engine/discoverySessionCache';
 import { resolveDiscoveryCoords } from '../engine/discoveryEngine';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
@@ -81,6 +82,8 @@ export function DiscoveryHomeFeed() {
   const sessionCachedFeed = readDiscoverySessionCache(coords.lat, coords.lng, filters);
   const feedData = query.data ?? sessionCachedFeed;
   const showInitialSkeleton = query.isPending && !feedData;
+
+  usePrefetchDiscoveryKitchens(feedData);
 
   if (showInitialSkeleton) {
     return (
@@ -209,12 +212,6 @@ export function DiscoveryHomeFeed() {
       }}
     >
       <div className="space-y-5">
-        {query.isFetching && feedData ? (
-          <p className="text-xs text-white/45" aria-live="polite">
-            Refreshing kitchens…
-          </p>
-        ) : null}
-
         <DiscoveryFeedControls />
 
         <DiscoveryNearbyHeader

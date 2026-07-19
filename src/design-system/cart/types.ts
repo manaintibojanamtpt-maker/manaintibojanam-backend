@@ -48,6 +48,9 @@ export interface CheckoutContactViewModel {
   readonly value: string;
   readonly error?: string;
   readonly hint: string;
+  readonly emailValue?: string;
+  readonly emailHint?: string;
+  readonly emailError?: string;
 }
 
 export interface CheckoutDeliverySlotViewModel {

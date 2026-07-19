@@ -239,7 +239,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   }, [prepareQuery]);
 
   const placeCodOrder = useCallback(
-    async (phone: string, customerName?: string) => {
+    async (phone: string, customerName?: string, notificationEmail?: string) => {
       if (placeInFlightRef.current) return null;
       placeInFlightRef.current = true;
       markPerf('pay_tap', 'cod');
@@ -248,13 +248,15 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlaceError(null);
       try {
         assertCanPlaceOrder();
+        const resolvedEmail = notificationEmail?.trim().toLowerCase() || sessionUser?.email?.trim().toLowerCase() || null;
         const payload = {
           ...getPayload(),
           paymentMethod: 'cod',
           phone: phone.trim(),
           customerName: customerName?.trim() || undefined,
           userId: sessionUser?.uid ?? null,
-          userEmail: sessionUser?.email ?? null,
+          userEmail: resolvedEmail,
+          notificationEmail: resolvedEmail,
         };
         const response = (await getMarketplaceApiClient().checkoutPlace(
           payload,
@@ -282,7 +284,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   );
 
   const placeRazorpayOrder = useCallback(
-    async (phone: string, customerName?: string) => {
+    async (phone: string, customerName?: string, notificationEmail?: string) => {
       if (placeInFlightRef.current) return null;
       placeInFlightRef.current = true;
       markPerf('pay_tap', 'razorpay');
@@ -291,13 +293,15 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setPlaceError(null);
       try {
         assertCanPlaceOrder();
+        const resolvedEmail = notificationEmail?.trim().toLowerCase() || sessionUser?.email?.trim().toLowerCase() || null;
         const payload = {
           ...getPayload(),
           paymentMethod: 'razorpay',
           phone: phone.trim(),
           customerName: customerName?.trim() || undefined,
           userId: sessionUser?.uid ?? null,
-          userEmail: sessionUser?.email ?? null,
+          userEmail: resolvedEmail,
+          notificationEmail: resolvedEmail,
         };
         const response = (await getMarketplaceApiClient().checkoutPlace(
           payload,
@@ -311,7 +315,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
           draftId,
           phone: phone.trim(),
           customerName: customerName?.trim() || sessionUser?.displayName || undefined,
-          customerEmail: sessionUser?.email ?? undefined,
+          customerEmail: resolvedEmail ?? undefined,
           userId: sessionUser?.uid ?? null,
           orderNumber: response.orderNumber,
         });
@@ -422,7 +426,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   );
 
   const placeUpiOrder = useCallback(
-    async (phone: string, customerName?: string) => {
+    async (phone: string, customerName?: string, notificationEmail?: string) => {
       if (placeInFlightRef.current) return null;
       placeInFlightRef.current = true;
       markPerf('pay_tap', 'upi');
@@ -432,13 +436,15 @@ export function useCheckoutFlow(): CheckoutFlowState {
       setUpiPollMessage(null);
       try {
         assertCanPlaceOrder();
+        const resolvedEmail = notificationEmail?.trim().toLowerCase() || sessionUser?.email?.trim().toLowerCase() || null;
         const payload = {
           ...getPayload(),
           paymentMethod: 'upi' as const,
           phone: phone.trim(),
           customerName: customerName?.trim() || undefined,
           userId: sessionUser?.uid ?? null,
-          userEmail: sessionUser?.email ?? null,
+          userEmail: resolvedEmail,
+          notificationEmail: resolvedEmail,
         };
         const response = (await getMarketplaceApiClient().checkoutPlace(
           payload,

@@ -63,7 +63,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
     return merged.slice(0, 6);
   }, [menu?.featuredIds, itemMap, items]);
 
-  if (query.isLoading) return <OrderBhojanFoodMenuSkeleton />;
+  if (query.isPending && !menu) return <OrderBhojanFoodMenuSkeleton />;
 
   if (query.isError || !menu) {
     return (
@@ -97,7 +97,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 
       {signatureItems.length > 0 ? (
         <Section density="comfortable" background="subtle" className="!py-6" aria-label="Signature dishes">
-          <div className="mx-auto max-w-3xl px-4">
+          <div className="ob-menu-container">
             <SectionHeader title="Signature dishes" align="left" className="!mb-4 !text-left" />
             <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
               {signatureItems.map((food, index) => (

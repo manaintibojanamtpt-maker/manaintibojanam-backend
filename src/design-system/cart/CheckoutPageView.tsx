@@ -24,6 +24,7 @@ export interface CheckoutPageViewProps {
   readonly billRefreshing?: boolean;
   readonly contact: CheckoutContactViewModel;
   readonly onContactChange: (value: string) => void;
+  readonly onContactEmailChange?: (value: string) => void;
   readonly errorMessage?: string;
   readonly backLabel: string;
   readonly onBack: () => void;
@@ -51,6 +52,7 @@ export function CheckoutPageView({
   billRefreshing = false,
   contact,
   onContactChange,
+  onContactEmailChange,
   errorMessage,
   backLabel,
   onBack,
@@ -104,7 +106,7 @@ export function CheckoutPageView({
           </div>
         ) : null}
 
-        <CheckoutContactView contact={contact} onChange={onContactChange} />
+        <CheckoutContactView contact={contact} onChange={onContactChange} onEmailChange={onContactEmailChange} />
 
         {errorMessage ? (
           <p role="alert" className="text-sm text-red-300">

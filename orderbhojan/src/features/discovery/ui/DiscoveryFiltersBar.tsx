@@ -161,6 +161,18 @@ export function DiscoveryFiltersBar() {
         onRemove: () => setFilters({ minRating: undefined }),
       });
     }
+    if (filters.cuisines?.length) {
+      for (const cuisine of filters.cuisines) {
+        chips.push({
+          id: `cuisine-${cuisine}`,
+          label: cuisine,
+          onRemove: () => {
+            const next = filters.cuisines?.filter((entry) => entry !== cuisine);
+            setFilters({ cuisines: next?.length ? next : undefined });
+          },
+        });
+      }
+    }
 
     return chips;
   }, [filters, setFilters]);
