@@ -41,8 +41,8 @@ const sampleContext: SearchContext = {
 };
 
 describe('projectSearch', () => {
-  it('returns live restaurant and food sections for matching query', () => {
-    const response = buildSearchPlatformResponse(
+  it('returns live restaurant and food sections for matching query', async () => {
+    const response = await buildSearchPlatformResponse(
       { q: 'biryani', lat: 18.52, lng: 73.85 },
       sampleContext,
     );
@@ -52,8 +52,8 @@ describe('projectSearch', () => {
     assert.ok(response.meta.totalResults > 0);
   });
 
-  it('builds suggestions from live restaurants and menu items', () => {
-    const suggestions = buildSearchSuggestions('bir', sampleContext);
+  it('builds suggestions from live restaurants and menu items', async () => {
+    const suggestions = await buildSearchSuggestions('bir', sampleContext);
     assert.ok(suggestions.suggestions.some((entry) => entry.type === 'food'));
   });
 
@@ -69,6 +69,7 @@ describe('projectSearch', () => {
       path.join(process.cwd(), 'backend-lib/marketplace/marketplaceRoutes.ts'),
       'utf8',
     );
+    assert.match(source, /\/search\/menu-items/);
     assert.match(source, /\/search\/suggestions/);
     assert.match(source, /\/search\/collections/);
     assert.match(source, /buildSearchPlatformResponse/);

@@ -1,6 +1,7 @@
 import type {
   SearchBrowseParams,
   SearchCollectionsResponse,
+  MenuItemSearchResponse,
   SearchPlatformResponse,
   SearchQueryParams,
   SearchRecentResponse,
@@ -39,6 +40,21 @@ function expandQuery(query: string): readonly string[] {
 export async function executeSearch(params: SearchQueryParams): Promise<SearchPlatformResponse> {
   const normalized = normalizeQuery(params.q);
   const response = await getSearchApiClient().search({ ...params, q: normalized });
+
+  if (response.meta.totalResults === 0) {
+    trackSearchEvent('search_no_results', { query: normalized });
+  } else {
+    trackSearchEvent('search_submit', { query: normalized });
+  }
+
+  return response;
+}
+
+export async function executeMenuItemSearch(
+  params: SearchQueryParams,
+): Promise<MenuItemSearchResponse> {
+  const normalized = normalizeQuery(params.q);
+  const response = await getSearchApiClient().searchMenuItems({ ...params, q: normalized });
 
   if (response.meta.totalResults === 0) {
     trackSearchEvent('search_no_results', { query: normalized });

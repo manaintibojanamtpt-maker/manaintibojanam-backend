@@ -25,6 +25,7 @@ import type {
 } from '@/types/marketplace-location';
 import type {
   SearchCollectionsResponse,
+  MenuItemSearchResponse,
   SearchPlatformResponse,
   SearchRecentResponse,
   SearchSuggestionsResponse,
@@ -178,6 +179,15 @@ export class MarketplaceApiClient {
   ): Promise<SearchPlatformResponse> {
     return this.http.request<SearchPlatformResponse>({
       path: `${MARKETPLACE_PREFIX}/search`,
+      query,
+    });
+  }
+
+  searchMenuItems(
+    query: Record<string, string | number | boolean>,
+  ): Promise<MenuItemSearchResponse> {
+    return this.http.request<MenuItemSearchResponse>({
+      path: `${MARKETPLACE_PREFIX}/search/menu-items`,
       query,
     });
   }

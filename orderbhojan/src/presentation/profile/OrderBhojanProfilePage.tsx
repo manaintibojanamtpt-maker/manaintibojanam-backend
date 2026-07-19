@@ -5,6 +5,8 @@ import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCustomerProfile } from '@/features/auth/hooks/useCustomerProfile';
 import { useCustomerSettingsActions } from '@/presentation/settings';
 
+import { openExternalUrl } from '@/lib/nativePlatform';
+
 const SUPPORT_MAILTO = 'mailto:support@orderbhojan.com?subject=OrderBhojan%20Support';
 
 export function OrderBhojanProfilePage() {
@@ -12,7 +14,7 @@ export function OrderBhojanProfilePage() {
   const { sessionUser, status, signOut } = useAuth();
   const profileQuery = useCustomerProfile();
   const locationEnabled = useLocationFeatureEnabled();
-  const { openSelector } = useLocationActions();
+  const { openSelector, refreshSavedAddresses } = useLocationActions();
   const { preferenceRows, handlePreferenceRow } = useCustomerSettingsActions();
 
   const handleQuickTile = (tile: string) => {
@@ -26,6 +28,7 @@ export function OrderBhojanProfilePage() {
     }
     if (tile === 'addresses') {
       if (locationEnabled) {
+        void refreshSavedAddresses();
         openSelector();
         return;
       }
@@ -72,10 +75,10 @@ export function OrderBhojanProfilePage() {
       onQuickTile={handleQuickTile}
       onPreferenceClick={handlePreferenceRow}
       onSupport={() => {
-        window.location.href = SUPPORT_MAILTO;
+        void openExternalUrl(SUPPORT_MAILTO);
       }}
       onAbout={() => {
-        window.open('https://www.bhojanos.com/about', '_blank', 'noopener,noreferrer');
+        void openExternalUrl('https://www.bhojanos.com/about');
       }}
       onSignOut={() => signOut()}
       onRetryProfile={() => void profileQuery.refetch()}

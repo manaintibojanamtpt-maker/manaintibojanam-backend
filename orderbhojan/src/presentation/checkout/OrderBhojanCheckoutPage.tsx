@@ -87,8 +87,8 @@ export function OrderBhojanCheckoutPage() {
 
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
-  const isBusy = isPreparing || isPlacing;
   const billRefreshing = isPreparing && Boolean(quote);
+  const checkoutActionsDisabled = isPlacing || !quote;
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const supportsUpi = paymentMethods.includes('upi');
@@ -203,22 +203,27 @@ export function OrderBhojanCheckoutPage() {
   if (orderId && status === 'success') {
     const isRazorpayPayment = lastPaymentMethod === 'razorpay';
     const isUpiPayment = lastPaymentMethod === 'upi';
+    const isCodConfirming = lastPaymentMethod === 'cod' && orderId === 'pending';
     const orderLabel = orderNumber ?? orderId;
     return (
       <CheckoutSuccessView
-        title="Order placed"
+        title={isCodConfirming ? 'Placing your order' : 'Order placed'}
         subtitle={
-          isRazorpayPayment
-            ? `Your online payment for order #${orderLabel} is confirmed.`
-            : isUpiPayment
-              ? `Your UPI payment for order #${orderLabel} is confirmed.`
-              : `Your COD order #${orderLabel} is confirmed.`
+          isCodConfirming
+            ? 'Confirming cash on delivery — this usually takes a moment.'
+            : isRazorpayPayment
+              ? `Your online payment for order #${orderLabel} is confirmed.`
+              : isUpiPayment
+                ? `Your UPI payment for order #${orderLabel} is confirmed.`
+                : `Your COD order #${orderLabel} is confirmed.`
         }
         trackLabel="Track order"
         ordersLabel="View orders"
         browseLabel="Continue browsing"
-        onTrack={() => navigate(`/orders/${orderId}/track`)}
-        onOrders={() => navigate('/orders')}
+        onTrack={
+          isCodConfirming ? () => undefined : () => navigate(`/orders/${orderId}/track`)
+        }
+        onOrders={isCodConfirming ? () => undefined : () => navigate('/orders')}
         onBrowse={() => navigate('/')}
       />
     );
@@ -342,7 +347,7 @@ export function OrderBhojanCheckoutPage() {
       deliverySlot={deliverySlotView}
       onDeliverySlotChange={setDeliveryTimeSlot}
       bill={billView}
-      quoteLoading={isBusy && !billView}
+      quoteLoading={isPreparing && !billView}
       billRefreshing={billRefreshing}
       contact={{
         value: phone,
@@ -375,7 +380,7 @@ export function OrderBhojanCheckoutPage() {
       razorpayBusy={placingMethod === 'razorpay' || placingMethod === 'upi'}
       showCod={supportsCod}
       showRazorpay={showRazorpayButton || showUpiButton}
-      actionsDisabled={isBusy || !quote}
+      actionsDisabled={checkoutActionsDisabled}
       hint={paymentHint}
       onPlaceCod={supportsCod ? () => void handlePlaceCod() : undefined}
       onPlaceRazorpay={

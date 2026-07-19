@@ -11,6 +11,8 @@ services:
       # PLATFORM_TIER=standard  → enables AutoPilot crons, extended telemetry (vs default free)
       # CRON_SECRET=<long random> → Bearer auth for POST /api/cron/* (founder-alerts, expire-unpaid-payments)
       # RESEND_API_KEY / EMAIL_*  → founder alert emails
+      # TINYFISH_API_KEY            → fast menu item search (GET api.search.tinyfish.ai)
+      # TINYFISH_MENU_SEARCH_ENABLED=true (default when key set; set false for Firestore-only)
       # See docs/OBSERVABILITY-RUNBOOK.md and PRODUCTION_OPERATIONS.md
       - key: ORDERBHOJAN_URL
         value: https://orderbhojan.web.app

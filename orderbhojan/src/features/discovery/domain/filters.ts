@@ -1,5 +1,6 @@
 import type { RestaurantPublic } from '@/types/marketplace';
 import type { DiscoveryFilters, DiscoverySort } from '@/types/marketplace-discovery';
+import { restaurantMatchesDiscoveryCuisineFilter } from './homeCategoryCuisine';
 import { DEFAULT_DISCOVERY_FILTERS } from './discoveryPolicy';
 
 export { DEFAULT_DISCOVERY_FILTERS } from './discoveryPolicy';
@@ -40,10 +41,7 @@ export function applyDiscoveryFilters(
     result = result.filter((r) => r.isOpen);
   }
   if (filters.cuisines?.length) {
-    const wanted = new Set(filters.cuisines.map((c) => c.toLowerCase()));
-    result = result.filter((r) =>
-      r.cuisines.some((c) => wanted.has(c.toLowerCase())),
-    );
+    result = result.filter((r) => restaurantMatchesDiscoveryCuisineFilter(r.cuisines, filters.cuisines!));
   }
 
   return sortRestaurants(result, filters.sort);

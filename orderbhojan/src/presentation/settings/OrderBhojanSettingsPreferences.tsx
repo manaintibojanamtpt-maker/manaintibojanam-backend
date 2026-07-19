@@ -5,6 +5,7 @@ import type { SettingsPreferenceViewModel } from '@bhojan/storefront-design-syst
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCustomerProfile } from '@/features/auth/hooks/useCustomerProfile';
 import { updateCustomerPreferences } from '@/features/auth/infrastructure/customerRepository';
+import { notifyToast } from '@/shared/providers/BdsToastProvider';
 
 const SPICE_LEVELS = ['Mild', 'Medium', 'Hot'] as const;
 const DIETARY_OPTIONS = ['Veg', 'Egg', 'Non-veg'] as const;
@@ -39,21 +40,29 @@ export function useCustomerSettingsActions() {
     }
 
     const prefs = profileQuery.data?.preferences;
+    const invalidateProfile = () => {
+      void queryClient.invalidateQueries({ queryKey: ['customer', 'profile', uid] });
+    };
+    const savePreference = async (patch: Parameters<typeof updateCustomerPreferences>[1]) => {
+      try {
+        await updateCustomerPreferences(uid, patch);
+        invalidateProfile();
+      } catch {
+        notifyToast('Could not save preference. Try again.', 'danger');
+      }
+    };
+
     if (id === 'spice') {
       const current = prefs?.spiceLevel ?? 'Medium';
       const next = SPICE_LEVELS[(SPICE_LEVELS.indexOf(current) + 1) % SPICE_LEVELS.length]!;
-      void updateCustomerPreferences(uid, { spiceLevel: next }).then(() => {
-        void queryClient.invalidateQueries({ queryKey: ['customer', 'profile', uid] });
-      });
+      void savePreference({ spiceLevel: next });
       return;
     }
 
     if (id === 'dietary') {
       const current = prefs?.dietary ?? 'Veg';
       const next = DIETARY_OPTIONS[(DIETARY_OPTIONS.indexOf(current) + 1) % DIETARY_OPTIONS.length]!;
-      void updateCustomerPreferences(uid, { dietary: next }).then(() => {
-        void queryClient.invalidateQueries({ queryKey: ['customer', 'profile', uid] });
-      });
+      void savePreference({ dietary: next });
     }
   };
 

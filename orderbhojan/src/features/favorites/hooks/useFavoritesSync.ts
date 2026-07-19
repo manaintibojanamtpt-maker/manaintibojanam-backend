@@ -65,6 +65,9 @@ export function useFavoriteToggle() {
       useFavoritesStore.getState().setIds(ids);
       queryClient.setQueryData(favoritesQueryKeys.list(), result.favorites);
     },
+    onError: (_error, { restaurantId }) => {
+      useFavoritesStore.getState().toggle(restaurantId);
+    },
   });
 
   return useCallback(

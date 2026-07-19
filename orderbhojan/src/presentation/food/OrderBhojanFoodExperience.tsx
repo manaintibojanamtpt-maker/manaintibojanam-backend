@@ -3,7 +3,14 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import type { FoodPublic } from '@/types/marketplace-food';
-import { groupItemsByCategory } from '@/features/food/domain/formatters';
+import {
+  filterMenuItemsByDietary,
+  groupItemsByCategory,
+  isNonVegFood,
+  isVegFood,
+  matchesMenuDietaryFilter,
+  type MenuDietaryFilter,
+} from '@/features/food/domain/formatters';
 import { hasBestsellerLabel } from '@/features/food/domain/contractPresentation';
 import { useCategoryScrollSpy } from '@/features/food/hooks/useCategoryScrollSpy';
 import { useFoodMenu } from '@/features/food/hooks/useFoodMenu';
@@ -18,6 +25,7 @@ import {
   useOnlineStatus,
 } from '@/presentation/states';
 import { OrderBhojanFoodCategoryRail } from './OrderBhojanFoodCategoryRail';
+import { OrderBhojanFoodDietaryFilterBar } from './OrderBhojanFoodDietaryFilterBar';
 import { OrderBhojanFoodFeaturedCard } from './OrderBhojanFoodFeaturedCard';
 import { OrderBhojanFoodFloatingCart } from './OrderBhojanFoodFloatingCart';
 import { OrderBhojanFoodMenuSection } from './OrderBhojanFoodMenuSection';
@@ -30,6 +38,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
   const online = useOnlineStatus();
   const query = useFoodMenu(restaurantSlug);
   const [customizeFood, setCustomizeFood] = useState<FoodPublic | null>(null);
+  const [dietaryFilter, setDietaryFilter] = useState<MenuDietaryFilter>('all');
   const enterFromRestaurant = Boolean(
     (location.state as { fromRestaurant?: boolean } | null)?.fromRestaurant,
   );
@@ -39,29 +48,56 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
   const items = useMemo(() => menu?.items ?? [], [menu?.items]);
   const categories = useMemo(() => menu?.categories ?? [], [menu?.categories]);
 
+  const dietaryCounts = useMemo(
+    () => ({
+      veg: items.filter(isVegFood).length,
+      nonVeg: items.filter(isNonVegFood).length,
+    }),
+    [items],
+  );
+
+  const filteredItems = useMemo(
+    () => filterMenuItemsByDietary(items, dietaryFilter),
+    [dietaryFilter, items],
+  );
+
+  useEffect(() => {
+    if (dietaryFilter === 'veg' && dietaryCounts.veg === 0) {
+      setDietaryFilter('all');
+    } else if (dietaryFilter === 'nonVeg' && dietaryCounts.nonVeg === 0) {
+      setDietaryFilter('all');
+    }
+  }, [dietaryCounts.nonVeg, dietaryCounts.veg, dietaryFilter]);
+
+  const visibleCategories = useMemo(() => {
+    const grouped = groupItemsByCategory(filteredItems);
+    return categories.filter((category) => (grouped.get(category.id)?.length ?? 0) > 0);
+  }, [categories, filteredItems]);
+
   const sectionIds = useMemo(
-    () => categories.map((category) => `food-cat-${category.id}`),
-    [categories],
+    () => visibleCategories.map((category) => `food-cat-${category.id}`),
+    [visibleCategories],
   );
   const { activeId, scrollTo } = useCategoryScrollSpy(sectionIds);
 
-  const byCategory = useMemo(() => groupItemsByCategory(items), [items]);
+  const byCategory = useMemo(() => groupItemsByCategory(filteredItems), [filteredItems]);
   const itemMap = useMemo(() => new Map(items.map((item) => [item.foodId, item])), [items]);
 
   const signatureItems = useMemo(() => {
     const featured = (menu?.featuredIds ?? [])
       .map((id) => itemMap.get(id))
       .filter((item): item is FoodPublic => Boolean(item));
-    const bestsellers = items.filter((item) => hasBestsellerLabel(item));
+    const bestsellers = filteredItems.filter((item) => hasBestsellerLabel(item));
     const seen = new Set<string>();
     const merged: FoodPublic[] = [];
     for (const item of [...featured, ...bestsellers]) {
+      if (!matchesMenuDietaryFilter(item, dietaryFilter)) continue;
       if (seen.has(item.foodId)) continue;
       seen.add(item.foodId);
       merged.push(item);
     }
     return merged.slice(0, 6);
-  }, [menu?.featuredIds, itemMap, items]);
+  }, [dietaryFilter, filteredItems, itemMap, menu?.featuredIds]);
 
   if (query.isPending && !menu) return <OrderBhojanFoodMenuSkeleton />;
 
@@ -93,9 +129,38 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
         onHome={() => navigate('/')}
       />
 
-      <OrderBhojanFoodCategoryRail categories={categories} activeId={activeId} onSelect={scrollTo} />
+      <div className="sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md">
+        <OrderBhojanFoodDietaryFilterBar
+          value={dietaryFilter}
+          onChange={setDietaryFilter}
+          vegCount={dietaryCounts.veg}
+          nonVegCount={dietaryCounts.nonVeg}
+        />
+        <OrderBhojanFoodCategoryRail
+          categories={visibleCategories}
+          activeId={activeId}
+          onSelect={scrollTo}
+          embedded
+        />
+      </div>
 
-      {signatureItems.length > 0 ? (
+      {filteredItems.length === 0 ? (
+        <Section density="comfortable" background="default" className="!py-10">
+          <div className="ob-menu-container text-center">
+            <p className="text-base font-semibold text-white">No dishes match this filter</p>
+            <p className="mt-2 text-sm text-white/60">Try All or switch between Veg and Non-Veg.</p>
+            <button
+              type="button"
+              className="mt-4 rounded-full border border-[#FF7A00]/40 px-4 py-2 text-sm font-semibold text-[#FF7A00]"
+              onClick={() => setDietaryFilter('all')}
+            >
+              Show all dishes
+            </button>
+          </div>
+        </Section>
+      ) : null}
+
+      {filteredItems.length > 0 && signatureItems.length > 0 ? (
         <Section density="comfortable" background="subtle" className="!py-6" aria-label="Signature dishes">
           <div className="ob-menu-container">
             <SectionHeader title="Signature dishes" align="left" className="!mb-4 !text-left" />
@@ -113,15 +178,17 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
         </Section>
       ) : null}
 
-      {categories.map((category) => (
-        <OrderBhojanFoodMenuSection
-          key={category.id}
-          id={`food-cat-${category.id}`}
-          title={category.name}
-          items={byCategory.get(category.id) ?? []}
-          onCustomize={setCustomizeFood}
-        />
-      ))}
+      {filteredItems.length > 0
+        ? visibleCategories.map((category) => (
+            <OrderBhojanFoodMenuSection
+              key={category.id}
+              id={`food-cat-${category.id}`}
+              title={category.name}
+              items={byCategory.get(category.id) ?? []}
+              onCustomize={setCustomizeFood}
+            />
+          ))
+        : null}
 
       <div className="h-28" aria-hidden />
 

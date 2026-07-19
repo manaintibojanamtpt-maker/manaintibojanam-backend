@@ -87,9 +87,21 @@ export interface CheckoutFlowState {
   setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
-  placeCodOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
-  placeRazorpayOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
-  placeUpiOrder: (phone: string, customerName?: string) => Promise<PlacedOrderConfirmation | null>;
+  placeCodOrder: (
+    phone: string,
+    customerName?: string,
+    notificationEmail?: string,
+  ) => Promise<PlacedOrderConfirmation | null>;
+  placeRazorpayOrder: (
+    phone: string,
+    customerName?: string,
+    notificationEmail?: string,
+  ) => Promise<PlacedOrderConfirmation | null>;
+  placeUpiOrder: (
+    phone: string,
+    customerName?: string,
+    notificationEmail?: string,
+  ) => Promise<PlacedOrderConfirmation | null>;
   checkUpiPayment: () => Promise<void>;
   notifyKitchenUpiPaid: (upiReference?: string) => Promise<void>;
   reset: () => void;
@@ -244,7 +256,6 @@ export function useCheckoutFlow(): CheckoutFlowState {
       placeInFlightRef.current = true;
       markPerf('pay_tap', 'cod');
       setPlacingMethod('cod');
-      setPlaceStatus('placing');
       setPlaceError(null);
       try {
         assertCanPlaceOrder();
@@ -258,6 +269,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
           userEmail: resolvedEmail,
           notificationEmail: resolvedEmail,
         };
+
+        // Optimistic success: transition immediately; revert on failure (cart stays intact until confirmed).
+        setPlaceStatus('success');
+        setOrderId('pending');
+        setOrderNumber('Confirming…');
+        markPerf('pay_next_step', 'cod-optimistic');
+
         const response = (await getMarketplaceApiClient().checkoutPlace(
           payload,
         )) as CheckoutPlaceResponse;
@@ -267,12 +285,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
         }
         setOrderId(placed.orderId);
         setOrderNumber(placed.orderNumber);
-        setPlaceStatus('success');
         markPerf('pay_next_step', 'cod-success');
         useCartStore.getState().clear();
         return placed;
       } catch (err) {
         setPlaceStatus('error');
+        setOrderId(null);
+        setOrderNumber(null);
         setPlaceError(err instanceof Error ? err.message : 'Unable to place order');
         return null;
       } finally {

@@ -3,7 +3,6 @@ import {
   getDoc,
   serverTimestamp,
   setDoc,
-  updateDoc,
   type Firestore,
 } from 'firebase/firestore';
 import { getFirebaseFirestore, isFirestoreConfigured } from '@/firebase';
@@ -110,6 +109,13 @@ function buildCustomerDocument(user: AuthSessionUser, providers?: readonly AuthP
   };
 }
 
+const DEFAULT_PREFERENCES: CustomerDocument['preferences'] = {
+  notifications: true,
+  marketing: false,
+  spiceLevel: 'Medium',
+  dietary: 'Veg',
+};
+
 export async function updateCustomerPreferences(
   uid: string,
   patch: Partial<CustomerDocument['preferences']>,
@@ -118,13 +124,26 @@ export async function updateCustomerPreferences(
   const db = getFirebaseFirestore();
   if (!db) return;
 
-  const updates: Record<string, unknown> = {
-    updatedAt: serverTimestamp(),
-  };
-  if (patch.notifications !== undefined) updates['preferences.notifications'] = patch.notifications;
-  if (patch.marketing !== undefined) updates['preferences.marketing'] = patch.marketing;
-  if (patch.spiceLevel !== undefined) updates['preferences.spiceLevel'] = patch.spiceLevel;
-  if (patch.dietary !== undefined) updates['preferences.dietary'] = patch.dietary;
+  const ref = customerRef(db, uid);
+  try {
+    const existing = await getDoc(ref);
+    const currentPrefs = (existing.data()?.preferences as CustomerDocument['preferences'] | undefined) ?? {
+      ...DEFAULT_PREFERENCES,
+    };
+    const nextPrefs = { ...currentPrefs, ...patch };
 
-  await updateDoc(customerRef(db, uid), updates);
+    await setDoc(
+      ref,
+      {
+        uid,
+        preferences: nextPrefs,
+        updatedAt: serverTimestamp(),
+        ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+      },
+      { merge: true },
+    );
+  } catch (error) {
+    if (isFirestorePermissionDenied(error)) return;
+    throw error;
+  }
 }

@@ -51,6 +51,7 @@ import {
 } from './projectFoodCollections.js';
 import {
   buildLegacySearchResponse,
+  buildMenuItemSearchResponse,
   buildSearchCollections,
   buildSearchPlatformResponse,
   buildSearchRecent,
@@ -627,19 +628,36 @@ export function registerMarketplaceRoutes(
       if (url.searchParams.get('legacy') === 'true') {
         return sendMarketplaceJson(
           res,
-          success(buildLegacySearchResponse(params.q, context), {
+          success(await buildLegacySearchResponse(params.q, context), {
             tenantSyncRevision: context.poolSyncRevision,
           }),
         );
       }
       return sendMarketplaceJson(
         res,
-        success(buildSearchPlatformResponse(params, context), {
+        success(await buildSearchPlatformResponse(params, context), {
           tenantSyncRevision: context.poolSyncRevision,
         }),
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to search marketplace';
+      res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+    }
+  });
+
+  app.get(`${prefix}/search/menu-items`, async (req: Request, res: Response) => {
+    try {
+      const url = new URL(req.originalUrl, 'http://localhost');
+      const params = parseSearchQueryParams(url);
+      const context = await loadSearchContext(db, { lat: params.lat, lng: params.lng });
+      return sendMarketplaceJson(
+        res,
+        success(await buildMenuItemSearchResponse(params, context), {
+          tenantSyncRevision: context.poolSyncRevision,
+        }),
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to search menu items';
       res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
     }
   });
@@ -653,7 +671,7 @@ export function registerMarketplaceRoutes(
       const context = await loadSearchContext(db, { lat, lng });
       sendMarketplaceJson(
         res,
-        success(buildSearchSuggestions(q, context), { tenantSyncRevision: context.poolSyncRevision }),
+        success(await buildSearchSuggestions(q, context), { tenantSyncRevision: context.poolSyncRevision }),
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load search suggestions';

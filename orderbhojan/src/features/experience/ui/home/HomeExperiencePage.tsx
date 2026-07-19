@@ -5,7 +5,7 @@ import { useLocationActions, useLocationFeatureEnabled, useActiveLocation } from
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
-import { OrderBhojanHomeHero } from '@/presentation/discovery/OrderBhojanHomeHero';
+import { OrderBhojanHomeHero, OrderBhojanHomeCategories } from '@/presentation/discovery';
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
 
@@ -62,6 +62,14 @@ export function HomeExperiencePage() {
   return (
     <div className="bg-[#030303] pb-6 text-white">
       <OrderBhojanHomeHero />
+
+      {discoveryEnabled ? (
+        <div className="px-4 pt-4 sm:px-6">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
+            <OrderBhojanHomeCategories compact />
+          </div>
+        </div>
+      ) : null}
 
       <div className="px-4 pt-4 sm:px-6">
         {discoveryEnabled ? (

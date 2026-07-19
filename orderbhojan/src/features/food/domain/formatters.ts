@@ -27,6 +27,26 @@ export function isVegFood(food: FoodPublic): boolean {
   return food.dietary === 'veg';
 }
 
+export function isNonVegFood(food: FoodPublic): boolean {
+  return food.dietary === 'nonVeg' || food.dietary === 'egg';
+}
+
+export type MenuDietaryFilter = 'all' | 'veg' | 'nonVeg';
+
+export function matchesMenuDietaryFilter(food: FoodPublic, filter: MenuDietaryFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'veg') return isVegFood(food);
+  return isNonVegFood(food);
+}
+
+export function filterMenuItemsByDietary(
+  items: readonly FoodPublic[],
+  filter: MenuDietaryFilter,
+): FoodPublic[] {
+  if (filter === 'all') return [...items];
+  return items.filter((item) => matchesMenuDietaryFilter(item, filter));
+}
+
 export function preparationLabel(minutes?: number): string | undefined {
   if (minutes == null) return undefined;
   return `${minutes} min`;

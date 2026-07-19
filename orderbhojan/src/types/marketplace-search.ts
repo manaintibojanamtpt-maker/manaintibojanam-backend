@@ -61,6 +61,16 @@ export interface SearchPlatformResponse {
   };
 }
 
+export interface MenuItemSearchResponse {
+  readonly query: string;
+  readonly items: readonly SearchResultItem[];
+  readonly meta: {
+    readonly provider: string;
+    readonly totalResults: number;
+    readonly tookMs?: number;
+  };
+}
+
 export interface SearchSuggestion {
   readonly id: string;
   readonly label: string;

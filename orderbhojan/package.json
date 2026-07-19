@@ -40,6 +40,7 @@
     "gate:prod": "node scripts/gate-prod.mjs",
     "audit": "npm audit --audit-level=high",
     "deploy": "npm run build && cd .. && firebase deploy --only hosting:orderbhojan --project orderbhojan",
+    "icons:generate": "node scripts/generate-app-icons.mjs && npx capacitor-assets generate --iconBackgroundColor \"#070504\" --splashBackgroundColor \"#070504\" --assetPath resources --ios --android",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run cap:sync && npx cap run android",
     "cap:ios": "npm run cap:sync && npx cap open ios"
@@ -71,6 +72,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.14",
@@ -83,6 +85,7 @@
     "globals": "^16.5.0",
     "msw": "^2.12.2",
     "playwright": "^1.52.0",
+    "sharp": "^0.35.3",
     "tsx": "^4.21.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.48.0",

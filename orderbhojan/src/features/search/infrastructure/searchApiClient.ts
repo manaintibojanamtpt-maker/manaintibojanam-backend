@@ -1,6 +1,7 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import type {
   SearchBrowseParams,
+  MenuItemSearchResponse,
   SearchCollectionsResponse,
   SearchPlatformResponse,
   SearchQueryParams,
@@ -25,6 +26,15 @@ export class SearchApiClient {
       q: params.q,
       ...baseQuery(params),
       limit: params.limit ?? 8,
+      ...serializeSearchFilters(params.filters ?? {}),
+    });
+  }
+
+  searchMenuItems(params: SearchQueryParams): Promise<MenuItemSearchResponse> {
+    return getMarketplaceApiClient().searchMenuItems({
+      q: params.q,
+      ...baseQuery(params),
+      limit: params.limit ?? 12,
       ...serializeSearchFilters(params.filters ?? {}),
     });
   }

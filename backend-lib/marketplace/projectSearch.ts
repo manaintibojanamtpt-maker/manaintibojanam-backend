@@ -6,6 +6,11 @@ import {
   loadMarketplaceRestaurants,
   type RestaurantPublic,
 } from './projectDiscovery.js';
+import {
+  searchMenuItems,
+  searchMenuItemsLocally,
+  type SearchMenuItem,
+} from './search/menuItemSearch.js';
 
 export interface SearchFilters {
   readonly cuisines?: readonly string[];
@@ -113,22 +118,22 @@ export interface SearchCollectionsResponse {
   readonly sections: readonly SearchBrowseSection[];
 }
 
-interface SearchMenuItem {
-  readonly id: string;
-  readonly tenantId: string;
-  readonly restaurantSlug: string;
-  readonly name: string;
-  readonly category: string;
-  readonly description?: string;
-  readonly image?: string;
-  readonly price: number;
-  readonly isVeg: boolean;
-}
-
-interface SearchContext {
+export interface SearchContext {
   readonly restaurants: readonly RestaurantPublic[];
   readonly menuItems: readonly SearchMenuItem[];
   readonly poolSyncRevision?: string;
+}
+
+export type { SearchMenuItem };
+
+export interface MenuItemSearchPlatformResponse {
+  readonly query: string;
+  readonly items: readonly SearchResultItem[];
+  readonly meta: {
+    readonly provider: string;
+    readonly totalResults: number;
+    readonly tookMs?: number;
+  };
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -324,10 +329,41 @@ export function parseSearchQueryParams(url: URL): SearchQueryParams {
   };
 }
 
-export function buildSearchPlatformResponse(
+function mapMenuItemToSearchResult(item: SearchMenuItem): SearchResultItem {
+  return {
+    id: item.id,
+    type: 'food',
+    label: item.name,
+    subtitle: item.category,
+    imageUrl: item.image,
+    slug: item.restaurantSlug,
+    meta: { price: item.price, isVeg: item.isVeg, tenantId: item.tenantId },
+  };
+}
+
+export async function buildMenuItemSearchResponse(
   params: SearchQueryParams,
   context: SearchContext,
-): SearchPlatformResponse {
+): Promise<MenuItemSearchPlatformResponse> {
+  const query = params.q.trim();
+  const limit = params.limit ?? 12;
+  const menuSearch = await searchMenuItems(query, context.menuItems, limit);
+
+  return {
+    query,
+    items: menuSearch.items.map(mapMenuItemToSearchResult),
+    meta: {
+      provider: menuSearch.provider,
+      totalResults: menuSearch.items.length,
+      tookMs: menuSearch.tookMs,
+    },
+  };
+}
+
+export async function buildSearchPlatformResponse(
+  params: SearchQueryParams,
+  context: SearchContext,
+): Promise<SearchPlatformResponse> {
   const started = Date.now();
   const query = params.q.trim();
   const pool = sortRestaurants(
@@ -343,23 +379,8 @@ export function buildSearchPlatformResponse(
     )
     .slice(0, params.limit ?? 8);
 
-  const foods = context.menuItems
-    .filter(
-      (item) =>
-        matchesQuery(item.name, query) ||
-        matchesQuery(item.category, query) ||
-        matchesQuery(item.description ?? '', query),
-    )
-    .slice(0, params.limit ?? 8)
-    .map((item) => ({
-      id: item.id,
-      type: 'food' as const,
-      label: item.name,
-      subtitle: item.category,
-      imageUrl: item.image,
-      slug: item.restaurantSlug,
-      meta: { price: item.price, isVeg: item.isVeg, tenantId: item.tenantId },
-    }));
+  const menuSearch = await searchMenuItems(query, context.menuItems, params.limit ?? 8);
+  const foods = menuSearch.items.map(mapMenuItemToSearchResult);
 
   const categories = [...new Set(context.menuItems.map((item) => item.category))]
     .filter((category) => matchesQuery(category, query))
@@ -441,22 +462,26 @@ export function buildSearchPlatformResponse(
   push({ id: 'brands', title: 'Brands', type: 'brand', items: brands });
 
   const totalResults = sections.reduce((sum, section) => sum + section.items.length, 0);
+  const provider =
+    menuSearch.provider === 'tinyfish-menu-search'
+      ? 'tinyfish-search-platform'
+      : 'firestore-search-platform';
 
   return {
     query,
     sections,
     meta: {
-      provider: 'firestore-search-platform',
+      provider,
       totalResults,
       tookMs: Date.now() - started,
     },
   };
 }
 
-export function buildSearchSuggestions(
+export async function buildSearchSuggestions(
   query: string,
   context: SearchContext,
-): SearchSuggestionsResponse {
+): Promise<SearchSuggestionsResponse> {
   const suggestions: SearchSuggestion[] = [];
   const normalized = normalizeForMatch(query);
 
@@ -470,10 +495,13 @@ export function buildSearchSuggestions(
         });
       }
     }
-    for (const item of context.menuItems) {
-      if (matchesQuery(item.name, query)) {
-        suggestions.push({ id: `sug_f_${item.id}`, label: item.name, type: 'food' });
-      }
+    const menuMatches = await searchMenuItems(query, context.menuItems, 6);
+    const foodItems =
+      menuMatches.items.length > 0
+        ? menuMatches.items
+        : searchMenuItemsLocally(query, context.menuItems, 6);
+    for (const item of foodItems) {
+      suggestions.push({ id: `sug_f_${item.id}`, label: item.name, type: 'food' });
     }
     for (const cuisine of new Set(context.restaurants.flatMap((r) => r.cuisines))) {
       if (matchesQuery(cuisine, query)) {
@@ -588,8 +616,8 @@ export function buildSearchCollections(context: SearchContext): SearchCollection
   return { sections };
 }
 
-export function buildLegacySearchResponse(query: string, context: SearchContext) {
-  const response = buildSearchPlatformResponse({ q: query, lat: 17.44, lng: 78.35 }, context);
+export async function buildLegacySearchResponse(query: string, context: SearchContext) {
+  const response = await buildSearchPlatformResponse({ q: query, lat: 17.44, lng: 78.35 }, context);
   const hits = response.sections
     .flatMap((section) => section.items)
     .filter((item) => item.type === 'restaurant' && item.restaurant)

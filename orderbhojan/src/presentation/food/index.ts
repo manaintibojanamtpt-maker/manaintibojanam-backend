@@ -2,6 +2,7 @@ export { OrderBhojanFoodExperience } from './OrderBhojanFoodExperience';
 export { OrderBhojanFoodCardItem } from './OrderBhojanFoodCardItem';
 export { OrderBhojanFoodFeaturedCard } from './OrderBhojanFoodFeaturedCard';
 export { OrderBhojanFoodCategoryRail } from './OrderBhojanFoodCategoryRail';
+export { OrderBhojanFoodDietaryFilterBar } from './OrderBhojanFoodDietaryFilterBar';
 export { OrderBhojanFoodRestaurantStrip } from './OrderBhojanFoodRestaurantStrip';
 export { OrderBhojanFoodFloatingCart } from './OrderBhojanFoodFloatingCart';
 export { OrderBhojanFoodMenuSkeleton } from './OrderBhojanFoodMenuSkeleton';

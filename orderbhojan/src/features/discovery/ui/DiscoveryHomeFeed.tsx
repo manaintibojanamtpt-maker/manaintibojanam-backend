@@ -13,7 +13,7 @@ import { hasDiscoveryFilterOverrides } from '../domain/filterState';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
 import { useActiveLocation, useLocationFeatureEnabled, useLocationActions } from '@/features/location';
 import { DEFAULT_MARKETPLACE_CITY_LABEL } from '@/lib/marketplaceDefaults';
-import { OrderBhojanHomeCategories, OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
+import { OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
 import {
   OrderBhojanDiscoveryOfflineNotice,
   OrderBhojanDiscoveryUxState,
@@ -48,14 +48,6 @@ function DiscoveryNearbyHeader({
         </span>
       </div>
     </header>
-  );
-}
-
-function DiscoveryCategoriesStrip() {
-  return (
-    <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
-      <OrderBhojanHomeCategories compact />
-    </div>
   );
 }
 
@@ -227,7 +219,6 @@ export function DiscoveryHomeFeed() {
         {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
           <>
             <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
-            <DiscoveryCategoriesStrip />
             {!discoveryEnabled ? <TrendingFoodsSection /> : null}
           </>
         ) : (
@@ -240,8 +231,6 @@ export function DiscoveryHomeFeed() {
                 showHeader={primaryRail.id !== 'nearby'}
               />
             ) : null}
-
-            <DiscoveryCategoriesStrip />
 
             {secondaryRails.map((collection) => (
               <DiscoveryCollectionRail key={collection.id} collection={collection} compact />

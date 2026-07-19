@@ -7,10 +7,12 @@ export { OrderBhojanSearchBrowsePanel as SearchBrowsePanel } from '@/presentatio
 export { useSearchFeatureEnabled } from './hooks/useSearchFeature';
 export { useSearchBrowse, useSearchLocationInvalidation } from './hooks/useSearchBrowse';
 export { useSearchResults } from './hooks/useSearchResults';
+export { useMenuItemSearch } from './hooks/useMenuItemSearch';
 export { useSearchSuggestions } from './hooks/useSearchSuggestions';
 export { searchKeys } from './hooks/searchQueryKeys';
 export {
   executeSearch,
+  executeMenuItemSearch,
   loadSearchBrowse,
   loadSearchSuggestions,
   resolveSearchCoords,

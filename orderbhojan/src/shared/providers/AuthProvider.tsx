@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSessionUser(mapped);
       setAuthReady(true);
       if (mapped && !mapped.isAnonymous && mapped.provider !== 'guest') {
+        useAuthSessionStore.getState().setGuestBrowsing(false);
         void bootstrapCustomerSession(mapped).catch((error) => {
           if (import.meta.env.DEV) {
             console.warn('[OrderBhojan] Customer profile bootstrap skipped', error);

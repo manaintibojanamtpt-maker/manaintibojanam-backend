@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   HOME_CATEGORY_DISCOVERY_CUISINES,
   isHomeCategoryDiscoveryFilterActive,
+  restaurantMatchesDiscoveryCuisineFilter,
   toggleHomeCategoryDiscoveryFilter,
 } from '../src/features/discovery/domain/homeCategoryCuisine';
 
@@ -23,5 +24,20 @@ describe('homeCategoryCuisine discovery filters', () => {
   it('matches cuisines case-insensitively', () => {
     assert.equal(isHomeCategoryDiscoveryFilterActive('meals', ['meals']), true);
     assert.equal(isHomeCategoryDiscoveryFilterActive('pizza', ['PIZZA']), true);
+  });
+
+  it('matches owner cuisine tags via aliases (Biryani chip → Hyderabadi kitchens)', () => {
+    assert.equal(
+      restaurantMatchesDiscoveryCuisineFilter(['Hyderabadi'], ['Biryani']),
+      true,
+    );
+    assert.equal(
+      restaurantMatchesDiscoveryCuisineFilter(['Dosa', 'South Indian'], ['South Indian']),
+      true,
+    );
+    assert.equal(
+      restaurantMatchesDiscoveryCuisineFilter(['Chinese'], ['Biryani']),
+      false,
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { isFirebaseConfigured } from '@/firebase';
+import { getFirebaseAuth, isFirebaseConfigured } from '@/firebase';
 import { bootstrapCustomerSession } from './profileBootstrapService';
 import {
   completeGoogleRedirectSignIn,
@@ -83,9 +83,17 @@ export async function signOut(): Promise<void> {
 }
 
 export async function fetchBearerToken(forceRefresh = false): Promise<string | null> {
+  const user = getFirebaseAuth()?.currentUser;
+
+  // Signed-in customers always get a bearer token, even if guestBrowsing was stale in storage.
+  if (user && !user.isAnonymous) {
+    return user.getIdToken(forceRefresh);
+  }
+
   if (useAuthSessionStore.getState().guestBrowsing) {
     return null;
   }
+
   return getCurrentIdToken(forceRefresh);
 }
 
