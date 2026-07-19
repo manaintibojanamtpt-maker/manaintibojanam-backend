@@ -2,7 +2,6 @@ import { getFoodApiClient } from '../infrastructure/foodApiClient';
 import { isContractMenuPathEnabled } from '../hooks/useContractV1Feature';
 import { mapFoodMenuDTOToFoodMenuResponse } from '@/marketplace-api/mappers/v1/foodMenuV1ToLegacy';
 import {
-  fallbackRestaurantId,
   useRestaurantContextStore,
 } from '@/features/restaurant/store/restaurantContextStore';
 import {
@@ -30,11 +29,16 @@ function persistMenuContext(
   });
 }
 
-/** Restores cart/checkout restaurant context when menu is shown from session cache. */
+function menuFallbackRestaurantId(slug: string): string {
+  return `obr_${slug}`;
+}
+
+/** Restores cart/checkout restaurant context when menu is shown from cache or query data. */
 export function syncRestaurantContextFromMenuCache(
   slug: string,
   lat: number,
   lng: number,
+  menu?: FoodMenuResponse | null,
 ): boolean {
   if (!slug) return false;
 
@@ -53,10 +57,10 @@ export function syncRestaurantContextFromMenuCache(
     return true;
   }
 
-  const cachedMenu = readFoodSessionCache(slug, lat, lng);
+  const cachedMenu = menu ?? readFoodSessionCache(slug, lat, lng);
   if (!cachedMenu) return false;
 
-  persistMenuContext(slug, `menu_${slug}`, fallbackRestaurantId(slug));
+  persistMenuContext(slug, `menu_${slug}`, menuFallbackRestaurantId(slug));
   return true;
 }
 

@@ -100,7 +100,25 @@ describe('syncRestaurantContextFromMenuCache', () => {
 
     const ctx = useRestaurantContextStore.getState();
     assert.equal(ctx.restaurantSlug, 'demo-dosa-corner');
-    assert.equal(ctx.restaurantId, 'rest_demo_dosa_corner');
+    assert.equal(ctx.restaurantId, 'obr_demo-dosa-corner');
     assert.equal(ctx.contextToken, 'menu_demo-dosa-corner');
+  });
+
+  it('restores context from in-memory menu when session cache is empty', () => {
+    const synced = syncRestaurantContextFromMenuCache(
+      'demo-dosa-corner',
+      18.5362,
+      73.8937,
+      SAMPLE_MENU,
+    );
+    assert.equal(synced, true);
+    assert.equal(useRestaurantContextStore.getState().restaurantSlug, 'demo-dosa-corner');
+    assert.equal(useRestaurantContextStore.getState().restaurantId, 'obr_demo-dosa-corner');
+
+    useCartStore.getState().addItem(
+      { foodId: 'plain-dosa', name: 'Plain Dosa', price: 80 },
+      1,
+    );
+    assert.equal(useCartStore.getState().lines.length, 1);
   });
 });

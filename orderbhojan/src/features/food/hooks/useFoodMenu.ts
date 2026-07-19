@@ -40,7 +40,7 @@ export function useFoodMenu(slug: string | undefined) {
       if (cancelled) return;
       const cached = readFoodSessionCache(slug, coords.lat, coords.lng);
       if (!cached) return;
-      syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng);
+      syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng, cached);
       queryClient.setQueryData(foodKeys.menu(slug, coords.lat, coords.lng), cached, {
         updatedAt: getFoodSessionCacheUpdatedAt(slug, coords.lat, coords.lng),
       });
@@ -72,7 +72,7 @@ export function useFoodMenu(slug: string | undefined) {
 
   useEffect(() => {
     if (!slug || !query.data) return;
-    syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng);
+    syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng, query.data);
   }, [slug, coords.lat, coords.lng, query.data]);
 
   return query;
