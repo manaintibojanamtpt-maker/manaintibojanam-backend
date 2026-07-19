@@ -21,6 +21,7 @@ const RAW_MOCK_RESTAURANTS: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = [
     deliveryFee: 20,
     isOpen: true,
     badges: ['offer', 'new'],
+    offer: '50% OFF up to ₹100',
   },
   {
     restaurantId: 'obr_demo_biryani_001',
@@ -37,6 +38,7 @@ const RAW_MOCK_RESTAURANTS: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = [
     deliveryFee: 20,
     isOpen: true,
     badges: ['offer', 'veg', 'new'],
+    offer: 'Best deal',
   },
   {
     restaurantId: 'obr_demo_dosa_002',

@@ -6,6 +6,10 @@ export interface MarketplaceDiscoveryHeroSlide {
   readonly webpSrcSet?: string;
   readonly avifSrcSet?: string;
   readonly alt: string;
+  readonly subline?: string;
+  readonly headline?: string;
+  readonly cta?: string;
+  readonly ctaPath?: string;
 }
 
 export interface MarketplaceDiscoveryHeroViewProps {
@@ -17,6 +21,8 @@ export interface MarketplaceDiscoveryHeroViewProps {
   readonly animated: boolean;
   readonly searchSlot: React.ReactNode;
   readonly locationSlot?: React.ReactNode;
+  readonly ctaLabel?: string;
+  readonly onCtaClick?: () => void;
   readonly onSlideSelect?: (index: number) => void;
 }
 
@@ -29,6 +35,8 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
   animated,
   searchSlot,
   locationSlot = null,
+  ctaLabel,
+  onCtaClick,
   onSlideSelect,
 }) => {
   const activeSlide = slides[activeIndex] ?? slides[0];
@@ -45,26 +53,32 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
         aria-hidden
       />
       <div className="absolute inset-0 z-0">
-        {activeSlide ? (
-          <picture className="absolute inset-0" aria-hidden>
-            {activeSlide.avifSrcSet ? (
-              <source type="image/avif" srcSet={activeSlide.avifSrcSet} sizes="100vw" />
+        {slides.map((slide, index) => (
+          <picture
+            key={slide.id}
+            className={`absolute inset-0 transition-opacity duration-[1800ms] ease-in-out ${
+              index === activeIndex ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden={index !== activeIndex}
+          >
+            {slide.avifSrcSet ? (
+              <source type="image/avif" srcSet={slide.avifSrcSet} sizes="100vw" />
             ) : null}
-            {activeSlide.webpSrcSet ? (
-              <source type="image/webp" srcSet={activeSlide.webpSrcSet} sizes="100vw" />
+            {slide.webpSrcSet ? (
+              <source type="image/webp" srcSet={slide.webpSrcSet} sizes="100vw" />
             ) : null}
             <img
-              src={activeSlide.src}
+              src={slide.src}
               alt=""
               className={`h-full w-full object-cover brightness-[0.55] contrast-[1.05] ${
-                animated ? 'scale-105' : ''
+                animated && index === activeIndex ? 'scale-105 transition-transform duration-[12000ms] ease-out' : ''
               }`}
-              loading="eager"
-              fetchPriority="high"
+              loading={index === 0 ? 'eager' : 'lazy'}
+              fetchPriority={index === 0 ? 'high' : 'auto'}
               decoding="async"
             />
           </picture>
-        ) : null}
+        ))}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/80 to-[#030303]/30" />
         <div className="absolute inset-0 bg-black/25" />
       </div>
@@ -77,6 +91,16 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
         <p className="mt-3 max-w-xl text-sm text-white/70 sm:text-base" key={activeSlide?.id ?? 'subline'}>
           {subline}
         </p>
+
+        {ctaLabel && onCtaClick ? (
+          <button
+            type="button"
+            onClick={onCtaClick}
+            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-[#FF7A00] px-5 text-sm font-semibold text-white shadow-lg shadow-[#FF7A00]/25 transition hover:bg-[#ff8f26] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7A00]"
+          >
+            {ctaLabel}
+          </button>
+        ) : null}
 
         {locationSlot ? <div className="mt-5">{locationSlot}</div> : null}
 

@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 
 export function AuthLayout() {
   return (
-    <div className="min-h-[100dvh] bg-[#070504] text-white">
+    <div className="ob-auth-layout min-h-[100dvh] text-[#fffaf3]">
       <Outlet />
     </div>
   );

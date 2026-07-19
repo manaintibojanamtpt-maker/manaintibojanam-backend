@@ -12,6 +12,27 @@ export function OrderBhojanRestaurantInfoSections({ data }: { data: RestaurantEx
 
   return (
     <div className="mx-auto max-w-3xl space-y-2 px-4 pb-32 pt-6">
+      {experience.offers.length > 0 ? (
+        <Section density="comfortable" background="subtle" className="!py-6" aria-label="Active offers">
+          <SectionHeader title="Offers" align="left" className="!mb-4 !text-left" />
+          <div className="flex flex-wrap gap-2">
+            {experience.offers.map((offer) => (
+              <span
+                key={offer.id}
+                className="inline-flex max-w-full flex-col rounded-2xl border border-[#FF7A00]/30 bg-[#FF7A00]/10 px-3 py-2 text-left"
+              >
+                <span className="text-sm font-bold text-[#FF7A00]">
+                  {offer.badge ?? offer.title}
+                </span>
+                {offer.description && offer.description !== offer.title ? (
+                  <span className="mt-0.5 text-xs text-white/65">{offer.description}</span>
+                ) : null}
+              </span>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
       {experience.description ? (
         <Section density="comfortable" background="default" className="!py-6">
           <SectionHeader title="About" align="left" className="!mb-4 !text-left" />

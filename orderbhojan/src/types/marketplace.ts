@@ -23,6 +23,8 @@ export interface RestaurantPublic {
   readonly isOpen: boolean;
   readonly badges: readonly RestaurantBadge[];
   readonly kitchenFormat: KitchenFormat;
+  /** Primary active offer label for customer badges — owner-authored */
+  readonly offer?: string;
 }
 
 export interface BillQuote {

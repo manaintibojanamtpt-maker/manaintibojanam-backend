@@ -35,6 +35,8 @@ import {
   buildSearchTrending,
   parseSearchQueryParams,
 } from './searchMockLogic';
+import { DEFAULT_HOME_HERO_CONFIG } from '@/features/experience/data/kitchenHeroScenes';
+import type { HomeHeroConfig } from '@/types/marketplace-home-hero';
 
 const prefix = '/api/marketplace';
 
@@ -84,6 +86,8 @@ export const marketplaceHandlers = [
       environment: 'mock',
     }),
   ),
+
+  http.get(`${prefix}/platform/home-hero`, () => success(DEFAULT_HOME_HERO_CONFIG satisfies HomeHeroConfig)),
 
   http.get(`${prefix}/discover`, ({ request }) => {
     const url = new URL(request.url);

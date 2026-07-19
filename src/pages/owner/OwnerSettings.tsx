@@ -12,6 +12,7 @@ import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { OwnerGalleryThemePanel } from '../../components/owner/OwnerGalleryThemePanel';
 import { NotificationSettingsPanel } from '../../modules/notifications/NotificationSettingsPanel';
 import OwnerPromotionsPanel from './OwnerPromotionsPanel';
+import OwnerFestivalOffersPanel from '../../components/owner/OwnerFestivalOffersPanel';
 import { KITCHEN_FORMAT_OPTIONS, type KitchenFormat } from '../../lib/kitchenFormat';
 import { isValidUpiId, normalizeUpiId } from '../../lib/upiValidation';
 
@@ -358,8 +359,11 @@ const OwnerSettings: React.FC = () => {
           ) : activeTab === 'notifications' && tenantId ? (
             <NotificationSettingsPanel tenantId={tenantId} />
           ) : activeTab === 'promotions' ? (
-            <div className="p-6 md:p-8">
-              <OwnerPromotionsPanel />
+            <div className="p-6 md:p-8 space-y-10">
+              <OwnerFestivalOffersPanel />
+              <div className="border-t border-white/10 pt-10">
+                <OwnerPromotionsPanel />
+              </div>
             </div>
           ) : activeTab === 'brand' ? (
             <OwnerGalleryThemePanel />

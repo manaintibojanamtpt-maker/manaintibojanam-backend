@@ -29,17 +29,19 @@
     <div id="root">
       <div
         id="ob-boot-shell"
-        style="min-height:100dvh;background:#070504;color:#fffaf3;font-family:Figtree,system-ui,sans-serif;display:flex;flex-direction:column"
+        style="min-height:100dvh;background:#070504;color:#fffaf3;font-family:Figtree,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(1rem,env(safe-area-inset-top)) 1rem max(1rem,env(safe-area-inset-bottom))"
         aria-hidden="true"
       >
-        <div style="padding:max(1rem,env(safe-area-inset-top)) 1rem 1rem">
-          <div style="height:2.5rem;width:60%;border-radius:1rem;background:rgba(255,255,255,0.06)"></div>
-          <div style="height:1rem;width:40%;margin-top:0.75rem;border-radius:0.5rem;background:rgba(255,255,255,0.04)"></div>
-        </div>
-        <div style="flex:1;padding:0 1rem;display:flex;flex-direction:column;gap:0.75rem">
-          <div style="height:7rem;border-radius:1.25rem;background:rgba(255,255,255,0.05)"></div>
-          <div style="height:7rem;border-radius:1.25rem;background:rgba(255,255,255,0.04)"></div>
-        </div>
+        <img
+          src="/brand/orderbhojan-logo.png"
+          alt=""
+          width="88"
+          height="88"
+          style="width:5.5rem;height:5.5rem;border-radius:1.25rem;box-shadow:0 0 40px -8px rgba(255,107,53,0.55)"
+        />
+        <p style="margin:1rem 0 0;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.55)">
+          Home Food · Faster · Healthier
+        </p>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

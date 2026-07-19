@@ -241,3 +241,82 @@ html.ob-native .ob-transactional-shell {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
+
+/* Auth — premium sign-in shell (edge-to-edge on native, safe-area aware) */
+.ob-auth-layout {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -18%, rgba(255, 122, 0, 0.2), transparent 58%),
+    radial-gradient(ellipse 90% 65% at 100% 100%, rgba(168, 85, 247, 0.14), transparent 52%),
+    radial-gradient(ellipse 70% 55% at 0% 85%, rgba(255, 107, 53, 0.1), transparent 48%),
+    #070504;
+}
+
+.ob-auth-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 159, 28, 0.08), transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(168, 85, 247, 0.06), transparent 36%);
+}
+
+.ob-auth-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: calc(100dvh - var(--ob-safe-top) - max(1rem, var(--ob-safe-bottom)));
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, var(--ob-safe-top)) max(1rem, var(--ob-safe-left)) max(1.25rem, var(--ob-safe-bottom))
+    max(1rem, var(--ob-safe-right));
+}
+
+.ob-auth-card {
+  background:
+    radial-gradient(circle at top left, rgba(255, 159, 28, 0.1), transparent 38%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.08), transparent 42%),
+    linear-gradient(145deg, rgba(18, 13, 10, 0.96), rgba(10, 8, 7, 0.98)) !important;
+  border: 1px solid rgba(255, 170, 95, 0.12) !important;
+  box-shadow:
+    0 24px 64px -28px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 48px -20px rgba(255, 107, 53, 0.22) !important;
+}
+
+.ob-auth-brand-glow::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 1.75rem;
+  background: radial-gradient(circle, rgba(255, 122, 0, 0.35), rgba(168, 85, 247, 0.18) 55%, transparent 72%);
+  filter: blur(14px);
+  opacity: 0.85;
+  z-index: -1;
+}
+
+.ob-auth-brand-logo {
+  position: relative;
+  z-index: 1;
+  border-radius: 1.25rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 122, 0, 0.28),
+    0 16px 40px -18px rgba(255, 107, 53, 0.55),
+    0 0 56px -16px rgba(168, 85, 247, 0.35);
+}
+
+.ob-auth-tagline {
+  text-shadow: 0 0 24px rgba(255, 122, 0, 0.12);
+}
+
+.ob-auth-title {
+  font-family: 'Fraunces', var(--bds-font-serif, ui-serif, Georgia, serif);
+  text-wrap: balance;
+}
+
+html.ob-native .ob-auth-shell {
+  min-height: calc(100dvh - var(--ob-safe-top) - var(--ob-safe-bottom));
+}

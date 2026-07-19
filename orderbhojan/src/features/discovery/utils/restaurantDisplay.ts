@@ -73,7 +73,13 @@ export function isCloudKitchen(restaurant: RestaurantPublic): boolean {
 }
 
 export function hasOffer(restaurant: RestaurantPublic): boolean {
-  return restaurant.badges.includes('offer');
+  return Boolean(restaurant.offer?.trim()) || restaurant.badges.includes('offer');
+}
+
+export function resolveOfferBadgeLabel(restaurant: RestaurantPublic): string | undefined {
+  const label = restaurant.offer?.trim();
+  if (label) return label;
+  return hasOffer(restaurant) ? 'Offer' : undefined;
 }
 
 export function cuisineLabel(restaurant: RestaurantPublic): string {

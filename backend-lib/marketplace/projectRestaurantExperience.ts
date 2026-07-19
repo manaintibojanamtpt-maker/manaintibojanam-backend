@@ -20,6 +20,10 @@ import {
   DEFAULT_PREP_TIME_MINUTES,
   estimateDeliveryEtaMinutes,
 } from './etaEstimate.js';
+import {
+  resolveActiveMarketplaceOffers,
+  resolvePrimaryMarketplaceOfferLabel,
+} from '../domain/marketplaceOffers.js';
 
 export interface RestaurantExperiencePayload {
   readonly experience: {
@@ -115,12 +119,13 @@ export function projectRestaurantExperience(
       url: item.url,
       caption: item.caption,
     })) ?? [];
+  const activeOffers = resolveActiveMarketplaceOffers(mp?.offers);
   const offers =
-    mp?.offers?.map((offer) => ({
+    activeOffers.map((offer) => ({
       id: offer.offerId,
-      title: offer.displayText,
-      description: offer.description,
-      badge: offer.badge,
+      title: offer.title?.trim() || offer.displayText,
+      description: offer.description ?? offer.displayText,
+      badge: offer.badge ?? offer.title ?? resolvePrimaryMarketplaceOfferLabel(offer),
     })) ?? [];
 
   const weeklyHours =

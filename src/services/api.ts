@@ -1062,3 +1062,35 @@ export const reviewTenantKyc = async (params: {
     body: JSON.stringify(params),
   });
 };
+
+export type PlatformHomeHeroSlide = {
+  id: string;
+  headline?: string;
+  subline: string;
+  imageAlt: string;
+  imageUrl?: string;
+  assetId?: string;
+  cta?: string;
+  ctaPath?: string;
+};
+
+export type PlatformHomeHeroConfig = {
+  eyebrow: string;
+  headline: string;
+  rotationIntervalMs: number;
+  slides: PlatformHomeHeroSlide[];
+  updatedAt?: string;
+  updatedBy?: string;
+};
+
+export const fetchPlatformHomeHeroConfig = async (): Promise<PlatformHomeHeroConfig> => {
+  const payload = await platformSuperadminFetch('/api/platform/orderbhojan-home-hero');
+  return payload.data as PlatformHomeHeroConfig;
+};
+
+export const updatePlatformHomeHeroConfig = async (config: PlatformHomeHeroConfig) => {
+  return platformSuperadminFetch('/api/platform/orderbhojan-home-hero', {
+    method: 'PUT',
+    body: JSON.stringify(config),
+  });
+};

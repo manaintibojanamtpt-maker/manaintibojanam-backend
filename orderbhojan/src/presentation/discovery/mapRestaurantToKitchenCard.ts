@@ -29,7 +29,7 @@ function buildBadges(restaurant: RestaurantPublic): MarketplaceBadge[] {
     badges.push({ id: 'closed', label: 'Closed' });
   }
   if (hasOffer(restaurant)) {
-    badges.push({ id: 'offer', label: 'Offer' });
+    badges.push({ id: 'offer', label: restaurant.offer?.trim() || 'Offer' });
   }
   if (shouldShowKitchenBadge(restaurant) && kitchenBadgeLabel(restaurant)) {
     badges.push({ id: 'highly_rated', label: kitchenBadgeLabel(restaurant)! });

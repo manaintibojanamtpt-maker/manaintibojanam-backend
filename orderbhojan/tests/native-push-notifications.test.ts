@@ -34,4 +34,13 @@ describe('native push notifications', () => {
     assert.match(strings, /order_updates/);
     assert.match(manifest, /POST_NOTIFICATIONS/);
   });
+
+  it('registers tokens through marketplace API after native permission', () => {
+    const page = readFileSync(
+      join(root, 'src/presentation/notifications/OrderBhojanNotificationsPage.tsx'),
+      'utf8',
+    );
+    assert.match(page, /registerNotificationToken/);
+    assert.match(page, /nativeNotificationPlatform\(\)/);
+  });
 });

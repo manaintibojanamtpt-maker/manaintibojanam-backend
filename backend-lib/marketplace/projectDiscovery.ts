@@ -33,6 +33,10 @@ import {
   setInFlightDiscoveryPool,
   toDiscoveryPoolCacheKey,
 } from './discoveryCache.js';
+import {
+  resolveActiveMarketplaceOffers,
+  resolvePrimaryMarketplaceOfferLabel,
+} from '../domain/marketplaceOffers.js';
 
 export type RestaurantBadge = 'veg' | 'pure_veg' | 'cloud_kitchen' | 'new' | 'offer';
 
@@ -55,6 +59,8 @@ export interface RestaurantPublic {
   readonly isOpen: boolean;
   readonly badges: readonly RestaurantBadge[];
   readonly kitchenFormat: KitchenFormat;
+  /** Primary active offer label for customer badges — owner-authored */
+  readonly offer?: string;
 }
 
 export type DiscoveryCollectionId =
@@ -187,7 +193,9 @@ export function projectRestaurantPublic(
   const badges: RestaurantBadge[] = [...kitchenDietaryToBadges(kitchenDietary)];
   const kitchenFormat = resolveKitchenFormat(tenant.businessType);
   if (kitchenFormat === 'cloud_kitchen') badges.push('cloud_kitchen');
-  if ((mp?.offers?.length ?? 0) > 0) badges.push('offer');
+  const activeOffers = resolveActiveMarketplaceOffers(mp?.offers);
+  const primaryOffer = activeOffers[0];
+  if (primaryOffer) badges.push('offer');
 
   let distanceKm: number | undefined;
   let deliveryFee: number | null | undefined;
@@ -221,6 +229,7 @@ export function projectRestaurantPublic(
     isOpen: storeOpen,
     badges,
     kitchenFormat,
+    offer: primaryOffer ? resolvePrimaryMarketplaceOfferLabel(primaryOffer) : undefined,
   };
 }
 

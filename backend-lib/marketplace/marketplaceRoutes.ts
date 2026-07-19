@@ -11,6 +11,10 @@ import {
 } from './projectCheckout.js';
 import { normalizeCustomerEmail } from '../shared/resolveCustomerEmail.js';
 import {
+  resolveActiveMarketplaceOffers,
+  resolvePrimaryMarketplaceOfferLabel,
+} from '../domain/marketplaceOffers.js';
+import {
   createMarketplaceContextToken,
   parseFirestoreMenuItem,
   parseFirestoreTenant,
@@ -59,6 +63,7 @@ import {
   loadSearchContext,
   parseSearchQueryParams,
 } from './projectSearch.js';
+import { readPlatformHomeHeroConfig } from './platformHomeHeroConfig.js';
 
 function success<T>(
   value: T,
@@ -291,6 +296,16 @@ export function registerMarketplaceRoutes(
     );
   });
 
+  app.get(`${prefix}/platform/home-hero`, async (_req: Request, res: Response) => {
+    try {
+      const config = await readPlatformHomeHeroConfig(db);
+      sendMarketplaceJson(res, success(config), { cacheMaxAgeSec: 300 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load home hero config';
+      res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+    }
+  });
+
   app.get(`${prefix}/sync/revision`, async (_req: Request, res: Response) => {
     try {
       const poolSyncRevision = await readPoolSyncRevision(db);
@@ -515,11 +530,11 @@ export function registerMarketplaceRoutes(
         return res.status(404).json(notFound(`Restaurant not found: ${slug}`));
       }
       const offers =
-        loaded.tenant.marketplace?.offers?.map((offer) => ({
+        resolveActiveMarketplaceOffers(loaded.tenant.marketplace?.offers).map((offer) => ({
           id: offer.offerId,
-          title: offer.displayText,
-          description: offer.description,
-          badge: offer.badge,
+          title: offer.title?.trim() || offer.displayText,
+          description: offer.description ?? offer.displayText,
+          badge: offer.badge ?? offer.title ?? resolvePrimaryMarketplaceOfferLabel(offer),
         })) ?? [];
       sendMarketplaceJson(
         res,

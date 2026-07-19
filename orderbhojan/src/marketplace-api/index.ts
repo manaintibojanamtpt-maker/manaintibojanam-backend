@@ -43,6 +43,7 @@ import type {
   RestaurantHighlightsResponse,
   RestaurantOffersResponse,
 } from '@/types/marketplace-restaurant';
+import type { HomeHeroConfig } from '@/types/marketplace-home-hero';
 
 const MARKETPLACE_PREFIX = '/api/marketplace';
 
@@ -52,6 +53,13 @@ export class MarketplaceApiClient {
   health(): Promise<MarketplaceHealth> {
     return this.http.request<MarketplaceHealth>({
       path: `${MARKETPLACE_PREFIX}/health`,
+    });
+  }
+
+  homeHero(): Promise<HomeHeroConfig> {
+    return this.http.request<HomeHeroConfig>({
+      path: `${MARKETPLACE_PREFIX}/platform/home-hero`,
+      bypassHttpCache: false,
     });
   }
 

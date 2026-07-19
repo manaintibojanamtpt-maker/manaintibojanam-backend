@@ -60,6 +60,7 @@ import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortal
 import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
 import { registerPlatformTenantSubscriptionRoutes } from "./backend-lib/marketplace/platformTenantSubscriptionRoutes.js";
 import { registerPlatformKycReviewRoutes } from "./backend-lib/marketplace/platformKycReviewRoutes.js";
+import { registerPlatformHomeHeroRoutes } from "./backend-lib/marketplace/platformHomeHeroRoutes.js";
 import {
   registerOwnerRecipesRoutes,
   maybeDeductInventoryOnOrderStatus,
@@ -89,6 +90,8 @@ import {
   formatOrderPaymentMethodLabel,
   isSelfPickupDelivery,
 } from "./backend-lib/shared/orderNotificationCopy.js";
+import { buildFcmMulticastPayload } from "./backend-lib/shared/fcmPushPayload.js";
+import { resolveCustomerPushTokens } from "./backend-lib/shared/resolveCustomerPushTokens.js";
 import {
   resolveCustomerNotificationEmail,
 } from "./backend-lib/shared/resolveCustomerEmail.js";
@@ -2032,40 +2035,25 @@ async function sendPushNotificationToUser(userId: string, title: string, body: s
       return;
     }
 
-    const userDoc = await db.collection("users").doc(userId).get();
-    if (!userDoc.exists) {
+    const [userDoc, customerDoc] = await Promise.all([
+      db.collection("users").doc(userId).get(),
+      db.collection("customers").doc(userId).get(),
+    ]);
+    if (!userDoc.exists && !customerDoc.exists) {
       console.warn(`Push notification skipped because user ${userId} was not found.`);
       return;
     }
 
-    const user = userDoc.data() || {};
-    const tokens = Array.from(new Set([...(user.deviceTokens || []), ...(user.fcmTokens || [])])).filter(Boolean);
+    const tokens = resolveCustomerPushTokens(userDoc.data(), customerDoc.data());
 
     if (tokens.length === 0) {
       console.log(`Push notification skipped because user ${userId} has no device tokens.`);
       return;
     }
 
-    const safeData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => [key, String(value || "")])
+    const response = await getMessaging(appAdmin).sendEachForMulticast(
+      buildFcmMulticastPayload(tokens, title, body, data),
     );
-
-    const response = await getMessaging(appAdmin).sendEachForMulticast({
-      tokens,
-      notification: { title, body },
-      data: safeData,
-      webpush: {
-        notification: {
-          title,
-          body,
-          icon: "/icon-192.png",
-          badge: "/icon-192.png"
-        },
-        fcmOptions: {
-          link: safeData.url || "/my-orders"
-        }
-      }
-    });
 
     const invalidTokens = response.responses
       .map((result, index) => ({ result, token: tokens[index] }))
@@ -2359,11 +2347,14 @@ async function notifyCustomer(order: any, status: string) {
 
   if (order.userId) {
     const push = buildOrderNotification(order, status);
+    const orderId = String(order.id || order.orderId || "").trim();
+    const nativePath = orderId ? `/orders/${encodeURIComponent(orderId)}/track` : "/orders";
     await sendPushNotificationToUser(order.userId, push.title, push.body, {
-      orderId: order.id || "",
+      orderId,
       status: String(status || ""),
       type: "order_status_update",
       url: trackingLink,
+      path: nativePath,
     });
   }
 }
@@ -3107,6 +3098,7 @@ registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantA
 });
 registerPlatformTenantSubscriptionRoutes(app, db, requireSuperadmin, FieldValue);
 registerPlatformKycReviewRoutes(app, db, requireSuperadmin, FieldValue);
+registerPlatformHomeHeroRoutes(app, db, requireSuperadmin, FieldValue);
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);

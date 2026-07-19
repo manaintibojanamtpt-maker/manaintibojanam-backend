@@ -11,9 +11,14 @@ export interface TenantMarketplaceLabel {
 export interface TenantMarketplaceOffer {
   readonly offerId: string;
   readonly enabled: boolean;
+  /** Short campaign title — e.g. "Diwali Feast" */
+  readonly title?: string;
+  /** Customer-facing discount copy — e.g. "20% off orders above ₹499" */
   readonly displayText: string;
   readonly badge?: string;
   readonly description?: string;
+  readonly validFrom?: string;
+  readonly validTo?: string;
   readonly priority?: number;
   readonly type?: string;
 }
@@ -139,13 +144,16 @@ function parseOffers(raw: unknown): TenantMarketplaceOffer[] | undefined {
     if (!entry || typeof entry !== 'object') continue;
     const body = entry as Record<string, unknown>;
     const displayText = typeof body.displayText === 'string' ? body.displayText.trim() : '';
-    if (!displayText || body.enabled === false) continue;
+    if (!displayText) continue;
     items.push({
       offerId: typeof body.offerId === 'string' ? body.offerId : `offer_${items.length}`,
-      enabled: true,
+      enabled: body.enabled !== false,
+      title: typeof body.title === 'string' ? body.title.trim() : undefined,
       displayText,
-      badge: typeof body.badge === 'string' ? body.badge : undefined,
+      badge: typeof body.badge === 'string' ? body.badge.trim() : undefined,
       description: typeof body.description === 'string' ? body.description : undefined,
+      validFrom: typeof body.validFrom === 'string' ? body.validFrom.trim() : undefined,
+      validTo: typeof body.validTo === 'string' ? body.validTo.trim() : undefined,
       priority: asNumber(body.priority) ?? items.length,
       type: typeof body.type === 'string' ? body.type : undefined,
     });

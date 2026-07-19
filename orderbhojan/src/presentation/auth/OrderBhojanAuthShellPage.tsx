@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthShellView, type AuthTabId } from '@bhojan/storefront-design-system/auth';
+import type { AuthTabId } from '@bhojan/storefront-design-system/auth';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { OrderBhojanAuthShellView } from './OrderBhojanAuthShellView';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { needsCheckoutPhoneVerification } from '@/features/auth/domain/checkoutAuth';
 import { useAuthSessionStore } from '@/features/auth/store/authSessionStore';
@@ -61,7 +62,9 @@ export function OrderBhojanAuthShellPage() {
   };
 
   if (status === 'loading') {
-    return <AuthShellView loading title="Welcome back" subtitle="Checking your session…" />;
+    return (
+      <OrderBhojanAuthShellView loading title="Welcome back" subtitle="Checking your session…" />
+    );
   }
 
   let body: ReactNode;
@@ -126,7 +129,7 @@ export function OrderBhojanAuthShellPage() {
   }
 
   return (
-    <AuthShellView
+    <OrderBhojanAuthShellView
       title="Welcome back"
       subtitle="Sign in to save favorites, track orders, and reorder in one tap."
       tabs={
@@ -147,6 +150,6 @@ export function OrderBhojanAuthShellPage() {
       onDismissError={() => setError(null)}
     >
       {body}
-    </AuthShellView>
+    </OrderBhojanAuthShellView>
   );
 }

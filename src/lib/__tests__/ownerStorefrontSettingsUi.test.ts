@@ -11,6 +11,7 @@ describe('owner settings API migration', () => {
     );
     assert.match(settingsSource, /fetchOwnerStorefront/);
     assert.match(settingsSource, /updateOwnerStorefront/);
+    assert.match(settingsSource, /OwnerFestivalOffersPanel/);
     assert.doesNotMatch(settingsSource, /updateDoc\(tenantRef/);
 
     const gallerySource = fs.readFileSync(

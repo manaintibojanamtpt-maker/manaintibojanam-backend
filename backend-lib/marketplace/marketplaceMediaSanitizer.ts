@@ -69,5 +69,43 @@ export function sanitizeMarketplacePayload(marketplace: unknown): Record<string,
       .filter(Boolean);
   }
 
+  if (Array.isArray(input.offers)) {
+    output.offers = input.offers
+      .slice(0, 5)
+      .map((entry, index) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const item = entry as Record<string, unknown>;
+        const displayText =
+          typeof item.displayText === 'string' ? item.displayText.trim().slice(0, 120) : '';
+        if (!displayText) return null;
+        const validFrom =
+          typeof item.validFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.validFrom)
+            ? item.validFrom
+            : undefined;
+        const validTo =
+          typeof item.validTo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.validTo)
+            ? item.validTo
+            : undefined;
+        return {
+          offerId: typeof item.offerId === 'string' ? item.offerId : `offer_${index}`,
+          enabled: item.enabled !== false,
+          title:
+            typeof item.title === 'string' ? item.title.trim().slice(0, 80) || undefined : undefined,
+          displayText,
+          badge:
+            typeof item.badge === 'string' ? item.badge.trim().slice(0, 40) || undefined : undefined,
+          description:
+            typeof item.description === 'string'
+              ? item.description.trim().slice(0, 200) || undefined
+              : undefined,
+          validFrom,
+          validTo,
+          priority: typeof item.priority === 'number' ? item.priority : index,
+          type: typeof item.type === 'string' ? item.type.slice(0, 40) : undefined,
+        };
+      })
+      .filter(Boolean);
+  }
+
   return output;
 }

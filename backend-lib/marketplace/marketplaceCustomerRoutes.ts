@@ -154,9 +154,18 @@ export function registerMarketplaceCustomerRoutes(
       if (!token) {
         return res.status(400).json({ ok: false, error: { code: 'INVALID', message: 'token is required' } });
       }
-      await customerRef(db, req.user.uid).set(
+      const uid = req.user.uid;
+      await customerRef(db, uid).set(
         {
           notificationTokens: fieldValue.arrayUnion({ token, platform, registeredAt: new Date().toISOString() }),
+          updatedAt: fieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      // Keep legacy push sender path in sync (`users.deviceTokens` / `users.fcmTokens`).
+      await db.collection('users').doc(uid).set(
+        {
+          deviceTokens: fieldValue.arrayUnion(token),
           updatedAt: fieldValue.serverTimestamp(),
         },
         { merge: true },
