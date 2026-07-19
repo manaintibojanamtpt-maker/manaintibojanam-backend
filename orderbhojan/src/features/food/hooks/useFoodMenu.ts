@@ -8,7 +8,10 @@ import {
   hydrateFoodSessionCacheFromIdb,
   readFoodSessionCache,
 } from '../engine/foodSessionCache';
-import { loadFoodMenu } from '../engine/foodExperienceLayer';
+import {
+  loadFoodMenu,
+  syncRestaurantContextFromMenuCache,
+} from '../engine/foodExperienceLayer';
 import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -27,11 +30,17 @@ export function useFoodMenu(slug: string | undefined) {
 
   useEffect(() => {
     if (!slug) return;
+    syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng);
+  }, [slug, coords.lat, coords.lng]);
+
+  useEffect(() => {
+    if (!slug) return;
     let cancelled = false;
     void hydrateFoodSessionCacheFromIdb(slug, coords.lat, coords.lng).then(() => {
       if (cancelled) return;
       const cached = readFoodSessionCache(slug, coords.lat, coords.lng);
       if (!cached) return;
+      syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng);
       queryClient.setQueryData(foodKeys.menu(slug, coords.lat, coords.lng), cached, {
         updatedAt: getFoodSessionCacheUpdatedAt(slug, coords.lat, coords.lng),
       });
@@ -41,7 +50,7 @@ export function useFoodMenu(slug: string | undefined) {
     };
   }, [slug, coords.lat, coords.lng, queryClient]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: foodKeys.menu(slug ?? '', coords.lat, coords.lng),
     queryFn: () =>
       loadFoodMenu({
@@ -60,4 +69,11 @@ export function useFoodMenu(slug: string | undefined) {
       (slug ? readFoodSessionCache(slug, coords.lat, coords.lng) : undefined),
     retry: 2,
   });
+
+  useEffect(() => {
+    if (!slug || !query.data) return;
+    syncRestaurantContextFromMenuCache(slug, coords.lat, coords.lng);
+  }, [slug, coords.lat, coords.lng, query.data]);
+
+  return query;
 }

@@ -7,12 +7,19 @@ const IDB_PREFIX = 'food:';
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_ENTRIES = 12;
 
+export interface FoodSessionContext {
+  readonly contextToken: string;
+  readonly restaurantId: string;
+}
+
 interface FoodSessionEntry {
   readonly slug: string;
   readonly lat: number;
   readonly lng: number;
   readonly data: FoodMenuResponse;
   readonly fetchedAt: number;
+  readonly contextToken?: string;
+  readonly restaurantId?: string;
 }
 
 function coordsMatch(aLat: number, aLng: number, bLat: number, bLng: number): boolean {
@@ -89,13 +96,34 @@ export function getFoodSessionCacheUpdatedAt(
   return match?.fetchedAt;
 }
 
+export function readFoodSessionContext(
+  slug: string,
+  lat: number,
+  lng: number,
+): FoodSessionContext | undefined {
+  const match = readAllEntries().find(
+    (entry) => entry.slug === slug && coordsMatch(entry.lat, entry.lng, lat, lng),
+  );
+  if (!match?.contextToken || !match.restaurantId) return undefined;
+  return { contextToken: match.contextToken, restaurantId: match.restaurantId };
+}
+
 export function writeFoodSessionCache(
   slug: string,
   lat: number,
   lng: number,
   data: FoodMenuResponse,
+  context?: FoodSessionContext,
 ): void {
-  const entry: FoodSessionEntry = { slug, lat, lng, data, fetchedAt: Date.now() };
+  const entry: FoodSessionEntry = {
+    slug,
+    lat,
+    lng,
+    data,
+    fetchedAt: Date.now(),
+    contextToken: context?.contextToken,
+    restaurantId: context?.restaurantId,
+  };
   upsertLocalEntry(entry);
 
   void writePersistentSessionRecord({

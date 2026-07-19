@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { Link } from 'react-router-dom';
@@ -11,6 +11,8 @@ import { resolveOwnerTenantIds } from '../../lib/ownerAccess';
 import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig } from '../../config/firebaseClientConfig';
+import { formatOwnerAuthError, isBenignOwnerAuthDismiss } from '../../lib/ownerAuthErrors';
+import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -28,10 +30,35 @@ const OwnerLogin = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const redirectHandled = useRef(false);
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
+
+  const afterSignIn = useCallback(async () => {
+    sessionStorage.setItem('bhojanos_owner_signed_in', '1');
+    setRedirecting(true);
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const ids = await resolveOwnerTenantIds(user.uid, user.email);
+        if (ids.length > 0) {
+          cacheOwnerTenantIds(ids);
+        } else if (isFounderOwnerEmail(user.email)) {
+          cacheOwnerTenantIds([FOUNDER_TENANT_ID]);
+        }
+      }
+    } catch (err) {
+      console.warn('Owner tenant sync before redirect failed:', err);
+      const user = auth.currentUser;
+      if (user && isFounderOwnerEmail(user.email)) {
+        cacheOwnerTenantIds([FOUNDER_TENANT_ID]);
+      }
+    }
+    redirectToOwnerDashboard();
+  }, []);
 
   useEffect(() => {
     const cfg = getFirebaseClientConfig();
@@ -47,8 +74,7 @@ const OwnerLogin = () => {
       if (cancelled || redirectHandled.current) return;
       if (auth.currentUser) {
         redirectHandled.current = true;
-        setRedirecting(true);
-        redirectToOwnerDashboard();
+        void afterSignIn();
         return;
       }
     });
@@ -56,31 +82,14 @@ const OwnerLogin = () => {
     const sub = onAuthStateChanged(auth, (user) => {
       if (cancelled || redirectHandled.current || !user) return;
       redirectHandled.current = true;
-      setRedirecting(true);
-      redirectToOwnerDashboard();
+      void afterSignIn();
     });
 
     return () => {
       cancelled = true;
       sub();
     };
-  }, []);
-
-  const afterSignIn = async () => {
-    sessionStorage.setItem('bhojanos_owner_signed_in', '1');
-    setRedirecting(true);
-    setLoading(true);
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        const ids = await resolveOwnerTenantIds(user.uid, user.email);
-        if (ids.length > 0) cacheOwnerTenantIds(ids);
-      }
-    } catch (err) {
-      console.warn('Owner tenant sync before redirect failed:', err);
-    }
-    redirectToOwnerDashboard();
-  };
+  }, [afterSignIn]);
 
   if (configError) {
     return (
@@ -106,27 +115,30 @@ const OwnerLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    setLoginError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       toast.success('Welcome back!');
       await afterSignIn();
-    } catch (error: any) {
-      logIncident('security_events', { reason: 'Owner Login Failed', email, error: error.message });
-      const code = error?.code as string | undefined;
-      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-        toast.error('Invalid email or password. This account uses email sign-in, not Google.');
-      } else if (code === 'auth/unauthorized-domain') {
-        toast.error('This domain is not authorized for sign-in. Add bhojanos.com in Firebase Auth → Settings → Authorized domains.');
-      } else {
-        toast.error(error?.message || 'Sign-in failed. Try again or use Forgot password.');
-      }
+    } catch (error: unknown) {
+      logIncident('security_events', {
+        reason: 'Owner Login Failed',
+        email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      const message = formatOwnerAuthError(error);
+      setLoginError(message);
+      toast.error(message);
       setLoading(false);
+      setRedirecting(false);
+      redirectHandled.current = false;
     }
   };
 
   const handleGoogleLogin = async () => {
     if (loading) return;
+    setLoginError(null);
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -134,19 +146,19 @@ const OwnerLogin = () => {
       await signInWithPopup(auth, provider);
       toast.success('Welcome back!');
       await afterSignIn();
-    } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-        logIncident('security_events', { reason: 'Google Login Failed', error: error.message });
-        const code = error?.code as string | undefined;
-        if (code === 'auth/account-exists-with-different-credential') {
-          toast.error('This email was registered with a password. Sign in with email and password instead.');
-        } else if (code === 'auth/unauthorized-domain') {
-          toast.error('Google sign-in is blocked for this domain. Add bhojanos.com in Firebase Auth authorized domains.');
-        } else {
-          toast.error(error.message || 'Google login failed');
-        }
+    } catch (error: unknown) {
+      if (!isBenignOwnerAuthDismiss(error)) {
+        logIncident('security_events', {
+          reason: 'Google Login Failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        const message = formatOwnerAuthError(error);
+        setLoginError(message);
+        toast.error(message);
       }
       setLoading(false);
+      setRedirecting(false);
+      redirectHandled.current = false;
     }
   };
 
@@ -177,6 +189,14 @@ const OwnerLogin = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4 relative z-10">
+            {loginError ? (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-left"
+              >
+                {loginError}
+              </div>
+            ) : null}
             <div>
               <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email Address</label>
               <div className="relative">
@@ -188,7 +208,10 @@ const OwnerLogin = () => {
                   required
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (loginError) setLoginError(null);
+                  }}
                   placeholder="owner@example.com"
                   className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
                 />
@@ -206,7 +229,10 @@ const OwnerLogin = () => {
                   required
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (loginError) setLoginError(null);
+                  }}
                   placeholder="••••••••"
                   className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
                 />

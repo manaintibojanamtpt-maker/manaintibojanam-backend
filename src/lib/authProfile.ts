@@ -13,12 +13,20 @@ export function filterOwnedTenantIds(ids: string[], email?: string | null): stri
   );
 }
 
-/** Immediate profile from Firebase Auth + session cache — never blocks on Firestore. */
-export function buildAuthFallbackProfile(user: FirebaseUser, ownedTenantIds: string[] = []): UserProfile {
-  const owned = filterOwnedTenantIds(
+function resolveOwnerTenantIdsForProfile(user: FirebaseUser, ownedTenantIds: string[] = []): string[] {
+  const fromInput = filterOwnedTenantIds(
     ownedTenantIds.length > 0 ? ownedTenantIds : readCachedOwnerTenantIds(),
     user.email,
   );
+  if (fromInput.length > 0) return fromInput;
+  if (isFounderOwnerEmail(user.email)) return [FOUNDER_TENANT_ID];
+  return [];
+}
+
+/** Immediate profile from Firebase Auth + session cache — never blocks on Firestore. */
+export function buildAuthFallbackProfile(user: FirebaseUser, ownedTenantIds: string[] = []): UserProfile {
+  const owned = resolveOwnerTenantIdsForProfile(user, ownedTenantIds);
+  if (owned.length > 0) cacheOwnerTenantIds(owned);
   return {
     userId: user.uid,
     email: user.email || '',
@@ -62,22 +70,27 @@ export async function hydrateOwnerProfileViaApi(
   user: FirebaseUser,
   prev: UserProfile | null,
 ): Promise<UserProfile | null> {
+  let owned: string[] = [];
   try {
     const synced = await syncOwnerTenantsViaApi();
-    const owned = filterOwnedTenantIds(synced, user.email);
-    if (owned.length === 0) return null;
-    cacheOwnerTenantIds(owned);
-    const base = prev ?? buildAuthFallbackProfile(user, owned);
-    const role = resolveAuthRole(user.email, base.role, owned);
-    return {
-      ...base,
-      ownedTenantIds: owned,
-      role,
-      email: user.email || base.email,
-      name: base.name || user.displayName || '',
-    } as UserProfile;
+    owned = filterOwnedTenantIds(synced, user.email);
   } catch (error) {
     console.warn('hydrateOwnerProfileViaApi failed:', error);
-    return null;
   }
+
+  if (owned.length === 0) {
+    owned = resolveOwnerTenantIdsForProfile(user);
+  }
+  if (owned.length === 0) return null;
+
+  cacheOwnerTenantIds(owned);
+  const base = prev ?? buildAuthFallbackProfile(user, owned);
+  const role = resolveAuthRole(user.email, base.role, owned);
+  return {
+    ...base,
+    ownedTenantIds: owned,
+    role,
+    email: user.email || base.email,
+    name: base.name || user.displayName || '',
+  } as UserProfile;
 }

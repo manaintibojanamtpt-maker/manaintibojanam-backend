@@ -1,8 +1,15 @@
 import { getFoodApiClient } from '../infrastructure/foodApiClient';
 import { isContractMenuPathEnabled } from '../hooks/useContractV1Feature';
 import { mapFoodMenuDTOToFoodMenuResponse } from '@/marketplace-api/mappers/v1/foodMenuV1ToLegacy';
-import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
-import { writeFoodSessionCache } from './foodSessionCache';
+import {
+  fallbackRestaurantId,
+  useRestaurantContextStore,
+} from '@/features/restaurant/store/restaurantContextStore';
+import {
+  readFoodSessionCache,
+  readFoodSessionContext,
+  writeFoodSessionCache,
+} from './foodSessionCache';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
@@ -23,6 +30,36 @@ function persistMenuContext(
   });
 }
 
+/** Restores cart/checkout restaurant context when menu is shown from session cache. */
+export function syncRestaurantContextFromMenuCache(
+  slug: string,
+  lat: number,
+  lng: number,
+): boolean {
+  if (!slug) return false;
+
+  const active = useRestaurantContextStore.getState();
+  if (
+    active.restaurantSlug === slug &&
+    active.restaurantId &&
+    active.contextToken
+  ) {
+    return true;
+  }
+
+  const cachedContext = readFoodSessionContext(slug, lat, lng);
+  if (cachedContext) {
+    persistMenuContext(slug, cachedContext.contextToken, cachedContext.restaurantId);
+    return true;
+  }
+
+  const cachedMenu = readFoodSessionCache(slug, lat, lng);
+  if (!cachedMenu) return false;
+
+  persistMenuContext(slug, `menu_${slug}`, fallbackRestaurantId(slug));
+  return true;
+}
+
 function restaurantIdFromEnvelope(envelope: FoodMenuApiEnvelopeDTO, slug: string): string {
   return envelope.items[0]?.restaurantId ?? slug;
 }
@@ -31,25 +68,35 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
   const lat = params.lat ?? 0;
   const lng = params.lng ?? 0;
 
-  const finalize = (menu: FoodMenuResponse): FoodMenuResponse => {
-    writeFoodSessionCache(params.slug, lat, lng, menu);
+  const finalize = (
+    menu: FoodMenuResponse,
+    context: { readonly contextToken: string; readonly restaurantId: string },
+  ): FoodMenuResponse => {
+    writeFoodSessionCache(params.slug, lat, lng, menu, context);
     return menu;
   };
 
   if (isContractMenuPathEnabled()) {
     const envelope = await getFoodApiClient().fetchMenuContractV1(params);
-    persistMenuContext(
-      params.slug,
-      envelope.contextToken,
-      restaurantIdFromEnvelope(envelope, params.slug),
-    );
+    const context = {
+      contextToken: envelope.contextToken,
+      restaurantId: restaurantIdFromEnvelope(envelope, params.slug),
+    };
+    persistMenuContext(params.slug, context.contextToken, context.restaurantId);
     const menu = mapFoodMenuDTOToFoodMenuResponse(envelope);
-    return finalize(enrichWithRecommendations(enrichWithAiBadges(menu)));
+    return finalize(enrichWithRecommendations(enrichWithAiBadges(menu)), context);
   }
 
   const payload = await getFoodApiClient().fetchMenu(params);
-  persistMenuContext(params.slug, payload.contextToken, `obr_${params.slug}`);
-  return finalize(enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload))));
+  const context = {
+    contextToken: payload.contextToken,
+    restaurantId: `obr_${params.slug}`,
+  };
+  persistMenuContext(params.slug, context.contextToken, context.restaurantId);
+  return finalize(
+    enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload))),
+    context,
+  );
 }
 
 export async function loadFoodRecommended(slug: string): Promise<FoodCollectionResponse> {

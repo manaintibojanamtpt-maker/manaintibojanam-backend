@@ -84,7 +84,10 @@ describe('session cache phase 2', () => {
   });
 
   it('food session cache reads by slug + coords', () => {
-    writeFoodSessionCache('test-kitchen', 18.5362, 73.8937, SAMPLE_MENU);
+    writeFoodSessionCache('test-kitchen', 18.5362, 73.8937, SAMPLE_MENU, {
+      contextToken: 'ctx_test',
+      restaurantId: 'obr_test',
+    });
     assert.deepEqual(readFoodSessionCache('test-kitchen', 18.5362, 73.8937), SAMPLE_MENU);
     assert.ok(getFoodSessionCacheUpdatedAt('test-kitchen', 18.5362, 73.8937));
   });

@@ -2,7 +2,7 @@ import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
-import { isFounderOwnerEmail } from './config/founder';
+import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from './config/founder';
 import { hasSuperadminPortalAccess } from './lib/authProfile';
 import { waitForOwnerTenantIds } from './lib/ownerAccess';
 import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
@@ -204,7 +204,14 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [gateTimedOut, setGateTimedOut] = React.useState(false);
 
   const ownedTenants = userProfile?.ownedTenantIds ?? [];
-  const effectiveOwnedTenants = ownedTenants.length > 0 ? ownedTenants : repairedTenantIds;
+  const effectiveOwnedTenants =
+    ownedTenants.length > 0
+      ? ownedTenants
+      : repairedTenantIds.length > 0
+        ? repairedTenantIds
+        : isFounderOwnerEmail(currentUser?.email)
+          ? [FOUNDER_TENANT_ID]
+          : [];
 
   React.useEffect(() => {
     const t = window.setTimeout(() => setGateTimedOut(true), 12_000);

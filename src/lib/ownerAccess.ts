@@ -106,6 +106,11 @@ export async function resolveOwnerTenantIds(uid: string, email?: string | null):
     }
   }
 
+  if (isFounderOwnerEmail(email)) {
+    cacheOwnerTenantIds([FOUNDER_TENANT_ID]);
+    return [FOUNDER_TENANT_ID];
+  }
+
   return [];
 }
 
