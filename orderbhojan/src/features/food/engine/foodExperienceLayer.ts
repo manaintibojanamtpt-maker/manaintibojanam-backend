@@ -9,6 +9,7 @@ import {
   readFoodSessionContext,
   writeFoodSessionCache,
 } from './foodSessionCache';
+import { sanitizeRestaurantSlugContext } from '@/lib/sanitizeLiveRestaurantContext';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
@@ -29,8 +30,19 @@ function persistMenuContext(
   });
 }
 
-function menuFallbackRestaurantId(slug: string): string {
+export function menuFallbackRestaurantId(slug: string): string {
   return `obr_${slug}`;
+}
+
+/** Sanitize slug drift, then restore checkout context from route/menu cache. */
+export function syncMenuRestaurantContext(
+  slug: string,
+  lat: number,
+  lng: number,
+  menu?: FoodMenuResponse | null,
+): void {
+  sanitizeRestaurantSlugContext(slug);
+  syncRestaurantContextFromMenuCache(slug, lat, lng, menu);
 }
 
 /** Restores cart/checkout restaurant context when menu is shown from cache or query data. */

@@ -101,6 +101,13 @@ describe('M6 food module structure', () => {
     assert.doesNotMatch(layer, /stripInternal[\s\S]*contextToken/);
   });
 
+  it('syncs restaurant context before paint via useLayoutEffect', () => {
+    const hook = readFileSync(join(root, 'src/features/food/hooks/useFoodMenu.ts'), 'utf8');
+    assert.match(hook, /useLayoutEffect/);
+    assert.match(hook, /syncMenuRestaurantContext/);
+    assert.match(hook, /setRestaurant\(slug\)/);
+  });
+
   it('menu presentation uses Founder DS adapters', () => {
     const experience = readFileSync(
       join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),

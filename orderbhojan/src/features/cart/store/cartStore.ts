@@ -41,8 +41,16 @@ const CROSS_RESTAURANT_TOAST =
 
 function readRestaurantContext(): { restaurantSlug: string; restaurantId: string } | null {
   const ctx = useRestaurantContextStore.getState();
-  if (!ctx.restaurantSlug || !ctx.restaurantId) return null;
-  return { restaurantSlug: ctx.restaurantSlug, restaurantId: ctx.restaurantId };
+  if (ctx.restaurantSlug && ctx.restaurantId) {
+    return { restaurantSlug: ctx.restaurantSlug, restaurantId: ctx.restaurantId };
+  }
+
+  const cartSlug = useCartStore.getState().restaurantSlug;
+  if (cartSlug) {
+    return { restaurantSlug: cartSlug, restaurantId: `obr_${cartSlug}` };
+  }
+
+  return null;
 }
 
 export function buildCartLineId(

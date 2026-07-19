@@ -143,7 +143,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
       </div>
 
       {filteredItems.length === 0 ? (
-        <section className="w-full min-w-0 bg-[#030303] py-10">
+        <section className="ob-menu-section w-full min-w-0 bg-[#030303] py-10">
           <div className="ob-menu-container text-center">
             <p className="text-base font-semibold text-white">No dishes match this filter</p>
             <p className="mt-2 text-sm text-white/60">Try All or switch between Veg and Non-Veg.</p>
@@ -159,7 +159,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
       ) : null}
 
       {filteredItems.length > 0 && signatureItems.length > 0 ? (
-        <section className="w-full min-w-0 bg-[#0A0A0A] py-6" aria-label="Signature dishes">
+        <section className="ob-menu-section w-full min-w-0 bg-[#0A0A0A] py-6" aria-label="Signature dishes">
           <div className="ob-menu-container">
             <SectionHeader title="Signature dishes" align="left" className="!mb-4 !text-left" />
             <div className="ob-menu-rail-scroll flex gap-4 pb-2 no-scrollbar">

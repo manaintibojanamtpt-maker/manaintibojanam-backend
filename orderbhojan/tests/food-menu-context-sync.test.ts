@@ -175,4 +175,18 @@ describe('syncRestaurantContextFromMenuCache', () => {
     );
     assert.equal(useCartStore.getState().lines.length, 1);
   });
+
+  it('cart add falls back to cart restaurant slug when context store is empty', () => {
+    useRestaurantContextStore.getState().clear();
+    useCartStore.setState({ restaurantSlug: 'demo-dosa-corner', lines: [], visible: false });
+
+    useCartStore.getState().addItem(
+      { foodId: 'plain-dosa', name: 'Plain Dosa', price: 80 },
+      1,
+    );
+
+    assert.equal(useCartStore.getState().lines.length, 1);
+    assert.equal(useCartStore.getState().lines[0]?.restaurantSlug, 'demo-dosa-corner');
+    assert.equal(useCartStore.getState().lines[0]?.restaurantId, 'obr_demo-dosa-corner');
+  });
 });

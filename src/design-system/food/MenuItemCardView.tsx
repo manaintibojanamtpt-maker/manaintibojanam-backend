@@ -36,7 +36,7 @@ export function MenuItemCardView({
     <article
       id={`menu-item-${item.id}`}
       className={cn(
-        'relative flex w-full min-w-0 justify-between gap-4 border-b border-white/5 bg-[#151515] px-4 py-4 transition-colors last:border-b-0 active:bg-white/[0.02]',
+        'ob-menu-card-item relative box-border flex w-full max-w-full min-w-0 items-start justify-between gap-3 border-b border-white/5 bg-[#151515] px-3 py-4 transition-colors last:border-b-0 active:bg-white/[0.02] sm:gap-4 sm:px-4',
         item.unavailable && 'opacity-60',
         className,
       )}
@@ -54,7 +54,7 @@ export function MenuItemCardView({
       role={onPress ? 'button' : undefined}
       tabIndex={onPress ? 0 : undefined}
     >
-      <div className="flex min-w-0 flex-1 flex-col justify-start pr-2">
+      <div className="ob-menu-card-item__body flex min-w-0 flex-1 flex-col justify-start overflow-hidden pr-1 sm:pr-2">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <span
             className={cn('inline-flex h-4 w-4 items-center justify-center rounded-[4px] border bg-black/70', dietaryBorder)}
@@ -72,7 +72,7 @@ export function MenuItemCardView({
           ))}
         </div>
 
-        <h3 className="mb-0.5 line-clamp-2 text-base font-bold leading-snug tracking-tight text-white sm:text-lg">
+        <h3 className="mb-0.5 line-clamp-2 break-words text-base font-bold leading-snug tracking-tight text-white sm:text-lg">
           {item.name}
         </h3>
 
@@ -103,8 +103,8 @@ export function MenuItemCardView({
         {item.unavailable ? <p className="mt-2 text-xs font-semibold text-red-400">Sold out</p> : null}
       </div>
 
-      <div className="relative mb-3 ml-2 flex flex-shrink-0 flex-col items-center">
-        <div className="relative h-[120px] w-[120px] overflow-hidden rounded-xl border border-white/5 bg-white/10 shadow-sm sm:h-[140px] sm:w-[140px]">
+      <div className="ob-menu-card-item__media relative flex w-[5.5rem] shrink-0 flex-col items-stretch sm:w-[7.5rem]">
+        <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-white/5 bg-white/10 shadow-sm">
           {!imageLoaded ? <div className="absolute inset-0 z-0 shimmer bg-white/5" aria-hidden /> : null}
           <img
             src={item.imageUrl}
@@ -118,7 +118,7 @@ export function MenuItemCardView({
             )}
           />
         </div>
-        <div className="absolute -bottom-3 left-1/2 z-10 w-[85%] -translate-x-1/2">{actionSlot}</div>
+        <div className="relative z-10 -mt-3 w-full min-w-0 px-0.5">{actionSlot}</div>
       </div>
     </article>
   );

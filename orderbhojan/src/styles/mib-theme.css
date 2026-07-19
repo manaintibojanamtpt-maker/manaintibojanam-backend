@@ -194,42 +194,91 @@ html.ob-native .ob-app-shell {
 }
 
 .ob-menu-page {
-  overflow-x: clip;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .ob-menu-sticky-chrome {
-  overflow-x: clip;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.ob-menu-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .ob-menu-container {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
-  max-width: 48rem;
+  overflow-x: hidden;
   padding-left: 1rem;
   padding-right: 1rem;
 }
 
+@media (min-width: 48rem) {
+  .ob-menu-container {
+    max-width: 48rem;
+  }
+}
+
 html.ob-native .ob-menu-container {
-  max-width: none;
   padding-left: max(0.75rem, var(--ob-safe-left));
   padding-right: max(0.75rem, var(--ob-safe-right));
 }
 
 .ob-menu-rail-scroll {
+  box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
 
+.ob-menu-container > .ob-menu-rail-scroll {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  scroll-padding-left: 1rem;
+  scroll-padding-right: 1rem;
+}
+
+html.ob-native .ob-menu-container > .ob-menu-rail-scroll {
+  margin-left: calc(-1 * max(0.75rem, var(--ob-safe-left)));
+  margin-right: calc(-1 * max(0.75rem, var(--ob-safe-right)));
+  padding-left: max(0.75rem, var(--ob-safe-left));
+  padding-right: max(0.75rem, var(--ob-safe-right));
+  scroll-padding-left: max(0.75rem, var(--ob-safe-left));
+  scroll-padding-right: max(0.75rem, var(--ob-safe-right));
+}
+
 .ob-menu-card-list {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+}
+
+.ob-menu-card-list > .ob-menu-card-item {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .ob-transactional-shell {

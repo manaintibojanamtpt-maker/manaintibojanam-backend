@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
@@ -9,24 +9,23 @@ import {
   hydrateFoodSessionCacheFromIdb,
   readFoodSessionCache,
 } from '../engine/foodSessionCache';
-import {
-  loadFoodMenu,
-  syncRestaurantContextFromMenuCache,
-} from '../engine/foodExperienceLayer';
+import { loadFoodMenu, syncMenuRestaurantContext } from '../engine/foodExperienceLayer';
 import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
 import { useCartStore } from '@/features/cart/store/cartStore';
-import { sanitizeRestaurantSlugContext } from '@/lib/sanitizeLiveRestaurantContext';
 import type { FoodMenuResponse } from '@/types/marketplace-food';
 
-function syncMenuRestaurantContext(
+function readCachedMenu(
   slug: string,
   lat: number,
   lng: number,
-  menu?: FoodMenuResponse | null,
-): void {
-  sanitizeRestaurantSlugContext(slug);
-  syncRestaurantContextFromMenuCache(slug, lat, lng, menu);
+  queryClient: ReturnType<typeof useQueryClient>,
+): FoodMenuResponse | undefined {
+  return (
+    (queryClient.getQueryData(foodKeys.menu(slug, lat, lng)) as FoodMenuResponse | undefined) ??
+    readFoodSessionCache(slug, lat, lng) ??
+    undefined
+  );
 }
 
 export function useFoodMenu(slug: string | undefined) {
@@ -37,32 +36,22 @@ export function useFoodMenu(slug: string | undefined) {
   const liveQuery = getMarketplaceQueryBehavior();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (slug) setRestaurant(slug);
-  }, [slug, setRestaurant]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!slug) return;
-    syncMenuRestaurantContext(slug, coords.lat, coords.lng);
-  }, [slug, coords.lat, coords.lng]);
+    setRestaurant(slug);
+    syncMenuRestaurantContext(slug, coords.lat, coords.lng, readCachedMenu(slug, coords.lat, coords.lng, queryClient));
+  }, [slug, coords.lat, coords.lng, queryClient, setRestaurant]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!slug) return;
     const rehydrate = useRestaurantContextStore.persist.onFinishHydration(() => {
-      syncMenuRestaurantContext(slug, coords.lat, coords.lng, queryClient.getQueryData(
-        foodKeys.menu(slug, coords.lat, coords.lng),
-      ) as FoodMenuResponse | undefined);
-    });
-    if (useRestaurantContextStore.persist.hasHydrated()) {
       syncMenuRestaurantContext(
         slug,
         coords.lat,
         coords.lng,
-        queryClient.getQueryData(foodKeys.menu(slug, coords.lat, coords.lng)) as
-          | FoodMenuResponse
-          | undefined,
+        readCachedMenu(slug, coords.lat, coords.lng, queryClient),
       );
-    }
+    });
     return rehydrate;
   }, [slug, coords.lat, coords.lng, queryClient]);
 
@@ -103,7 +92,7 @@ export function useFoodMenu(slug: string | undefined) {
     retry: 2,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!slug || !query.data) return;
     syncMenuRestaurantContext(slug, coords.lat, coords.lng, query.data);
   }, [slug, coords.lat, coords.lng, query.data]);
