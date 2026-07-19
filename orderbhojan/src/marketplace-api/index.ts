@@ -410,13 +410,19 @@ export class MarketplaceApiClient {
     restaurantId: string;
     contextToken: string;
     orderType: 'delivery' | 'pickup';
-    lines: { itemId: string; quantity: number; unitPrice?: number }[];
+    lines: { itemId: string; quantity: number; unitPrice?: number; name?: string }[];
     deliveryAddress?: { lat: number; lng: number };
     couponCode?: string;
   }): Promise<{
     valid: boolean;
     quote: BillQuote;
-    issues: { itemId: string; code: string; message: string }[];
+    issues: {
+      itemId: string;
+      code: 'NOT_FOUND' | 'UNAVAILABLE' | 'PRICE_CHANGED' | 'ID_UPDATED';
+      message: string;
+      resolvedItemId?: string;
+    }[];
+    resolvedLines: { itemId: string; quantity: number; unitPrice?: number; name?: string }[];
   }> {
     return this.http.request({
       method: 'POST',

@@ -79,3 +79,9 @@ export function clearCheckoutPrepareSession(): void {
     // ignore
   }
 }
+
+export function clearCheckoutPrepareSessionForCart(cartSignature: string): void {
+  if (!cartSignature || typeof sessionStorage === 'undefined') return;
+  const entries = readEntries().filter((entry) => entry.cartSignature !== cartSignature);
+  writeEntries(entries);
+}

@@ -389,6 +389,12 @@ export const marketplaceHandlers = [
         lineItems: [{ label: 'Subtotal', amount: 199 }],
       },
       issues,
+      resolvedLines: (body.lines ?? []).map((line) => ({
+        itemId: line.itemId,
+        quantity: 1,
+        unitPrice: 199,
+        name: 'Mock item',
+      })),
     });
   }),
 

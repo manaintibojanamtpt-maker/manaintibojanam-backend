@@ -4,6 +4,8 @@ import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/Tr
 
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 
+import { OrderBhojanOrderTrustPanel } from '@/presentation/checkout/OrderBhojanOrderTrustPanel';
+
 import {
 
   buildUpiCopyText,
@@ -29,6 +31,10 @@ export interface UpiPaymentPendingViewProps {
   readonly orderId: string;
 
   readonly orderNumber: string;
+
+  readonly deliveryAddress: string;
+
+  readonly estimatedDelivery?: string;
 
   readonly phone: string;
 
@@ -89,6 +95,10 @@ export function UpiPaymentPendingView({
   orderId,
 
   orderNumber,
+
+  deliveryAddress,
+
+  estimatedDelivery,
 
   phone: _phone,
 
@@ -230,17 +240,26 @@ export function UpiPaymentPendingView({
 
       title="Complete UPI payment"
 
-      subtitle={`Order #${orderNumber} · ${formatAmount(amount)} · payment pending`}
+      subtitle={`${formatAmount(amount)} · payment pending`}
 
     >
 
       <div className="space-y-4">
 
+        <OrderBhojanOrderTrustPanel
+          orderNumber={orderNumber}
+          orderId={orderId}
+          deliveryAddress={deliveryAddress}
+          estimatedDelivery={estimatedDelivery}
+          variant="pending_payment"
+          paymentNote="Complete UPI payment to confirm this order."
+        />
+
         <p className="text-sm text-white/75">
 
-          Your order is reserved but not confirmed yet. Pay in your UPI app, then wait here — we
+          Pay in your UPI app, then wait here — we confirm only after the kitchen verifies payment
 
-          confirm only after the kitchen verifies payment in their UPI statement.
+          in their UPI statement.
 
         </p>
 

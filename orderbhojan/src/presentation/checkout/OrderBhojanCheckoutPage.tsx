@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getLocationStoreAddress, subscribeLocationStore } from '@bhojan/location-core';
 import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
-import {
-  CheckoutPageView,
-  CheckoutSuccessView,
-} from '@bhojan/storefront-design-system/cart/CheckoutPageView';
+import { CheckoutPageView } from '@bhojan/storefront-design-system/cart/CheckoutPageView';
 import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
 import { phoneNumberSchema } from '@/features/auth/domain/auth.types';
 import {
@@ -22,7 +19,12 @@ import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { UpiPaymentPendingView } from '@/presentation/checkout/UpiPaymentPendingView';
+import { OrderBhojanCheckoutSuccessView } from '@/presentation/checkout/OrderBhojanCheckoutSuccessView';
 import { CheckoutAuthGateView } from '@/presentation/checkout/CheckoutAuthGateView';
+import {
+  formatCheckoutDeliveryAddress,
+  formatCheckoutEstimatedDelivery,
+} from '@/features/checkout/domain/checkoutDeliveryDisplay';
 import { markPerf } from '@/lib/perfMarks';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import {
@@ -64,6 +66,7 @@ export function OrderBhojanCheckoutPage() {
     placingMethod,
     quoteIsRefreshing,
     quoteIsStale,
+    cartSyncMessages,
     upiSession,
     upiVerifying,
     upiPollMessage,
@@ -90,7 +93,7 @@ export function OrderBhojanCheckoutPage() {
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
   const billRefreshing = quoteIsRefreshing || (quoteIsStale && isPreparing);
-  const checkoutActionsDisabled = isPlacing || !quote;
+  const checkoutActionsDisabled = isPlacing || !quote || Boolean(error);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const supportsUpi = paymentMethods.includes('upi');
@@ -182,11 +185,16 @@ export function OrderBhojanCheckoutPage() {
     return <CheckoutAuthGateView />;
   }
 
+  const deliveryAddressLabel = formatCheckoutDeliveryAddress(activeLocation, v2Address);
+  const estimatedDeliveryLabel = formatCheckoutEstimatedDelivery(deliveryTimeSlot, scheduling);
+
   if (status === 'awaiting_payment' && upiSession) {
     return (
       <UpiPaymentPendingView
         orderId={upiSession.orderId}
         orderNumber={upiSession.orderNumber}
+        deliveryAddress={deliveryAddressLabel}
+        estimatedDelivery={estimatedDeliveryLabel}
         phone={upiSession.phone}
         amount={upiSession.amount}
         upiUrl={upiSession.upiUrl}
@@ -207,25 +215,22 @@ export function OrderBhojanCheckoutPage() {
     const isUpiPayment = lastPaymentMethod === 'upi';
     const isCodConfirming = lastPaymentMethod === 'cod' && orderId === 'pending';
     const orderLabel = orderNumber ?? orderId;
+    const paymentNote = isCodConfirming
+      ? 'Confirming cash on delivery with the kitchen.'
+      : isRazorpayPayment
+        ? 'Online payment confirmed.'
+        : isUpiPayment
+          ? 'UPI payment confirmed.'
+          : 'Pay with cash when your order arrives.';
     return (
-      <CheckoutSuccessView
-        title={isCodConfirming ? 'Placing your order' : 'Order placed'}
-        subtitle={
-          isCodConfirming
-            ? 'Confirming cash on delivery — this usually takes a moment.'
-            : isRazorpayPayment
-              ? `Your online payment for order #${orderLabel} is confirmed.`
-              : isUpiPayment
-                ? `Your UPI payment for order #${orderLabel} is confirmed.`
-                : `Your COD order #${orderLabel} is confirmed.`
-        }
-        trackLabel="Track order"
-        ordersLabel="View orders"
-        browseLabel="Continue browsing"
-        onTrack={
-          isCodConfirming ? () => undefined : () => navigate(`/orders/${orderId}/track`)
-        }
-        onOrders={isCodConfirming ? () => undefined : () => navigate('/orders')}
+      <OrderBhojanCheckoutSuccessView
+        orderId={isCodConfirming ? 'pending' : orderId}
+        orderNumber={orderLabel}
+        deliveryAddress={deliveryAddressLabel}
+        estimatedDelivery={estimatedDeliveryLabel}
+        confirming={isCodConfirming}
+        paymentNote={paymentNote}
+        onTrack={() => navigate(`/orders/${orderId}/track`)}
         onBrowse={() => navigate('/')}
       />
     );
@@ -314,9 +319,15 @@ export function OrderBhojanCheckoutPage() {
       ? {
           lines: [{ label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` }],
           totalLabel: `₹${estimatedSubtotal}`,
-          deliveryPendingNote: 'Calculating taxes and delivery…',
+          deliveryPendingNote: isPreparing ? 'Calculating taxes and delivery…' : undefined,
         }
       : undefined;
+
+  const checkoutMessages = [
+    ...cartSyncMessages,
+    ...(error ? [error] : []),
+  ];
+  const errorMessage = checkoutMessages.length > 0 ? checkoutMessages.join(' ') : undefined;
 
   const showQuoteSkeleton = isPreparing && !billView;
 
@@ -377,7 +388,7 @@ export function OrderBhojanCheckoutPage() {
               if (emailError) setEmailError(null);
             }
       }
-      errorMessage={error ?? undefined}
+      errorMessage={errorMessage}
       backLabel="Back to cart"
       onBack={() => navigate('/cart')}
       codLabel="Pay on delivery"

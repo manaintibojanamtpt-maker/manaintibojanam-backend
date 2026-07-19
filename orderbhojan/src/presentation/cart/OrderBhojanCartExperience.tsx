@@ -48,7 +48,7 @@ export function OrderBhojanCartExperience() {
   const clear = useCartStore((s) => s.clear);
   const itemCount = cartItemCount(lines);
   const subtotal = cartSubtotal(lines);
-  const { result, error, reset } = useCartValidation();
+  const { result, error, syncMessages, reset } = useCartValidation();
   const activeLocation = useActiveLocation();
   const { openSelector, openConfirmation } = useLocationActions();
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
@@ -101,6 +101,7 @@ export function OrderBhojanCartExperience() {
 
   const slug = restaurantSlug ?? lines[0]?.restaurantSlug;
   const validationMessages = [
+    ...syncMessages,
     ...(!hasDeliveryLocation ? [DELIVERY_LOCATION_GATE_MESSAGE] : []),
     ...(hasDeliveryLocation && !isCheckoutReady
       ? ['Confirm your flat or house number to continue to checkout.']
