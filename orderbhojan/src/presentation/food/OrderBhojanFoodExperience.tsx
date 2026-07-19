@@ -162,15 +162,17 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
         <section className="ob-menu-section w-full min-w-0 bg-[#0A0A0A] py-6" aria-label="Signature dishes">
           <div className="ob-menu-container">
             <SectionHeader title="Signature dishes" align="left" className="!mb-4 !text-left" />
-            <div className="ob-menu-rail-scroll flex gap-4 pb-2 no-scrollbar">
-              {signatureItems.map((food, index) => (
-                <OrderBhojanFoodFeaturedCard
-                  key={food.foodId}
-                  food={food}
-                  onCustomize={setCustomizeFood}
-                  priority={index === 0}
-                />
-              ))}
+            <div className="ob-menu-rail-bleed">
+              <div className="ob-menu-rail-scroll flex gap-4 pb-2 no-scrollbar">
+                {signatureItems.map((food, index) => (
+                  <OrderBhojanFoodFeaturedCard
+                    key={food.foodId}
+                    food={food}
+                    onCustomize={setCustomizeFood}
+                    priority={index === 0}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </section>

@@ -25,23 +25,25 @@ export function OrderBhojanFoodCategoryRail({
       className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md'} min-w-0 max-w-full py-3 ob-menu-container`}
       aria-label="Menu categories"
     >
-      <div className="ob-menu-rail-scroll flex gap-2 pb-1 no-scrollbar">
-        {categories.map((category) => {
-          const sectionId = `food-cat-${category.id}`;
-          const active = activeId === sectionId;
-          return (
-            <button
-              key={category.id}
-              type="button"
-              className={chipClass(active)}
-              aria-current={active ? 'true' : undefined}
-              onClick={() => onSelect(sectionId)}
-            >
-              {category.name}
-              {category.itemCount != null ? ` · ${category.itemCount}` : ''}
-            </button>
-          );
-        })}
+      <div className="ob-menu-rail-bleed">
+        <div className="ob-menu-rail-scroll flex gap-2 pb-1 no-scrollbar">
+          {categories.map((category) => {
+            const sectionId = `food-cat-${category.id}`;
+            const active = activeId === sectionId;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                className={chipClass(active)}
+                aria-current={active ? 'true' : undefined}
+                onClick={() => onSelect(sectionId)}
+              >
+                {category.name}
+                {category.itemCount != null ? ` · ${category.itemCount}` : ''}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

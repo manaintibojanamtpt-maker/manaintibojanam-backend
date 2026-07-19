@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getActiveMenuRouteSlug, menuRouteRestaurantId } from '@/features/food/engine/foodMenuRouteContext';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { notifyToast } from '@/shared/providers/BdsToastProvider';
 
@@ -47,7 +48,15 @@ function readRestaurantContext(): { restaurantSlug: string; restaurantId: string
 
   const cartSlug = useCartStore.getState().restaurantSlug;
   if (cartSlug) {
-    return { restaurantSlug: cartSlug, restaurantId: `obr_${cartSlug}` };
+    return { restaurantSlug: cartSlug, restaurantId: menuRouteRestaurantId(cartSlug) };
+  }
+
+  const menuRouteSlug = getActiveMenuRouteSlug();
+  if (menuRouteSlug) {
+    return {
+      restaurantSlug: menuRouteSlug,
+      restaurantId: menuRouteRestaurantId(menuRouteSlug),
+    };
   }
 
   return null;

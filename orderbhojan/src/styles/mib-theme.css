@@ -176,6 +176,10 @@
 }
 
 .ob-fullscreen-shell.ob-app-shell {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
   padding-left: 0;
   padding-right: 0;
 }
@@ -215,6 +219,7 @@ html.ob-native .ob-app-shell {
 }
 
 .ob-menu-container {
+  --ob-menu-inline-pad: 1rem;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -222,8 +227,8 @@ html.ob-native .ob-app-shell {
   margin-left: auto;
   margin-right: auto;
   overflow-x: hidden;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: var(--ob-menu-inline-pad);
+  padding-right: var(--ob-menu-inline-pad);
 }
 
 @media (min-width: 48rem) {
@@ -233,45 +238,44 @@ html.ob-native .ob-app-shell {
 }
 
 html.ob-native .ob-menu-container {
-  padding-left: max(0.75rem, var(--ob-safe-left));
+  --ob-menu-inline-pad: max(0.75rem, var(--ob-safe-left));
+  padding-left: var(--ob-menu-inline-pad);
   padding-right: max(0.75rem, var(--ob-safe-right));
+}
+
+.ob-menu-rail-bleed {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin-left: calc(-1 * var(--ob-menu-inline-pad));
+  margin-right: calc(-1 * var(--ob-menu-inline-pad));
 }
 
 .ob-menu-rail-scroll {
   box-sizing: border-box;
+  display: flex;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-}
-
-.ob-menu-container > .ob-menu-rail-scroll {
-  margin-left: -1rem;
-  margin-right: -1rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  scroll-padding-left: 1rem;
-  scroll-padding-right: 1rem;
-}
-
-html.ob-native .ob-menu-container > .ob-menu-rail-scroll {
-  margin-left: calc(-1 * max(0.75rem, var(--ob-safe-left)));
-  margin-right: calc(-1 * max(0.75rem, var(--ob-safe-right)));
-  padding-left: max(0.75rem, var(--ob-safe-left));
-  padding-right: max(0.75rem, var(--ob-safe-right));
-  scroll-padding-left: max(0.75rem, var(--ob-safe-left));
-  scroll-padding-right: max(0.75rem, var(--ob-safe-right));
+  padding-left: var(--ob-menu-inline-pad);
+  padding-right: var(--ob-menu-inline-pad);
+  scroll-padding-left: var(--ob-menu-inline-pad);
+  scroll-padding-right: var(--ob-menu-inline-pad);
 }
 
 .ob-menu-card-list {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 .ob-menu-card-list > .ob-menu-card-item {
@@ -279,6 +283,22 @@ html.ob-native .ob-menu-container > .ob-menu-rail-scroll {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.ob-menu-card-item__body {
+  min-width: 0;
+}
+
+.ob-menu-card-item__media {
+  width: 5.5rem;
+  max-width: 5.5rem;
+}
+
+@media (min-width: 40rem) {
+  .ob-menu-card-item__media {
+    width: 7.5rem;
+    max-width: 7.5rem;
+  }
 }
 
 .ob-transactional-shell {

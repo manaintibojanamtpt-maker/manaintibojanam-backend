@@ -106,6 +106,16 @@ describe('M6 food module structure', () => {
     assert.match(hook, /useLayoutEffect/);
     assert.match(hook, /syncMenuRestaurantContext/);
     assert.match(hook, /setRestaurant\(slug\)/);
+    assert.match(hook, /useCartStore\.persist\.onFinishHydration/);
+    assert.match(hook, /hasHydrated\(\)/);
+  });
+
+  it('menu page wires useFoodMenu for restaurant context sync', () => {
+    const experience = readFileSync(
+      join(root, 'src/presentation/food/OrderBhojanFoodExperience.tsx'),
+      'utf8',
+    );
+    assert.match(experience, /useFoodMenu\(restaurantSlug\)/);
   });
 
   it('menu presentation uses Founder DS adapters', () => {

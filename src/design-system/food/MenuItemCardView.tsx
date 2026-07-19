@@ -36,7 +36,7 @@ export function MenuItemCardView({
     <article
       id={`menu-item-${item.id}`}
       className={cn(
-        'ob-menu-card-item relative box-border flex w-full max-w-full min-w-0 items-start justify-between gap-3 border-b border-white/5 bg-[#151515] px-3 py-4 transition-colors last:border-b-0 active:bg-white/[0.02] sm:gap-4 sm:px-4',
+        'ob-menu-card-item relative box-border grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_5.5rem] items-start gap-3 border-b border-white/5 bg-[#151515] px-3 py-4 transition-colors last:border-b-0 active:bg-white/[0.02] sm:grid-cols-[minmax(0,1fr)_7.5rem] sm:gap-4 sm:px-4',
         item.unavailable && 'opacity-60',
         className,
       )}
@@ -54,7 +54,7 @@ export function MenuItemCardView({
       role={onPress ? 'button' : undefined}
       tabIndex={onPress ? 0 : undefined}
     >
-      <div className="ob-menu-card-item__body flex min-w-0 flex-1 flex-col justify-start overflow-hidden pr-1 sm:pr-2">
+      <div className="ob-menu-card-item__body flex min-w-0 flex-col justify-start pr-1 sm:pr-2">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <span
             className={cn('inline-flex h-4 w-4 items-center justify-center rounded-[4px] border bg-black/70', dietaryBorder)}
@@ -103,7 +103,7 @@ export function MenuItemCardView({
         {item.unavailable ? <p className="mt-2 text-xs font-semibold text-red-400">Sold out</p> : null}
       </div>
 
-      <div className="ob-menu-card-item__media relative flex w-[5.5rem] shrink-0 flex-col items-stretch sm:w-[7.5rem]">
+      <div className="ob-menu-card-item__media relative flex min-w-0 flex-col items-stretch">
         <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-white/5 bg-white/10 shadow-sm">
           {!imageLoaded ? <div className="absolute inset-0 z-0 shimmer bg-white/5" aria-hidden /> : null}
           <img

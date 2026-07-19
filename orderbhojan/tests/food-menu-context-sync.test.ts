@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { syncRestaurantContextFromMenuCache } from '../src/features/food/engine/foodExperienceLayer';
 import {
+  setActiveMenuRouteSlug,
+  getActiveMenuRouteSlug,
+} from '../src/features/food/engine/foodMenuRouteContext';
+import {
   clearFoodSessionCacheForTests,
   writeFoodSessionCache,
 } from '../src/features/food/engine/foodSessionCache';
@@ -54,6 +58,7 @@ describe('syncRestaurantContextFromMenuCache', () => {
   beforeEach(() => {
     installMemoryLocalStorage();
     clearFoodSessionCacheForTests();
+    setActiveMenuRouteSlug(null);
     useRestaurantContextStore.getState().clear();
     useCartStore.getState().clear();
     useCartStore.setState({ restaurantSlug: null, visible: false });
@@ -61,6 +66,7 @@ describe('syncRestaurantContextFromMenuCache', () => {
 
   afterEach(() => {
     clearFoodSessionCacheForTests();
+    setActiveMenuRouteSlug(null);
     useRestaurantContextStore.getState().clear();
     useCartStore.getState().clear();
   });
@@ -185,6 +191,22 @@ describe('syncRestaurantContextFromMenuCache', () => {
       1,
     );
 
+    assert.equal(useCartStore.getState().lines.length, 1);
+    assert.equal(useCartStore.getState().lines[0]?.restaurantSlug, 'demo-dosa-corner');
+    assert.equal(useCartStore.getState().lines[0]?.restaurantId, 'obr_demo-dosa-corner');
+  });
+
+  it('cart add falls back to active menu route slug during persist rehydration window', () => {
+    useRestaurantContextStore.getState().clear();
+    useCartStore.setState({ restaurantSlug: null, lines: [], visible: false });
+    setActiveMenuRouteSlug('demo-dosa-corner');
+
+    useCartStore.getState().addItem(
+      { foodId: 'plain-dosa', name: 'Plain Dosa', price: 80 },
+      1,
+    );
+
+    assert.equal(getActiveMenuRouteSlug(), 'demo-dosa-corner');
     assert.equal(useCartStore.getState().lines.length, 1);
     assert.equal(useCartStore.getState().lines[0]?.restaurantSlug, 'demo-dosa-corner');
     assert.equal(useCartStore.getState().lines[0]?.restaurantId, 'obr_demo-dosa-corner');

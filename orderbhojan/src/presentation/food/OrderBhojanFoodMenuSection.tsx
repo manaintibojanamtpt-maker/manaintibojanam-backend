@@ -21,7 +21,7 @@ export function OrderBhojanFoodMenuSection({
     <section id={id} aria-label={title} className="ob-menu-section w-full min-w-0 bg-[#030303] py-6">
       <div className="ob-menu-container">
         <SectionHeader title={title} align="left" className="!mb-4 !text-left" />
-        <div className="ob-menu-card-list rounded-2xl border border-white/10 bg-[#151515]">
+        <div className="ob-menu-card-list flex w-full min-w-0 flex-col rounded-2xl border border-white/10 bg-[#151515]">
           {items.map((food, index) => (
             <OrderBhojanFoodCardItem key={food.foodId} food={food} onCustomize={onCustomize} index={index} />
           ))}

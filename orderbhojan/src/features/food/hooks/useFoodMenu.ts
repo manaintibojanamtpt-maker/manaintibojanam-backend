@@ -10,6 +10,7 @@ import {
   readFoodSessionCache,
 } from '../engine/foodSessionCache';
 import { loadFoodMenu, syncMenuRestaurantContext } from '../engine/foodExperienceLayer';
+import { setActiveMenuRouteSlug } from '../engine/foodMenuRouteContext';
 import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -28,6 +29,18 @@ function readCachedMenu(
   );
 }
 
+function syncMenuContextForSlug(
+  slug: string,
+  lat: number,
+  lng: number,
+  queryClient: ReturnType<typeof useQueryClient>,
+  setRestaurant: (slug: string) => void,
+  menu?: FoodMenuResponse | null,
+): void {
+  setRestaurant(slug);
+  syncMenuRestaurantContext(slug, lat, lng, menu ?? readCachedMenu(slug, lat, lng, queryClient));
+}
+
 export function useFoodMenu(slug: string | undefined) {
   const enabled = useFoodFeatureEnabled();
   const activeLocation = useActiveLocation();
@@ -37,23 +50,32 @@ export function useFoodMenu(slug: string | undefined) {
   const queryClient = useQueryClient();
 
   useLayoutEffect(() => {
-    if (!slug) return;
-    setRestaurant(slug);
-    syncMenuRestaurantContext(slug, coords.lat, coords.lng, readCachedMenu(slug, coords.lat, coords.lng, queryClient));
+    if (!slug) {
+      setActiveMenuRouteSlug(null);
+      return;
+    }
+    syncMenuContextForSlug(slug, coords.lat, coords.lng, queryClient, setRestaurant);
+    return () => setActiveMenuRouteSlug(null);
   }, [slug, coords.lat, coords.lng, queryClient, setRestaurant]);
 
   useLayoutEffect(() => {
     if (!slug) return;
-    const rehydrate = useRestaurantContextStore.persist.onFinishHydration(() => {
-      syncMenuRestaurantContext(
-        slug,
-        coords.lat,
-        coords.lng,
-        readCachedMenu(slug, coords.lat, coords.lng, queryClient),
-      );
-    });
-    return rehydrate;
-  }, [slug, coords.lat, coords.lng, queryClient]);
+    const resync = () => {
+      syncMenuContextForSlug(slug, coords.lat, coords.lng, queryClient, setRestaurant);
+    };
+
+    const unsubContext = useRestaurantContextStore.persist.onFinishHydration(resync);
+    const unsubCart = useCartStore.persist.onFinishHydration(resync);
+
+    if (useRestaurantContextStore.persist.hasHydrated() && useCartStore.persist.hasHydrated()) {
+      resync();
+    }
+
+    return () => {
+      unsubContext();
+      unsubCart();
+    };
+  }, [slug, coords.lat, coords.lng, queryClient, setRestaurant]);
 
   useEffect(() => {
     if (!slug) return;

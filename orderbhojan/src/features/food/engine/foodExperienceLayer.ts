@@ -10,6 +10,7 @@ import {
   writeFoodSessionCache,
 } from './foodSessionCache';
 import { sanitizeRestaurantSlugContext } from '@/lib/sanitizeLiveRestaurantContext';
+import { setActiveMenuRouteSlug } from './foodMenuRouteContext';
 import type {
   FoodCollectionResponse,
   FoodMenuApiPayload,
@@ -41,6 +42,7 @@ export function syncMenuRestaurantContext(
   lng: number,
   menu?: FoodMenuResponse | null,
 ): void {
+  setActiveMenuRouteSlug(slug);
   sanitizeRestaurantSlugContext(slug);
   syncRestaurantContextFromMenuCache(slug, lat, lng, menu);
 }
