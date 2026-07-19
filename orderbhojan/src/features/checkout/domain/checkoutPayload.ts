@@ -9,6 +9,7 @@ export function buildCheckoutPayload(
   contextToken: string,
   activeLocation: CustomerLocation | null,
   deliveryTimeSlot = 'ASAP',
+  couponCode?: string | null,
 ) {
   const coords = activeLocation?.coordinates
     ? { lat: activeLocation.coordinates.lat, lng: activeLocation.coordinates.lng }
@@ -39,6 +40,7 @@ export function buildCheckoutPayload(
       ...(typeof distanceKm === 'number' ? { distanceKm } : {}),
     },
     ...schedule,
+    ...(couponCode?.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
   };
 }
 
@@ -48,6 +50,7 @@ export function buildCheckoutPrepareSignature(input: {
   readonly lines: readonly CartLine[];
   readonly lat?: number;
   readonly lng?: number;
+  readonly couponCode?: string | null;
 }): string {
   const lineSig = input.lines
     .map((line) => `${line.foodId}:${line.quantity}`)
@@ -55,5 +58,6 @@ export function buildCheckoutPrepareSignature(input: {
     .join('|');
   const lat = input.lat?.toFixed(4) ?? '0';
   const lng = input.lng?.toFixed(4) ?? '0';
-  return `${input.restaurantId}:${input.contextToken}:${lat},${lng}:${lineSig}`;
+  const coupon = input.couponCode?.trim().toUpperCase() || 'none';
+  return `${input.restaurantId}:${input.contextToken}:${lat},${lng}:${coupon}:${lineSig}`;
 }

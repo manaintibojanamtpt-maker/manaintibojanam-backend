@@ -1,15 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { PublicPromoCoupon, RestaurantOffer } from '@/types/marketplace-restaurant';
 
 interface RestaurantContextState {
   readonly restaurantId: string | null;
   readonly contextToken: string | null;
   readonly restaurantSlug: string | null;
+  readonly availableOffers: readonly RestaurantOffer[];
+  readonly availablePromoCodes: readonly PublicPromoCoupon[];
+  readonly appliedCouponCode: string | null;
   setContext: (ctx: {
     readonly restaurantId: string;
     readonly contextToken: string;
     readonly restaurantSlug: string;
   }) => void;
+  setPromoContext: (ctx: {
+    readonly offers?: readonly RestaurantOffer[];
+    readonly promoCodes?: readonly PublicPromoCoupon[];
+  }) => void;
+  setAppliedCouponCode: (code: string | null) => void;
   clear: () => void;
 }
 
@@ -19,14 +28,29 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
       restaurantId: null,
       contextToken: null,
       restaurantSlug: null,
+      availableOffers: [],
+      availablePromoCodes: [],
+      appliedCouponCode: null,
 
       setContext: (ctx) => set({ ...ctx }),
+
+      setPromoContext: (ctx) =>
+        set({
+          availableOffers: ctx.offers ?? [],
+          availablePromoCodes: ctx.promoCodes ?? [],
+        }),
+
+      setAppliedCouponCode: (code) =>
+        set({ appliedCouponCode: code?.trim().toUpperCase() || null }),
 
       clear: () =>
         set({
           restaurantId: null,
           contextToken: null,
           restaurantSlug: null,
+          availableOffers: [],
+          availablePromoCodes: [],
+          appliedCouponCode: null,
         }),
     }),
     {
@@ -35,6 +59,9 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
         restaurantId: state.restaurantId,
         contextToken: state.contextToken,
         restaurantSlug: state.restaurantSlug,
+        availableOffers: state.availableOffers,
+        availablePromoCodes: state.availablePromoCodes,
+        appliedCouponCode: state.appliedCouponCode,
       }),
     },
   ),

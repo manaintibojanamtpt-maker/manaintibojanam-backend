@@ -4,12 +4,14 @@ import { CheckoutBillSummaryView } from './CheckoutBillSummaryView';
 import { CheckoutContactView } from './CheckoutContactView';
 import { CheckoutDeliveryAddressView } from './CheckoutDeliveryAddressView';
 import { CheckoutDeliverySlotView } from './CheckoutDeliverySlotView';
+import { CheckoutPromoView } from './CheckoutPromoView';
 import { TransactionalPageShell } from './TransactionalPageShell';
 import type {
   CheckoutBillSummaryViewModel,
   CheckoutContactViewModel,
   CheckoutDeliveryAddressViewModel,
   CheckoutDeliverySlotViewModel,
+  CheckoutPromoViewModel,
 } from './types';
 
 export interface CheckoutPageViewProps {
@@ -25,6 +27,11 @@ export interface CheckoutPageViewProps {
   readonly contact: CheckoutContactViewModel;
   readonly onContactChange: (value: string) => void;
   readonly onContactEmailChange?: (value: string) => void;
+  readonly promo?: CheckoutPromoViewModel;
+  readonly onPromoChange?: (value: string) => void;
+  readonly onPromoApply?: () => void;
+  readonly onPromoSelectChip?: (code: string) => void;
+  readonly onPromoClear?: () => void;
   readonly errorMessage?: string;
   readonly backLabel: string;
   readonly onBack: () => void;
@@ -53,6 +60,11 @@ export function CheckoutPageView({
   contact,
   onContactChange,
   onContactEmailChange,
+  promo,
+  onPromoChange,
+  onPromoApply,
+  onPromoSelectChip,
+  onPromoClear,
   errorMessage,
   backLabel,
   onBack,
@@ -104,6 +116,16 @@ export function CheckoutPageView({
               </p>
             ) : null}
           </div>
+        ) : null}
+
+        {promo && onPromoChange && onPromoApply && onPromoSelectChip ? (
+          <CheckoutPromoView
+            promo={promo}
+            onChange={onPromoChange}
+            onApply={onPromoApply}
+            onSelectChip={onPromoSelectChip}
+            onClear={onPromoClear}
+          />
         ) : null}
 
         <CheckoutContactView contact={contact} onChange={onContactChange} onEmailChange={onContactEmailChange} />

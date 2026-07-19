@@ -94,6 +94,8 @@ export interface CheckoutFlowState {
   readonly quoteIsRefreshing: boolean;
   readonly quoteIsStale: boolean;
   readonly cartSyncMessages: readonly string[];
+  readonly appliedCouponCode: string | null;
+  readonly setAppliedCouponCode: (code: string | null) => void;
   setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
@@ -123,6 +125,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
+  const appliedCouponCode = useRestaurantContextStore((s) => s.appliedCouponCode);
+  const setAppliedCouponCode = useRestaurantContextStore((s) => s.setAppliedCouponCode);
   const activeLocation = useActiveLocation();
   const { sessionUser, status: authStatus } = useAuth();
 
@@ -174,8 +178,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
       lines,
       lat: coords.lat,
       lng: coords.lng,
+      couponCode: appliedCouponCode,
     });
-  }, [contextToken, coords, lines, resolvedRestaurantId]);
+  }, [appliedCouponCode, contextToken, coords, lines, resolvedRestaurantId]);
 
   const cartSignature = useMemo(() => {
     if (!resolvedRestaurantId || !contextToken) return null;
@@ -183,8 +188,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
       restaurantId: resolvedRestaurantId,
       contextToken,
       lines,
+      couponCode: appliedCouponCode,
     });
-  }, [contextToken, lines, resolvedRestaurantId]);
+  }, [appliedCouponCode, contextToken, lines, resolvedRestaurantId]);
 
   const sessionPrepare = useMemo(
     () => (cartSignature ? readCheckoutPrepareSession(cartSignature) : null),
@@ -210,8 +216,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
       contextToken,
       activeLocation,
       deliveryTimeSlot,
+      appliedCouponCode,
     );
-  }, [activeLocation, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
+  }, [activeLocation, appliedCouponCode, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
 
   const prepareQuery = useQuery({
     queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
@@ -644,6 +651,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
     quoteIsRefreshing,
     quoteIsStale,
     cartSyncMessages,
+    appliedCouponCode,
+    setAppliedCouponCode,
     setDeliveryTimeSlot,
     refreshQuote,
     prepareCheckout,

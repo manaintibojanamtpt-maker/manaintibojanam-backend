@@ -34,9 +34,11 @@ import {
   toDiscoveryPoolCacheKey,
 } from './discoveryCache.js';
 import {
-  resolveActiveMarketplaceOffers,
-  resolvePrimaryMarketplaceOfferLabel,
-} from '../domain/marketplaceOffers.js';
+  hasVisibleCustomerOffers,
+  loadActivePublicCouponsByTenantIds,
+  resolvePrimaryCustomerOfferLabel,
+  type PublicPromoCoupon,
+} from './projectPublicCoupons.js';
 
 export type RestaurantBadge = 'veg' | 'pure_veg' | 'cloud_kitchen' | 'new' | 'offer';
 
@@ -179,6 +181,7 @@ export function projectRestaurantPublic(
   raw: Record<string, unknown>,
   coords: { lat: number; lng: number },
   menuTypes?: readonly ('veg' | 'non-veg')[],
+  promoCoupons: readonly PublicPromoCoupon[] = [],
 ): RestaurantPublic {
   const mp = tenant.marketplace;
   const timing = resolveStoreTiming(tenant, raw);
@@ -193,9 +196,14 @@ export function projectRestaurantPublic(
   const badges: RestaurantBadge[] = [...kitchenDietaryToBadges(kitchenDietary)];
   const kitchenFormat = resolveKitchenFormat(tenant.businessType);
   if (kitchenFormat === 'cloud_kitchen') badges.push('cloud_kitchen');
-  const activeOffers = resolveActiveMarketplaceOffers(mp?.offers);
-  const primaryOffer = activeOffers[0];
-  if (primaryOffer) badges.push('offer');
+  if (
+    hasVisibleCustomerOffers({
+      marketplaceOffers: mp?.offers,
+      promoCoupons,
+    })
+  ) {
+    badges.push('offer');
+  }
 
   let distanceKm: number | undefined;
   let deliveryFee: number | null | undefined;
@@ -229,7 +237,10 @@ export function projectRestaurantPublic(
     isOpen: storeOpen,
     badges,
     kitchenFormat,
-    offer: primaryOffer ? resolvePrimaryMarketplaceOfferLabel(primaryOffer) : undefined,
+    offer: resolvePrimaryCustomerOfferLabel({
+      marketplaceOffers: mp?.offers,
+      promoCoupons,
+    }),
   };
 }
 
@@ -334,6 +345,7 @@ async function loadMarketplaceRestaurantsFromGeoIndex(
 
   const tenantRefs = tenantIds.map((tenantId) => db.collection('tenants').doc(tenantId));
   const tenantDocs = await db.getAll(...tenantRefs);
+  const couponsByTenant = await loadActivePublicCouponsByTenantIds(db, tenantIds);
   const restaurants: RestaurantPublic[] = [];
   let poolSyncRevision: string | undefined;
 
@@ -343,7 +355,15 @@ async function loadMarketplaceRestaurantsFromGeoIndex(
     if (!isConsumerListedTenant(raw, tenantDoc.id)) continue;
     poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
     const tenant = parseFirestoreTenant(tenantDoc.id, raw);
-    restaurants.push(projectRestaurantPublic(tenant, raw, coords));
+    restaurants.push(
+      projectRestaurantPublic(
+        tenant,
+        raw,
+        coords,
+        undefined,
+        couponsByTenant.get(tenantDoc.id) ?? [],
+      ),
+    );
   }
 
   return {
@@ -363,6 +383,8 @@ async function loadMarketplaceRestaurantsFromProfiles(
 
   const tenantRefs = profiles.map((entry) => db.collection('tenants').doc(entry.tenantId));
   const tenantDocs = await db.getAll(...tenantRefs);
+  const tenantIds = tenantDocs.filter((doc) => doc.exists).map((doc) => doc.id);
+  const couponsByTenant = await loadActivePublicCouponsByTenantIds(db, tenantIds);
   const restaurants: RestaurantPublic[] = [];
   let poolSyncRevision: string | undefined;
 
@@ -376,7 +398,15 @@ async function loadMarketplaceRestaurantsFromProfiles(
       profiles.find((p) => p.tenantId === tenantDoc.id)?.profile.syncRevision,
     );
     const tenant = parseFirestoreTenant(tenantDoc.id, raw);
-    restaurants.push(projectRestaurantPublic(tenant, raw, coords));
+    restaurants.push(
+      projectRestaurantPublic(
+        tenant,
+        raw,
+        coords,
+        undefined,
+        couponsByTenant.get(tenantDoc.id) ?? [],
+      ),
+    );
   }
 
   return { restaurants, poolSyncRevision };
@@ -392,21 +422,39 @@ async function loadMarketplaceRestaurantsFromTenantsScan(
   ]);
 
   const seen = new Set<string>();
+  const tenantIds: string[] = [];
   const restaurants: RestaurantPublic[] = [];
   let poolSyncRevision: string | undefined;
 
   const ingest = (doc: QueryDocumentSnapshot) => {
     if (seen.has(doc.id)) return;
     seen.add(doc.id);
-    const raw = doc.data() as Record<string, unknown>;
-    if (!isConsumerListedTenant(raw, doc.id)) return;
-    poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
-    const tenant = parseFirestoreTenant(doc.id, raw);
-    restaurants.push(projectRestaurantPublic(tenant, raw, coords));
+    tenantIds.push(doc.id);
   };
 
   for (const doc of publishedSnap.docs) ingest(doc);
   for (const doc of liveSnap.docs) ingest(doc);
+
+  const couponsByTenant = await loadActivePublicCouponsByTenantIds(db, tenantIds);
+
+  const pushRestaurant = (doc: QueryDocumentSnapshot) => {
+    const raw = doc.data() as Record<string, unknown>;
+    if (!isConsumerListedTenant(raw, doc.id)) return;
+    poolSyncRevision = mergeSyncRevisions(poolSyncRevision, extractTenantSyncRevision(raw));
+    const tenant = parseFirestoreTenant(doc.id, raw);
+    restaurants.push(
+      projectRestaurantPublic(
+        tenant,
+        raw,
+        coords,
+        undefined,
+        couponsByTenant.get(doc.id) ?? [],
+      ),
+    );
+  };
+
+  for (const doc of publishedSnap.docs) pushRestaurant(doc);
+  for (const doc of liveSnap.docs) pushRestaurant(doc);
 
   return { restaurants, poolSyncRevision };
 }

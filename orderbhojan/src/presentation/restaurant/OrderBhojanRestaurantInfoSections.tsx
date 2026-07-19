@@ -5,31 +5,23 @@ import { SectionHeader } from '@bhojan/storefront-design-system/primitives/Secti
 import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { OrderBhojanRestaurantGallery } from './OrderBhojanRestaurantGallery';
+import { OrderBhojanAvailableOffersSection } from './OrderBhojanAvailableOffersSection';
 
 export function OrderBhojanRestaurantInfoSections({ data }: { data: RestaurantExperienceResponse }) {
   const navigate = useNavigate();
   const { experience, hours, highlights, policies } = data;
+  const hasOffers =
+    experience.offers.length > 0 || (experience.promoCodes?.length ?? 0) > 0;
 
   return (
     <div className="mx-auto max-w-3xl space-y-2 px-4 pb-32 pt-6">
-      {experience.offers.length > 0 ? (
-        <Section density="comfortable" background="subtle" className="!py-6" aria-label="Active offers">
-          <SectionHeader title="Offers" align="left" className="!mb-4 !text-left" />
-          <div className="flex flex-wrap gap-2">
-            {experience.offers.map((offer) => (
-              <span
-                key={offer.id}
-                className="inline-flex max-w-full flex-col rounded-2xl border border-[#FF7A00]/30 bg-[#FF7A00]/10 px-3 py-2 text-left"
-              >
-                <span className="text-sm font-bold text-[#FF7A00]">
-                  {offer.badge ?? offer.title}
-                </span>
-                {offer.description && offer.description !== offer.title ? (
-                  <span className="mt-0.5 text-xs text-white/65">{offer.description}</span>
-                ) : null}
-              </span>
-            ))}
-          </div>
+      {hasOffers ? (
+        <Section density="comfortable" background="subtle" className="!py-6" aria-label="Available offers">
+          <SectionHeader title="Available offers" align="left" className="!mb-4 !text-left" />
+          <OrderBhojanAvailableOffersSection
+            offers={experience.offers}
+            promoCodes={experience.promoCodes}
+          />
         </Section>
       ) : null}
 

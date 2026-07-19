@@ -19,6 +19,7 @@ export function useCheckoutPrefetch(enabled = true): void {
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
+  const appliedCouponCode = useRestaurantContextStore((s) => s.appliedCouponCode);
   const activeLocation = useActiveLocation();
 
   const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
@@ -40,13 +41,22 @@ export function useCheckoutPrefetch(enabled = true): void {
       lines,
       lat: coords.lat,
       lng: coords.lng,
+      couponCode: appliedCouponCode,
     });
     const cartSignature = buildCheckoutCartSignature({
       restaurantId: resolvedRestaurantId,
       contextToken,
       lines,
+      couponCode: appliedCouponCode,
     });
-    const payload = buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
+    const payload = buildCheckoutPayload(
+      lines,
+      resolvedRestaurantId,
+      contextToken,
+      activeLocation,
+      'ASAP',
+      appliedCouponCode,
+    );
 
     markPerf('checkout_prepare_start', 'prefetch');
     void queryClient
@@ -65,5 +75,5 @@ export function useCheckoutPrefetch(enabled = true): void {
       .catch(() => {
         // Prefetch failures are non-blocking; checkout page will retry.
       });
-  }, [activeLocation, canPrefetch, contextToken, coords, lines, queryClient, resolvedRestaurantId]);
+  }, [activeLocation, appliedCouponCode, canPrefetch, contextToken, coords, lines, queryClient, resolvedRestaurantId]);
 }

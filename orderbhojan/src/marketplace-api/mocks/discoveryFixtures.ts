@@ -17,6 +17,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 20,
     isOpen: true,
     badges: ['offer', 'veg'],
+    offer: '50% OFF up to ₹100',
   },
   {
     restaurantId: 'obr_demo_biryani_001',
@@ -33,6 +34,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 20,
     isOpen: true,
     badges: ['offer', 'veg'],
+    offer: 'Flat ₹80 off on biryani',
   },
   {
     restaurantId: 'obr_demo_dosa_002',
@@ -81,6 +83,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 15,
     isOpen: true,
     badges: ['offer'],
+    offer: 'Free delivery above ₹299',
   },
   {
     restaurantId: 'obr_green_bowl_005',
@@ -113,6 +116,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 30,
     isOpen: true,
     badges: ['cloud_kitchen', 'offer'],
+    offer: 'Midnight combo ₹199',
   },
   {
     restaurantId: 'obr_family_feast_007',
@@ -161,6 +165,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 15,
     isOpen: true,
     badges: ['pure_veg', 'new', 'offer'],
+    offer: '20% off on desserts',
   },
   {
     restaurantId: 'obr_festival_thali_010',
@@ -177,6 +182,7 @@ const RAW_DISCOVERY_MOCK_POOL: Array<Omit<RestaurantPublic, 'kitchenFormat'>> = 
     deliveryFee: 18,
     isOpen: true,
     badges: ['offer', 'veg'],
+    offer: 'Festival thali at ₹299',
   },
   {
     restaurantId: 'obr_trending_wok_011',

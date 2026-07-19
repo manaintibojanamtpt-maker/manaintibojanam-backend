@@ -21,9 +21,10 @@ import {
   estimateDeliveryEtaMinutes,
 } from './etaEstimate.js';
 import {
-  resolveActiveMarketplaceOffers,
-  resolvePrimaryMarketplaceOfferLabel,
-} from '../domain/marketplaceOffers.js';
+  hasVisibleCustomerOffers,
+  projectPublicRestaurantOffers,
+  type PublicPromoCoupon,
+} from './projectPublicCoupons.js';
 
 export interface RestaurantExperiencePayload {
   readonly experience: {
@@ -54,6 +55,13 @@ export interface RestaurantExperiencePayload {
       readonly title: string;
       readonly description?: string;
       readonly badge?: string;
+      readonly couponCode?: string;
+    }[];
+    readonly promoCodes: readonly {
+      readonly id: string;
+      readonly code: string;
+      readonly discountLabel: string;
+      readonly minOrder: number;
     }[];
     readonly badges: readonly string[];
     readonly subscriptionEnabled?: boolean;
@@ -80,6 +88,7 @@ export interface RestaurantExperienceProjectionInput {
   readonly contextToken: string;
   readonly customerCoords?: { readonly lat: number; readonly lng: number };
   readonly menuTypes?: readonly ('veg' | 'non-veg')[];
+  readonly promoCoupons?: readonly PublicPromoCoupon[];
 }
 
 function formatPriceRange(priceForTwo?: number): string | undefined {
@@ -104,7 +113,7 @@ function resolveKitchenDietary(
 export function projectRestaurantExperience(
   input: RestaurantExperienceProjectionInput,
 ): RestaurantExperiencePayload {
-  const { tenant, raw, contextToken, customerCoords, menuTypes } = input;
+  const { tenant, raw, contextToken, customerCoords, menuTypes, promoCoupons = [] } = input;
   const mp = tenant.marketplace;
   const timing = resolveStoreTiming(tenant, raw);
   const storeOpen = isStoreOpenNow(timing);
@@ -119,14 +128,7 @@ export function projectRestaurantExperience(
       url: item.url,
       caption: item.caption,
     })) ?? [];
-  const activeOffers = resolveActiveMarketplaceOffers(mp?.offers);
-  const offers =
-    activeOffers.map((offer) => ({
-      id: offer.offerId,
-      title: offer.title?.trim() || offer.displayText,
-      description: offer.description ?? offer.displayText,
-      badge: offer.badge ?? offer.title ?? resolvePrimaryMarketplaceOfferLabel(offer),
-    })) ?? [];
+  const offers = projectPublicRestaurantOffers(mp?.offers, promoCoupons);
 
   const weeklyHours =
     mp?.businessHours?.weeklyHours?.map((entry) => ({
@@ -183,7 +185,12 @@ export function projectRestaurantExperience(
     }
   }
 
-  const offerBadges = offers.length > 0 ? ['offer'] : [];
+  const offerBadges = hasVisibleCustomerOffers({
+    marketplaceOffers: mp?.offers,
+    promoCoupons,
+  })
+    ? ['offer']
+    : [];
   const features =
     typeof raw.features === 'object' && raw.features !== null && !Array.isArray(raw.features)
       ? (raw.features as { subscriptionEnabled?: unknown })
@@ -216,6 +223,7 @@ export function projectRestaurantExperience(
       gallery,
       description: mp?.description ?? mp?.tagline ?? tenant.description,
       offers,
+      promoCodes: promoCoupons,
       badges: [...dietaryBadges, ...offerBadges],
       subscriptionEnabled,
     },

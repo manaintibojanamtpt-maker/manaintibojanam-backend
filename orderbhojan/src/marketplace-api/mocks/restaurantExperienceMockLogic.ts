@@ -13,10 +13,22 @@ import { buildRestaurantGalleryFromManifest } from '@/features/restaurant/data/r
 
 const OFFERS_BY_SLUG: Record<string, RestaurantOffer[]> = {
   'mana-inti-kitchen': [
-    { id: 'o1', title: '50% OFF up to ₹100', description: 'On orders above ₹299', badge: 'Best deal' },
+    {
+      id: 'o1',
+      title: '50% OFF up to ₹100',
+      description: 'On orders above ₹299',
+      badge: 'Best deal',
+      couponCode: 'MIB20',
+    },
   ],
   'demo-biryani-house': [
-    { id: 'o1', title: '50% OFF up to ₹100', description: 'On orders above ₹299', badge: 'Best deal' },
+    {
+      id: 'o1',
+      title: '50% OFF up to ₹100',
+      description: 'On orders above ₹299',
+      badge: 'Best deal',
+      couponCode: 'BIRYANI50',
+    },
     { id: 'o2', title: 'Free delivery', description: 'Weekend special', badge: 'Free delivery' },
   ],
   'demo-dosa-corner': [
@@ -39,6 +51,11 @@ function defaultGallery(slug: string) {
   }));
 }
 
+const PROMO_CODES_BY_SLUG: Record<string, RestaurantExperiencePublic['promoCodes']> = {
+  'mana-inti-kitchen': [{ id: 'c1', code: 'MIB20', discountLabel: '20% off', minOrder: 299 }],
+  'demo-biryani-house': [{ id: 'c2', code: 'BIRYANI50', discountLabel: '50% off up to ₹100', minOrder: 299 }],
+};
+
 function defaultOffers(restaurant: RestaurantPublic): RestaurantOffer[] {
   return (
     OFFERS_BY_SLUG[restaurant.restaurantSlug] ??
@@ -48,11 +65,16 @@ function defaultOffers(restaurant: RestaurantPublic): RestaurantOffer[] {
   );
 }
 
+function defaultPromoCodes(restaurant: RestaurantPublic): NonNullable<RestaurantExperiencePublic['promoCodes']> {
+  return PROMO_CODES_BY_SLUG[restaurant.restaurantSlug] ?? [];
+}
+
 export function buildRestaurantExperiencePayload(slug: string): RestaurantExperienceApiPayload {
   const restaurant = findRestaurant(slug);
   const base = mapRestaurantPublicToExperience(restaurant);
   const gallery = defaultGallery(slug);
   const offers = defaultOffers(restaurant);
+  const promoCodes = defaultPromoCodes(restaurant);
 
   const experience: RestaurantExperiencePublic = {
     ...base,
@@ -63,6 +85,7 @@ export function buildRestaurantExperiencePayload(slug: string): RestaurantExperi
     description:
       `${restaurant.displayName} serves authentic ${restaurant.cuisines.join(' & ')} flavours with care-packed delivery. A Mana Inti Bojanam partner kitchen focused on consistency, hygiene, and homestyle taste.`,
     offers,
+    promoCodes,
   };
 
   return {
@@ -102,7 +125,11 @@ export function buildRestaurantGallery(slug: string): RestaurantGalleryResponse 
 
 export function buildRestaurantOffers(slug: string): RestaurantOffersResponse {
   const restaurant = findRestaurant(slug);
-  return { slug, offers: defaultOffers(restaurant) };
+  return {
+    slug,
+    offers: defaultOffers(restaurant),
+    promoCodes: defaultPromoCodes(restaurant),
+  };
 }
 
 export function buildRestaurantHighlights(slug: string): RestaurantHighlightsResponse {

@@ -1,4 +1,6 @@
 import { getRestaurantApiClient } from '../infrastructure/restaurantApiClient';
+import { syncPromoContextFromExperience } from '../domain/promoOffers';
+import { useRestaurantContextStore } from '../store/restaurantContextStore';
 import type {
   RestaurantExperienceApiPayload,
   RestaurantExperienceQueryParams,
@@ -27,7 +29,10 @@ export async function loadRestaurantExperience(
   params: RestaurantExperienceQueryParams,
 ): Promise<RestaurantExperienceResponse> {
   const payload = await getRestaurantApiClient().fetchExperience(params);
-  return enrichWithLoyalty(enrichWithAiSummary(toPublicResponse(payload)));
+  const response = enrichWithLoyalty(enrichWithAiSummary(toPublicResponse(payload)));
+  const promoContext = syncPromoContextFromExperience(response.experience);
+  useRestaurantContextStore.getState().setPromoContext(promoContext);
+  return response;
 }
 
 export async function loadRestaurantGallery(

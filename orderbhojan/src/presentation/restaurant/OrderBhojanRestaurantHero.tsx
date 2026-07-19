@@ -36,6 +36,13 @@ export function OrderBhojanRestaurantHero({
 }: OrderBhojanRestaurantHeroProps) {
   const { experience } = data;
   const primaryOffer = experience.offers[0];
+  const primaryOfferLabel = primaryOffer
+    ? primaryOffer.couponCode
+      ? `${primaryOffer.badge ?? primaryOffer.title} · ${primaryOffer.couponCode}`
+      : primaryOffer.badge ?? primaryOffer.title
+    : experience.promoCodes?.[0]
+      ? `${experience.promoCodes[0].discountLabel} · ${experience.promoCodes[0].code}`
+      : null;
   const pillClass =
     'inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm';
 
@@ -79,9 +86,9 @@ export function OrderBhojanRestaurantHero({
         </div>
 
         <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
-          {primaryOffer ? (
+          {primaryOfferLabel ? (
             <span className={`${pillClass} border-[#FF7A00]/40 text-[#FF7A00]`}>
-              {primaryOffer.badge ?? primaryOffer.title}
+              {primaryOfferLabel}
             </span>
           ) : null}
           <span

@@ -13,6 +13,14 @@ export interface RestaurantOffer {
   readonly title: string;
   readonly description?: string;
   readonly badge?: string;
+  readonly couponCode?: string;
+}
+
+export interface PublicPromoCoupon {
+  readonly id: string;
+  readonly code: string;
+  readonly discountLabel: string;
+  readonly minOrder: number;
 }
 
 export interface RestaurantHighlight {
@@ -65,6 +73,7 @@ export interface RestaurantExperiencePublic {
   readonly gallery: readonly RestaurantGalleryImage[];
   readonly description?: string;
   readonly offers: readonly RestaurantOffer[];
+  readonly promoCodes?: readonly PublicPromoCoupon[];
   readonly badges: readonly string[];
   readonly subscriptionEnabled?: boolean;
 }
@@ -85,6 +94,7 @@ export interface RestaurantGalleryResponse {
 export interface RestaurantOffersResponse {
   readonly slug: string;
   readonly offers: readonly RestaurantOffer[];
+  readonly promoCodes?: readonly PublicPromoCoupon[];
 }
 
 export interface RestaurantHighlightsResponse {

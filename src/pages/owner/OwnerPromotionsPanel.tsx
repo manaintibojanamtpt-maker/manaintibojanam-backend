@@ -100,7 +100,7 @@ const OwnerPromotionsPanel: React.FC = () => {
         <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-1">
           <Zap size={20} className="text-[#FF6B00]" /> Promo Codes
         </h3>
-        <p className="text-sm text-white/50">Create discount codes for your storefront checkout. Codes only work on your store.</p>
+        <p className="text-sm text-white/50">Create discount codes for your storefront checkout. Active codes appear on kitchen cards, restaurant pages, and checkout.</p>
       </div>
 
       <form onSubmit={handleCreate} className="p-4 bg-[#0a0a0a] border border-white/10 rounded-xl space-y-4">

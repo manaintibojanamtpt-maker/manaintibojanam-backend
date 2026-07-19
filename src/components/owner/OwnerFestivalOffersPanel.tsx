@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarRange, Plus, Sparkles, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
+import { fetchOwnerCoupons, type OwnerCoupon } from '../../lib/ownerCouponsApi';
 
 export interface OwnerFestivalOfferDraft {
   offerId: string;
@@ -11,6 +12,7 @@ export interface OwnerFestivalOfferDraft {
   validFrom: string;
   validTo: string;
   enabled: boolean;
+  couponCode: string;
 }
 
 function emptyOffer(): OwnerFestivalOfferDraft {
@@ -21,6 +23,7 @@ function emptyOffer(): OwnerFestivalOfferDraft {
     validFrom: '',
     validTo: '',
     enabled: true,
+    couponCode: '',
   };
 }
 
@@ -36,6 +39,7 @@ function parseOfferDraft(raw: unknown, index: number): OwnerFestivalOfferDraft |
     validFrom: typeof body.validFrom === 'string' ? body.validFrom : '',
     validTo: typeof body.validTo === 'string' ? body.validTo : '',
     enabled: body.enabled !== false,
+    couponCode: typeof body.couponCode === 'string' ? body.couponCode.trim().toUpperCase() : '',
   };
 }
 
@@ -50,22 +54,33 @@ function offerStatusLabel(offer: OwnerFestivalOfferDraft): string {
 const OwnerFestivalOffersPanel: React.FC = () => {
   const tenantId = useOwnerTenantId();
   const [offers, setOffers] = useState<OwnerFestivalOfferDraft[]>([]);
+  const [coupons, setCoupons] = useState<OwnerCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const activeCoupons = useMemo(
+    () => coupons.filter((coupon) => coupon.isActive),
+    [coupons],
+  );
 
   const loadOffers = useCallback(async (activeTenantId: string) => {
     setLoading(true);
     try {
-      const data = await fetchOwnerStorefront(activeTenantId);
+      const [data, couponResponse] = await Promise.all([
+        fetchOwnerStorefront(activeTenantId),
+        fetchOwnerCoupons(activeTenantId),
+      ]);
       const rawOffers = Array.isArray(data.marketplace?.offers) ? data.marketplace.offers : [];
       const parsed = rawOffers
         .map((entry, index) => parseOfferDraft(entry, index))
         .filter((entry): entry is OwnerFestivalOfferDraft => entry != null);
       setOffers(parsed);
+      setCoupons(couponResponse.coupons ?? []);
     } catch (error) {
       console.error(error);
       toast.error('Failed to load festival offers');
       setOffers([]);
+      setCoupons([]);
     } finally {
       setLoading(false);
     }
@@ -74,6 +89,7 @@ const OwnerFestivalOffersPanel: React.FC = () => {
   useEffect(() => {
     if (!tenantId) {
       setOffers([]);
+      setCoupons([]);
       setLoading(false);
       return;
     }
@@ -104,24 +120,36 @@ const OwnerFestivalOffersPanel: React.FC = () => {
       return;
     }
 
+    const activeCodes = new Set(activeCoupons.map((coupon) => coupon.code.toUpperCase()));
+    const invalidLinked = offers.find(
+      (offer) => offer.couponCode.trim() && !activeCodes.has(offer.couponCode.trim().toUpperCase()),
+    );
+    if (invalidLinked) {
+      toast.error(`Linked promo code ${invalidLinked.couponCode} must match an active coupon`);
+      return;
+    }
+
     setSaving(true);
     try {
       await updateOwnerStorefront(tenantId, {
         marketplace: {
           offers: offers.map((offer, index) => ({
             offerId: offer.offerId,
-            title: offer.title.trim() || undefined,
+            title: offer.title.trim(),
             displayText: offer.displayText.trim(),
-            badge: offer.title.trim().slice(0, 24) || undefined,
-            validFrom: offer.validFrom || undefined,
-            validTo: offer.validTo || undefined,
+            ...(offer.title.trim() ? { badge: offer.title.trim().slice(0, 24) } : {}),
+            ...(offer.validFrom ? { validFrom: offer.validFrom } : {}),
+            ...(offer.validTo ? { validTo: offer.validTo } : {}),
+            ...(offer.couponCode.trim()
+              ? { couponCode: offer.couponCode.trim().toUpperCase() }
+              : {}),
             enabled: offer.enabled,
             priority: index,
             type: 'festival',
           })),
         },
       });
-      toast.success('Festival offer saved — visible on OrderBhojan when active');
+      toast.success('Festival offer saved — visible on OrderBhojan with linked promo when active');
       await loadOffers(tenantId);
     } catch (error) {
       console.error(error);
@@ -141,7 +169,8 @@ const OwnerFestivalOffersPanel: React.FC = () => {
         </h3>
         <p className="text-sm text-white/50">
           Publish limited-time offers for Diwali, weekends, or new launches. Customers see badges on
-          kitchen cards, home rails, and your restaurant page — no checkout changes.
+          kitchen cards, your restaurant page, and checkout — link an active promo code to make it
+          copyable and one-tap applicable.
         </p>
       </div>
 
@@ -225,6 +254,31 @@ const OwnerFestivalOffersPanel: React.FC = () => {
                     className="w-full px-4 py-2.5 bg-black border border-white/10 rounded-lg text-white"
                     required
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-white/60 mb-2 uppercase tracking-widest">
+                    Linked promo code
+                  </label>
+                  <select
+                    value={offer.couponCode}
+                    onChange={(e) => updateOffer(offer.offerId, { couponCode: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-black border border-white/10 rounded-lg text-white"
+                  >
+                    <option value="">Badge only — no checkout code</option>
+                    {activeCoupons.map((coupon) => (
+                      <option key={coupon.id} value={coupon.code}>
+                        {coupon.code} ·{' '}
+                        {coupon.discountType === 'percentage'
+                          ? `${coupon.discountValue}% off`
+                          : `₹${coupon.discountValue} off`}
+                      </option>
+                    ))}
+                  </select>
+                  {activeCoupons.length === 0 ? (
+                    <p className="mt-2 text-xs text-white/40">
+                      Create an active promo code first to link checkout discounts.
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-white/60 mb-2 uppercase tracking-widest">

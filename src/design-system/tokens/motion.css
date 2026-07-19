@@ -23,3 +23,24 @@
     animation: none;
   }
 }
+
+@keyframes ds-hero-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ds-hero-copy-in {
+  animation: ds-hero-copy-in 650ms var(--ds-ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-hero-copy-in {
+    animation: none;
+  }
+}

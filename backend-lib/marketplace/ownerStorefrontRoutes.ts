@@ -12,6 +12,7 @@ import { isStoreOpenNow, resolveStoreTiming } from './tenantProjectionHelpers.js
 import {
   MarketplaceMediaValidationError,
   sanitizeMarketplacePayload,
+  stripUndefinedDeep,
 } from './marketplaceMediaSanitizer.js';
 
 type OwnerAccessFn = (
@@ -30,18 +31,18 @@ export function registerOwnerStorefrontRoutes(
   app.get('/api/owner/storefront/:tenantId', verifyFirebaseToken, async (req: any, res: Response) => {
     try {
       const tenantId = String(req.params.tenantId);
-      await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
-      const doc = await db.collection('tenants').doc(tenantId).get();
+      const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
+      const doc = await db.collection('tenants').doc(resolvedTenantId).get();
       if (!doc.exists) {
         return res.status(404).json({ success: false, error: 'Kitchen not found' });
       }
       const data = doc.data() as Record<string, unknown>;
-      const tenant = parseFirestoreTenant(tenantId, data);
+      const tenant = parseFirestoreTenant(resolvedTenantId, data);
       const timing = resolveStoreTiming(tenant, data);
       const acceptingOrders = isStoreOpenNow(timing);
       res.json({
         success: true,
-        tenantId,
+        tenantId: resolvedTenantId,
         name: data.name ?? '',
         businessType: typeof data.businessType === 'string' ? data.businessType : 'home_kitchen',
         contact: data.contact ?? {},
@@ -70,9 +71,9 @@ export function registerOwnerStorefrontRoutes(
   app.put('/api/owner/storefront/:tenantId', verifyFirebaseToken, async (req: any, res: Response) => {
     try {
       const tenantId = String(req.params.tenantId);
-      await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
+      const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
       const body = req.body ?? {};
-      const ref = db.collection('tenants').doc(tenantId);
+      const ref = db.collection('tenants').doc(resolvedTenantId);
       const existing = ((await ref.get()).data() ?? {}) as Record<string, unknown>;
       const updates: Record<string, unknown> = { updatedAt: fieldValue.serverTimestamp() };
 
@@ -130,17 +131,17 @@ export function registerOwnerStorefrontRoutes(
         };
       }
 
-      await ref.set(updates, { merge: true });
+      await ref.set(stripUndefinedDeep(updates) as Record<string, unknown>, { merge: true });
       const eventType = inferStorefrontEventType(body);
       const sync = await publishTenantDomainEvent(db, fieldValue, {
-        tenantId,
+        tenantId: resolvedTenantId,
         type: eventType,
         source: `owner_storefront_put:${eventType}`,
       });
 
       res.json({
         success: true,
-        tenantId,
+        tenantId: resolvedTenantId,
         tenantSyncRevision: sync.tenantSyncRevision,
         poolSyncRevision: sync.poolSyncRevision,
       });
@@ -159,15 +160,15 @@ export function registerOwnerStorefrontRoutes(
   app.post('/api/owner/storefront/:tenantId/publish', verifyFirebaseToken, async (req: any, res: Response) => {
     try {
       const tenantId = String(req.params.tenantId);
-      await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
-      const doc = await db.collection('tenants').doc(tenantId).get();
+      const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
+      const doc = await db.collection('tenants').doc(resolvedTenantId).get();
       if (!doc.exists) {
         return res.status(404).json({ success: false, error: 'Kitchen not found' });
       }
 
       const raw = doc.data() as Record<string, unknown>;
-      const slug = typeof raw.slug === 'string' ? raw.slug : tenantId;
-      const menuCount = await countTenantMenuItems(db, tenantId);
+      const slug = typeof raw.slug === 'string' ? raw.slug : resolvedTenantId;
+      const menuCount = await countTenantMenuItems(db, resolvedTenantId);
       const validation = validateTenantPublishable(raw, menuCount);
       if (!validation.ok) {
         return res.status(400).json({
@@ -177,7 +178,7 @@ export function registerOwnerStorefrontRoutes(
         });
       }
 
-      await db.collection('tenants').doc(tenantId).set(
+      await db.collection('tenants').doc(resolvedTenantId).set(
         {
           storeStatus: 'published',
           updatedAt: fieldValue.serverTimestamp(),
@@ -187,14 +188,14 @@ export function registerOwnerStorefrontRoutes(
       );
 
       const sync = await publishTenantDomainEvent(db, fieldValue, {
-        tenantId,
+        tenantId: resolvedTenantId,
         type: 'StoreOperationsUpdated',
         source: 'owner_storefront_publish',
       });
 
       res.json({
         success: true,
-        tenantId,
+        tenantId: resolvedTenantId,
         slug,
         storeStatus: 'published',
         menuItemCount: menuCount,

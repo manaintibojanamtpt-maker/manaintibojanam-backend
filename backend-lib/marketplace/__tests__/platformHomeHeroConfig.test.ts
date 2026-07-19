@@ -9,7 +9,8 @@ import {
 describe('platformHomeHeroConfig', () => {
   it('defaults to pan-India English copy without regional Hindi strings', () => {
     assert.doesNotMatch(DEFAULT_PLATFORM_HOME_HERO.headline, /ghar ka khana/i);
-    assert.match(DEFAULT_PLATFORM_HOME_HERO.headline, /Fresh home-cooked meals/i);
+    assert.match(DEFAULT_PLATFORM_HOME_HERO.headline, /craving tonight/i);
+    assert.match(DEFAULT_PLATFORM_HOME_HERO.eyebrow, /delivered hot/i);
     assert.equal(DEFAULT_PLATFORM_HOME_HERO.rotationIntervalMs, 12_000);
     assert.equal(DEFAULT_PLATFORM_HOME_HERO.slides.length, 3);
   });

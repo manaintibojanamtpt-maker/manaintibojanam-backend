@@ -17,6 +17,7 @@ import { cartSubtotal, useCartStore } from '@/features/cart/store/cartStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
+import { useCheckoutPromoOffers } from '@/features/checkout/hooks/useCheckoutPromoOffers';
 import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { UpiPaymentPendingView } from '@/presentation/checkout/UpiPaymentPendingView';
 import { OrderBhojanCheckoutSuccessView } from '@/presentation/checkout/OrderBhojanCheckoutSuccessView';
@@ -67,6 +68,8 @@ export function OrderBhojanCheckoutPage() {
     quoteIsRefreshing,
     quoteIsStale,
     cartSyncMessages,
+    appliedCouponCode,
+    setAppliedCouponCode,
     upiSession,
     upiVerifying,
     upiPollMessage,
@@ -74,6 +77,24 @@ export function OrderBhojanCheckoutPage() {
     notifyKitchenUpiPaid,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
+  const { selectableCodes } = useCheckoutPromoOffers(canCheckout);
+
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoApplying, setPromoApplying] = useState(false);
+
+  useEffect(() => {
+    if (appliedCouponCode) {
+      setPromoInput(appliedCouponCode);
+    }
+  }, [appliedCouponCode]);
+
+  useEffect(() => {
+    if (appliedCouponCode || selectableCodes.length === 0) return;
+    const primaryCode = selectableCodes[0]?.code;
+    if (!primaryCode) return;
+    setPromoInput(primaryCode);
+  }, [appliedCouponCode, selectableCodes]);
 
   const checkoutAuthGate = resolveCheckoutAuthGate({ status: authStatus, sessionUser });
 
@@ -331,6 +352,49 @@ export function OrderBhojanCheckoutPage() {
 
   const showQuoteSkeleton = isPreparing && !billView;
 
+  const handleApplyPromo = () => {
+    const normalized = promoInput.trim().toUpperCase();
+    if (!normalized) return;
+    const knownCode = selectableCodes.find((entry) => entry.code === normalized);
+    if (selectableCodes.length > 0 && !knownCode) {
+      setPromoError('This code is not available for this kitchen');
+      return;
+    }
+    setPromoApplying(true);
+    setPromoError(null);
+    setAppliedCouponCode(normalized);
+    setPromoInput(normalized);
+    window.setTimeout(() => setPromoApplying(false), 300);
+  };
+
+  const handleSelectPromoChip = (code: string) => {
+    setPromoError(null);
+    setPromoInput(code);
+    setAppliedCouponCode(code);
+  };
+
+  const handleClearPromo = () => {
+    setPromoError(null);
+    setPromoInput('');
+    setAppliedCouponCode(null);
+  };
+
+  const promoView =
+    selectableCodes.length > 0
+      ? {
+          value: promoInput,
+          appliedCode: appliedCouponCode ?? undefined,
+          chips: selectableCodes.map((entry) => ({
+            code: entry.code,
+            label: entry.discountLabel,
+            minOrder: entry.minOrder > 0 ? entry.minOrder : undefined,
+          })),
+          hint: 'Tap a code to apply instantly — discount updates in your bill',
+          error: promoError ?? undefined,
+          busy: promoApplying || quoteIsRefreshing,
+        }
+      : undefined;
+
   const deliverySlotView =
     scheduling && scheduling.deliverySlots.length > 0
       ? {
@@ -366,6 +430,14 @@ export function OrderBhojanCheckoutPage() {
       bill={billView}
       quoteLoading={showQuoteSkeleton}
       billRefreshing={billRefreshing}
+      promo={promoView}
+      onPromoChange={(value) => {
+        setPromoInput(value);
+        if (promoError) setPromoError(null);
+      }}
+      onPromoApply={handleApplyPromo}
+      onPromoSelectChip={handleSelectPromoChip}
+      onPromoClear={appliedCouponCode ? handleClearPromo : undefined}
       contact={{
         value: phone,
         error: phoneError ?? undefined,

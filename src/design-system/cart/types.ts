@@ -62,3 +62,18 @@ export interface CheckoutDeliverySlotViewModel {
   readonly isAsap: (slot: string) => boolean;
   readonly formatLabel: (slot: string) => string;
 }
+
+export interface CheckoutPromoChipViewModel {
+  readonly code: string;
+  readonly label: string;
+  readonly minOrder?: number;
+}
+
+export interface CheckoutPromoViewModel {
+  readonly value: string;
+  readonly appliedCode?: string;
+  readonly chips: readonly CheckoutPromoChipViewModel[];
+  readonly hint?: string;
+  readonly error?: string;
+  readonly busy?: boolean;
+}

@@ -11,9 +11,9 @@ import {
 } from './projectCheckout.js';
 import { normalizeCustomerEmail } from '../shared/resolveCustomerEmail.js';
 import {
-  resolveActiveMarketplaceOffers,
-  resolvePrimaryMarketplaceOfferLabel,
-} from '../domain/marketplaceOffers.js';
+  loadActivePublicCouponsForTenant,
+  projectPublicRestaurantOffers,
+} from './projectPublicCoupons.js';
 import {
   createMarketplaceContextToken,
   parseFirestoreMenuItem,
@@ -482,12 +482,14 @@ export function registerMarketplaceRoutes(
       const customerCoords =
         Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined;
       const menuTypes = await loadMenuDietaryTypes(db, loaded.tenant.id, loaded.tenant.slug);
+      const promoCoupons = await loadActivePublicCouponsForTenant(db, loaded.tenant.id);
       const payload = projectRestaurantExperience({
         tenant: loaded.tenant,
         raw: loaded.raw,
         contextToken: createMarketplaceContextToken(),
         customerCoords,
         menuTypes,
+        promoCoupons,
       });
       sendMarketplaceJson(
         res,
@@ -529,16 +531,11 @@ export function registerMarketplaceRoutes(
       if (!loaded) {
         return res.status(404).json(notFound(`Restaurant not found: ${slug}`));
       }
-      const offers =
-        resolveActiveMarketplaceOffers(loaded.tenant.marketplace?.offers).map((offer) => ({
-          id: offer.offerId,
-          title: offer.title?.trim() || offer.displayText,
-          description: offer.description ?? offer.displayText,
-          badge: offer.badge ?? offer.title ?? resolvePrimaryMarketplaceOfferLabel(offer),
-        })) ?? [];
+      const promoCoupons = await loadActivePublicCouponsForTenant(db, loaded.tenant.id);
+      const offers = projectPublicRestaurantOffers(loaded.tenant.marketplace?.offers, promoCoupons);
       sendMarketplaceJson(
         res,
-        success({ slug, offers }, { tenantSyncRevision: extractTenantSyncRevision(loaded.raw) }),
+        success({ slug, offers, promoCodes: promoCoupons }, { tenantSyncRevision: extractTenantSyncRevision(loaded.raw) }),
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load offers';

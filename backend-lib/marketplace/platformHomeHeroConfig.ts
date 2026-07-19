@@ -15,6 +15,7 @@ const ALLOWED_ASSET_IDS = new Set([
 
 export interface PlatformHomeHeroSlide {
   readonly id: string;
+  readonly kind?: 'food' | 'offer';
   readonly headline?: string;
   readonly subline: string;
   readonly imageAlt: string;
@@ -22,6 +23,9 @@ export interface PlatformHomeHeroSlide {
   readonly assetId?: string;
   readonly cta?: string;
   readonly ctaPath?: string;
+  readonly offerBadge?: string;
+  readonly restaurantName?: string;
+  readonly restaurantSlug?: string;
 }
 
 export interface PlatformHomeHeroConfig {
@@ -29,36 +33,46 @@ export interface PlatformHomeHeroConfig {
   readonly headline: string;
   readonly rotationIntervalMs: number;
   readonly slides: readonly PlatformHomeHeroSlide[];
+  readonly includeDiscoveryOffers?: boolean;
+  readonly maxOfferSlides?: number;
   readonly updatedAt?: string;
   readonly updatedBy?: string;
 }
 
 export const DEFAULT_PLATFORM_HOME_HERO: PlatformHomeHeroConfig = {
-  eyebrow: 'OrderBhojan · home kitchens',
-  headline: 'Fresh home-cooked meals, delivered hot',
+  eyebrow: 'Home kitchens · delivered hot',
+  headline: 'What are you craving tonight?',
   rotationIntervalMs: 12_000,
+  includeDiscoveryOffers: true,
+  maxOfferSlides: 2,
   slides: [
     {
       id: 'biryani',
+      kind: 'food',
       assetId: 'hero-biryani',
       imageAlt: 'Steaming chicken biryani with saffron rice',
-      subline: 'Signature biryani — slow-cooked and sealed for delivery',
+      headline: 'Biryani that hits different',
+      subline: 'Dum-sealed Hyderabadi biryani — hot, fragrant, at your door',
       cta: 'Order biryani',
       ctaPath: '/search?q=biryani',
     },
     {
       id: 'thali',
+      kind: 'food',
       assetId: 'hero-thali',
       imageAlt: 'Fresh vegetarian thali with dal, vegetables, and roti',
-      subline: 'Balanced meal trays — fresh, homestyle portions',
+      headline: 'A full thali, delivered fresh',
+      subline: 'Homestyle thali trays — balanced, fresh, made to order',
       cta: 'Browse meals',
       ctaPath: '/search?q=meals',
     },
     {
       id: 'tiffin',
+      kind: 'food',
       assetId: 'hero-tiffin',
       imageAlt: 'Crisp dosa with chutney on a brass plate',
-      subline: 'South Indian plates, made fresh after you order',
+      headline: 'South Indian mornings',
+      subline: 'Crisp dosas & filter coffee — South Indian breakfast, delivered',
       cta: 'Explore tiffins',
       ctaPath: '/search?q=dosa',
     },
@@ -109,6 +123,13 @@ function sanitizeSlide(raw: unknown, index: number): PlatformHomeHeroSlide {
   const ctaPathRaw = typeof slide.ctaPath === 'string' ? slide.ctaPath.trim() : undefined;
   const ctaPath =
     ctaPathRaw && ctaPathRaw.startsWith('/') && !ctaPathRaw.startsWith('//') ? ctaPathRaw : undefined;
+  const kindRaw = typeof slide.kind === 'string' ? slide.kind.trim() : '';
+  const kind = kindRaw === 'offer' ? 'offer' : kindRaw === 'food' ? 'food' : undefined;
+  const offerBadge = typeof slide.offerBadge === 'string' ? slide.offerBadge.trim() : undefined;
+  const restaurantName = typeof slide.restaurantName === 'string' ? slide.restaurantName.trim() : undefined;
+  const restaurantSlugRaw = typeof slide.restaurantSlug === 'string' ? slide.restaurantSlug.trim() : undefined;
+  const restaurantSlug =
+    restaurantSlugRaw && /^[a-z0-9-]+$/.test(restaurantSlugRaw) ? restaurantSlugRaw : undefined;
 
   return {
     id,
@@ -119,6 +140,10 @@ function sanitizeSlide(raw: unknown, index: number): PlatformHomeHeroSlide {
     ...(assetId ? { assetId } : {}),
     ...(cta ? { cta } : {}),
     ...(ctaPath ? { ctaPath } : {}),
+    ...(kind ? { kind } : {}),
+    ...(offerBadge ? { offerBadge } : {}),
+    ...(restaurantName ? { restaurantName } : {}),
+    ...(restaurantSlug ? { restaurantSlug } : {}),
   };
 }
 
@@ -155,11 +180,21 @@ export function sanitizePlatformHomeHeroConfig(raw: unknown): PlatformHomeHeroCo
     throw new Error('Slide ids must be unique.');
   }
 
+  const includeDiscoveryOffers =
+    input.includeDiscoveryOffers === undefined ? true : Boolean(input.includeDiscoveryOffers);
+  const maxOfferSlidesRaw = Number(input.maxOfferSlides);
+  const maxOfferSlides =
+    Number.isFinite(maxOfferSlidesRaw) && maxOfferSlidesRaw >= 0 && maxOfferSlidesRaw <= 4
+      ? Math.round(maxOfferSlidesRaw)
+      : DEFAULT_PLATFORM_HOME_HERO.maxOfferSlides ?? 2;
+
   return {
     eyebrow,
     headline,
     rotationIntervalMs,
     slides,
+    includeDiscoveryOffers,
+    maxOfferSlides,
   };
 }
 

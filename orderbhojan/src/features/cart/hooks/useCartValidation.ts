@@ -15,6 +15,7 @@ export function useCartValidation(options?: { enabled?: boolean; autoApply?: boo
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
+  const appliedCouponCode = useRestaurantContextStore((s) => s.appliedCouponCode);
   const activeLocation = useActiveLocation();
   const [syncMessages, setSyncMessages] = useState<string[]>([]);
   const lastAppliedKeyRef = useRef<string | null>(null);
@@ -36,8 +37,9 @@ export function useCartValidation(options?: { enabled?: boolean; autoApply?: boo
       restaurantId: resolvedRestaurantId,
       contextToken,
       lines,
+      couponCode: appliedCouponCode,
     });
-  }, [contextToken, lines, resolvedRestaurantId]);
+  }, [appliedCouponCode, contextToken, lines, resolvedRestaurantId]);
 
   const query = useQuery({
     queryKey: ['cart', 'validate', cartSignature ?? 'inactive'],
@@ -56,6 +58,7 @@ export function useCartValidation(options?: { enabled?: boolean; autoApply?: boo
           name: line.name,
         })),
         deliveryAddress: { lat: coords.lat, lng: coords.lng },
+        ...(appliedCouponCode ? { couponCode: appliedCouponCode } : {}),
       });
     },
     enabled: canValidate && Boolean(cartSignature),

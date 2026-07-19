@@ -25,6 +25,8 @@ describe('owner storefront settings API contract', () => {
     assert.match(source, /deliveryNotes/);
     assert.match(source, /location:/);
     assert.match(source, /features:/);
+    assert.match(source, /resolvedTenantId/);
+    assert.match(source, /stripUndefinedDeep\(updates\)/);
   });
 
   it('exposes per-slug tenant sync revision endpoint', () => {

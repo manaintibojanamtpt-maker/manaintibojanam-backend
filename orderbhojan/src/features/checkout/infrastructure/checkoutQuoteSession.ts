@@ -38,12 +38,14 @@ export function buildCheckoutCartSignature(input: {
   readonly restaurantId: string;
   readonly contextToken: string;
   readonly lines: readonly CartLine[];
+  readonly couponCode?: string | null;
 }): string {
   const lineSig = input.lines
     .map((line) => `${line.foodId}:${line.quantity}`)
     .sort()
     .join('|');
-  return `${input.restaurantId}:${input.contextToken}:${lineSig}`;
+  const coupon = input.couponCode?.trim().toUpperCase() || 'none';
+  return `${input.restaurantId}:${input.contextToken}:${coupon}:${lineSig}`;
 }
 
 export function readCheckoutPrepareSession(

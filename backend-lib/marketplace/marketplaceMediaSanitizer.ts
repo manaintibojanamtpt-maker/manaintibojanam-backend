@@ -10,6 +10,41 @@ export class MarketplaceMediaValidationError extends Error {
   }
 }
 
+/** Firestore rejects explicit `undefined` field values — omit those keys instead. */
+export function omitUndefinedFields<T extends Record<string, unknown>>(value: T): T {
+  const output = {} as T;
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (fieldValue !== undefined) {
+      output[key as keyof T] = fieldValue as T[keyof T];
+    }
+  }
+  return output;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/** Recursively drop undefined keys/objects before Firestore writes. */
+export function stripUndefinedDeep(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== 'object') return value;
+  if (!isPlainObject(value) && !Array.isArray(value)) return value;
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripUndefinedDeep(entry));
+  }
+
+  const output: Record<string, unknown> = {};
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (fieldValue === undefined) continue;
+    output[key] = stripUndefinedDeep(fieldValue);
+  }
+  return output;
+}
+
 function assertSafeMediaUrl(url: unknown, label: string): string | undefined {
   if (url === undefined || url === null || url === '') return undefined;
   if (typeof url !== 'string') {
@@ -86,26 +121,23 @@ export function sanitizeMarketplacePayload(marketplace: unknown): Record<string,
           typeof item.validTo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.validTo)
             ? item.validTo
             : undefined;
-        return {
+        return omitUndefinedFields({
           offerId: typeof item.offerId === 'string' ? item.offerId : `offer_${index}`,
           enabled: item.enabled !== false,
-          title:
-            typeof item.title === 'string' ? item.title.trim().slice(0, 80) || undefined : undefined,
+          title: typeof item.title === 'string' ? item.title.trim().slice(0, 80) : '',
           displayText,
           badge:
             typeof item.badge === 'string' ? item.badge.trim().slice(0, 40) || undefined : undefined,
           description:
-            typeof item.description === 'string'
-              ? item.description.trim().slice(0, 200) || undefined
-              : undefined,
+            typeof item.description === 'string' ? item.description.trim().slice(0, 200) : '',
           validFrom,
           validTo,
           priority: typeof item.priority === 'number' ? item.priority : index,
-          type: typeof item.type === 'string' ? item.type.slice(0, 40) : undefined,
-        };
+          type: typeof item.type === 'string' ? item.type.slice(0, 40) : 'festival',
+        });
       })
       .filter(Boolean);
   }
 
-  return output;
+  return stripUndefinedDeep(output) as Record<string, unknown>;
 }

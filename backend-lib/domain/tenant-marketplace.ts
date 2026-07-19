@@ -21,6 +21,8 @@ export interface TenantMarketplaceOffer {
   readonly validTo?: string;
   readonly priority?: number;
   readonly type?: string;
+  /** Optional linked checkout promo code — must match an active owner coupon. */
+  readonly couponCode?: string;
 }
 
 export interface TenantMarketplaceGalleryItem {
@@ -156,6 +158,8 @@ function parseOffers(raw: unknown): TenantMarketplaceOffer[] | undefined {
       validTo: typeof body.validTo === 'string' ? body.validTo.trim() : undefined,
       priority: asNumber(body.priority) ?? items.length,
       type: typeof body.type === 'string' ? body.type : undefined,
+      couponCode:
+        typeof body.couponCode === 'string' ? body.couponCode.trim().toUpperCase() : undefined,
     });
   }
   return items.length > 0 ? items : undefined;

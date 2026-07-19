@@ -2,8 +2,10 @@
  * Prepare Capacitor asset inputs from the master OrderBhojan icon.
  *
  * Drop your master PNG at: resources/icon-source.png (1024x1024+ recommended).
- * Foreground uses a light safe-zone inset only; Android adaptive XML already
- * applies a 16.7% inset — avoid stacking aggressive shrink on top of that.
+ * Legacy icons (icon.png, PWA, iOS) use ~90% fill — full-bleed square with breathing room.
+ * Adaptive foreground uses ~70% fill so the wide OB mark fits Android/iOS circle masks
+ * (66dp safe zone). Android XML inset stays at 0% — padding lives in the foreground PNG
+ * only, avoiding the old 16.7% + shrink double-crop.
  *
  * @capacitor/assets v3 custom icon-foreground/icon-background mode writes legacy
  * 48dp mipmaps (192px @ xxxhdpi) instead of adaptive 108dp (432px). Run
@@ -23,8 +25,15 @@ const PRIMARY_SOURCE_PATH = path.join(resourcesDir, 'icon-source.png');
 const FALLBACK_SOURCE_PATH = path.join(root, 'assets', 'icon-source.png');
 const androidResDir = path.join(root, 'android', 'app', 'src', 'main', 'res');
 const iconBackgroundColor = '#070504';
-/** Logo fill inside foreground layer; Android XML adds another 16.7% safe-zone inset. */
-const foregroundScale = 0.93;
+/** Full-bleed legacy icon (icon.png, PWA, iOS via capacitor-assets). */
+const legacyIconScale = 0.9;
+/**
+ * Adaptive foreground — keep OB + wordmark inside the ~66% launcher safe zone.
+ * Source artwork is edge-to-edge; shrinking here prevents circle/squircle clipping.
+ */
+const adaptiveForegroundScale = 0.7;
+/** No XML inset — foreground PNG already carries safe-zone padding (was 16.7%, then 10%). */
+const ADAPTIVE_INSET = '0%';
 const MIN_SOURCE_SIZE = 1024;
 const MIN_LAYER_SIZE = 1024;
 const MAX_LAYER_SIZE = 4096;
@@ -46,10 +55,10 @@ const ANDROID_ADAPTIVE_DENSITIES = [
 const ADAPTIVE_ICON_XML = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background>
-        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="16.7%" />
+        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="${ADAPTIVE_INSET}" />
     </background>
     <foreground>
-        <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="16.7%" />
+        <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="${ADAPTIVE_INSET}" />
     </foreground>
 </adaptive-icon>`;
 
@@ -127,14 +136,16 @@ async function writeSolidBackground(outPath, size) {
     .toFile(outPath);
 }
 
-async function writeForeground(outPath, size, sourceBuffer) {
-  const inset = Math.round((size * (1 - foregroundScale)) / 2);
+async function composeScaledSquare(outPath, size, sourceBuffer, scale, background) {
+  const inset = Math.round((size * (1 - scale)) / 2);
   const inner = size - inset * 2;
+  const resizeBackground =
+    background.alpha === 0 ? { r: 0, g: 0, b: 0, alpha: 0 } : background;
 
   const resized = await sharp(sourceBuffer)
     .resize(inner, inner, {
       fit: 'contain',
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      background: resizeBackground,
       kernel: resizeKernel,
     })
     .png(PNG_OPTIONS)
@@ -145,12 +156,25 @@ async function writeForeground(outPath, size, sourceBuffer) {
       width: size,
       height: size,
       channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      background,
     },
   })
     .composite([{ input: resized, top: inset, left: inset }])
     .png(PNG_OPTIONS)
     .toFile(outPath);
+}
+
+async function writeForeground(outPath, size, sourceBuffer) {
+  await composeScaledSquare(outPath, size, sourceBuffer, adaptiveForegroundScale, {
+    r: 0,
+    g: 0,
+    b: 0,
+    alpha: 0,
+  });
+}
+
+async function writeLegacyIcon(outPath, size, sourceBuffer) {
+  await composeScaledSquare(outPath, size, sourceBuffer, legacyIconScale, iconBackgroundColor);
 }
 
 async function writePwaIcons(sourceBuffer) {
@@ -159,20 +183,10 @@ async function writePwaIcons(sourceBuffer) {
   await mkdir(iconsDir, { recursive: true });
   await mkdir(brandDir, { recursive: true });
 
-  const resize = (size) =>
-    sharp(sourceBuffer)
-      .resize(size, size, {
-        fit: 'contain',
-        background: iconBackgroundColor,
-        kernel: resizeKernel,
-      })
-      .png(PNG_OPTIONS);
-
-  await resize(512).toFile(path.join(iconsDir, 'icon-512.png'));
-  await resize(192).toFile(path.join(iconsDir, 'icon-192.png'));
+  await writeLegacyIcon(path.join(iconsDir, 'icon-512.png'), 512, sourceBuffer);
+  await writeLegacyIcon(path.join(iconsDir, 'icon-192.png'), 192, sourceBuffer);
 
   await sharp(sourceBuffer).png(PNG_OPTIONS).toFile(path.join(brandDir, 'orderbhojan-logo.png'));
-  await sharp(sourceBuffer).png(PNG_OPTIONS).toFile(path.join(resourcesDir, 'icon.png'));
 }
 
 async function writeAndroidAdaptiveMipmaps(foregroundPath, backgroundPath) {
@@ -210,15 +224,19 @@ async function prepareAssets() {
   const size = layerSize(Math.max(sourceMeta.width ?? 0, sourceMeta.height ?? 0));
 
   await writePwaIcons(sourceBuffer);
+  await writeLegacyIcon(path.join(resourcesDir, 'icon.png'), size, sourceBuffer);
   await writeSolidBackground(path.join(resourcesDir, 'icon-background.png'), size);
   await writeForeground(path.join(resourcesDir, 'icon-foreground.png'), size, sourceBuffer);
 
   console.log('');
   console.log('Prepared Capacitor layers:');
-  console.log(`  resources/icon.png (${sourceMeta.width}x${sourceMeta.height})`);
   console.log(
-    `  resources/icon-foreground.png (${size}x${size}, ${Math.round(foregroundScale * 100)}% logo fill)`,
+    `  resources/icon.png (${size}x${size}, ${Math.round(legacyIconScale * 100)}% logo fill, legacy full-bleed)`,
   );
+  console.log(
+    `  resources/icon-foreground.png (${size}x${size}, ${Math.round(adaptiveForegroundScale * 100)}% logo fill)`,
+  );
+  console.log(`  Android adaptive XML inset: ${ADAPTIVE_INSET}`);
   console.log(`  resources/icon-background.png (${size}x${size})`);
   console.log('Updated PWA icons:');
   console.log('  public/icons/icon-192.png (192x192)');
