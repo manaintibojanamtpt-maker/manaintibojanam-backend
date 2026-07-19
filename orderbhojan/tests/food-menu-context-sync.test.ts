@@ -121,4 +121,58 @@ describe('syncRestaurantContextFromMenuCache', () => {
     );
     assert.equal(useCartStore.getState().lines.length, 1);
   });
+
+  it('sets provisional context from route slug when no menu cache exists', () => {
+    const synced = syncRestaurantContextFromMenuCache('demo-dosa-corner', 18.5362, 73.8937);
+    assert.equal(synced, true);
+    assert.equal(useRestaurantContextStore.getState().restaurantSlug, 'demo-dosa-corner');
+    assert.equal(useRestaurantContextStore.getState().restaurantId, 'obr_demo-dosa-corner');
+    assert.equal(useRestaurantContextStore.getState().contextToken, 'menu_demo-dosa-corner');
+
+    useCartStore.getState().addItem(
+      { foodId: 'plain-dosa', name: 'Plain Dosa', price: 80 },
+      1,
+    );
+    assert.equal(useCartStore.getState().lines.length, 1);
+  });
+
+  it('restores context after slug sanitize when menu data is already loaded', () => {
+    useRestaurantContextStore.getState().setContext({
+      restaurantSlug: 'demo-biryani-house',
+      contextToken: 'ctx_biryani',
+      restaurantId: 'obr_demo_biryani_001',
+    });
+    useCartStore.setState({
+      restaurantSlug: 'demo-biryani-house',
+      lines: [
+        {
+          lineId: 'biryani-1',
+          foodId: 'biryani-1',
+          name: 'Mutton Biryani',
+          price: 299,
+          quantity: 1,
+          restaurantSlug: 'demo-biryani-house',
+          restaurantId: 'obr_demo_biryani_001',
+        },
+      ],
+    });
+
+    sanitizeRestaurantSlugContext('demo-dosa-corner');
+    assert.equal(useRestaurantContextStore.getState().restaurantSlug, null);
+
+    const synced = syncRestaurantContextFromMenuCache(
+      'demo-dosa-corner',
+      18.5362,
+      73.8937,
+      SAMPLE_MENU,
+    );
+    assert.equal(synced, true);
+    assert.equal(useRestaurantContextStore.getState().restaurantSlug, 'demo-dosa-corner');
+
+    useCartStore.getState().addItem(
+      { foodId: 'plain-dosa', name: 'Plain Dosa', price: 80 },
+      1,
+    );
+    assert.equal(useCartStore.getState().lines.length, 1);
+  });
 });

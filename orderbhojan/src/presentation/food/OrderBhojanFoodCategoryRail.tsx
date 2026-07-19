@@ -22,10 +22,10 @@ export function OrderBhojanFoodCategoryRail({
 }: OrderBhojanFoodCategoryRailProps) {
   return (
     <nav
-      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md'} py-3 ob-menu-container`}
+      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md'} min-w-0 max-w-full py-3 ob-menu-container`}
       aria-label="Menu categories"
     >
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <div className="ob-menu-rail-scroll flex gap-2 pb-1 no-scrollbar">
         {categories.map((category) => {
           const sectionId = `food-cat-${category.id}`;
           const active = activeId === sectionId;

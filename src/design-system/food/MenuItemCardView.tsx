@@ -36,7 +36,7 @@ export function MenuItemCardView({
     <article
       id={`menu-item-${item.id}`}
       className={cn(
-        'relative flex justify-between gap-4 border-b border-white/5 bg-[#151515] px-4 py-4 transition-colors last:border-b-0 active:bg-white/[0.02]',
+        'relative flex w-full min-w-0 justify-between gap-4 border-b border-white/5 bg-[#151515] px-4 py-4 transition-colors last:border-b-0 active:bg-white/[0.02]',
         item.unavailable && 'opacity-60',
         className,
       )}

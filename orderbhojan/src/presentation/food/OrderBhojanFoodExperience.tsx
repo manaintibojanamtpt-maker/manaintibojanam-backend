@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import type { FoodPublic } from '@/types/marketplace-food';
 import {
@@ -15,7 +14,6 @@ import { hasBestsellerLabel } from '@/features/food/domain/contractPresentation'
 import { useCategoryScrollSpy } from '@/features/food/hooks/useCategoryScrollSpy';
 import { useFoodMenu } from '@/features/food/hooks/useFoodMenu';
 import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
-import { sanitizeRestaurantSlugContext } from '@/lib/sanitizeLiveRestaurantContext';
 import { OrderBhojanFoodCustomizeSheet as FoodCustomizeSheet } from './OrderBhojanFoodCustomizeSheet';
 import {
   OrderBhojanDiscoveryOfflineNotice,
@@ -120,7 +118,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 
   return (
     <div
-      className={`min-h-screen bg-[#030303] text-white${enterFromRestaurant ? ' ob-menu-enter' : ''}`}
+      className={`ob-menu-page min-h-screen bg-[#030303] text-white${enterFromRestaurant ? ' ob-menu-enter' : ''}`}
     >
       <OrderBhojanFoodRestaurantStrip
         slug={restaurantSlug}
@@ -129,7 +127,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
         onHome={() => navigate('/')}
       />
 
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md">
+      <div className="ob-menu-sticky-chrome sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md">
         <OrderBhojanFoodDietaryFilterBar
           value={dietaryFilter}
           onChange={setDietaryFilter}
@@ -145,7 +143,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
       </div>
 
       {filteredItems.length === 0 ? (
-        <Section density="comfortable" background="default" className="!py-10">
+        <section className="w-full min-w-0 bg-[#030303] py-10">
           <div className="ob-menu-container text-center">
             <p className="text-base font-semibold text-white">No dishes match this filter</p>
             <p className="mt-2 text-sm text-white/60">Try All or switch between Veg and Non-Veg.</p>
@@ -157,14 +155,14 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
               Show all dishes
             </button>
           </div>
-        </Section>
+        </section>
       ) : null}
 
       {filteredItems.length > 0 && signatureItems.length > 0 ? (
-        <Section density="comfortable" background="subtle" className="!py-6" aria-label="Signature dishes">
+        <section className="w-full min-w-0 bg-[#0A0A0A] py-6" aria-label="Signature dishes">
           <div className="ob-menu-container">
             <SectionHeader title="Signature dishes" align="left" className="!mb-4 !text-left" />
-            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+            <div className="ob-menu-rail-scroll flex gap-4 pb-2 no-scrollbar">
               {signatureItems.map((food, index) => (
                 <OrderBhojanFoodFeaturedCard
                   key={food.foodId}
@@ -175,7 +173,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
               ))}
             </div>
           </div>
-        </Section>
+        </section>
       ) : null}
 
       {filteredItems.length > 0
@@ -206,12 +204,6 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 export function OrderBhojanFoodExperience() {
   const { restaurantSlug } = useParams<{ restaurantSlug: string }>();
   useTenantRevisionSync(restaurantSlug);
-
-  useEffect(() => {
-    if (restaurantSlug) {
-      sanitizeRestaurantSlugContext(restaurantSlug);
-    }
-  }, [restaurantSlug]);
 
   return <OrderBhojanFoodContent restaurantSlug={restaurantSlug ?? ''} />;
 }

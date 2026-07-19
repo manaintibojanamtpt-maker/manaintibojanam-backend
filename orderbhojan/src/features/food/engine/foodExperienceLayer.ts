@@ -58,8 +58,12 @@ export function syncRestaurantContextFromMenuCache(
   }
 
   const cachedMenu = menu ?? readFoodSessionCache(slug, lat, lng);
-  if (!cachedMenu) return false;
+  if (cachedMenu) {
+    persistMenuContext(slug, `menu_${slug}`, menuFallbackRestaurantId(slug));
+    return true;
+  }
 
+  // Route slug is authoritative — allow ADD before menu fetch/cache hydration completes.
   persistMenuContext(slug, `menu_${slug}`, menuFallbackRestaurantId(slug));
   return true;
 }

@@ -193,8 +193,19 @@ html.ob-native .ob-app-shell {
   padding-right: 0;
 }
 
+.ob-menu-page {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+.ob-menu-sticky-chrome {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 .ob-menu-container {
   width: 100%;
+  min-width: 0;
   margin-left: auto;
   margin-right: auto;
   max-width: 48rem;
@@ -206,6 +217,19 @@ html.ob-native .ob-menu-container {
   max-width: none;
   padding-left: max(0.75rem, var(--ob-safe-left));
   padding-right: max(0.75rem, var(--ob-safe-right));
+}
+
+.ob-menu-rail-scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ob-menu-card-list {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .ob-transactional-shell {
