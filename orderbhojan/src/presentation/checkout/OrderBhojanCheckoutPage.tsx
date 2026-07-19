@@ -90,6 +90,13 @@ export function OrderBhojanCheckoutPage() {
   }, [appliedCouponCode]);
 
   useEffect(() => {
+    if (!error || !appliedCouponCode) return;
+    if (/promo code|coupon|minimum order/i.test(error)) {
+      setPromoError(error);
+    }
+  }, [appliedCouponCode, error]);
+
+  useEffect(() => {
     if (appliedCouponCode || selectableCodes.length === 0) return;
     const primaryCode = selectableCodes[0]?.code;
     if (!primaryCode) return;
@@ -323,7 +330,8 @@ export function OrderBhojanCheckoutPage() {
         lines: [
           ...quote.lineItems.map((item) => ({
             label: item.label,
-            amountLabel: `₹${item.amount}`,
+            amountLabel:
+              item.amount < 0 ? `-₹${Math.abs(item.amount)}` : `₹${item.amount}`,
           })),
           ...(deliveryTimeSlot && !isAsapSlot(deliveryTimeSlot)
             ? [{ label: 'Delivery slot', amountLabel: formatDeliverySlotLabel(deliveryTimeSlot) }]

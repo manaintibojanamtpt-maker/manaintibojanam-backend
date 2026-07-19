@@ -295,6 +295,36 @@ class StorageService {
     });
   }
 
+  /** Platform OrderBhojan home hero slide image (super admin). */
+  async uploadPlatformHeroImage(file: File, slideId: string): Promise<string> {
+    const validationError = this.validateFile(file);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Please sign in again to upload images.');
+    }
+
+    await user.getIdToken(true);
+
+    const compressedBlob = await this.compressImage(file);
+    const safeId = slideId.replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 48) || 'slide';
+    const fileName = `${safeId}-${Date.now()}.jpg`;
+    const storageRef = ref(this.storage, `platform-hero/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, compressedBlob, {
+      contentType: 'image/jpeg',
+      customMetadata: {
+        slideId: safeId,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
+    return getDownloadURL(snapshot.ref);
+  }
+
   /**
    * Validate file before upload
    * @param file File to validate

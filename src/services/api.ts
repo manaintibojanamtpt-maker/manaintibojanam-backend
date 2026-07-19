@@ -14,7 +14,8 @@ import {
 } from 'firebase/firestore';
 import { getDb, handleFirestoreError, OperationType } from '../lib/firebase-db';
 import { sortOrdersNewestFirst } from '../lib/activeOrder';
-import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent } from '../types';
+import { MenuItem, Order, UserProfile, OrderStatus, OrderTimelineEvent, ReleaseNote } from '../types';
+import type { PlatformSuperadminMetrics } from '../lib/platformSuperadminMetrics';
 import { safeParseDate } from '../lib/utils';
 import { getOrderDisplayState, normalizePaymentStatus } from '../lib/orderDisplay';
 import { EnvironmentConfig } from '../config/environment';
@@ -931,30 +932,50 @@ export const fetchOnboardingLeads = async () => {
     });
 };
 
-/** Load tenants + leads via Render API (Admin SDK) — reliable on bhojanos-prod cutover. */
-export const fetchSuperadminPlatformData = async (): Promise<{ tenants: any[]; leads: any[]; projectId?: string | null }> => {
-  const { auth } = await import('../firebase');
-  const user = auth.currentUser;
-  if (!user) throw new Error('You must be signed in to load platform data.');
+export type SuperadminPlatformPayload = {
+  tenants: any[];
+  leads: any[];
+  releases: ReleaseNote[];
+  metrics: PlatformSuperadminMetrics;
+  projectId?: string | null;
+  syncedAt?: string | null;
+};
 
-  const token = await user.getIdToken(true);
-  const apiBase =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
-      ? window.location.origin
-      : API_BASE_URL;
+/** Load tenants + leads + releases + metrics via Render API (Admin SDK) — reliable on bhojanos-prod cutover. */
+export const fetchSuperadminPlatformData = async (): Promise<SuperadminPlatformPayload> => {
+  const payload = await platformSuperadminFetch(
+    `/api/platform/superadmin-data?_=${Date.now()}`,
+    { cache: 'no-store' },
+  );
 
-  const res = await fetch(`${apiBase}/api/platform/superadmin-data`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const payload = await res.json().catch(() => ({}));
-  if (!res.ok || payload.success === false) {
-    throw new Error(payload.error || 'Failed to load platform data from server');
-  }
+  const metrics = payload.metrics as PlatformSuperadminMetrics | undefined;
   return {
     tenants: Array.isArray(payload.tenants) ? payload.tenants : [],
     leads: Array.isArray(payload.leads) ? payload.leads : [],
+    releases: Array.isArray(payload.releases) ? (payload.releases as ReleaseNote[]) : [],
+    metrics:
+      metrics ??
+      ({
+        mrr: 0,
+        arr: 0,
+        arpu: 0,
+        activeTenantsCount: 0,
+        trialTenantsCount: 0,
+        suspendedTenantsCount: 0,
+        publishedStoresCount: 0,
+        activeSubscriptions: 0,
+        ordersProcessed: 0,
+        platformGmv: 0,
+        churnRisk: 0,
+        verifiedMerchants: 0,
+        fssaiVerified: 0,
+        complianceOverdue: 0,
+        betaMerchantsCount: 0,
+        betaPublishedCount: 0,
+        firstOrdersCount: 0,
+      } satisfies PlatformSuperadminMetrics),
     projectId: payload.projectId ?? null,
+    syncedAt: typeof payload.syncedAt === 'string' ? payload.syncedAt : null,
   };
 };
 
@@ -1033,10 +1054,13 @@ async function platformSuperadminFetch(path: string, init?: RequestInit) {
       : API_BASE_URL;
 
   const res = await fetch(`${apiBase}${path}`, {
+    cache: 'no-store',
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
       ...(init?.headers ?? {}),
     },
   });

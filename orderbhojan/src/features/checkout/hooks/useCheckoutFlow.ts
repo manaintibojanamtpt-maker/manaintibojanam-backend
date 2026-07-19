@@ -9,6 +9,7 @@ import { useCartValidation } from '@/features/cart/hooks/useCartValidation';
 import {
   buildCheckoutCartSignature,
   clearCheckoutPrepareSessionForCart,
+  clearCheckoutPrepareSessionsExcept,
   persistCheckoutPrepareSession,
   readCheckoutPrepareSession,
 } from '../infrastructure/checkoutQuoteSession';
@@ -146,6 +147,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
   const placeInFlightRef = useRef(false);
   const upiPollAbortRef = useRef<AbortController | null>(null);
+  const previousPrepareSignatureRef = useRef<string | null>(null);
 
   const checkoutAuthGate = useMemo(
     () => resolveCheckoutAuthGate({ status: authStatus, sessionUser }),
@@ -192,10 +194,30 @@ export function useCheckoutFlow(): CheckoutFlowState {
     });
   }, [appliedCouponCode, contextToken, lines, resolvedRestaurantId]);
 
-  const sessionPrepare = useMemo(
-    () => (cartSignature ? readCheckoutPrepareSession(cartSignature) : null),
-    [cartSignature],
-  );
+  const sessionPrepare = useMemo(() => {
+    if (!cartSignature) return null;
+    const cached = readCheckoutPrepareSession(cartSignature);
+    if (!cached) return null;
+    if (appliedCouponCode) {
+      const discountLine = cached.quote.lineItems.find((line) => line.label.startsWith('Discount'));
+      if (!discountLine) return null;
+    }
+    return cached;
+  }, [appliedCouponCode, cartSignature]);
+
+  useEffect(() => {
+    if (!prepareSignature || !cartSignature) return;
+    if (
+      previousPrepareSignatureRef.current &&
+      previousPrepareSignatureRef.current !== prepareSignature
+    ) {
+      void queryClient.removeQueries({
+        queryKey: checkoutKeys.prepare(previousPrepareSignatureRef.current),
+      });
+      clearCheckoutPrepareSessionsExcept(cartSignature);
+    }
+    previousPrepareSignatureRef.current = prepareSignature;
+  }, [cartSignature, prepareSignature, queryClient]);
 
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {
@@ -240,8 +262,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
       Boolean(prepareSignature),
     staleTime: CHECKOUT_PREPARE_STALE_MS,
     gcTime: CHECKOUT_PREPARE_GC_MS,
-    placeholderData: (previous) => {
+    placeholderData: (previous, query) => {
       if (previous) return previous;
+      if (query.queryKey[2] !== prepareSignature) return undefined;
       return sessionPrepare ?? undefined;
     },
     refetchOnWindowFocus: false,
@@ -285,10 +308,19 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (placeStatus === 'awaiting_payment') return 'awaiting_payment';
     if (placeStatus === 'success') return 'success';
     if (placeStatus === 'error') return 'error';
-    if ((prepareQuery.isFetching || !cartValidationReady) && !quote) return 'preparing';
     if (prepareQuery.isError) return 'error';
+    if ((prepareQuery.isFetching || !cartValidationReady) && !quote && !sessionPrepare) {
+      return 'preparing';
+    }
     return 'idle';
-  }, [cartValidationReady, placeStatus, prepareQuery.isError, prepareQuery.isFetching, quote]);
+  }, [
+    cartValidationReady,
+    placeStatus,
+    prepareQuery.isError,
+    prepareQuery.isFetching,
+    quote,
+    sessionPrepare,
+  ]);
 
   const error = placeError ?? prepareErrorMessage;
 

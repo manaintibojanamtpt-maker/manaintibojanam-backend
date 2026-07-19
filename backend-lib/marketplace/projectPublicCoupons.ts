@@ -118,8 +118,8 @@ export function projectPublicRestaurantOffers(
     offerRows.push({
       id: `coupon_${coupon.id}`,
       title: coupon.discountLabel,
-      description: coupon.minOrder > 0 ? `Min order ₹${coupon.minOrder}` : 'Apply at checkout',
-      badge: coupon.code,
+      description: coupon.minOrder > 0 ? `Min order ₹${coupon.minOrder}` : 'Available at checkout',
+      badge: coupon.discountLabel,
       couponCode: coupon.code,
     });
   }

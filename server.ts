@@ -102,6 +102,7 @@ import {
   resolveDatabaseId,
 } from "./backend-lib/firebase/FirebaseAdminProvider";
 import { mountOwnerApiGateway } from "./backend-lib/shared/apiGatewayMiddleware.js";
+import { computePlatformSuperadminMetrics } from "./src/lib/platformSuperadminMetrics";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -563,6 +564,10 @@ app.use(createCorsMiddleware());
 // Rate Limiting
 const isProductionApi = process.env.NODE_ENV === 'production';
 
+const ownerRateLimitWindowMs = Number(process.env.OWNER_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+const ownerRateLimitMax =
+  Number(process.env.OWNER_RATE_LIMIT_MAX) || (isProductionApi ? 3_000 : 50_000);
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: isProductionApi ? 100 : 50_000,
@@ -570,6 +575,10 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     const url = req.originalUrl || req.url || '';
+    // Owner portal uses Firebase auth + dedicated limiter (dashboard polls every ~15s).
+    if (url.startsWith('/api/owner/') || url.startsWith('/api/owner?')) {
+      return true;
+    }
     // Local dev: OrderBhojan polls revision + discovery/menu every few seconds.
     if (!isProductionApi && url.includes('/marketplace')) {
       return true;
@@ -583,6 +592,15 @@ const globalLimiter = rateLimit({
   },
 });
 app.use("/api/", globalLimiter);
+
+/** Authenticated owner routes — separate bucket so dashboard polling does not exhaust public limits. */
+const ownerApiLimiter = rateLimit({
+  windowMs: ownerRateLimitWindowMs,
+  max: ownerRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many owner portal requests. Please wait and retry.' },
+});
 
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -2784,9 +2802,10 @@ async function syncOwnerTenantsForUser(
 }
 
 // Phase 12 — Owner API gateway (rateLimit → tenant resolver → auth → capability router).
-// rateLimit hook is a passthrough stub here; globalLimiter already covers /api/*.
+// Owner routes skip globalLimiter; ownerApiLimiter applies a higher authenticated bucket.
 // Per-route verifyFirebaseToken remains during rollout; gateway auth runs first for /api/owner/*.
 mountOwnerApiGateway(app, {
+  rateLimit: ownerApiLimiter,
   verifyAuth: verifyFirebaseToken,
   log: (level, message, meta) => {
     if (level === 'debug' && process.env.NODE_ENV !== 'production') {
@@ -5637,10 +5656,15 @@ app.post("/api/platform/grant-superadmin", async (req, res) => {
 
 /** Platform data for superadmin dashboard — Admin SDK bypasses client Firestore rule edge cases. */
 app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, res: any) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
-    const [tenantsSnap, leadsSnap] = await Promise.all([
+    const [tenantsSnap, leadsSnap, releasesSnap] = await Promise.all([
       db.collection('tenants').get(),
       db.collection('salesPipeline').get(),
+      db.collection('release_notes').get(),
     ]);
 
     const tenants = tenantsSnap.docs
@@ -5659,10 +5683,42 @@ app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, re
         return bSec - aSec;
       });
 
+    const releases = releasesSnap.docs
+      .map((d) => ({ id: d.id, ...(serializeFirestoreValue(d.data()) as Record<string, unknown>) }))
+      .sort((a, b) =>
+        String((b as { version?: string }).version ?? '').localeCompare(
+          String((a as { version?: string }).version ?? ''),
+          undefined,
+          { numeric: true, sensitivity: 'base' },
+        ),
+      );
+
+    const analyticsEntries = await Promise.all(
+      tenants.map(async (tenant) => {
+        const tenantId = String((tenant as { id?: string }).id ?? '');
+        if (!tenantId) return [tenantId, {}] as const;
+        const analyticsSnap = await db.doc(`tenants/${tenantId}/analytics/overview`).get();
+        const data = analyticsSnap.exists
+          ? (serializeFirestoreValue(analyticsSnap.data()) as Record<string, unknown>)
+          : {};
+        return [
+          tenantId,
+          {
+            totalOrders: Number(data.totalOrders ?? 0),
+            totalRevenue: Number(data.totalRevenue ?? 0),
+          },
+        ] as const;
+      }),
+    );
+    const analyticsByTenantId = Object.fromEntries(analyticsEntries);
+    const metrics = computePlatformSuperadminMetrics(tenants, analyticsByTenantId);
+
     res.json({
       success: true,
       tenants,
       leads,
+      releases,
+      metrics,
       projectId: process.env.FIREBASE_PROJECT_ID || appAdmin.options?.projectId || null,
       syncedAt: new Date().toISOString(),
     });

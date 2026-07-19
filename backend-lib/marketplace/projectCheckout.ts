@@ -178,6 +178,85 @@ async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<Map<st
 
 type MenuPriceMap = Map<string, { price: number; name: string }>;
 
+interface ResolvedCouponDiscount {
+  readonly code: string;
+  readonly discountAmount: number;
+}
+
+function readCouponDiscountType(coupon: Record<string, unknown>): 'fixed' | 'percentage' {
+  if (coupon.discountType === 'percentage' || coupon.type === 'percentage') return 'percentage';
+  return 'fixed';
+}
+
+function readCouponDiscountValue(coupon: Record<string, unknown>): number {
+  const raw = coupon.discountValue ?? coupon.discount ?? 0;
+  return Number(raw);
+}
+
+function isCouponExpired(coupon: Record<string, unknown>): boolean {
+  if (!coupon.expiryDate) return false;
+  return new Date(String(coupon.expiryDate)).setHours(23, 59, 59, 999) < Date.now();
+}
+
+async function resolveMarketplaceCouponDiscount(
+  db: Firestore,
+  tenantId: string,
+  couponCode: string | undefined,
+  subtotal: number,
+  options?: { strict?: boolean },
+): Promise<ResolvedCouponDiscount | null> {
+  const normalized = couponCode?.trim().toUpperCase();
+  if (!normalized) return null;
+
+  const couponSnap = await db
+    .collection('coupons')
+    .where('code', '==', normalized)
+    .where('tenantId', '==', tenantId)
+    .where('isActive', '==', true)
+    .limit(1)
+    .get();
+
+  if (couponSnap.empty) {
+    if (options?.strict) {
+      throw Object.assign(new Error('This promo code is not valid for this kitchen'), { statusCode: 400 });
+    }
+    return { code: normalized, discountAmount: 0 };
+  }
+
+  const coupon = couponSnap.docs[0].data() as Record<string, unknown>;
+  if (isCouponExpired(coupon)) {
+    if (options?.strict) {
+      throw Object.assign(new Error('This promo code has expired'), { statusCode: 400 });
+    }
+    return { code: normalized, discountAmount: 0 };
+  }
+
+  const minOrder = Number(coupon.minOrder ?? 0);
+  if (subtotal < minOrder) {
+    if (options?.strict) {
+      throw Object.assign(
+        new Error(`Minimum order ₹${minOrder} required for promo code ${normalized}`),
+        { statusCode: 400 },
+      );
+    }
+    return { code: normalized, discountAmount: 0 };
+  }
+
+  const discountType = readCouponDiscountType(coupon);
+  const discountValue = readCouponDiscountValue(coupon);
+  let discountAmount = 0;
+  if (discountType === 'percentage') {
+    discountAmount = Math.round((subtotal * discountValue) / 100);
+  } else {
+    discountAmount = Math.round(discountValue);
+  }
+
+  return {
+    code: normalized,
+    discountAmount: Math.min(Math.max(0, discountAmount), Math.round(subtotal)),
+  };
+}
+
 interface MarketplaceQuoteContext {
   tenantId: string;
   tenantRaw: TenantRaw;
@@ -248,30 +327,24 @@ async function buildMarketplaceQuoteContext(
   );
 
   let discountAmount = 0;
-  if (request.couponCode?.trim()) {
-    const couponSnap = await db
-      .collection('coupons')
-      .where('code', '==', request.couponCode.trim().toUpperCase())
-      .where('tenantId', '==', loaded.id)
-      .where('isActive', '==', true)
-      .limit(1)
-      .get();
-    if (!couponSnap.empty) {
-      const coupon = couponSnap.docs[0].data() as Record<string, unknown>;
-      const minOrder = Number(coupon.minOrder ?? 0);
-      if (subtotal >= minOrder) {
-        if (coupon.discountType === 'percentage') {
-          discountAmount = Math.round((subtotal * Number(coupon.discountValue ?? 0)) / 100);
-        } else {
-          discountAmount = Number(coupon.discountValue ?? 0);
-        }
-      }
+  let discountLabel = 'Discount';
+  const couponDiscount = await resolveMarketplaceCouponDiscount(
+    db,
+    loaded.id,
+    request.couponCode,
+    subtotal,
+    { strict: Boolean(request.couponCode?.trim()) },
+  );
+  if (couponDiscount) {
+    discountAmount = couponDiscount.discountAmount;
+    if (discountAmount > 0) {
+      discountLabel = `Discount (${couponDiscount.code})`;
     }
   }
 
   const grandTotal = Math.max(0, subtotal - discountAmount + gstAmount + packagingFee + deliveryFee);
   const lineItems: { label: string; amount: number }[] = [{ label: 'Item Total', amount: Math.round(subtotal) }];
-  if (discountAmount > 0) lineItems.push({ label: 'Discount', amount: -discountAmount });
+  if (discountAmount > 0) lineItems.push({ label: discountLabel, amount: -discountAmount });
   if (gstAmount > 0) lineItems.push({ label: `GST (${gstPercent}%)`, amount: gstAmount });
   if (packagingFee > 0) lineItems.push({ label: 'Packaging', amount: packagingFee });
   if (deliveryFee > 0) lineItems.push({ label: 'Delivery', amount: deliveryFee });

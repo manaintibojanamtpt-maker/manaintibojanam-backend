@@ -52,9 +52,7 @@ export function readCheckoutPrepareSession(
   cartSignature: string,
 ): CheckoutPrepareResponse | null {
   const entries = readEntries();
-  const match =
-    entries.find((entry) => entry.cartSignature === cartSignature) ??
-    entries[0];
+  const match = entries.find((entry) => entry.cartSignature === cartSignature);
   return match?.response ?? null;
 }
 
@@ -85,5 +83,11 @@ export function clearCheckoutPrepareSession(): void {
 export function clearCheckoutPrepareSessionForCart(cartSignature: string): void {
   if (!cartSignature || typeof sessionStorage === 'undefined') return;
   const entries = readEntries().filter((entry) => entry.cartSignature !== cartSignature);
+  writeEntries(entries);
+}
+
+export function clearCheckoutPrepareSessionsExcept(cartSignature: string): void {
+  if (!cartSignature || typeof sessionStorage === 'undefined') return;
+  const entries = readEntries().filter((entry) => entry.cartSignature === cartSignature);
   writeEntries(entries);
 }

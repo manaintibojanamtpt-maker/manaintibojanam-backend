@@ -25,9 +25,11 @@ import {
   computePendingOrders,
   DASHBOARD_ORDERS_LIMIT,
   DASHBOARD_REALTIME_POLL_MS,
+  DASHBOARD_REALTIME_POLL_BACKOFF_MS,
   filterActiveOrders,
   type LowStockAlert,
 } from './dashboardRealtimeHelpers';
+import { isOwnerApiPaused } from '../lib/ownerApiRateLimit';
 
 interface DashboardOrdersSlice {
   orders: OwnerOrder[];
@@ -112,9 +114,13 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   const pollInFlightRef = useRef(false);
+  const pollBackoffUntilRef = useRef(0);
 
   const refreshNow = useCallback(async () => {
     if (!tenantId || pollInFlightRef.current) return;
+    if (Date.now() < pollBackoffUntilRef.current || isOwnerApiPaused()) {
+      return;
+    }
     pollInFlightRef.current = true;
 
     try {
@@ -124,11 +130,16 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
         fetchOwnerStoreOperations(tenantId),
       ]);
 
+      let sawRateLimit = false;
+
       if (ordersResult.status === 'fulfilled') {
         setOrders(ordersResult.value);
         setOrdersError(null);
       } else {
         setOrdersError(ordersResult.reason);
+        if ((ordersResult.reason as { status?: number })?.status === 429) {
+          sawRateLimit = true;
+        }
         console.error('Dashboard realtime orders poll failed:', ordersResult.reason);
       }
       setOrdersLoading(false);
@@ -138,6 +149,9 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
         setMenuError(null);
       } else {
         setMenuError(menuResult.reason);
+        if ((menuResult.reason as { status?: number })?.status === 429) {
+          sawRateLimit = true;
+        }
         console.error('Dashboard realtime menu poll failed:', menuResult.reason);
       }
       setMenuLoading(false);
@@ -151,9 +165,16 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
         setStoreError(null);
       } else {
         setStoreError(storeResult.reason);
+        if ((storeResult.reason as { status?: number })?.status === 429) {
+          sawRateLimit = true;
+        }
         console.error('Dashboard realtime store status poll failed:', storeResult.reason);
       }
       setStoreLoading(false);
+
+      if (sawRateLimit) {
+        pollBackoffUntilRef.current = Date.now() + DASHBOARD_REALTIME_POLL_BACKOFF_MS;
+      }
     } finally {
       pollInFlightRef.current = false;
     }
@@ -181,6 +202,7 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
     setOrdersLoading(true);
     setMenuLoading(true);
     setStoreLoading(true);
+    pollBackoffUntilRef.current = 0;
 
     void refreshNow();
     const timer = window.setInterval(() => {

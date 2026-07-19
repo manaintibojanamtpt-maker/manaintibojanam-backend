@@ -82,6 +82,164 @@ describe('projectCheckout', () => {
       /At least one line item/,
     );
   });
+
+  it('applies percentage coupon discount to quote line items', async () => {
+    const menuItemId = 'item-thali';
+    const fakeDb = {
+      collection: (name: string) => {
+        if (name === 'tenants') {
+          return {
+            doc: (id: string) => ({
+              get: async () =>
+                id === 'mana-inti'
+                  ? {
+                      exists: true,
+                      id: 'mana-inti',
+                      data: () => ({
+                        slug: 'mana-inti',
+                        deliveryConfig: { feesConfigured: false },
+                        pricingConfig: { packingFee: 0, gstPercent: 0 },
+                      }),
+                    }
+                  : { exists: false },
+            }),
+            where: () => ({
+              limit: () => ({
+                get: async () => ({ empty: true, docs: [] }),
+              }),
+            }),
+          };
+        }
+        if (name === 'menu') {
+          return {
+            where: () => ({
+              get: async () => ({
+                docs: [
+                  {
+                    id: menuItemId,
+                    data: () => ({ price: 555, name: 'Thali', isAvailable: true }),
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+        if (name === 'coupons') {
+          return {
+            where: () => ({
+              where: () => ({
+                where: () => ({
+                  limit: () => ({
+                    get: async () => ({
+                      empty: false,
+                      docs: [
+                        {
+                          data: () => ({
+                            code: 'MIB20',
+                            tenantId: 'mana-inti',
+                            discountType: 'percentage',
+                            discountValue: 20,
+                            minOrder: 499,
+                            isActive: true,
+                          }),
+                        },
+                      ],
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected collection ${name}`);
+      },
+    } as never;
+
+    const { quote } = await buildMarketplaceQuote(fakeDb, {
+      restaurantId: 'mana-inti',
+      orderType: 'pickup',
+      couponCode: 'MIB20',
+      lines: [{ itemId: menuItemId, quantity: 1 }],
+    });
+
+    assert.equal(quote.subtotal, 555);
+    assert.equal(quote.discountAmount, 111);
+    assert.equal(quote.grandTotal, 444);
+    assert.deepEqual(quote.lineItems, [
+      { label: 'Item Total', amount: 555 },
+      { label: 'Discount (MIB20)', amount: -111 },
+    ]);
+  });
+
+  it('rejects invalid coupon codes during quote', async () => {
+    const menuItemId = 'item-thali';
+    const fakeDb = {
+      collection: (name: string) => {
+        if (name === 'tenants') {
+          return {
+            doc: (id: string) => ({
+              get: async () =>
+                id === 'mana-inti'
+                  ? {
+                      exists: true,
+                      id: 'mana-inti',
+                      data: () => ({
+                        slug: 'mana-inti',
+                        deliveryConfig: { feesConfigured: false },
+                        pricingConfig: { packingFee: 0, gstPercent: 0 },
+                      }),
+                    }
+                  : { exists: false },
+            }),
+            where: () => ({
+              limit: () => ({
+                get: async () => ({ empty: true, docs: [] }),
+              }),
+            }),
+          };
+        }
+        if (name === 'menu') {
+          return {
+            where: () => ({
+              get: async () => ({
+                docs: [
+                  {
+                    id: menuItemId,
+                    data: () => ({ price: 555, name: 'Thali', isAvailable: true }),
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+        if (name === 'coupons') {
+          return {
+            where: () => ({
+              where: () => ({
+                where: () => ({
+                  limit: () => ({
+                    get: async () => ({ empty: true, docs: [] }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected collection ${name}`);
+      },
+    } as never;
+
+    await assert.rejects(
+      () =>
+        buildMarketplaceQuote(fakeDb, {
+          restaurantId: 'mana-inti',
+          orderType: 'pickup',
+          couponCode: 'MIB20',
+          lines: [{ itemId: menuItemId, quantity: 1 }],
+        }),
+      /not valid for this kitchen/,
+    );
+  });
 });
 
 describe('marketplace checkout frontend contract', () => {

@@ -39,7 +39,7 @@ import {
 import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
-import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
+import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
 import { fetchOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
 import { fetchLatestReleaseNote, updateOwnerTenantPreferences } from '../../lib/ownerPortalApi';
@@ -150,7 +150,7 @@ const OwnerDashboard = () => {
       if (tenantInfo.onboardingStatus !== undefined) return;
 
       try {
-        const response = await fetchOwnerMenuItems(tenantInfo.id);
+        const response = await fetchOwnerMenuItemsCached(tenantInfo.id);
         const hasMenu = (response.items?.length ?? 0) >= 3;
         const hasLocation = !!(tenantInfo.location?.address?.trim() && tenantInfo.location?.city?.trim());
         const hasName = !!(tenantInfo.name && tenantInfo.name.trim().length > 1);

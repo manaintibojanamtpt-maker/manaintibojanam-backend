@@ -1,6 +1,6 @@
 import { ownerApiRequest } from './ownerProvisioning';
 
-export const OWNER_ORDERS_POLL_MS = 5_000;
+export const OWNER_ORDERS_POLL_MS = 15_000;
 
 export async function fetchOwnerOrdersFromApi(tenantId: string, limit = 50) {
   return ownerApiRequest<{

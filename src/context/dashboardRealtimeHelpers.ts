@@ -1,7 +1,8 @@
 import type { MenuItem } from '../types';
 import type { OwnerOrder } from '../lib/ownerOrdersReads';
 
-export const DASHBOARD_REALTIME_POLL_MS = 5_000;
+export const DASHBOARD_REALTIME_POLL_MS = 15_000;
+export const DASHBOARD_REALTIME_POLL_BACKOFF_MS = 60_000;
 export const DASHBOARD_ORDERS_LIMIT = 200;
 
 export const NEW_ORDER_STATUSES = new Set([

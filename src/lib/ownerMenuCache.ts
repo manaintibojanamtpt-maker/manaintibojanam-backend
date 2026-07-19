@@ -6,8 +6,8 @@ export interface OwnerMenuCachePayload {
   items: MenuItem[];
 }
 
-const OWNER_MENU_CACHE_TTL_MS = 15_000;
-const OWNER_MENU_CACHE_STALE_MS = 30_000;
+const OWNER_MENU_CACHE_TTL_MS = 30_000;
+const OWNER_MENU_CACHE_STALE_MS = 60_000;
 
 export const ownerMenuRepositoryCache = new RepositoryCache<OwnerMenuCachePayload>({
   ttlMs: OWNER_MENU_CACHE_TTL_MS,

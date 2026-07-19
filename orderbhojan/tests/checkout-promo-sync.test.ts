@@ -1,7 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { listCopyableCouponCodes } from '../src/features/restaurant/domain/promoOffers';
 import { buildCheckoutPrepareSignature } from '../src/features/checkout/domain/checkoutPayload';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = resolve(__dirname, '..');
 
 describe('checkout promo sync', () => {
   it('collects linked festival offers and standalone promo codes', () => {
@@ -46,5 +52,15 @@ describe('checkout promo sync', () => {
     });
 
     assert.match(signature, /MIB20/);
+  });
+
+  it('keeps promo codes off restaurant offer cards', () => {
+    const offersSection = readFileSync(
+      join(root, 'src/presentation/restaurant/OrderBhojanAvailableOffersSection.tsx'),
+      'utf8',
+    );
+    const hero = readFileSync(join(root, 'src/presentation/restaurant/OrderBhojanRestaurantHero.tsx'), 'utf8');
+    assert.doesNotMatch(offersSection, /copyCouponCode|navigator\.clipboard/);
+    assert.doesNotMatch(hero, /couponCode/);
   });
 });

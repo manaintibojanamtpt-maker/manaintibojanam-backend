@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, addDoc, getDocs, doc, updateDoc, query, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, query, serverTimestamp, getDocsFromServer } from 'firebase/firestore';
 import { getDb } from '../../lib/firebase-db';
 import { ReleaseNote } from '../../types';
 import toast from 'react-hot-toast';
-import { Rocket, Send, Edit, Plus, Trash2, Eye, Sparkles, FileEdit } from 'lucide-react';
+import { Rocket, Send, Edit, Plus, Trash2, Eye, Sparkles, FileEdit, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isReleaseNewer, PENDING_PLATFORM_RELEASE } from '../../config/platformRelease';
 
-export function ReleaseCenter() {
+type ReleaseCenterProps = {
+  releases?: ReleaseNote[];
+  syncToken?: number;
+  onReleasesChanged?: () => void | Promise<void>;
+};
+
+export function ReleaseCenter({ releases: syncedReleases, syncToken = 0, onReleasesChanged }: ReleaseCenterProps) {
   const { currentUser } = useAuth();
-  const [releases, setReleases] = useState<ReleaseNote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [releases, setReleases] = useState<ReleaseNote[]>(syncedReleases ?? []);
+  const [loading, setLoading] = useState(!syncedReleases?.length);
   const [publishingManifest, setPublishingManifest] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -22,14 +28,16 @@ export function ReleaseCenter() {
   const [category, setCategory] = useState<ReleaseNote['category']>('stability');
   const [highlights, setHighlights] = useState<string[]>(['']);
 
-  const loadReleases = async () => {
+  const sortReleases = (rows: ReleaseNote[]) =>
+    [...rows].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
+
+  const loadReleasesFromServer = async () => {
     setLoading(true);
     try {
       const db = getDb();
-      const snap = await getDocs(query(collection(db, 'release_notes')));
+      const snap = await getDocsFromServer(query(collection(db, 'release_notes')));
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ReleaseNote));
-      data.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
-      setReleases(data);
+      setReleases(sortReleases(data));
     } catch (error: any) {
       toast.error('Failed to load releases: ' + error.message);
     } finally {
@@ -38,8 +46,13 @@ export function ReleaseCenter() {
   };
 
   useEffect(() => {
-    loadReleases();
-  }, []);
+    if (syncedReleases) {
+      setReleases(sortReleases(syncedReleases));
+      setLoading(false);
+      return;
+    }
+    void loadReleasesFromServer();
+  }, [syncedReleases, syncToken]);
 
   const latestPublished = useMemo(
     () => releases.find(r => r.isPublished) ?? null,
@@ -99,7 +112,11 @@ export function ReleaseCenter() {
     }
     toast.success(options?.successMessage ?? 'Release saved!');
     resetForm();
-    await loadReleases();
+    if (onReleasesChanged) {
+      await onReleasesChanged();
+    } else {
+      await loadReleasesFromServer();
+    }
   };
 
   const handleSave = async (publish: boolean) => {
@@ -175,15 +192,25 @@ export function ReleaseCenter() {
             App manifest: v{PENDING_PLATFORM_RELEASE.version}
           </p>
         </div>
-        {!isCreating && !editingId && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            onClick={() => void (onReleasesChanged ? onReleasesChanged() : loadReleasesFromServer())}
+            className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Plus size={18} /> New Release
+            <RefreshCw size={14} />
+            Refresh
           </button>
-        )}
+          {!isCreating && !editingId && (
+            <button
+              type="button"
+              onClick={() => setIsCreating(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            >
+              <Plus size={18} /> New Release
+            </button>
+          )}
+        </div>
       </div>
 
       {!isCreating && !editingId && manifestReadyToPublish && (
@@ -301,6 +328,9 @@ export function ReleaseCenter() {
 
       {!isCreating && !editingId && (
         <div className="space-y-4">
+          {loading && (
+            <div className="text-center p-8 text-gray-500 text-sm">Loading release notes…</div>
+          )}
           {releases.length === 0 && !loading && !manifestReadyToPublish && (
             <div className="text-center p-10 bg-[#1C0E0A] border border-white/10 rounded-xl">
               <p className="text-gray-400">No releases found.</p>

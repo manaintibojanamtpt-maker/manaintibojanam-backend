@@ -3,7 +3,7 @@ import { CheckCircle2, Loader2, Shield, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchPendingKyc, reviewTenantKyc, type PendingKycTenant } from '../../services/api';
 
-export function KycReviewPanel() {
+export function KycReviewPanel({ refreshToken = 0 }: { refreshToken?: number }) {
   const [pending, setPending] = useState<PendingKycTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function KycReviewPanel() {
 
   useEffect(() => {
     void loadPending();
-  }, [loadPending]);
+  }, [loadPending, refreshToken]);
 
   const handleReview = async (tenantId: string, action: 'approve' | 'reject') => {
     if (action === 'reject' && !rejectReason[tenantId]?.trim()) {

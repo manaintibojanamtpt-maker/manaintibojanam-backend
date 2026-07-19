@@ -4,7 +4,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import {
   Building2, Users, Activity, Settings, Search, Filter, 
   CheckCircle2, Clock, LogOut, User, ChevronRight, Save, Shield, Key, Home,
-  TrendingUp, RefreshCw, AlertTriangle, Zap, BarChart, Bell, ChevronUp, ChevronDown, ArrowRight, UserPlus, Rocket, BrainCircuit
+  TrendingUp, RefreshCw, AlertTriangle, Zap, BarChart, Bell, ChevronUp, ChevronDown, ArrowRight, UserPlus, Rocket, BrainCircuit, ImageIcon
 } from 'lucide-react';
 import { 
   fetchAllTenants, updateTenantStatus,
@@ -27,9 +27,15 @@ import { ReleaseCenter } from '../components/admin/ReleaseCenter';
 import { InvestorDataRoomPanel } from '../components/admin/InvestorDataRoomPanel';
 import { TenantsCrmPanel } from '../components/admin/TenantsCrmPanel';
 import { KycReviewPanel } from '../components/admin/KycReviewPanel';
+import { OrderBhojanHomeHeroPanel } from '../components/admin/OrderBhojanHomeHeroPanel';
 import { exportInvestorReportPdf } from '../lib/exportInvestorReportPdf';
+import {
+  computePlatformSuperadminMetrics,
+  type PlatformSuperadminMetrics,
+} from '../lib/platformSuperadminMetrics';
+import type { ReleaseNote } from '../types';
 
-type SuperAdminTab = 'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'settings';
+type SuperAdminTab = 'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'orderbhojan' | 'settings';
 
 type PlatformAlert = {
   id: string;
@@ -45,6 +51,11 @@ export default function BhojanOSSuperAdmin() {
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('overview');
   const [tenants, setTenants] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
+  const [releases, setReleases] = useState<ReleaseNote[]>([]);
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformSuperadminMetrics>(() =>
+    computePlatformSuperadminMetrics([]),
+  );
+  const [syncGeneration, setSyncGeneration] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +95,7 @@ export default function BhojanOSSuperAdmin() {
 
       let tenantsData: any[] = [];
       let leadsData: any[] = [];
+      let releasesData: ReleaseNote[] = [];
 
       try {
         const serverPayload = await Promise.race([
@@ -92,6 +104,8 @@ export default function BhojanOSSuperAdmin() {
         ]);
         tenantsData = serverPayload.tenants;
         leadsData = serverPayload.leads;
+        releasesData = serverPayload.releases;
+        setPlatformMetrics(serverPayload.metrics);
         setDataSource('server');
         setFirebaseProjectId(serverPayload.projectId ?? null);
       } catch (serverError) {
@@ -108,13 +122,19 @@ export default function BhojanOSSuperAdmin() {
         if (leadResult.status === 'rejected') {
           console.warn('fetchOnboardingLeads failed', leadResult.reason);
         }
+        setPlatformMetrics(computePlatformSuperadminMetrics(tenantsData));
         setDataSource('client');
       }
 
       if (timeoutId) clearTimeout(timeoutId);
       setTenants(tenantsData);
       setLeads(leadsData);
+      setReleases(releasesData);
+      setSyncGeneration((current) => current + 1);
       setLastSyncedAt(new Date());
+      if (!isInitial && !options?.silent) {
+        toast.success('Platform data synced from production');
+      }
     } catch (error: any) {
       console.error("Failed to load SuperAdmin data", error);
       toast.error(error.message || "Failed to load platform data");
@@ -310,12 +330,20 @@ export default function BhojanOSSuperAdmin() {
     return { color: 'text-red-400', bg: 'bg-red-400', border: 'border-red-400/20', bgFill: 'bg-red-400/10', label: '🔴 Registration Only' };
   };
 
-  const activeTenantsCount = tenants.filter(t => t.status === 'active').length;
-  const trialTenantsCount = tenants.filter(t => t.status === 'trialing' || t.status === 'pending').length;
-  const suspendedTenantsCount = tenants.filter(t => t.status === 'suspended' || t.status === 'rejected').length;
-  
-  const mrr = activeTenantsCount * 4999;
-  const arr = mrr * 12;
+  const activeTenantsCount = platformMetrics.activeTenantsCount;
+  const trialTenantsCount = platformMetrics.trialTenantsCount;
+  const suspendedTenantsCount = platformMetrics.suspendedTenantsCount;
+  const mrr = platformMetrics.mrr;
+  const arr = platformMetrics.arr;
+  const arpu = platformMetrics.arpu;
+  const ordersProcessed = platformMetrics.ordersProcessed;
+  const churnRisk = platformMetrics.churnRisk;
+  const verifiedMerchants = platformMetrics.verifiedMerchants;
+  const fssaiVerified = platformMetrics.fssaiVerified;
+  const complianceOverdue = platformMetrics.complianceOverdue;
+  const activeSubscriptions = platformMetrics.activeSubscriptions;
+  const firstOrdersCount = platformMetrics.firstOrdersCount;
+  const publishedStoresCount = platformMetrics.publishedStoresCount;
 
   const demoRequests = leads.filter(l => l.source === 'Landing Page Demo Book').length;
   const newLeadsCount = leads.filter(l => l.stage === 'new').length;
@@ -323,16 +351,6 @@ export default function BhojanOSSuperAdmin() {
 
   const leadToTrialConv = leads.length > 0 ? Math.round((trialTenantsCount / leads.length) * 100) : 0;
   const trialToPaidConv = trialTenantsCount + activeTenantsCount > 0 ? Math.round((activeTenantsCount / (trialTenantsCount + activeTenantsCount)) * 100) : 0;
-  
-  const ordersProcessed = activeTenantsCount * 1240 + trialTenantsCount * 120; // Simulated
-  const churnRisk = Math.max(0, activeTenantsCount - 2); // Simulated
-
-  const verifiedMerchants = tenants.filter(
-    (t) => (t.kyc?.verificationLevel ?? 0) >= 2 || t.kyc?.status === 'verified',
-  ).length;
-  const fssaiVerified = tenants.filter(t => t.fssai?.verificationStatus === 'verified' || t.fssai?.verificationStatus === 'submitted').length;
-  const complianceOverdue = tenants.filter(t => t.fssai?.verificationStatus === 'compliance_overdue').length;
-  const activeSubscriptions = tenants.filter(t => t.subscription?.status === 'active').length;
 
   const investorFunnel = useMemo(
     () => [
@@ -341,11 +359,11 @@ export default function BhojanOSSuperAdmin() {
       { step: 'KYC Completed', count: verifiedMerchants },
       { step: 'Location Added', count: tenants.filter(t => t.location?.lat).length },
       { step: 'Menu Uploaded', count: tenants.filter(t => t.menuCount > 0 || t.status === 'active').length },
-      { step: 'Store Published', count: activeTenantsCount },
-      { step: 'First Order', count: Math.round(activeTenantsCount * 0.8) },
+      { step: 'Store Published', count: publishedStoresCount },
+      { step: 'First Order', count: firstOrdersCount },
       { step: 'Paid Subscription', count: activeSubscriptions },
     ],
-    [tenants, verifiedMerchants, activeTenantsCount, activeSubscriptions],
+    [tenants, verifiedMerchants, publishedStoresCount, firstOrdersCount, activeSubscriptions],
   );
 
   const handleExportInvestorPdf = async () => {
@@ -456,6 +474,7 @@ export default function BhojanOSSuperAdmin() {
     { id: 'leads', icon: Users, label: 'Leads' },
     { id: 'investors', icon: TrendingUp, label: 'Investors' },
     { id: 'releases', icon: Zap, label: 'Releases' },
+    { id: 'orderbhojan', icon: ImageIcon, label: 'Hero' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -518,6 +537,18 @@ export default function BhojanOSSuperAdmin() {
               >
                 <Rocket size={18} className={activeTab === 'releases' ? 'text-white' : 'text-gray-500'} /> 
                 Release Center
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange('orderbhojan')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  activeTab === 'orderbhojan'
+                  ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}
+              >
+                <ImageIcon size={18} className={activeTab === 'orderbhojan' ? 'text-white' : 'text-gray-500'} />
+                OrderBhojan Hero
               </button>
               <button
                 type="button"
@@ -587,6 +618,11 @@ export default function BhojanOSSuperAdmin() {
               <RefreshCw size={14} className={`text-gray-400 group-hover:text-white ${refreshing ? 'animate-spin' : ''}`} />
               Sync Data
             </button>
+            {lastSyncedAt && (
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest hidden lg:inline">
+                Synced {lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
             
             <div className="h-6 w-px bg-white/10"></div>
             
@@ -725,7 +761,7 @@ export default function BhojanOSSuperAdmin() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                     <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">First Orders (Beta)</div>
-                      <div className="text-2xl font-black text-white">{Math.round(activeTenantsCount * 0.8)}</div>
+                      <div className="text-2xl font-black text-white">{firstOrdersCount}</div>
                     </m.div>
                     
                     <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }} className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
@@ -787,7 +823,7 @@ export default function BhojanOSSuperAdmin() {
                   </AnimatePresence>
 
                   <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}>
-                    <KycReviewPanel />
+                    <KycReviewPanel refreshToken={syncGeneration} />
                   </m.div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -800,7 +836,7 @@ export default function BhojanOSSuperAdmin() {
                          <div className="flex justify-between items-start mb-8">
                            <div>
                              <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-1"><TrendingUp size={16} className="text-orange-500"/> Revenue Intelligence</h3>
-                             <p className="text-gray-500 text-xs font-medium">Real-time subscription metrics</p>
+                             <p className="text-gray-500 text-xs font-medium">Live subscription + production order analytics</p>
                            </div>
                            <div className="text-right">
                              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Growth Trend</div>
@@ -821,7 +857,7 @@ export default function BhojanOSSuperAdmin() {
                            </div>
                            <div>
                              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">ARPU</div>
-                             <div className="text-3xl font-black text-white tracking-tighter">₹4,999</div>
+                             <div className="text-3xl font-black text-white tracking-tighter">₹{arpu.toLocaleString()}</div>
                            </div>
                            <div>
                              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Churn Risk</div>
@@ -998,12 +1034,12 @@ export default function BhojanOSSuperAdmin() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                     <div className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Beta Merchants Onboarded</div>
-                      <div className="text-3xl font-black text-white">{tenants.filter(t => t.beta?.isBetaUser).length} / 10</div>
+                      <div className="text-3xl font-black text-white">{platformMetrics.betaMerchantsCount} / 10</div>
                     </div>
                     
                     <div className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
                       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Stores Published</div>
-                      <div className="text-3xl font-black text-blue-400">{tenants.filter(t => t.beta?.isBetaUser && t.status === 'active').length}</div>
+                      <div className="text-3xl font-black text-blue-400">{platformMetrics.betaPublishedCount}</div>
                     </div>
 
                     <div className="bg-[#151515] p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden">
@@ -1247,8 +1283,8 @@ export default function BhojanOSSuperAdmin() {
                           { step: 'KYC Completed', count: verifiedMerchants, drop: 30 },
                           { step: 'Location Added', count: tenants.filter(t => t.location?.lat).length, drop: 5 },
                           { step: 'Menu Uploaded', count: tenants.filter(t => t.menuCount > 0 || t.status === 'active').length, drop: 20 },
-                          { step: 'Store Published', count: activeTenantsCount, drop: 15 },
-                          { step: 'First Order', count: Math.round(activeTenantsCount * 0.8), drop: 20 },
+                          { step: 'Store Published', count: publishedStoresCount, drop: 15 },
+                          { step: 'First Order', count: firstOrdersCount, drop: 20 },
                           { step: 'Paid Subscription', count: activeSubscriptions, drop: 40 }
                         ].map((stage, i, arr) => {
                           const maxCount = arr[0].count || 1;
@@ -1320,7 +1356,21 @@ export default function BhojanOSSuperAdmin() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <ReleaseCenter />
+                  <ReleaseCenter
+                    releases={releases}
+                    syncToken={syncGeneration}
+                    onReleasesChanged={() => void loadData({ silent: true })}
+                  />
+                </m.div>
+              )}
+
+              {activeTab === 'orderbhojan' && (
+                <m.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <OrderBhojanHomeHeroPanel />
                 </m.div>
               )}
 

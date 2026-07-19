@@ -179,6 +179,7 @@ export async function validateMarketplaceCart(
     ...request,
     restaurantId,
     lines: resolvedLines,
+    couponCode: undefined,
   });
 
   return { valid, quote, issues, resolvedLines };
