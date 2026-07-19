@@ -53,6 +53,17 @@ export function getMarketplaceQueryBehavior(): MarketplaceQueryBehavior {
   };
 }
 
+export function getSearchQueryBehavior(): MarketplaceQueryBehavior {
+  const base = getMarketplaceQueryBehavior();
+  return {
+    ...base,
+    // Search is user-driven; polling every 5s keeps autocomplete stuck on "Loading…".
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    staleTime: MARKETPLACE_LIVE_STALE_TIME_MS,
+  };
+}
+
 export function shouldBypassMarketplaceHttpCache(): boolean {
   return isLiveStorefrontSyncEnabled();
 }

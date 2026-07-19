@@ -11,8 +11,15 @@ services:
       # PLATFORM_TIER=standard  → enables AutoPilot crons, extended telemetry (vs default free)
       # CRON_SECRET=<long random> → Bearer auth for POST /api/cron/* (founder-alerts, expire-unpaid-payments)
       # RESEND_API_KEY / EMAIL_*  → founder alert emails
-      # TINYFISH_API_KEY            → fast menu item search (GET api.search.tinyfish.ai)
-      # TINYFISH_MENU_SEARCH_ENABLED=true (default when key set; set false for Firestore-only)
+      # TINYFISH_API_KEY              → primary key for menu search (GET api.search.tinyfish.ai)
+      # TINYFISH_SEARCH_API_KEY         → alternate key name (fallback if TINYFISH_API_KEY unset)
+      # TINYFISH_MENU_SEARCH_ENABLED    → set false to force Firestore-only menu search
+      # TINYFISH_SEARCH_ENABLED         → alias disable flag (false = Firestore-only)
+      # TINYFISH_SEARCH_LOCATION=IN     → TinyFish geo hint (default IN)
+      # TINYFISH_SEARCH_LANGUAGE=en     → TinyFish language (default en)
+      # TINYFISH_SEARCH_TIMEOUT_MS=800  → max wait before Firestore fallback (default 800)
+      # TINYFISH_SEARCH_CACHE_TTL_MS=300000 → in-process query expansion cache (default 5m)
+      # Set TINYFISH_API_KEY in Render Dashboard → Environment (Secrets). Backend reads via readTinyFishSearchConfig().
       # See docs/OBSERVABILITY-RUNBOOK.md and PRODUCTION_OPERATIONS.md
       - key: ORDERBHOJAN_URL
         value: https://orderbhojan.web.app

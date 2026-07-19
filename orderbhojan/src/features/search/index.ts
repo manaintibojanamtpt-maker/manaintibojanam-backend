@@ -8,6 +8,7 @@ export { useSearchFeatureEnabled } from './hooks/useSearchFeature';
 export { useSearchBrowse, useSearchLocationInvalidation } from './hooks/useSearchBrowse';
 export { useSearchResults } from './hooks/useSearchResults';
 export { useMenuItemSearch } from './hooks/useMenuItemSearch';
+export { useMenuItemSearchSuggestions } from './hooks/useMenuItemSearchSuggestions';
 export { useSearchSuggestions } from './hooks/useSearchSuggestions';
 export { searchKeys } from './hooks/searchQueryKeys';
 export {

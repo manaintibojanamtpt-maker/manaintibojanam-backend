@@ -18,9 +18,11 @@ describe('Sprint 19 — live search sync', () => {
       'src/features/search/hooks/useSearchResults.ts',
       'src/features/search/hooks/useSearchSuggestions.ts',
       'src/features/search/hooks/useSearchBrowse.ts',
+      'src/features/search/hooks/useMenuItemSearch.ts',
+      'src/features/search/hooks/useMenuItemSearchSuggestions.ts',
     ]) {
       const source = fs.readFileSync(path.join(root, file), 'utf8');
-      assert.match(source, /getMarketplaceQueryBehavior/);
+      assert.match(source, /getSearchQueryBehavior/);
     }
   });
 

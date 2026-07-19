@@ -7,6 +7,7 @@ import type {
   SearchFilters,
   SearchPlatformResponse,
   SearchQueryParams,
+  MenuItemSearchResponse,
   SearchRecentResponse,
   SearchResultItem,
   SearchResultSection,
@@ -47,6 +48,15 @@ const MOCK_FOODS: SearchResultItem[] = [
     subtitle: 'Limited time festive platter',
     imageUrl: 'https://placehold.co/120x120/gold/white?text=Thali',
     meta: { price: 399, isVeg: true },
+  },
+  {
+    id: 'food_andhra_mini_thali',
+    type: 'food',
+    label: 'Andhra Veg Thali (Mini)',
+    subtitle: 'Veg Thali (South Indian Meals)',
+    imageUrl: 'https://placehold.co/120x120/green/white?text=Thali',
+    slug: 'lucky-s-kitchen',
+    meta: { price: 149, isVeg: true },
   },
 ];
 
@@ -412,6 +422,27 @@ export function buildSearchPlatformResponse(
       provider: 'mock-search-platform',
       totalResults,
       tookMs: 12,
+    },
+  };
+}
+
+export function buildMenuItemSearchResponse(params: SearchQueryParams): MenuItemSearchResponse {
+  const query = params.q.trim();
+  const nq = normalizeQuery(query);
+  const items = MOCK_FOODS.filter(
+    (food) =>
+      !nq ||
+      matchesQuery(food.label, query) ||
+      matchesQuery(food.subtitle ?? '', query),
+  ).slice(0, params.limit ?? 12);
+
+  return {
+    query,
+    items,
+    meta: {
+      provider: 'mock-menu-item-search',
+      totalResults: items.length,
+      tookMs: 8,
     },
   };
 }

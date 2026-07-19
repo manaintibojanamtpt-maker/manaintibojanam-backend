@@ -69,6 +69,26 @@ export function searchMenuItemsLocally(
   return rankMenuItemsByTerms(items, [query], limit);
 }
 
+function waitMs(ms: number): Promise<null> {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(null), ms);
+  });
+}
+
+function hasStrongLocalMenuMatch(query: string, localItems: readonly SearchMenuItem[]): boolean {
+  const normalizedQuery = normalizeForMatch(query);
+  if (!normalizedQuery || localItems.length === 0) return false;
+
+  return localItems.some((item) => {
+    const normalizedName = normalizeForMatch(item.name);
+    return (
+      normalizedName === normalizedQuery ||
+      normalizedName.startsWith(normalizedQuery) ||
+      normalizedName.includes(normalizedQuery)
+    );
+  });
+}
+
 export async function searchMenuItems(
   query: string,
   items: readonly SearchMenuItem[],
@@ -80,17 +100,29 @@ export async function searchMenuItems(
   },
 ): Promise<MenuItemSearchResult> {
   const started = Date.now();
+  const localItems = searchMenuItemsLocally(query, items, limit);
   const tinyFishEnabled = options?.tinyFishEnabled ?? isTinyFishMenuSearchEnabled();
   const config = options?.config ?? readTinyFishSearchConfig();
 
+  if (hasStrongLocalMenuMatch(query, localItems)) {
+    return {
+      items: localItems,
+      provider: 'firestore-menu-search',
+      tookMs: Date.now() - started,
+    };
+  }
+
   if (tinyFishEnabled && config?.enabled) {
     try {
-      const terms = await fetchTinyFishQueryTerms(query, {
-        fetchImpl: options?.fetchImpl,
-        config,
-      });
-      const ranked = rankMenuItemsByTerms(items, terms, limit);
-      if (ranked.length > 0) {
+      const ranked = await Promise.race([
+        fetchTinyFishQueryTerms(query, {
+          fetchImpl: options?.fetchImpl,
+          config,
+        }).then((terms) => rankMenuItemsByTerms(items, terms, limit)),
+        waitMs(config.timeoutMs),
+      ]);
+
+      if (ranked && ranked.length > 0) {
         return {
           items: ranked,
           provider: 'tinyfish-menu-search',
@@ -103,7 +135,7 @@ export async function searchMenuItems(
   }
 
   return {
-    items: searchMenuItemsLocally(query, items, limit),
+    items: localItems,
     provider: 'firestore-menu-search',
     tookMs: Date.now() - started,
   };

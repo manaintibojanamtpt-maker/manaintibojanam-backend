@@ -269,7 +269,26 @@ async function loadMenuItemsForTenants(
   return items;
 }
 
-export async function loadSearchContext(
+const SEARCH_CONTEXT_CACHE_TTL_MS = 60_000;
+
+interface CachedSearchContextEntry {
+  readonly context: SearchContext;
+  readonly expiresAt: number;
+}
+
+const searchContextCache = new Map<string, CachedSearchContextEntry>();
+const inflightSearchContextLoads = new Map<string, Promise<SearchContext>>();
+
+function searchContextCacheKey(coords: { lat: number; lng: number }): string {
+  return `${coords.lat.toFixed(2)}:${coords.lng.toFixed(2)}`;
+}
+
+export function resetSearchContextCacheForTests(): void {
+  searchContextCache.clear();
+  inflightSearchContextLoads.clear();
+}
+
+async function loadSearchContextUncached(
   db: Firestore,
   coords: { lat: number; lng: number },
 ): Promise<SearchContext> {
@@ -294,6 +313,38 @@ export async function loadSearchContext(
 
   const menuItems = await loadMenuItemsForTenants(db, tenantIds, slugByTenantId);
   return { restaurants, menuItems, poolSyncRevision };
+}
+
+export async function loadSearchContext(
+  db: Firestore,
+  coords: { lat: number; lng: number },
+): Promise<SearchContext> {
+  const key = searchContextCacheKey(coords);
+  const now = Date.now();
+  const cached = searchContextCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.context;
+  }
+
+  const inflight = inflightSearchContextLoads.get(key);
+  if (inflight) return inflight;
+
+  const loadPromise = loadSearchContextUncached(db, coords)
+    .then((context) => {
+      searchContextCache.set(key, {
+        context,
+        expiresAt: Date.now() + SEARCH_CONTEXT_CACHE_TTL_MS,
+      });
+      inflightSearchContextLoads.delete(key);
+      return context;
+    })
+    .catch((error: unknown) => {
+      inflightSearchContextLoads.delete(key);
+      throw error;
+    });
+
+  inflightSearchContextLoads.set(key, loadPromise);
+  return loadPromise;
 }
 
 export function parseSearchQueryParams(url: URL): SearchQueryParams {
@@ -495,11 +546,7 @@ export async function buildSearchSuggestions(
         });
       }
     }
-    const menuMatches = await searchMenuItems(query, context.menuItems, 6);
-    const foodItems =
-      menuMatches.items.length > 0
-        ? menuMatches.items
-        : searchMenuItemsLocally(query, context.menuItems, 6);
+    const foodItems = searchMenuItemsLocally(query, context.menuItems, 6);
     for (const item of foodItems) {
       suggestions.push({ id: `sug_f_${item.id}`, label: item.name, type: 'food' });
     }

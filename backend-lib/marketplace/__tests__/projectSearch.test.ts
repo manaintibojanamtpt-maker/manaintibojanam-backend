@@ -74,4 +74,14 @@ describe('projectSearch', () => {
     assert.match(source, /\/search\/collections/);
     assert.match(source, /buildSearchPlatformResponse/);
   });
+
+  it('caches and dedupes search context loads by coordinates', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'backend-lib/marketplace/projectSearch.ts'),
+      'utf8',
+    );
+    assert.match(source, /searchContextCache/);
+    assert.match(source, /inflightSearchContextLoads/);
+    assert.match(source, /resetSearchContextCacheForTests/);
+  });
 });

@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { Section } from '@bhojan/storefront-design-system/primitives/Section';
 import { useSearchBrowse } from '@/features/search/hooks/useSearchBrowse';
-import { useSearchResults } from '@/features/search/hooks/useSearchResults';
+import { useMenuItemSearch } from '@/features/search/hooks/useMenuItemSearch';
 import { useSearchHistoryStore, useSearchSessionStore } from '@/features/search/store/searchStore';
 import {
   OrderBhojanDiscoveryOfflineNotice,
@@ -25,11 +25,23 @@ export function OrderBhojanSearchExperience() {
   const online = useOnlineStatus();
 
   const browseQuery = useSearchBrowse();
-  const resultsQuery = useSearchResults(query);
+  const menuSearchQuery = useMenuItemSearch(query);
 
   const trimmed = query.trim();
   const isSearching = trimmed.length > 0;
   const fieldRef = useRef<HTMLDivElement>(null);
+
+  const menuResultsSection = useMemo(() => {
+    const items = menuSearchQuery.data?.items ?? [];
+    if (items.length === 0) return null;
+    return {
+      id: 'menu-items',
+      title: 'Menu items',
+      type: 'food' as const,
+      items,
+      total: menuSearchQuery.data?.meta.totalResults ?? items.length,
+    };
+  }, [menuSearchQuery.data?.items, menuSearchQuery.data?.meta.totalResults]);
 
   useEffect(() => {
     const initial = searchParams.get('q')?.trim();
@@ -48,7 +60,7 @@ export function OrderBhojanSearchExperience() {
   const handleSubmit = () => {
     if (!trimmed) return;
     addTerm(trimmed);
-    void resultsQuery.refetch();
+    void menuSearchQuery.refetch();
   };
 
   return (
@@ -68,7 +80,7 @@ export function OrderBhojanSearchExperience() {
           <div className="py-6">
             <OrderBhojanDiscoveryOfflineNotice
               onRetry={() => {
-                if (isSearching) void resultsQuery.refetch();
+                if (isSearching) void menuSearchQuery.refetch();
                 else void browseQuery.refetch();
               }}
             />
@@ -78,17 +90,19 @@ export function OrderBhojanSearchExperience() {
         {isSearching ? (
           <div className="space-y-6 py-6">
             <OrderBhojanSearchFiltersBar />
-            {resultsQuery.isLoading ? <OrderBhojanSearchResultsSkeleton /> : null}
-            {resultsQuery.isError ? (
+            {menuSearchQuery.isFetching && !menuSearchQuery.data && !menuResultsSection ? (
+              <OrderBhojanSearchResultsSkeleton />
+            ) : null}
+            {menuSearchQuery.isError ? (
               <OrderBhojanDiscoveryUxState
                 variant="error"
                 title="Search unavailable"
                 description="Please check your connection and try again."
                 primaryLabel="Retry"
-                onPrimary={() => void resultsQuery.refetch()}
+                onPrimary={() => void menuSearchQuery.refetch()}
               />
             ) : null}
-            {resultsQuery.data && resultsQuery.data.meta.totalResults === 0 ? (
+            {menuSearchQuery.data && menuSearchQuery.data.meta.totalResults === 0 ? (
               <OrderBhojanDiscoveryUxState
                 variant="no-results"
                 title={`No results for "${trimmed}"`}
@@ -97,14 +111,14 @@ export function OrderBhojanSearchExperience() {
                 onPrimary={() => setQuery('')}
               />
             ) : null}
-            {resultsQuery.data?.sections.map((section) => (
+            {menuResultsSection ? (
               <OrderBhojanSearchResultsSection
-                key={section.id}
-                section={section}
+                key={menuResultsSection.id}
+                section={menuResultsSection}
                 query={trimmed}
                 onSelectTerm={selectTerm}
               />
-            ))}
+            ) : null}
           </div>
         ) : browseQuery.isError ? (
           <div className="py-6">

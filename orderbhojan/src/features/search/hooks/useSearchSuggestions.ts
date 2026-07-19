@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
+import { getSearchQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import { loadSearchSuggestions, resolveSearchCoords } from '../engine/searchPlatform';
 import {
@@ -14,13 +14,13 @@ export function useSearchSuggestions(rawQuery: string) {
   const activeLocation = useActiveLocation();
   const coords = resolveSearchCoords(activeLocation);
   const query = useDebouncedValue(rawQuery.trim(), SEARCH_DEBOUNCE_MS);
-  const liveQuery = getMarketplaceQueryBehavior();
+  const searchQuery = getSearchQueryBehavior();
 
   return useQuery({
     queryKey: searchKeys.suggestions(query, coords.lat, coords.lng),
     queryFn: () => loadSearchSuggestions({ ...coords, q: query }),
     enabled: enabled && query.length > 0,
-    ...liveQuery,
+    ...searchQuery,
     retry: 1,
   });
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { MarketplaceSearchBar } from '@bhojan/storefront-design-system/marketplace/MarketplaceSearchBar';
 import type { AutocompleteItem } from '@bhojan/storefront-design-system/marketplace/types';
-import { useSearchSuggestions } from '@/features/search/hooks/useSearchSuggestions';
+import { useMenuItemSearchSuggestions } from '@/features/search/hooks/useMenuItemSearchSuggestions';
 import { useSearchSessionStore } from '@/features/search/store/searchStore';
 import { trackSearchEvent } from '@/features/search/analytics/searchAnalytics';
 import {
@@ -22,14 +22,14 @@ export function OrderBhojanSearchBar({ onSubmit, onSelectTerm, inputRef }: Order
   const setFocused = useSearchSessionStore((s) => s.setFocused);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  const suggestionsQuery = useSearchSuggestions(query);
+  const suggestionsQuery = useMenuItemSearchSuggestions(query);
   const trimmed = query.trim();
   const showAutocomplete = trimmed.length > 0 && isFocused;
 
   const autocompleteView = useMemo(
     () =>
       mapSearchSuggestionsToAutocompleteView({
-        suggestions: suggestionsQuery.data?.suggestions,
+        suggestions: suggestionsQuery.suggestions,
         query,
         isFocused: showAutocomplete,
         isFetching: suggestionsQuery.isFetching,
@@ -37,7 +37,7 @@ export function OrderBhojanSearchBar({ onSubmit, onSelectTerm, inputRef }: Order
         activeIndex,
       }),
     [
-      suggestionsQuery.data?.suggestions,
+      suggestionsQuery.suggestions,
       suggestionsQuery.isFetching,
       suggestionsQuery.isError,
       query,

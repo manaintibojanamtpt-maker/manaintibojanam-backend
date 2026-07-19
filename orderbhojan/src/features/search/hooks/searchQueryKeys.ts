@@ -12,3 +12,6 @@ export const searchKeys = {
 export const SEARCH_STALE_TIME_MS = 60_000;
 export const SEARCH_GC_TIME_MS = 5 * 60_000;
 export const SEARCH_DEBOUNCE_MS = 280;
+export const SEARCH_SUGGESTIONS_DEBOUNCE_MS = 150;
+/** Client-side cap so autocomplete falls back to local cache instead of hanging. */
+export const SEARCH_CLIENT_TIMEOUT_MS = 4_500;

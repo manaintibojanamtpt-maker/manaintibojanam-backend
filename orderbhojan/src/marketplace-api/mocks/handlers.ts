@@ -27,6 +27,7 @@ import {
 } from './foodExperienceMockLogic';
 import {
   buildLegacySearchResponse,
+  buildMenuItemSearchResponse,
   buildSearchCollections,
   buildSearchPlatformResponse,
   buildSearchRecent,
@@ -147,6 +148,11 @@ export const marketplaceHandlers = [
     }
     const params = parseSearchQueryParams(url);
     return success(buildSearchPlatformResponse(params));
+  }),
+
+  http.get(`${prefix}/search/menu-items`, ({ request }) => {
+    const params = parseSearchQueryParams(new URL(request.url));
+    return success(buildMenuItemSearchResponse(params));
   }),
 
   http.get(`${prefix}/search/suggestions`, ({ request }) => {

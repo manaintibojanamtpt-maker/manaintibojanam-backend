@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getMarketplaceQueryBehavior,
+  getSearchQueryBehavior,
   isLiveStorefrontSyncEnabled,
   MARKETPLACE_LIVE_REFETCH_INTERVAL_MS,
   MARKETPLACE_LIVE_STALE_TIME_MS,
@@ -22,5 +23,11 @@ describe('marketplaceQueryPolicy', () => {
   it('documents revision-driven sync interval target', () => {
     assert.equal(MARKETPLACE_LIVE_STALE_TIME_MS, 30_000);
     assert.equal(MARKETPLACE_LIVE_REFETCH_INTERVAL_MS, 5_000);
+  });
+
+  it('search queries never poll on an interval', () => {
+    const searchBehavior = getSearchQueryBehavior();
+    assert.equal(searchBehavior.refetchInterval, false);
+    assert.equal(searchBehavior.refetchIntervalInBackground, false);
   });
 });
