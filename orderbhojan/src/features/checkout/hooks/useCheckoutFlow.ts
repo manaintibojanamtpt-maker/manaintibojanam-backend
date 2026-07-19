@@ -12,6 +12,8 @@ import {
   clearCheckoutPrepareSessionsExcept,
   persistCheckoutPrepareSession,
   readCheckoutPrepareSession,
+  cloneCheckoutPrepareForQuery,
+  type CheckoutPrepareQueryData,
 } from '../infrastructure/checkoutQuoteSession';
 import {
   claimCustomerUpiPayment,
@@ -242,7 +244,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     );
   }, [activeLocation, appliedCouponCode, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
 
-  const prepareQuery = useQuery({
+  const prepareQuery = useQuery<CheckoutPrepareQueryData>({
     queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
     queryFn: async () => {
       markPerf('checkout_prepare_start', 'checkout-page');
@@ -253,7 +255,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       if (prepareSignature && cartSignature) {
         persistCheckoutPrepareSession(prepareSignature, cartSignature, response);
       }
-      return response;
+      return cloneCheckoutPrepareForQuery(response);
     },
     enabled:
       canCheckout &&
@@ -264,8 +266,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
     gcTime: CHECKOUT_PREPARE_GC_MS,
     placeholderData: (previous, query) => {
       if (previous) return previous;
-      if (query.queryKey[2] !== prepareSignature) return undefined;
-      return sessionPrepare ?? undefined;
+      if (query?.queryKey[2] !== prepareSignature) return undefined;
+      return sessionPrepare ? cloneCheckoutPrepareForQuery(sessionPrepare) : undefined;
     },
     refetchOnWindowFocus: false,
     retry: 1,

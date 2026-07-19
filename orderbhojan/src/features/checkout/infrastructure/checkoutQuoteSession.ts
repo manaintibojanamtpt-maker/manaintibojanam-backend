@@ -91,3 +91,20 @@ export function clearCheckoutPrepareSessionsExcept(cartSignature: string): void 
   const entries = readEntries().filter((entry) => entry.cartSignature === cartSignature);
   writeEntries(entries);
 }
+
+
+export type CheckoutPrepareQueryData = {
+  paymentMethods: string[];
+  quote: CheckoutPrepareResponse["quote"];
+  scheduling?: CheckoutPrepareResponse["scheduling"];
+};
+
+export function cloneCheckoutPrepareForQuery(
+  response: CheckoutPrepareResponse,
+): CheckoutPrepareQueryData {
+  return {
+    paymentMethods: [...response.paymentMethods],
+    quote: response.quote,
+    scheduling: response.scheduling,
+  };
+}

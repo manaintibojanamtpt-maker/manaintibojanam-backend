@@ -36,7 +36,7 @@ export function useMenuItemSearchSuggestions(rawQuery: string, limit = 8) {
     [limit, rawQuery],
   );
 
-  const apiQuery = useQuery({
+  const apiQuery = useQuery<SearchSuggestion[]>({
     queryKey: [...searchKeys.all, 'menu-suggestions', query, coords.lat, coords.lng, limit] as const,
     queryFn: async () => {
       const localItems = filterLocalMenuItems(query, getCachedMenuItemsForSearch(), limit);
@@ -50,9 +50,9 @@ export function useMenuItemSearchSuggestions(rawQuery: string, limit = 8) {
           }),
         );
         mergeMenuItemsIntoSearchCache(response.items);
-        return menuItemsToSuggestions(response.items);
+        return [...menuItemsToSuggestions(response.items)];
       } catch {
-        return menuItemsToSuggestions(localItems);
+        return [...menuItemsToSuggestions(localItems)];
       }
     },
     enabled: enabled && hasQuery,
@@ -61,7 +61,7 @@ export function useMenuItemSearchSuggestions(rawQuery: string, limit = 8) {
     placeholderData: (previous) => {
       if (previous?.length) return previous;
       if (localSuggestions.length === 0) return undefined;
-      return localSuggestions;
+      return [...localSuggestions];
     },
   });
 

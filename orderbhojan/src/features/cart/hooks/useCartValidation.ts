@@ -70,7 +70,7 @@ export function useCartValidation(options?: { enabled?: boolean; autoApply?: boo
     lastAppliedKeyRef.current = applyKey;
     const messages = applyCartValidationResult(lines, query.data);
     if (messages.length > 0) {
-      setSyncMessages(messages);
+      setSyncMessages([...messages]);
     }
   }, [autoApply, cartSignature, lines, query.data, query.dataUpdatedAt]);
 

@@ -23,7 +23,6 @@ export function applyCartValidationResult(
   result: CartValidationSyncInput,
 ): readonly string[] {
   const messages: string[] = [];
-  const store = useCartStore.getState();
   let nextLines = [...lines];
 
   const removeFoodIds = new Set(
