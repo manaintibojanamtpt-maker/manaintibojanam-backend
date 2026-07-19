@@ -62,6 +62,8 @@ export function OrderBhojanCheckoutPage() {
     placeRazorpayOrder,
     placeUpiOrder,
     placingMethod,
+    quoteIsRefreshing,
+    quoteIsStale,
     upiSession,
     upiVerifying,
     upiPollMessage,
@@ -87,7 +89,7 @@ export function OrderBhojanCheckoutPage() {
 
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
-  const billRefreshing = isPreparing && Boolean(quote);
+  const billRefreshing = quoteIsRefreshing || (quoteIsStale && isPreparing);
   const checkoutActionsDisabled = isPlacing || !quote;
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
@@ -304,7 +306,9 @@ export function OrderBhojanCheckoutPage() {
         totalLabel: `₹${quote.grandTotal}`,
         deliveryPendingNote: quote.deliveryPending
           ? 'Delivery fee pending address confirmation'
-          : undefined,
+          : quoteIsStale
+            ? 'Updating taxes and delivery for your address…'
+            : undefined,
       }
     : estimatedSubtotal > 0
       ? {
@@ -313,6 +317,8 @@ export function OrderBhojanCheckoutPage() {
           deliveryPendingNote: 'Calculating taxes and delivery…',
         }
       : undefined;
+
+  const showQuoteSkeleton = isPreparing && !billView;
 
   const deliverySlotView =
     scheduling && scheduling.deliverySlots.length > 0
@@ -347,7 +353,7 @@ export function OrderBhojanCheckoutPage() {
       deliverySlot={deliverySlotView}
       onDeliverySlotChange={setDeliveryTimeSlot}
       bill={billView}
-      quoteLoading={isPreparing && !billView}
+      quoteLoading={showQuoteSkeleton}
       billRefreshing={billRefreshing}
       contact={{
         value: phone,

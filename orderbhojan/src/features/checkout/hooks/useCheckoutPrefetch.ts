@@ -7,6 +7,10 @@ import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
 import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
+import {
+  buildCheckoutCartSignature,
+  persistCheckoutPrepareSession,
+} from '../infrastructure/checkoutQuoteSession';
 import { checkoutKeys, CHECKOUT_PREPARE_GC_MS, CHECKOUT_PREPARE_STALE_MS } from './checkoutQueryKeys';
 
 export function useCheckoutPrefetch(enabled = true): void {
@@ -37,6 +41,11 @@ export function useCheckoutPrefetch(enabled = true): void {
       lat: coords.lat,
       lng: coords.lng,
     });
+    const cartSignature = buildCheckoutCartSignature({
+      restaurantId: resolvedRestaurantId,
+      contextToken,
+      lines,
+    });
     const payload = buildCheckoutPayload(lines, resolvedRestaurantId, contextToken, activeLocation);
 
     markPerf('checkout_prepare_start', 'prefetch');
@@ -45,6 +54,7 @@ export function useCheckoutPrefetch(enabled = true): void {
         queryKey: checkoutKeys.prepare(signature),
         queryFn: async () => {
           const response = await getMarketplaceApiClient().checkoutPrepare(payload);
+          persistCheckoutPrepareSession(signature, cartSignature, response);
           markPerf('checkout_prepare_end', 'prefetch');
           markPerf('checkout_bill_ready', 'prefetch');
           return response;

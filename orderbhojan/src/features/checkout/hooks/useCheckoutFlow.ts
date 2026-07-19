@@ -6,6 +6,11 @@ import { useRestaurantContextStore } from '@/features/restaurant/store/restauran
 import { hasReadyDeliveryLocation, useActiveLocation } from '@/features/location';
 import { runRazorpayCheckoutFlow } from '../infrastructure/razorpayCheckout';
 import {
+  buildCheckoutCartSignature,
+  persistCheckoutPrepareSession,
+  readCheckoutPrepareSession,
+} from '../infrastructure/checkoutQuoteSession';
+import {
   claimCustomerUpiPayment,
   fetchOrderPaymentSnapshot,
   pollUpiPaymentStatus,
@@ -84,6 +89,8 @@ export interface CheckoutFlowState {
   readonly itemCount: number;
   readonly canCheckout: boolean;
   readonly placingMethod: 'cod' | 'razorpay' | 'upi' | null;
+  readonly quoteIsRefreshing: boolean;
+  readonly quoteIsStale: boolean;
   setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
@@ -161,6 +168,20 @@ export function useCheckoutFlow(): CheckoutFlowState {
     });
   }, [contextToken, coords, lines, resolvedRestaurantId]);
 
+  const cartSignature = useMemo(() => {
+    if (!resolvedRestaurantId || !contextToken) return null;
+    return buildCheckoutCartSignature({
+      restaurantId: resolvedRestaurantId,
+      contextToken,
+      lines,
+    });
+  }, [contextToken, lines, resolvedRestaurantId]);
+
+  const sessionPrepare = useMemo(
+    () => (cartSignature ? readCheckoutPrepareSession(cartSignature) : null),
+    [cartSignature],
+  );
+
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {
       throw new Error('Restaurant context is missing. Re-open the menu and try again.');
@@ -191,19 +212,30 @@ export function useCheckoutFlow(): CheckoutFlowState {
       const response = await getMarketplaceApiClient().checkoutPrepare(payload);
       markPerf('checkout_prepare_end', 'checkout-page');
       markPerf('checkout_bill_ready', 'checkout-page');
+      if (prepareSignature && cartSignature) {
+        persistCheckoutPrepareSession(prepareSignature, cartSignature, response);
+      }
       return response;
     },
     enabled: canCheckout && Boolean(prepareSignature),
     staleTime: CHECKOUT_PREPARE_STALE_MS,
     gcTime: CHECKOUT_PREPARE_GC_MS,
-    placeholderData: (previous) => previous,
+    placeholderData: (previous) => previous ?? sessionPrepare ?? undefined,
     refetchOnWindowFocus: false,
     retry: 1,
   });
 
-  const quote = prepareQuery.data?.quote ?? null;
-  const scheduling = prepareQuery.data?.scheduling ?? null;
-  const paymentMethods = prepareQuery.data?.paymentMethods ?? [];
+  useEffect(() => {
+    if (!prepareQuery.data || !prepareSignature || !cartSignature) return;
+    persistCheckoutPrepareSession(prepareSignature, cartSignature, prepareQuery.data);
+  }, [cartSignature, prepareQuery.data, prepareSignature]);
+
+  const prepareData = prepareQuery.data ?? sessionPrepare;
+  const quote = prepareData?.quote ?? null;
+  const scheduling = prepareData?.scheduling ?? null;
+  const paymentMethods = prepareData?.paymentMethods ?? [];
+  const quoteIsRefreshing = prepareQuery.isFetching && Boolean(quote);
+  const quoteIsStale = Boolean(quote) && (prepareQuery.isFetching || prepareQuery.data == null);
 
   useEffect(() => {
     if (!scheduling?.deliverySlots?.length) return;
@@ -218,14 +250,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (placeStatus === 'awaiting_payment') return 'awaiting_payment';
     if (placeStatus === 'success') return 'success';
     if (placeStatus === 'error') return 'error';
-    if (prepareQuery.isFetching && !prepareQuery.data) return 'preparing';
-    if (prepareQuery.isError) return 'error';
+    if (prepareQuery.isFetching && !quote) return 'preparing';
+    if (prepareQuery.isError && !quote) return 'error';
     return 'idle';
-  }, [placeStatus, prepareQuery.data, prepareQuery.isError, prepareQuery.isFetching]);
+  }, [placeStatus, prepareQuery.isError, prepareQuery.isFetching, quote]);
 
   const error =
     placeError ??
-    (prepareQuery.error instanceof Error ? prepareQuery.error.message : null);
+    (prepareQuery.isError && !quote
+      ? prepareQuery.error instanceof Error
+        ? prepareQuery.error.message
+        : null
+      : null);
 
   const refreshQuote = useCallback(async () => {
     markPerf('checkout_prepare_start', 'refresh-quote');
@@ -583,6 +619,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
     itemCount,
     canCheckout,
     placingMethod,
+    quoteIsRefreshing,
+    quoteIsStale,
     setDeliveryTimeSlot,
     refreshQuote,
     prepareCheckout,

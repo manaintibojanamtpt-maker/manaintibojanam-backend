@@ -132,7 +132,7 @@ describe('marketplace checkout frontend contract', () => {
       path.join(process.cwd(), 'backend-lib/marketplace/marketplaceRoutes.ts'),
       'utf8',
     );
-    assert.match(source, /buildCheckoutSchedulingContext/);
+    assert.match(source, /buildMarketplaceCheckoutPrepare/);
     assert.match(source, /scheduling/);
   });
 });

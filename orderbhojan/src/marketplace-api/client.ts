@@ -21,6 +21,7 @@ export interface MarketplaceRequestOptions {
   readonly correlationId?: string;
   readonly signal?: AbortSignal;
   readonly bypassHttpCache?: boolean;
+  readonly timeoutMs?: number;
 }
 
 export interface MarketplaceClientConfig {
@@ -76,7 +77,8 @@ export class MarketplaceHttpClient {
   ): Promise<T> {
     const url = this.buildUrl(options.path, options.query);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    const timeoutMs = options.timeoutMs ?? this.config.timeoutMs;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const token =
       options.authToken !== undefined

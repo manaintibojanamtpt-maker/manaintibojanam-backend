@@ -2,9 +2,14 @@
  * Prepare Capacitor asset inputs from the master OrderBhojan icon.
  *
  * Drop your master PNG at: resources/icon-source.png (1024x1024+ recommended).
- * Foreground is scaled to ~88% for adaptive-icon safe zone (round/square masks).
+ * Foreground uses a light safe-zone inset only; Android adaptive XML already
+ * applies a 16.7% inset — avoid stacking aggressive shrink on top of that.
+ *
+ * @capacitor/assets v3 custom icon-foreground/icon-background mode writes legacy
+ * 48dp mipmaps (192px @ xxxhdpi) instead of adaptive 108dp (432px). Run
+ * `--fix-android-adaptive` after capacitor-assets to emit correct mipmaps.
  */
-import { access, mkdir } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -16,14 +21,37 @@ const resourcesDir = path.join(root, 'resources');
 const PRIMARY_SOURCE_PATH = path.join(resourcesDir, 'icon-source.png');
 /** Optional fallback if you keep design assets under assets/. */
 const FALLBACK_SOURCE_PATH = path.join(root, 'assets', 'icon-source.png');
+const androidResDir = path.join(root, 'android', 'app', 'src', 'main', 'res');
 const iconBackgroundColor = '#070504';
-const foregroundScale = 0.88;
+/** Logo fill inside foreground layer; Android XML adds another 16.7% safe-zone inset. */
+const foregroundScale = 0.93;
 const MIN_SOURCE_SIZE = 1024;
-const MIN_CAPACITOR_LAYER_SIZE = 2048;
-const MAX_CAPACITOR_LAYER_SIZE = 4096;
-const PNG_OPTIONS = { compressionLevel: 9, effort: 10 };
+const MIN_LAYER_SIZE = 1024;
+const MAX_LAYER_SIZE = 4096;
+/** Lossless PNG — no aggressive DEFLATE (compressionLevel 9 bloated re-encode passes). */
+const PNG_OPTIONS = { compressionLevel: 0, effort: 1 };
 
 const resizeKernel = sharp.kernel.lanczos3;
+
+/** Adaptive icon layer sizes (108dp @ density). */
+const ANDROID_ADAPTIVE_DENSITIES = [
+  { folder: 'mipmap-ldpi', size: 81 },
+  { folder: 'mipmap-mdpi', size: 108 },
+  { folder: 'mipmap-hdpi', size: 162 },
+  { folder: 'mipmap-xhdpi', size: 216 },
+  { folder: 'mipmap-xxhdpi', size: 324 },
+  { folder: 'mipmap-xxxhdpi', size: 432 },
+];
+
+const ADAPTIVE_ICON_XML = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background>
+        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="16.7%" />
+    </background>
+    <foreground>
+        <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="16.7%" />
+    </foreground>
+</adaptive-icon>`;
 
 async function resolveSourcePath() {
   for (const candidate of [PRIMARY_SOURCE_PATH, FALLBACK_SOURCE_PATH]) {
@@ -42,6 +70,10 @@ async function resolveSourcePath() {
   );
 }
 
+function layerSize(sourceMaxDim) {
+  return Math.min(MAX_LAYER_SIZE, Math.max(MIN_LAYER_SIZE, sourceMaxDim));
+}
+
 async function loadNormalizedSourceBuffer(sourcePath) {
   const image = sharp(sourcePath).rotate().ensureAlpha();
   const meta = await image.metadata();
@@ -49,7 +81,7 @@ async function loadNormalizedSourceBuffer(sourcePath) {
   const height = meta.height ?? 0;
   const maxDim = Math.max(width, height);
 
-  console.log(`Source icon: ${path.relative(root, sourcePath)} (${width}x${height})`);
+  console.log(`Source icon: ${path.relative(root, sourcePath)} (${width}x${height}, ${meta.format})`);
 
   if (maxDim < MIN_SOURCE_SIZE) {
     console.warn(
@@ -91,7 +123,7 @@ async function writeSolidBackground(outPath, size) {
       background: iconBackgroundColor,
     },
   })
-    .png(PNG_OPTIONS)
+    .png({ compressionLevel: 9, effort: 1 })
     .toFile(outPath);
 }
 
@@ -102,7 +134,7 @@ async function writeForeground(outPath, size, sourceBuffer) {
   const resized = await sharp(sourceBuffer)
     .resize(inner, inner, {
       fit: 'contain',
-      background: iconBackgroundColor,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
       kernel: resizeKernel,
     })
     .png(PNG_OPTIONS)
@@ -143,39 +175,115 @@ async function writePwaIcons(sourceBuffer) {
   await sharp(sourceBuffer).png(PNG_OPTIONS).toFile(path.join(resourcesDir, 'icon.png'));
 }
 
-function capacitorLayerSize(sourceMaxDim) {
-  return Math.min(
-    MAX_CAPACITOR_LAYER_SIZE,
-    Math.max(MIN_CAPACITOR_LAYER_SIZE, sourceMaxDim),
-  );
+async function writeAndroidAdaptiveMipmaps(foregroundPath, backgroundPath) {
+  console.log('');
+  console.log('Fixing Android adaptive mipmaps (108dp / xxxhdpi=432px):');
+
+  for (const { folder, size } of ANDROID_ADAPTIVE_DENSITIES) {
+    const dir = path.join(androidResDir, folder);
+    await mkdir(dir, { recursive: true });
+
+    const foregroundDest = path.join(dir, 'ic_launcher_foreground.png');
+    const backgroundDest = path.join(dir, 'ic_launcher_background.png');
+
+    await sharp(foregroundPath)
+      .resize(size, size, { kernel: resizeKernel })
+      .png(PNG_OPTIONS)
+      .toFile(foregroundDest);
+
+    await writeSolidBackground(backgroundDest, size);
+
+    console.log(`  ${folder}/ic_launcher_foreground.png (${size}x${size})`);
+  }
+
+  const anydpiDir = path.join(androidResDir, 'mipmap-anydpi-v26');
+  await mkdir(anydpiDir, { recursive: true });
+  await writeFile(path.join(anydpiDir, 'ic_launcher.xml'), ADAPTIVE_ICON_XML);
+  await writeFile(path.join(anydpiDir, 'ic_launcher_round.xml'), ADAPTIVE_ICON_XML);
 }
 
-async function main() {
+async function prepareAssets() {
   await mkdir(resourcesDir, { recursive: true });
   const sourcePath = await resolveSourcePath();
   const sourceBuffer = await loadNormalizedSourceBuffer(sourcePath);
   const sourceMeta = await sharp(sourceBuffer).metadata();
-  const layerSize = capacitorLayerSize(Math.max(sourceMeta.width ?? 0, sourceMeta.height ?? 0));
+  const size = layerSize(Math.max(sourceMeta.width ?? 0, sourceMeta.height ?? 0));
 
   await writePwaIcons(sourceBuffer);
-  await writeSolidBackground(path.join(resourcesDir, 'icon-background.png'), layerSize);
-  await writeForeground(
-    path.join(resourcesDir, 'icon-foreground.png'),
-    layerSize,
-    sourceBuffer,
-  );
+  await writeSolidBackground(path.join(resourcesDir, 'icon-background.png'), size);
+  await writeForeground(path.join(resourcesDir, 'icon-foreground.png'), size, sourceBuffer);
 
   console.log('');
   console.log('Prepared Capacitor layers:');
   console.log(`  resources/icon.png (${sourceMeta.width}x${sourceMeta.height})`);
-  console.log(`  resources/icon-foreground.png (${layerSize}x${layerSize}, ~88% safe zone)`);
-  console.log(`  resources/icon-background.png (${layerSize}x${layerSize})`);
+  console.log(
+    `  resources/icon-foreground.png (${size}x${size}, ${Math.round(foregroundScale * 100)}% logo fill)`,
+  );
+  console.log(`  resources/icon-background.png (${size}x${size})`);
   console.log('Updated PWA icons:');
   console.log('  public/icons/icon-192.png (192x192)');
   console.log('  public/icons/icon-512.png (512x512)');
   console.log(`  public/brand/orderbhojan-logo.png (${sourceMeta.width}x${sourceMeta.height})`);
   console.log('');
-  console.log('Next: capacitor-assets will emit Android mipmap + iOS AppIcon sizes.');
+  console.log('Next: capacitor-assets (iOS + legacy Android), then --fix-android-adaptive.');
+}
+
+async function fixAndroidAdaptive() {
+  const foregroundPath = path.join(resourcesDir, 'icon-foreground.png');
+  const backgroundPath = path.join(resourcesDir, 'icon-background.png');
+
+  for (const candidate of [foregroundPath, backgroundPath]) {
+    try {
+      await access(candidate);
+    } catch {
+      throw new Error(`Missing ${path.relative(root, candidate)}. Run prepare step first.`);
+    }
+  }
+
+  await writeAndroidAdaptiveMipmaps(foregroundPath, backgroundPath);
+}
+
+async function verifyOutputs() {
+  const checks = [
+    ['android xxxhdpi foreground', path.join(androidResDir, 'mipmap-xxxhdpi/ic_launcher_foreground.png'), 432, 432],
+    ['android xxxhdpi background', path.join(androidResDir, 'mipmap-xxxhdpi/ic_launcher_background.png'), 432, 432],
+    ['iOS App Store icon', path.join(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), 1024, 1024],
+    ['resources foreground layer', path.join(resourcesDir, 'icon-foreground.png'), null, null],
+  ];
+
+  console.log('');
+  console.log('Verification:');
+  for (const [label, filePath, expW, expH] of checks) {
+    try {
+      const meta = await sharp(filePath).metadata();
+      const { size } = await import('node:fs/promises').then((fs) => fs.stat(filePath));
+      const dimOk = expW == null || (meta.width === expW && meta.height === expH);
+      const flag = dimOk ? 'OK' : 'WARN';
+      console.log(
+        `  [${flag}] ${label}: ${meta.width}x${meta.height} ${meta.format} ${size} bytes` +
+          (expW != null && !dimOk ? ` (expected ${expW}x${expH})` : ''),
+      );
+    } catch {
+      console.log(`  [MISSING] ${label}: ${path.relative(root, filePath)}`);
+    }
+  }
+}
+
+async function main() {
+  const mode = process.argv.includes('--fix-android-adaptive')
+    ? 'fix-android-adaptive'
+    : process.argv.includes('--verify')
+      ? 'verify'
+      : 'prepare';
+
+  if (mode === 'prepare') {
+    await prepareAssets();
+  } else if (mode === 'fix-android-adaptive') {
+    await fixAndroidAdaptive();
+    await verifyOutputs();
+  } else if (mode === 'verify') {
+    await verifyOutputs();
+  }
 }
 
 main().catch((err) => {

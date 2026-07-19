@@ -142,26 +142,19 @@ async function loadTenantByRestaurantId(db: Firestore, restaurantId: string) {
   const direct = await db.collection('tenants').doc(trimmed).get();
   if (direct.exists) return { id: direct.id, raw: direct.data() as TenantRaw };
 
-  const bySlug = await db.collection('tenants').where('slug', '==', trimmed).limit(1).get();
-  if (!bySlug.empty) {
-    const doc = bySlug.docs[0];
-    return { id: doc.id, raw: doc.data() as TenantRaw };
-  }
+  const slugCandidates = new Set<string>([trimmed]);
+  if (trimmed.startsWith('obr_')) slugCandidates.add(trimmed.slice(4));
+  if (trimmed.startsWith('rest_')) slugCandidates.add(trimmed.slice(5).replace(/_/g, '-'));
 
-  if (trimmed.startsWith('obr_')) {
-    const slug = trimmed.slice(4);
-    const byObr = await db.collection('tenants').where('slug', '==', slug).limit(1).get();
-    if (!byObr.empty) {
-      const doc = byObr.docs[0];
-      return { id: doc.id, raw: doc.data() as TenantRaw };
-    }
-  }
+  const slugQueries = await Promise.all(
+    [...slugCandidates].map((slug) =>
+      db.collection('tenants').where('slug', '==', slug).limit(1).get(),
+    ),
+  );
 
-  if (trimmed.startsWith('rest_')) {
-    const slug = trimmed.slice(5).replace(/_/g, '-');
-    const byLegacy = await db.collection('tenants').where('slug', '==', slug).limit(1).get();
-    if (!byLegacy.empty) {
-      const doc = byLegacy.docs[0];
+  for (const snap of slugQueries) {
+    if (!snap.empty) {
+      const doc = snap.docs[0];
       return { id: doc.id, raw: doc.data() as TenantRaw };
     }
   }
@@ -187,6 +180,7 @@ type MenuPriceMap = Map<string, { price: number; name: string }>;
 
 interface MarketplaceQuoteContext {
   tenantId: string;
+  tenantRaw: TenantRaw;
   quote: BillQuote;
   menuPrices: MenuPriceMap;
   etaMinutes: { min: number; max: number };
@@ -289,6 +283,7 @@ async function buildMarketplaceQuoteContext(
 
   return {
     tenantId: loaded.id,
+    tenantRaw: loaded.raw,
     menuPrices,
     etaMinutes,
     quote: {
@@ -314,12 +309,7 @@ export async function buildMarketplaceQuote(
   return { tenantId, quote };
 }
 
-export async function buildCheckoutSchedulingContext(
-  db: Firestore,
-  tenantId: string,
-): Promise<CheckoutSchedulingContext> {
-  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-  const raw = (tenantDoc.data() ?? {}) as TenantRaw;
+export function buildCheckoutSchedulingFromTenant(raw: TenantRaw): CheckoutSchedulingContext {
   const storeTiming = resolveStoreTiming(raw as never, raw);
   const delivery = (raw.deliveryConfig ?? {}) as Record<string, unknown>;
   const prepMinutes = Number(delivery.prepTime ?? DEFAULT_PREP_TIME_MINUTES);
@@ -340,6 +330,33 @@ export async function buildCheckoutSchedulingContext(
     deliverySlots,
     closedMessage: closedMessage || undefined,
   };
+}
+
+export async function buildMarketplaceCheckoutPrepare(
+  db: Firestore,
+  request: MarketplaceQuoteRequest,
+): Promise<{
+  tenantId: string;
+  quote: BillQuote;
+  scheduling: CheckoutSchedulingContext;
+  paymentMethods: string[];
+}> {
+  const { tenantId, tenantRaw, quote } = await buildMarketplaceQuoteContext(db, request);
+  return {
+    tenantId,
+    quote,
+    scheduling: buildCheckoutSchedulingFromTenant(tenantRaw),
+    paymentMethods: enabledPaymentMethods(tenantRaw),
+  };
+}
+
+export async function buildCheckoutSchedulingContext(
+  db: Firestore,
+  tenantId: string,
+): Promise<CheckoutSchedulingContext> {
+  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+  const raw = (tenantDoc.data() ?? {}) as TenantRaw;
+  return buildCheckoutSchedulingFromTenant(raw);
 }
 
 export function enabledPaymentMethods(tenant: TenantRaw): string[] {

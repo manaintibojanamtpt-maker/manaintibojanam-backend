@@ -349,6 +349,7 @@ export class MarketplaceApiClient {
       method: 'POST',
       path: `${MARKETPLACE_PREFIX}/checkout/prepare`,
       body,
+      timeoutMs: 12_000,
     });
   }
 
