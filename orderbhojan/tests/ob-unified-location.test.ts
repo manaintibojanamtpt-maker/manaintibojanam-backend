@@ -12,7 +12,7 @@ describe('OB unified location (last-mile)', () => {
     const chip = readFileSync(join(root, 'src/features/location/ui/LocationChip.tsx'), 'utf8');
     assert.match(chip, /subscribeLocationStore/);
     assert.match(chip, /v2Address\?\.text\?\.shortLabel/);
-    assert.match(chip, /Set delivery location/);
+    assert.match(chip, /Set your delivery area/);
     assert.match(chip, /openSelector/);
   });
 

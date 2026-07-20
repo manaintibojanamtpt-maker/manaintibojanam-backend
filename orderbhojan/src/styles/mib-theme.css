@@ -317,6 +317,12 @@ html.ob-native .ob-transactional-shell {
   transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease;
 }
 
+.ob-touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  touch-action: manipulation;
+}
+
 .ob-press:active {
   transform: scale(0.96);
   opacity: 0.92;
@@ -425,24 +431,34 @@ html.ob-native .ob-auth-shell {
 
 .ds-discovery-hero__vignette {
   background:
-    radial-gradient(ellipse 88% 72% at 50% 38%, transparent 0%, rgba(5, 4, 3, 0.18) 52%, rgba(5, 4, 3, 0.72) 100%),
-    radial-gradient(circle at 50% 50%, transparent 34%, rgba(0, 0, 0, 0.55) 100%);
+    radial-gradient(ellipse 92% 78% at 50% 42%, transparent 0%, rgba(5, 4, 3, 0.28) 48%, rgba(5, 4, 3, 0.82) 100%),
+    radial-gradient(circle at 50% 50%, transparent 28%, rgba(0, 0, 0, 0.68) 100%);
 }
 
 .ds-discovery-hero__spotlight {
-  background: radial-gradient(ellipse 72% 58% at 50% 34%, rgba(255, 140, 40, 0.14) 0%, transparent 68%);
+  background: radial-gradient(ellipse 72% 58% at 50% 34%, rgba(255, 140, 40, 0.1) 0%, transparent 68%);
   mix-blend-mode: screen;
-  opacity: 0.9;
+  opacity: 0.55;
 }
 
 .ds-discovery-hero__scrim {
   background: linear-gradient(
     to top,
     #050403 0%,
-    rgba(5, 4, 3, 0.98) 22%,
-    rgba(5, 4, 3, 0.88) 44%,
-    rgba(5, 4, 3, 0.52) 68%,
-    rgba(5, 4, 3, 0.16) 86%,
+    rgba(5, 4, 3, 0.99) 28%,
+    rgba(5, 4, 3, 0.94) 50%,
+    rgba(5, 4, 3, 0.72) 72%,
+    rgba(5, 4, 3, 0.34) 88%,
+    transparent 100%
+  );
+}
+
+.ds-discovery-hero__readability {
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 3, 0.96) 0%,
+    rgba(5, 4, 3, 0.82) 42%,
+    rgba(5, 4, 3, 0.42) 72%,
     transparent 100%
   );
 }
@@ -489,39 +505,42 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__copy::before {
   content: '';
   position: absolute;
-  inset: -1.75rem -1.25rem -1.25rem -1.5rem;
+  inset: -2rem -1.5rem -1.5rem -1.75rem;
   z-index: -1;
   border-radius: 1.5rem;
   background:
-    radial-gradient(ellipse 130% 110% at 0% 100%, rgba(5, 4, 3, 0.92), rgba(5, 4, 3, 0.42) 58%, transparent 78%),
-    linear-gradient(to top, rgba(5, 4, 3, 0.78), transparent 72%);
+    radial-gradient(ellipse 140% 120% at 0% 100%, rgba(5, 4, 3, 0.96), rgba(5, 4, 3, 0.58) 62%, transparent 82%),
+    linear-gradient(to top, rgba(5, 4, 3, 0.88), rgba(5, 4, 3, 0.28) 68%, transparent 92%);
   pointer-events: none;
 }
 
 .ds-discovery-hero__eyebrow {
-  color: #ffe8cc;
+  color: #ffffff;
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.92),
-    0 4px 18px rgba(0, 0, 0, 0.72);
+    0 1px 2px rgba(0, 0, 0, 0.98),
+    0 2px 8px rgba(0, 0, 0, 0.92),
+    0 6px 24px rgba(0, 0, 0, 0.78);
 }
 
 .ds-discovery-hero__headline {
-  color: #fffaf3;
+  color: #ffffff;
   text-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.95),
-    0 8px 32px rgba(0, 0, 0, 0.82),
-    0 0 1px rgba(0, 0, 0, 1);
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.98),
+    0 8px 28px rgba(0, 0, 0, 0.88),
+    0 16px 48px rgba(0, 0, 0, 0.72);
 }
 
 .ds-discovery-hero__headline--offer {
-  color: #fff7ed;
+  color: #ffffff;
 }
 
 .ds-discovery-hero__subline {
-  color: rgba(255, 250, 243, 0.94);
+  color: rgba(255, 255, 255, 0.96);
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 6px 24px rgba(0, 0, 0, 0.68);
+    0 1px 2px rgba(0, 0, 0, 0.98),
+    0 4px 16px rgba(0, 0, 0, 0.84),
+    0 10px 32px rgba(0, 0, 0, 0.68);
 }
 
 .ds-discovery-hero__cta {

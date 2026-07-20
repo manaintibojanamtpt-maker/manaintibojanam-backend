@@ -44,8 +44,16 @@ export const SoftButton: React.FC<SoftButtonProps> = ({
   const inner = <span className="soft-btn__inner">{children}</span>;
 
   if (to) {
+    const { disabled, onClick, onKeyDown, tabIndex, 'aria-disabled': ariaDisabled } = rest;
     return (
-      <Link to={to} className={classes}>
+      <Link
+        to={to}
+        className={classes}
+        onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}
+        onKeyDown={onKeyDown as unknown as React.KeyboardEventHandler<HTMLAnchorElement>}
+        tabIndex={tabIndex}
+        aria-disabled={ariaDisabled ?? disabled}
+      >
         {inner}
       </Link>
     );
@@ -53,7 +61,7 @@ export const SoftButton: React.FC<SoftButtonProps> = ({
 
   if (href) {
     return (
-      <a href={href} className={classes}>
+      <a href={href} className={classes} aria-disabled={rest.disabled}>
         {inner}
       </a>
     );

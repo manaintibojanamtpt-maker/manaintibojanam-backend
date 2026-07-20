@@ -33,7 +33,7 @@ import {
   isAsapSlot,
 } from '@/features/checkout/domain/deliveryTimeSlots';
 
-const DELIVERY_ADDRESS_PLACEHOLDER = 'Set delivery location';
+const DELIVERY_ADDRESS_PLACEHOLDER = 'Set your delivery area';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizePhoneFromSession(phoneNumber: string | null | undefined): string {
@@ -286,7 +286,7 @@ export function OrderBhojanCheckoutPage() {
     return (
       <TransactionalPageShell title="Checkout" subtitle="">
         <MarketplaceUxStateView
-          title="Set delivery location"
+          title="Set your delivery area"
           description="Add your delivery address to complete checkout."
           primaryLabel="Add address"
           onPrimary={() => openSelector()}

@@ -94,6 +94,14 @@ export async function createSavedAddress(uid: string, input: SavedAddressInput):
   return saveAddress(uid, input);
 }
 
+export async function updateSavedAddress(
+  uid: string,
+  addressId: string,
+  input: SavedAddressInput,
+): Promise<SavedAddress> {
+  return saveAddress(uid, input, addressId);
+}
+
 export async function removeSavedAddress(uid: string, addressId: string): Promise<void> {
   return deleteSavedAddress(uid, addressId);
 }

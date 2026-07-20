@@ -45,7 +45,7 @@ function DiscoveryNearbyHeader({
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
-          <p className="text-xs text-white/50">{contextLine}</p>
+          <p className="text-xs text-white/60">{contextLine}</p>
         </div>
         <span className="shrink-0 text-xs font-semibold text-[#FF7A00]">
           {kitchenCount} {kitchenCount === 1 ? 'kitchen' : 'kitchens'}

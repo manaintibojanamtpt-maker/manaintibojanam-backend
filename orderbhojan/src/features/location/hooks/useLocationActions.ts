@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
 import { getLocationStoreAddress } from '@bhojan/location-core';
+import { bootstrapCustomerSession } from '@/features/auth/application/profileBootstrapService';
+import type { AuthSessionUser } from '@/features/auth/domain/auth.types';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
 import type { GeoCoordinates } from '../domain/location.types';
-import type { SavedAddressInput } from '../domain/location.schema';
+import { savedAddressInputSchema, type SavedAddressInput } from '../domain/location.schema';
 import {
   createSavedAddress,
   fetchSavedAddresses,
@@ -11,6 +13,7 @@ import {
   loadRecentLocationEntries,
   markDefaultAddress,
   removeSavedAddress,
+  updateSavedAddress,
 } from '../application/locationService';
 import {
   applyObRecentLocation,
@@ -43,25 +46,35 @@ function isDuplicateSavedAddress(
 
 async function persistConfirmedAddressForUser(
   uid: string,
-  options: { force?: boolean; priorSavedAddressId?: string },
+  sessionUser: AuthSessionUser,
+  options: { force?: boolean; updatingSavedAddressId?: string },
   refreshSavedAddresses: () => Promise<void>,
 ): Promise<void> {
-  if (options.priorSavedAddressId && !options.force) {
-    return;
-  }
-
   const address = getLocationStoreAddress();
   if (!address) {
     return;
   }
 
   const savedInput = v2ToSavedAddressInput(address);
-  const store = locationStore();
-  if (!options.force && isDuplicateSavedAddress(store.savedAddresses, savedInput)) {
+  const parsed = savedAddressInputSchema.safeParse(savedInput);
+  if (!parsed.success) {
     return;
   }
 
-  await createSavedAddress(uid, savedInput);
+  await bootstrapCustomerSession(sessionUser);
+
+  if (options.updatingSavedAddressId) {
+    await updateSavedAddress(uid, options.updatingSavedAddressId, parsed.data);
+    await refreshSavedAddresses();
+    return;
+  }
+
+  const store = locationStore();
+  if (!options.force && isDuplicateSavedAddress(store.savedAddresses, parsed.data)) {
+    return;
+  }
+
+  await createSavedAddress(uid, parsed.data);
   await refreshSavedAddresses();
 }
 
@@ -157,6 +170,7 @@ export function useLocationActions() {
       if (!sessionUser?.uid || !isAuthenticated) {
         throw new LocationError(LOCATION_ERROR_CODES.FIRESTORE_UNAVAILABLE, 'Sign in to save addresses');
       }
+      await bootstrapCustomerSession(sessionUser);
       const saved = await createSavedAddress(sessionUser.uid, input);
       await refreshSavedAddresses();
       await applyObSavedAddress(saved, geocodeEnabled);
@@ -274,7 +288,8 @@ export function useLocationActions() {
   const confirmAddress = useCallback(
     async (input: { flat?: string; building?: string; landmark?: string }) => {
       const store = locationStore();
-      const priorSavedAddressId = store.activeLocation?.savedAddressId;
+      const updatingSavedAddressId =
+        store.activeLocation?.kind === 'saved' ? store.activeLocation.savedAddressId : undefined;
       const forcePersist = store.pendingSavedAddress;
       confirmObLocationDraft(input);
 
@@ -282,7 +297,8 @@ export function useLocationActions() {
         try {
           await persistConfirmedAddressForUser(
             sessionUser.uid,
-            { force: forcePersist, priorSavedAddressId },
+            sessionUser,
+            { force: forcePersist, updatingSavedAddressId },
             refreshSavedAddresses,
           );
         } catch {

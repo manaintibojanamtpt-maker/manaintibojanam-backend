@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileGuestView, ProfileMemberView } from '@bhojan/storefront-design-system/profile';
 import { useLocationActions, useLocationFeatureEnabled } from '@/features/location';
@@ -16,6 +17,11 @@ export function OrderBhojanProfilePage() {
   const locationEnabled = useLocationFeatureEnabled();
   const { openSelector, refreshSavedAddresses } = useLocationActions();
   const { preferenceRows, handlePreferenceRow } = useCustomerSettingsActions();
+
+  useEffect(() => {
+    if (!sessionUser?.uid || status === 'guest' || sessionUser.provider === 'guest') return;
+    void refreshSavedAddresses();
+  }, [refreshSavedAddresses, sessionUser?.provider, sessionUser?.uid, status]);
 
   const handleQuickTile = (tile: string) => {
     if (tile === 'orders') {

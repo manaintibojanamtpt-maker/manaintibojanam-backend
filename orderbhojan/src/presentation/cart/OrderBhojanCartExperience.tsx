@@ -138,7 +138,7 @@ export function OrderBhojanCartExperience() {
           ? 'Proceed to checkout'
           : hasDeliveryLocation
             ? 'Confirm delivery address'
-            : 'Set delivery location'
+            : 'Set your delivery area'
       }
       checkoutBusy={false}
       onCheckout={handleCheckout}

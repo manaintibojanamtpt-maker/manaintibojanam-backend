@@ -18,7 +18,7 @@ export function EmptyStateView({
       <SectionHeader title={title} description={description} align="center" />
       {actionLabel && onAction ? (
         <div className="mt-4">
-          <SoftButton type="button" onClick={onAction}>
+          <SoftButton type="button" fullWidth className="min-h-11 touch-manipulation" onClick={onAction}>
             {actionLabel}
           </SoftButton>
         </div>

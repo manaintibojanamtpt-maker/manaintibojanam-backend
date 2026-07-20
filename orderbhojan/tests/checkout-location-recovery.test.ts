@@ -17,7 +17,7 @@ describe('checkout location recovery (batch 2)', () => {
     assert.match(checkout, /hasActiveDeliveryLocation/);
     assert.match(checkout, /needsFlatConfirmation/);
     assert.match(checkout, /openConfirmation/);
-    assert.match(checkout, /Set delivery location/);
+    assert.match(checkout, /Set your delivery area/);
     assert.match(checkout, /Confirm delivery address/);
     assert.match(checkout, /Add your flat or house number/);
     assert.match(checkout, /Session expired/);
@@ -46,7 +46,7 @@ describe('checkout location recovery (batch 2)', () => {
     );
 
     assert.match(actions, /persistConfirmedAddressForUser/);
-    assert.match(actions, /priorSavedAddressId/);
+    assert.match(actions, /updatingSavedAddressId/);
     assert.match(actions, /v2ToSavedAddressInput/);
     assert.match(actions, /startAddSavedAddress/);
   });
@@ -58,7 +58,8 @@ describe('checkout location recovery (batch 2)', () => {
     );
 
     assert.match(selector, /handleSignIn/);
-    assert.match(selector, /navigate\(`\/auth\?returnTo=\$\{returnTo\}`\)/);
+    assert.match(selector, /signInPath/);
+    assert.match(selector, /navigate\(signInPath\)/);
     assert.doesNotMatch(selector, /<Link to="\/auth"/);
   });
 });

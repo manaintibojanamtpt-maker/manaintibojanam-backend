@@ -8,7 +8,7 @@ import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationSessionStore } from '../store/locationSessionStore';
 import { hasActiveDeliveryLocation } from '../domain/locationReadiness';
 
-const PLACEHOLDER = 'Set delivery location';
+const PLACEHOLDER = 'Set your delivery area';
 const USE_CURRENT_LABEL = 'Use current location';
 
 interface LocationChipProps {

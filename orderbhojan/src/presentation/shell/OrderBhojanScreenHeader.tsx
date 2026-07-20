@@ -39,7 +39,7 @@ export function OrderBhojanScreenHeader({
       <div className="mx-auto flex min-h-12 max-w-7xl items-center gap-2 px-3 py-2">
         <button
           type="button"
-          className="ob-press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/90 touch-manipulation"
+          className="ob-press ob-touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/90 touch-manipulation"
           aria-label="Go back"
           onClick={() => {
             if (window.history.length > 1) {

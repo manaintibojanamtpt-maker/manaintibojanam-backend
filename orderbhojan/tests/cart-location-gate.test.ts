@@ -166,7 +166,7 @@ describe('cart/checkout location gate (batch 1)', () => {
 
     assert.match(cart, /openSelector/);
 
-    assert.match(cart, /Set delivery location/);
+    assert.match(cart, /Set your delivery area/);
 
     assert.match(cart, /DELIVERY_LOCATION_GATE_MESSAGE/);
 

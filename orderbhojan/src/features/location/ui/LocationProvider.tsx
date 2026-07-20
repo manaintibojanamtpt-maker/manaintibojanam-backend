@@ -38,6 +38,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       const { App } = await import('@capacitor/app');
       const handle = await App.addListener('appStateChange', ({ isActive }) => {
         if (!isActive || cancelled) return;
+        hydrate();
         void refreshSavedAddresses();
       });
       removeListener = () => void handle.remove();
@@ -47,7 +48,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
       removeListener?.();
     };
-  }, [enabled, isAuthenticated, refreshSavedAddresses, sessionUser?.uid]);
+  }, [enabled, hydrate, isAuthenticated, refreshSavedAddresses, sessionUser?.uid]);
 
   return (
     <>

@@ -33,11 +33,11 @@ export function LocationSelectorSheet() {
   const routeLocation = useLocation();
   const [search, setSearch] = useState('');
   const [manualFormOpen, setManualFormOpen] = useState(false);
+  const signInPath = `/auth?returnTo=${encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`)}`;
 
   const handleSignIn = () => {
     closeSelector();
-    const returnTo = encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`);
-    navigate(`/auth?returnTo=${returnTo}`);
+    navigate(signInPath);
   };
 
   const filteredSaved = saved.filter((a) => {
@@ -62,6 +62,7 @@ export function LocationSelectorSheet() {
             type="button"
             fullWidth
             disabled={isDetecting}
+            className="min-h-11 touch-manipulation"
             onClick={() => {
               void requestCurrentLocation();
             }}
@@ -96,7 +97,7 @@ export function LocationSelectorSheet() {
                   type="button"
                   tone="ghost"
                   fullWidth
-                  className="!justify-start"
+                  className="!justify-start min-h-11 touch-manipulation"
                   onClick={() => void selectRecentLocation(entry.id)}
                 >
                   <Clock3 className="h-4 w-4" aria-hidden />
@@ -111,6 +112,7 @@ export function LocationSelectorSheet() {
             tone="secondary"
             fullWidth
             disabled={isDetecting}
+            className="min-h-11 touch-manipulation"
             onClick={() => {
               closeSelector();
               setManualFormOpen(true);
@@ -127,10 +129,14 @@ export function LocationSelectorSheet() {
               ) : null}
               {filteredSaved.length === 0 ? (
                 <EmptyStateView
-                  title="No saved addresses"
-                  description="Add home, work, or other addresses for faster checkout."
-                  actionLabel="Add address"
-                  onAction={() => void startAddSavedAddress()}
+                  title={search.trim() ? 'No matching addresses' : 'No saved addresses'}
+                  description={
+                    search.trim()
+                      ? 'Try a different search or add a new address.'
+                      : 'Add home, work, or other addresses for faster checkout.'
+                  }
+                  actionLabel={search.trim() ? undefined : 'Add address'}
+                  onAction={search.trim() ? undefined : () => void startAddSavedAddress()}
                 />
               ) : (
                 filteredSaved.map((addr) => (
@@ -139,7 +145,7 @@ export function LocationSelectorSheet() {
                     type="button"
                     tone="ghost"
                     fullWidth
-                    className="!h-auto !flex-col !items-start !gap-1 !py-3"
+                    className="!h-auto !min-h-11 !flex-col !items-start !gap-1 !py-3 touch-manipulation"
                     onClick={() => void selectSavedAddress(addr.id)}
                   >
                     <span className="text-sm font-bold text-white">
@@ -155,6 +161,7 @@ export function LocationSelectorSheet() {
                 tone="secondary"
                 fullWidth
                 disabled={isDetecting}
+                className="min-h-11 touch-manipulation"
                 onClick={() => {
                   void startAddSavedAddress();
                 }}
@@ -165,7 +172,13 @@ export function LocationSelectorSheet() {
           ) : (
             <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
               <p className="text-sm text-white/80">Sign in to save addresses for faster checkout.</p>
-              <SoftButton type="button" tone="secondary" fullWidth className="mt-3" onClick={handleSignIn}>
+              <SoftButton
+                type="button"
+                tone="secondary"
+                fullWidth
+                className="mt-3 min-h-11 touch-manipulation"
+                onClick={handleSignIn}
+              >
                 Sign in
               </SoftButton>
             </GlassCard>
