@@ -24,7 +24,8 @@ function resolveHeroSlidePhoto(slide: HomeHeroSlide) {
 
 export function OrderBhojanHomeHero() {
   const navigate = useNavigate();
-  const { richMotion } = useKitchenHeroMotion();
+  const { richMotion, prefersReducedMotion } = useKitchenHeroMotion();
+  const carouselAutoAdvance = !prefersReducedMotion;
   const heroQuery = useHomeHeroConfig();
   const heroConfig = heroQuery.data ?? DEFAULT_HOME_HERO_CONFIG;
   const includeDiscoveryOffers = heroConfig.includeDiscoveryOffers !== false;
@@ -70,22 +71,22 @@ export function OrderBhojanHomeHero() {
   }, [heroConfig.updatedAt, slides.length]);
 
   useEffect(() => {
-    if (!richMotion || slides.length <= 1) return undefined;
+    if (!carouselAutoAdvance || slides.length <= 1) return undefined;
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % slides.length);
     }, rotationIntervalMs);
     return () => window.clearInterval(timer);
-  }, [richMotion, rotationIntervalMs, slides.length]);
+  }, [carouselAutoAdvance, rotationIntervalMs, slides.length]);
 
   useEffect(() => {
-    if (!richMotion) return undefined;
+    if (!carouselAutoAdvance) return undefined;
     slides.forEach((slide, index) => {
       if (index === 0) return;
       const img = new Image();
       img.decoding = 'async';
       img.src = slide.webpSrcSet?.split(',')[0]?.trim().split(/\s+/)[0] ?? slide.src;
     });
-  }, [richMotion, slides]);
+  }, [carouselAutoAdvance, slides]);
 
   const goToSearch = () => {
     const trimmed = searchValue.trim();
@@ -109,6 +110,7 @@ export function OrderBhojanHomeHero() {
       slides={slides}
       activeIndex={activeIndex}
       animated={richMotion}
+      slideDurationMs={rotationIntervalMs}
       onSlideSelect={setActiveIndex}
       ctaLabel={activeSlide?.cta}
       onCtaClick={activeSlide?.cta ? handleCta : undefined}

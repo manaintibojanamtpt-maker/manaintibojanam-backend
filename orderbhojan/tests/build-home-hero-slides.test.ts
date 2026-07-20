@@ -26,7 +26,7 @@ describe('buildHomeHeroSlides', () => {
     assert.equal(merged[0]?.kind, 'food');
     assert.equal(merged[1]?.kind, 'offer');
     assert.equal(merged[1]?.headline, 'Flat 30% off');
-    assert.equal(merged[1]?.subline, 'From Test Kitchen');
+    assert.equal(merged[1]?.subline, 'Test Kitchen — order before it ends');
     assert.equal(merged[1]?.cta, 'Order now');
     assert.equal(merged[1]?.ctaPath, '/restaurant/test-kitchen');
   });

@@ -101,25 +101,25 @@ function resolveStaticPhoto(asset: FoodPhotoAsset): ResolvedFoodPhoto {
 export const FOOD_PHOTO_MANIFEST: Record<FoodPhotoAssetId, FoodPhotoAsset> = {
   'hero-biryani': {
     id: 'hero-biryani',
-    baseUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b',
+    baseUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
     fallbackBaseUrl: '/hero/hyderabadi-chicken-biryani-hero.jpg',
     blurDataURL: WARM_BLUR,
     widths: HERO_PHOTO_WIDTHS,
-    hero: { quality: 92, focalY: 0.45 },
+    hero: { quality: 94, focalY: 0.42 },
   },
   'hero-thali': {
     id: 'hero-thali',
-    baseUrl: 'https://images.unsplash.com/photo-1626646292532-7e4f2be936e8',
+    baseUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d',
     blurDataURL: WARM_BLUR,
     widths: HERO_PHOTO_WIDTHS,
-    hero: { quality: 92 },
+    hero: { quality: 94, focalY: 0.48 },
   },
   'hero-tiffin': {
     id: 'hero-tiffin',
-    baseUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc',
+    baseUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950',
     blurDataURL: WARM_BLUR,
     widths: HERO_PHOTO_WIDTHS,
-    hero: { quality: 92 },
+    hero: { quality: 94, focalY: 0.44 },
   },
   'cat-pizza': {
     id: 'cat-pizza',
@@ -309,7 +309,7 @@ export function foodPhotoFormatUrl(
   url.searchParams.set('fit', 'crop');
   url.searchParams.set('auto', 'format');
   if (crop?.heroBanner && width >= 1280) {
-    url.searchParams.set('h', String(Math.round(width * 0.45)));
+    url.searchParams.set('h', String(Math.round(width * 0.52)));
   }
   if (crop?.focalY != null) {
     url.searchParams.set('crop', 'focalpoint');

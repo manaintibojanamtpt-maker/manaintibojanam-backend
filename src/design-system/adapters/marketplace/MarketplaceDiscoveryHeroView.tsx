@@ -30,6 +30,8 @@ export interface MarketplaceDiscoveryHeroViewProps {
   readonly ctaLabel?: string;
   readonly onCtaClick?: () => void;
   readonly onSlideSelect?: (index: number) => void;
+  /** Sync Ken Burns + crossfade timing with carousel interval (default 12s) */
+  readonly slideDurationMs?: number;
 }
 
 function slideIsOffer(slide: MarketplaceDiscoveryHeroSlide | undefined): boolean {
@@ -48,6 +50,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
   ctaLabel,
   onCtaClick,
   onSlideSelect,
+  slideDurationMs = 12_000,
 }) => {
   const activeSlide = slides[activeIndex] ?? slides[0];
   const isOfferSlide = slideIsOffer(activeSlide);
@@ -55,89 +58,96 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
   const displaySubline = activeSlide?.subline ?? subline;
   const displayCta = activeSlide?.cta ?? ctaLabel;
   const displayEyebrow = isOfferSlide ? 'Limited-time deal' : eyebrow;
+  const kenBurnsSeconds = Math.max(10, Math.round(slideDurationMs / 1000));
 
   return (
     <section
-      className="relative min-h-[min(72vh,640px)] overflow-hidden border-b border-white/5 bg-[#050403]"
+      className="ds-discovery-hero relative min-h-[min(78vh,720px)] overflow-hidden border-b border-white/[0.04] bg-[#050403]"
       aria-label="Home kitchens"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      style={
+        {
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          '--ds-hero-ken-burns-duration': `${kenBurnsSeconds}s`,
+          '--ds-hero-crossfade-duration': '2s',
+        } as React.CSSProperties
+      }
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] bg-gradient-to-b from-[#FF7A00]/16 via-[#FF7A00]/6 to-transparent"
-        style={{ height: 'calc(100% + env(safe-area-inset-top, 0px))' }}
-        aria-hidden
-      />
-      <div className="absolute inset-0 z-0">
+      <div className="ds-discovery-hero__media absolute inset-0 z-0">
         {slides.map((slide, index) => {
           const offerSlide = slideIsOffer(slide);
           const isActive = index === activeIndex;
+          const kenBurnsVariant = index % 2 === 0 ? 'ds-hero-photo--ken-burns' : 'ds-hero-photo--ken-burns-alt';
 
           return (
             <picture
               key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-[2200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                isActive ? 'opacity-100' : 'pointer-events-none opacity-0'
-              }`}
+              className={`ds-hero-slide absolute inset-0 ${isActive ? 'ds-hero-slide--active' : ''}`}
               aria-hidden={!isActive}
             >
               {slide.avifSrcSet ? (
-                <source type="image/avif" srcSet={slide.avifSrcSet} sizes="103vw" />
+                <source type="image/avif" srcSet={slide.avifSrcSet} sizes="100vw" />
               ) : null}
               {slide.webpSrcSet ? (
-                <source type="image/webp" srcSet={slide.webpSrcSet} sizes="103vw" />
+                <source type="image/webp" srcSet={slide.webpSrcSet} sizes="100vw" />
               ) : null}
               <img
                 src={slide.src}
                 alt=""
-                className={`ds-hero-photo object-cover object-center ${
-                  animated && isActive ? 'ds-hero-photo--ken-burns' : 'h-full w-full'
+                className={`ds-hero-photo h-full w-full object-cover object-center ${
+                  animated && isActive ? kenBurnsVariant : ''
                 } ${
                   offerSlide
-                    ? 'brightness-[0.46] contrast-[1.1] saturate-[1.14]'
-                    : 'brightness-[0.5] contrast-[1.08] saturate-[1.1]'
+                    ? 'brightness-[0.72] contrast-[1.12] saturate-[1.16]'
+                    : 'brightness-[0.94] contrast-[1.06] saturate-[1.14]'
                 }`}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding="async"
               />
-              {offerSlide && slide.offerBadge ? (
-                <div
-                  className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top,0px)+4.5rem)] z-[2] flex justify-start sm:inset-x-6"
-                  aria-hidden
-                >
-                  <div className="max-w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-[#050403]/55 px-4 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.45)] backdrop-blur-md">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#FFB366]">
-                      Deal live now
-                    </p>
-                    <p className="mt-1 text-lg font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-xl">
-                      {slide.offerBadge}
-                    </p>
-                    {slide.restaurantName ? (
-                      <p className="mt-1 text-xs font-medium text-white/72">{slide.restaurantName}</p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
             </picture>
           );
         })}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/84 to-[#030303]/24" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,122,0,0.14),transparent_58%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,122,0,0.08)_0%,transparent_42%)]" />
-        <div className="absolute inset-0 bg-black/18" />
+
+        <div className="ds-discovery-hero__vignette pointer-events-none absolute inset-0" aria-hidden />
+        <div className="ds-discovery-hero__spotlight pointer-events-none absolute inset-0" aria-hidden />
+        <div className="ds-discovery-hero__scrim pointer-events-none absolute inset-x-0 bottom-0 h-[58%]" aria-hidden />
+        <div className="ds-discovery-hero__glow pointer-events-none absolute inset-0" aria-hidden />
+        {animated ? (
+          <div className="ds-discovery-hero__steam pointer-events-none absolute inset-0" aria-hidden />
+        ) : null}
+        <div className="ds-discovery-hero__edge-fade pointer-events-none absolute inset-0" aria-hidden />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[min(72vh,640px)] max-w-5xl flex-col justify-end px-4 pb-8 pt-12 sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
+      {activeSlide && slideIsOffer(activeSlide) && activeSlide.offerBadge ? (
+        <div
+          className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top,0px)+5.5rem)] z-[2] flex justify-end sm:inset-x-6 lg:top-[calc(env(safe-area-inset-top,0px)+6rem)]"
+          aria-hidden
+        >
+          <div className="ds-discovery-hero__offer-card max-w-[min(19rem,calc(100vw-2rem))] rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FFB366]">
+              Deal live now
+            </p>
+            <p className="mt-1 text-lg font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-xl">
+              {activeSlide.offerBadge}
+            </p>
+            {activeSlide.restaurantName ? (
+              <p className="mt-1 text-xs font-medium text-white/76">{activeSlide.restaurantName}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="relative z-10 mx-auto flex min-h-[min(78vh,720px)] max-w-5xl flex-col justify-end px-4 pb-8 pt-14 sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
         <div
           key={activeSlide?.id ?? 'hero-copy'}
-          className={`max-w-2xl motion-reduce:transition-none ${animated ? 'ds-hero-copy-in' : ''}`}
+          className={`ds-discovery-hero__copy max-w-xl motion-reduce:transition-none ${animated ? 'ds-hero-copy-in' : ''}`}
           aria-live="polite"
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#FF7A00] sm:text-[11px]">
             {displayEyebrow}
           </p>
           <h1
-            className={`mt-3 text-balance text-[2rem] font-extrabold leading-[1.04] tracking-[-0.035em] text-white sm:text-[2.75rem] lg:text-[3.25rem] ${
+            className={`mt-2.5 text-balance text-[2rem] font-extrabold leading-[1.02] tracking-[-0.035em] text-white sm:mt-3 sm:text-[2.65rem] lg:text-[3rem] ${
               isOfferSlide
                 ? 'bg-gradient-to-r from-white via-[#FFF4EA] to-[#FFB366] bg-clip-text text-transparent'
                 : ''
@@ -145,7 +155,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           >
             {displayHeadline}
           </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/74 sm:text-base">
+          <p className="mt-2.5 max-w-md text-[15px] leading-relaxed text-white/78 sm:mt-3 sm:text-base">
             {displaySubline}
           </p>
 
@@ -153,11 +163,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
             <button
               type="button"
               onClick={onCtaClick}
-              className={`mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-6 text-sm font-bold tracking-wide text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7A00] active:scale-[0.98] ${
-                isOfferSlide
-                  ? 'bg-[#FF7A00] shadow-[0_10px_40px_rgba(255,122,0,0.38)] hover:bg-[#ff8f26] hover:shadow-[0_12px_44px_rgba(255,122,0,0.45)]'
-                  : 'border border-white/15 bg-white/10 backdrop-blur-sm hover:border-[#FF7A00]/40 hover:bg-[#FF7A00]/90 hover:shadow-[0_10px_36px_rgba(255,122,0,0.32)]'
-              }`}
+              className="ds-discovery-hero__cta mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-6 text-sm font-bold tracking-wide text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7A00] active:scale-[0.98]"
             >
               {displayCta}
               <span aria-hidden className="text-base leading-none">
@@ -171,7 +177,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
 
         <div className="mt-5 max-w-2xl">{searchSlot}</div>
 
-        {animated && slides.length > 1 ? (
+        {slides.length > 1 ? (
           <div className="mt-6 flex items-center gap-2.5" role="tablist" aria-label="Hero scenes">
             {slides.map((slide, index) => {
               const offerSlide = slideIsOffer(slide);

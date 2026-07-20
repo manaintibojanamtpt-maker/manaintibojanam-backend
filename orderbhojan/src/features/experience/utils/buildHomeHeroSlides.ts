@@ -23,7 +23,7 @@ export function restaurantToHeroOfferSlide(restaurant: RestaurantPublic): HomeHe
     id: `offer-${restaurant.restaurantSlug}`,
     kind: 'offer',
     headline: offerBadge,
-    subline: `From ${restaurant.displayName}`,
+    subline: `${restaurant.displayName} — order before it ends`,
     imageAlt: `${restaurant.displayName} — ${offerBadge}`,
     imageUrl: restaurant.coverUrl,
     offerBadge,
