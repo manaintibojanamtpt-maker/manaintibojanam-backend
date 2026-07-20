@@ -20,6 +20,34 @@ export interface PublicRestaurantOffer {
   readonly couponCode?: string;
 }
 
+export function normalizeCouponTenantRef(raw: unknown): string {
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
+/** Coupon tenantId must match the checkout tenant document id or slug (same kitchen only). */
+export function couponBelongsToTenant(
+  coupon: Record<string, unknown>,
+  tenantId: string,
+  tenantSlug?: string,
+): boolean {
+  const couponTenant = normalizeCouponTenantRef(coupon.tenantId);
+  if (!couponTenant) return false;
+  const candidates = new Set<string>([tenantId.trim()]);
+  const slug = tenantSlug?.trim();
+  if (slug) candidates.add(slug);
+  return candidates.has(couponTenant);
+}
+
+export function assertCouponBelongsToTenant(
+  coupon: Record<string, unknown>,
+  tenantId: string,
+  tenantSlug?: string,
+): void {
+  if (!couponBelongsToTenant(coupon, tenantId, tenantSlug)) {
+    throw Object.assign(new Error('This promo code is not valid for this kitchen'), { statusCode: 400 });
+  }
+}
+
 export function formatPublicCouponDiscountLabel(coupon: {
   readonly discountType?: unknown;
   readonly discountValue?: unknown;
@@ -50,7 +78,9 @@ export async function loadActivePublicCouponsForTenant(
     .get();
 
   return snapshot.docs
-    .map((doc) => mapCouponDocToPublic(doc.id, doc.data() as Record<string, unknown>))
+    .map((doc) => ({ id: doc.id, data: doc.data() as Record<string, unknown> }))
+    .filter(({ data }) => couponBelongsToTenant(data, tenantId))
+    .map(({ id, data }) => mapCouponDocToPublic(id, data))
     .filter((coupon) => coupon.code.length > 0)
     .sort((a, b) => a.code.localeCompare(b.code));
 }
@@ -74,8 +104,8 @@ export async function loadActivePublicCouponsByTenantIds(
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as Record<string, unknown>;
-      const tenantId = String(data.tenantId ?? '');
-      if (!tenantId) continue;
+      const tenantId = normalizeCouponTenantRef(data.tenantId);
+      if (!tenantId || !uniqueIds.includes(tenantId)) continue;
       const coupon = mapCouponDocToPublic(doc.id, data);
       if (!coupon.code) continue;
       const current = grouped.get(tenantId) ?? [];

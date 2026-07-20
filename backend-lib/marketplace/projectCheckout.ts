@@ -23,6 +23,10 @@ import {
   getStoreClosedMessage,
   validateMarketplaceSchedule,
 } from './deliveryTimeSlots.js';
+import {
+  assertCouponBelongsToTenant,
+  couponBelongsToTenant,
+} from './projectPublicCoupons.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -201,6 +205,7 @@ function isCouponExpired(coupon: Record<string, unknown>): boolean {
 async function resolveMarketplaceCouponDiscount(
   db: Firestore,
   tenantId: string,
+  tenantSlug: string | undefined,
   couponCode: string | undefined,
   subtotal: number,
   options?: { strict?: boolean },
@@ -211,19 +216,23 @@ async function resolveMarketplaceCouponDiscount(
   const couponSnap = await db
     .collection('coupons')
     .where('code', '==', normalized)
-    .where('tenantId', '==', tenantId)
     .where('isActive', '==', true)
-    .limit(1)
+    .limit(15)
     .get();
 
-  if (couponSnap.empty) {
+  const matchedDoc = couponSnap.docs.find((doc) =>
+    couponBelongsToTenant(doc.data() as Record<string, unknown>, tenantId, tenantSlug),
+  );
+
+  if (!matchedDoc) {
     if (options?.strict) {
       throw Object.assign(new Error('This promo code is not valid for this kitchen'), { statusCode: 400 });
     }
     return { code: normalized, discountAmount: 0 };
   }
 
-  const coupon = couponSnap.docs[0].data() as Record<string, unknown>;
+  const coupon = matchedDoc.data() as Record<string, unknown>;
+  assertCouponBelongsToTenant(coupon, tenantId, tenantSlug);
   if (isCouponExpired(coupon)) {
     if (options?.strict) {
       throw Object.assign(new Error('This promo code has expired'), { statusCode: 400 });
@@ -328,9 +337,11 @@ async function buildMarketplaceQuoteContext(
 
   let discountAmount = 0;
   let discountLabel = 'Discount';
+  const tenantSlug = String(loaded.raw.slug ?? '').trim() || undefined;
   const couponDiscount = await resolveMarketplaceCouponDiscount(
     db,
     loaded.id,
+    tenantSlug,
     request.couponCode,
     subtotal,
     { strict: Boolean(request.couponCode?.trim()) },

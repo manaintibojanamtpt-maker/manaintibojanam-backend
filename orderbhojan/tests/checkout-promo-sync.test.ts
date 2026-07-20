@@ -73,10 +73,16 @@ describe('checkout promo sync', () => {
       join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
       'utf8',
     );
+    const promoOffers = readFileSync(
+      join(root, 'src/features/checkout/hooks/useCheckoutPromoOffers.ts'),
+      'utf8',
+    );
     assert.match(checkoutFlow, /previousCouponRef/);
     assert.match(checkoutFlow, /invalidateQueries/);
     assert.match(checkoutFlow, /isCheckoutPrepareSessionCompatible/);
     assert.match(checkoutFlow, /getState\(\)\.appliedCouponCode/);
+    assert.match(promoOffers, /query\.data\?\.experience\.promoCodes/);
+    assert.doesNotMatch(promoOffers, /availablePromoCodes\.length === 0/);
     assert.doesNotMatch(checkoutPage, /prepareCheckout\(\)/);
     assert.match(checkoutPage, /setAppliedCouponCode/);
   });

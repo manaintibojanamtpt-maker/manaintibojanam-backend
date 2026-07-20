@@ -68,6 +68,27 @@ describe('sanitizeRestaurantSlugContext', () => {
       'demo-biryani-house',
     );
   });
+
+  it('clears persisted promo codes when restaurant context changes', () => {
+    useRestaurantContextStore.getState().setContext({
+      restaurantSlug: 'mana-inti',
+      contextToken: 'ctx_a',
+      restaurantId: 'obr_mana-inti',
+    });
+    useRestaurantContextStore.getState().setPromoContext({
+      promoCodes: [{ id: 'c1', code: 'MIB20', discountLabel: '20% off', minOrder: 499 }],
+    });
+    useRestaurantContextStore.getState().setAppliedCouponCode('MIB20');
+
+    useRestaurantContextStore.getState().setContext({
+      restaurantSlug: 'inti-bhojanam-pune',
+      contextToken: 'ctx_b',
+      restaurantId: 'obr_inti-bhojanam-pune',
+    });
+
+    assert.equal(useRestaurantContextStore.getState().availablePromoCodes.length, 0);
+    assert.equal(useRestaurantContextStore.getState().appliedCouponCode, null);
+  });
 });
 
 describe('recovery-01 discovery copy', () => {

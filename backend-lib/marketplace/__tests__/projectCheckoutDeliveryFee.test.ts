@@ -121,10 +121,8 @@ describe('mana-inti delivery fee parity', () => {
           return {
             where: () => ({
               where: () => ({
-                where: () => ({
-                  limit: () => ({
-                    get: async () => ({ empty: true, docs: [] }),
-                  }),
+                limit: () => ({
+                  get: async () => ({ empty: true, docs: [] }),
                 }),
               }),
             }),

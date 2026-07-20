@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  couponBelongsToTenant,
   formatPublicCouponDiscountLabel,
   projectPublicRestaurantOffers,
   resolvePrimaryCustomerOfferLabel,
@@ -16,6 +17,22 @@ describe('projectPublicCoupons', () => {
       formatPublicCouponDiscountLabel({ discountType: 'fixed', discountValue: 50 }),
       '₹50 off',
     );
+  });
+
+  it('scopes coupons to tenant id or slug only', () => {
+    assert.equal(
+      couponBelongsToTenant({ tenantId: 'mana-inti' }, 'mana-inti', 'mana-inti'),
+      true,
+    );
+    assert.equal(
+      couponBelongsToTenant({ tenantId: 'mana-inti' }, 'manaintibojanam', 'mana-inti'),
+      true,
+    );
+    assert.equal(
+      couponBelongsToTenant({ tenantId: 'mana-inti' }, 'inti-bhojanam-pune', 'inti-bhojanam-pune'),
+      false,
+    );
+    assert.equal(couponBelongsToTenant({ tenantId: '' }, 'mana-inti'), false);
   });
 
   it('merges festival offers with linked and standalone coupons', () => {

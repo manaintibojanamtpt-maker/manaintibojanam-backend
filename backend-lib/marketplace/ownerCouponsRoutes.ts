@@ -47,8 +47,22 @@ async function loadOwnedCoupon(
   const snap = await ref.get();
   if (!snap.exists) return null;
   const data = snap.data() as Record<string, unknown>;
-  if (String(data.tenantId) !== tenantId) return null;
+  const couponTenant = String(data.tenantId ?? '').trim();
+  if (couponTenant !== tenantId) return null;
   return { ref, data };
+}
+
+async function resolveCanonicalTenantId(db: Firestore, tenantRef: string): Promise<string> {
+  const trimmed = tenantRef.trim();
+  if (!trimmed) return trimmed;
+
+  const direct = await db.collection('tenants').doc(trimmed).get();
+  if (direct.exists) return direct.id;
+
+  const bySlug = await db.collection('tenants').where('slug', '==', trimmed).limit(1).get();
+  if (!bySlug.empty) return bySlug.docs[0].id;
+
+  return trimmed;
 }
 
 export function registerOwnerCouponsRoutes(
@@ -62,10 +76,11 @@ export function registerOwnerCouponsRoutes(
     try {
       const tenantId = typeof req.query?.tenantId === 'string' ? req.query.tenantId.trim() : '';
       const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
-      const snapshot = await db.collection('coupons').where('tenantId', '==', resolvedTenantId).get();
+      const canonicalTenantId = await resolveCanonicalTenantId(db, resolvedTenantId);
+      const snapshot = await db.collection('coupons').where('tenantId', '==', canonicalTenantId).get();
       const coupons = snapshot.docs.map((doc) => mapCouponDoc(doc.id, doc.data() as Record<string, unknown>));
       coupons.sort((a, b) => a.code.localeCompare(b.code));
-      res.json({ success: true, tenantId: resolvedTenantId, coupons });
+      res.json({ success: true, tenantId: canonicalTenantId, coupons });
     } catch (error: unknown) {
       const status = (error as { statusCode?: number }).statusCode ?? 500;
       res.status(status).json({
@@ -79,6 +94,7 @@ export function registerOwnerCouponsRoutes(
     try {
       const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
       const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
+      const canonicalTenantId = await resolveCanonicalTenantId(db, resolvedTenantId);
       const code = normalizeCouponCode(req.body?.code);
       const discountType = normalizeDiscountType(req.body?.discountType);
       const discountValue = Number(req.body?.discountValue);
@@ -99,7 +115,7 @@ export function registerOwnerCouponsRoutes(
 
       const duplicate = await db
         .collection('coupons')
-        .where('tenantId', '==', resolvedTenantId)
+        .where('tenantId', '==', canonicalTenantId)
         .where('code', '==', code)
         .limit(1)
         .get();
@@ -108,7 +124,7 @@ export function registerOwnerCouponsRoutes(
       }
 
       const ref = await db.collection('coupons').add({
-        tenantId: resolvedTenantId,
+        tenantId: canonicalTenantId,
         code,
         discountType,
         discountValue,
@@ -118,12 +134,12 @@ export function registerOwnerCouponsRoutes(
       });
 
       await publishTenantDomainEvent(db, fieldValue, {
-        tenantId: resolvedTenantId,
+        tenantId: canonicalTenantId,
         type: 'OfferUpdated',
         source: 'owner_coupons_create',
       });
 
-      res.json({ success: true, id: ref.id, tenantId: resolvedTenantId });
+      res.json({ success: true, id: ref.id, tenantId: canonicalTenantId });
     } catch (error: unknown) {
       const status = (error as { statusCode?: number }).statusCode ?? 500;
       res.status(status).json({
@@ -138,7 +154,8 @@ export function registerOwnerCouponsRoutes(
       const couponId = String(req.params.id);
       const tenantId = typeof req.body?.tenantId === 'string' ? req.body.tenantId.trim() : '';
       const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
-      const owned = await loadOwnedCoupon(db, couponId, resolvedTenantId);
+      const canonicalTenantId = await resolveCanonicalTenantId(db, resolvedTenantId);
+      const owned = await loadOwnedCoupon(db, couponId, canonicalTenantId);
       if (!owned) {
         return res.status(404).json({ success: false, error: 'Coupon not found' });
       }
@@ -151,7 +168,7 @@ export function registerOwnerCouponsRoutes(
       await owned.ref.set(patch, { merge: true });
 
       await publishTenantDomainEvent(db, fieldValue, {
-        tenantId: resolvedTenantId,
+        tenantId: canonicalTenantId,
         type: 'OfferUpdated',
         source: 'owner_coupons_update',
       });
@@ -171,7 +188,8 @@ export function registerOwnerCouponsRoutes(
       const couponId = String(req.params.id);
       const tenantId = typeof req.query?.tenantId === 'string' ? req.query.tenantId.trim() : '';
       const resolvedTenantId = await assertOwnerTenantAccess(req.user.uid, tenantId, req.user.email);
-      const owned = await loadOwnedCoupon(db, couponId, resolvedTenantId);
+      const canonicalTenantId = await resolveCanonicalTenantId(db, resolvedTenantId);
+      const owned = await loadOwnedCoupon(db, couponId, canonicalTenantId);
       if (!owned) {
         return res.status(404).json({ success: false, error: 'Coupon not found' });
       }
@@ -179,7 +197,7 @@ export function registerOwnerCouponsRoutes(
       await owned.ref.delete();
 
       await publishTenantDomainEvent(db, fieldValue, {
-        tenantId: resolvedTenantId,
+        tenantId: canonicalTenantId,
         type: 'OfferUpdated',
         source: 'owner_coupons_delete',
       });

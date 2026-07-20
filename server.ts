@@ -55,6 +55,7 @@ import { registerMarketplaceReferralRoutes } from "./backend-lib/marketplace/mar
 import { registerOwnerStorefrontRoutes } from "./backend-lib/marketplace/ownerStorefrontRoutes";
 import { registerOwnerStorefrontMediaRoutes } from "./backend-lib/marketplace/ownerStorefrontMediaRoutes";
 import { registerOwnerCouponsRoutes } from "./backend-lib/marketplace/ownerCouponsRoutes.js";
+import { couponBelongsToTenant } from "./backend-lib/marketplace/projectPublicCoupons.js";
 import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrdersRoutes.js";
 import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
 import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
@@ -2489,21 +2490,30 @@ app.post("/api/admin/send-report", requireAdmin, async (req: any, res: any) => {
 
 // ================= COUPON VALIDATION =================
 app.post("/api/coupons/validate", async (req, res) => {
-  const { code, subtotal } = req.body;
+  const { code, subtotal, tenantId, restaurantId } = req.body;
+  const scopedTenantId = typeof tenantId === 'string' ? tenantId.trim() : typeof restaurantId === 'string' ? restaurantId.trim() : '';
   
   if (!_db) return res.status(500).json({ error: "Database not initialized" });
+  if (!scopedTenantId) {
+    return res.status(400).json({ valid: false, message: "Restaurant context is required to validate promo codes" });
+  }
 
   try {
     const couponSnap = await _db.collection("coupons")
-      .where("code", "==", code.toUpperCase())
-      .limit(1)
+      .where("code", "==", String(code ?? '').toUpperCase())
+      .where("isActive", "==", true)
+      .limit(15)
       .get();
 
-    if (couponSnap.empty) {
+    const matched = couponSnap.docs.find((doc) =>
+      couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId),
+    );
+
+    if (!matched) {
       return res.status(404).json({ valid: false, message: "Invalid coupon code" });
     }
 
-    const coupon = couponSnap.docs[0].data();
+    const coupon = matched.data();
     
     // Check if active
     if (coupon.isActive === false) {
@@ -3765,8 +3775,11 @@ app.post("/api/orders", verifyFirebaseToken, async (req: any, res: any) => {
       riderPhone,
       status,
       couponCode,
-      deliveryTimeSlot
+      deliveryTimeSlot,
+      tenantId,
+      restaurantId,
     } = req.body;
+    const scopedTenantId = typeof tenantId === 'string' ? tenantId.trim() : typeof restaurantId === 'string' ? restaurantId.trim() : '';
 
     if (!items || !phone || !address) {
       console.warn("⚠️ Order placement failed: Missing required fields", { items: !!items, phone: !!phone, address: !!address });
@@ -3826,14 +3839,22 @@ app.post("/api/orders", verifyFirebaseToken, async (req: any, res: any) => {
     let appliedCouponData = null;
 
     if (couponCode && _db) {
+      if (!scopedTenantId) {
+        return res.status(400).json({ success: false, error: "Restaurant context is required when applying a promo code" });
+      }
+
       const couponSnap = await _db.collection("coupons")
         .where("code", "==", couponCode.toUpperCase())
         .where("isActive", "==", true)
-        .limit(1)
+        .limit(15)
         .get();
 
-      if (!couponSnap.empty) {
-        const coupon = couponSnap.docs[0].data();
+      const matched = couponSnap.docs.find((doc) =>
+        couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId),
+      );
+
+      if (matched) {
+        const coupon = matched.data();
         const isExpired = coupon.expiryDate && new Date(coupon.expiryDate).setHours(23, 59, 59, 999) < new Date().getTime();
         const isMinOrderMet = !coupon.minOrder || subtotal >= coupon.minOrder;
 

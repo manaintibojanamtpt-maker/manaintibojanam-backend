@@ -12,17 +12,11 @@ import { useRestaurantContextStore } from '@/features/restaurant/store/restauran
 
 export function useCheckoutPromoOffers(enabled = true) {
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
-  const availableOffers = useRestaurantContextStore((s) => s.availableOffers);
-  const availablePromoCodes = useRestaurantContextStore((s) => s.availablePromoCodes);
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
   const liveQuery = getMarketplaceQueryBehavior();
 
-  const needsFetch =
-    enabled &&
-    Boolean(restaurantSlug) &&
-    availableOffers.length === 0 &&
-    availablePromoCodes.length === 0;
+  const shouldFetch = enabled && Boolean(restaurantSlug);
 
   const query = useQuery({
     queryKey: restaurantKeys.experience(restaurantSlug ?? '', coords.lat, coords.lng),
@@ -32,7 +26,7 @@ export function useCheckoutPromoOffers(enabled = true) {
         lat: coords.lat,
         lng: coords.lng,
       }),
-    enabled: needsFetch,
+    enabled: shouldFetch,
     ...liveQuery,
     staleTime: 60_000,
   });
@@ -45,16 +39,16 @@ export function useCheckoutPromoOffers(enabled = true) {
     });
   }, [query.data]);
 
-  const offers = query.data?.experience.offers ?? availableOffers;
-  const promoCodes = query.data?.experience.promoCodes ?? availablePromoCodes;
+  const offers = query.data?.experience.offers ?? [];
+  const promoCodes = query.data?.experience.promoCodes ?? [];
 
   return useMemo(
     () => ({
       offers,
       promoCodes,
       selectableCodes: listCopyableCouponCodes({ offers, promoCodes }),
-      isLoading: needsFetch && query.isLoading,
+      isLoading: shouldFetch && query.isLoading,
     }),
-    [needsFetch, offers, promoCodes, query.isLoading],
+    [offers, promoCodes, query.isLoading, shouldFetch],
   );
 }

@@ -128,23 +128,21 @@ describe('projectCheckout', () => {
           return {
             where: () => ({
               where: () => ({
-                where: () => ({
-                  limit: () => ({
-                    get: async () => ({
-                      empty: false,
-                      docs: [
-                        {
-                          data: () => ({
-                            code: 'MIB20',
-                            tenantId: 'mana-inti',
-                            discountType: 'percentage',
-                            discountValue: 20,
-                            minOrder: 499,
-                            isActive: true,
-                          }),
-                        },
-                      ],
-                    }),
+                limit: () => ({
+                  get: async () => ({
+                    empty: false,
+                    docs: [
+                      {
+                        data: () => ({
+                          code: 'MIB20',
+                          tenantId: 'mana-inti',
+                          discountType: 'percentage',
+                          discountValue: 20,
+                          minOrder: 499,
+                          isActive: true,
+                        }),
+                      },
+                    ],
                   }),
                 }),
               }),
@@ -216,23 +214,21 @@ describe('projectCheckout', () => {
           return {
             where: () => ({
               where: () => ({
-                where: () => ({
-                  limit: () => ({
-                    get: async () => ({
-                      empty: false,
-                      docs: [
-                        {
-                          data: () => ({
-                            code: 'MIB20',
-                            tenantId: 'mana-inti',
-                            discountType: 'percentage',
-                            discountValue: 20,
-                            minOrder: 599,
-                            isActive: true,
-                          }),
-                        },
-                      ],
-                    }),
+                limit: () => ({
+                  get: async () => ({
+                    empty: false,
+                    docs: [
+                      {
+                        data: () => ({
+                          code: 'MIB20',
+                          tenantId: 'mana-inti',
+                          discountType: 'percentage',
+                          discountValue: 20,
+                          minOrder: 599,
+                          isActive: true,
+                        }),
+                      },
+                    ],
                   }),
                 }),
               }),
@@ -300,10 +296,8 @@ describe('projectCheckout', () => {
           return {
             where: () => ({
               where: () => ({
-                where: () => ({
-                  limit: () => ({
-                    get: async () => ({ empty: true, docs: [] }),
-                  }),
+                limit: () => ({
+                  get: async () => ({ empty: true, docs: [] }),
                 }),
               }),
             }),
@@ -317,6 +311,88 @@ describe('projectCheckout', () => {
       () =>
         buildMarketplaceQuote(fakeDb, {
           restaurantId: 'mana-inti',
+          orderType: 'pickup',
+          couponCode: 'MIB20',
+          lines: [{ itemId: menuItemId, quantity: 1 }],
+        }),
+      /not valid for this kitchen/,
+    );
+  });
+
+  it('rejects coupon codes scoped to a different tenant during quote', async () => {
+    const menuItemId = 'item-thali';
+    const fakeDb = {
+      collection: (name: string) => {
+        if (name === 'tenants') {
+          return {
+            doc: (id: string) => ({
+              get: async () =>
+                id === 'inti-bhojanam-pune'
+                  ? {
+                      exists: true,
+                      id: 'inti-bhojanam-pune',
+                      data: () => ({
+                        slug: 'inti-bhojanam-pune',
+                        deliveryConfig: { feesConfigured: false },
+                        pricingConfig: { packingFee: 0, gstPercent: 0 },
+                      }),
+                    }
+                  : { exists: false },
+            }),
+            where: () => ({
+              limit: () => ({
+                get: async () => ({ empty: true, docs: [] }),
+              }),
+            }),
+          };
+        }
+        if (name === 'menu') {
+          return {
+            where: () => ({
+              get: async () => ({
+                docs: [
+                  {
+                    id: menuItemId,
+                    data: () => ({ price: 555, name: 'Thali', isAvailable: true }),
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+        if (name === 'coupons') {
+          return {
+            where: () => ({
+              where: () => ({
+                limit: () => ({
+                  get: async () => ({
+                    empty: false,
+                    docs: [
+                      {
+                        data: () => ({
+                          code: 'MIB20',
+                          tenantId: 'mana-inti',
+                          discountType: 'percentage',
+                          discountValue: 20,
+                          minOrder: 499,
+                          isActive: true,
+                        }),
+                      },
+                    ],
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected collection ${name}`);
+      },
+    } as never;
+
+    await assert.rejects(
+      () =>
+        buildMarketplaceQuote(fakeDb, {
+          restaurantId: 'inti-bhojanam-pune',
           orderType: 'pickup',
           couponCode: 'MIB20',
           lines: [{ itemId: menuItemId, quantity: 1 }],

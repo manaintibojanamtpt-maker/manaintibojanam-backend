@@ -32,7 +32,20 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
       availablePromoCodes: [],
       appliedCouponCode: null,
 
-      setContext: (ctx) => set({ ...ctx }),
+      setContext: (ctx) =>
+        set((state) => {
+          const restaurantChanged =
+            state.restaurantSlug !== ctx.restaurantSlug ||
+            state.restaurantId !== ctx.restaurantId;
+          return restaurantChanged
+            ? {
+                ...ctx,
+                availableOffers: [],
+                availablePromoCodes: [],
+                appliedCouponCode: null,
+              }
+            : { ...ctx };
+        }),
 
       setPromoContext: (ctx) =>
         set({
@@ -54,7 +67,7 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
         }),
     }),
     {
-      name: 'ob-restaurant-context-m7',
+      name: 'ob-restaurant-context-m8',
       partialize: (state) => ({
         restaurantId: state.restaurantId,
         contextToken: state.contextToken,
