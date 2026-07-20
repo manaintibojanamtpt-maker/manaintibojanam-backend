@@ -27,20 +27,31 @@ Configure in [Firebase Console → Authentication → Settings → Authorized do
 - **No backend env changes** — `VITE_FIREBASE_PROJECT_ID=bhojanos-prod` stays the same for OrderBhojan; only hosting URLs change.
 - If sign-in fails with `auth/network-request-failed` on `www.bhojanos.com`, also verify **GCP API key HTTP referrer restrictions** for the bhojanos-prod browser key include `https://www.bhojanos.com/*` and `https://bhojanos.com/*` (Console → Google Cloud → Credentials).
 
-## Programmatic sync (repo script)
+## Programmatic sync (repo scripts)
 
 When you have Firebase Admin credentials locally or in CI:
 
 ```bash
-# List missing domains (exit 1 if any missing)
+# List missing Firebase Auth authorized domains (exit 1 if any missing)
 npm run firebase:sync-auth-domains -- --check
 
-# Preview changes
+# Preview auth domain changes
 npm run firebase:sync-auth-domains -- --dry-run
 
-# Apply missing domains to bhojanos-prod
+# Apply missing auth domains via Identity Toolkit Admin v2 REST API
 npm run firebase:sync-auth-domains
+
+# Probe identitytoolkit from www.bhojanos.com referrer (INVALID_LOGIN_CREDENTIALS = OK)
+npm run firebase:probe-api-key-referrer
+
+# Check API key HTTP referrers (prints Console steps if apikeys API unavailable)
+npm run firebase:sync-api-key-referrers -- --check
+
+# Attempt GCP patch when you have apikeys.keys.update (Project Owner)
+npm run firebase:sync-api-key-referrers -- --apply
 ```
+
+> **Note:** `firebase-admin` v13 `projectConfigManager()` returns empty `authorizedDomains`. The repo script uses Identity Toolkit Admin v2 instead.
 
 ## Manual Firebase Console steps
 

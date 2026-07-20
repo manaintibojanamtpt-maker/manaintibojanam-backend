@@ -2,6 +2,9 @@
 /**
  * Ensure bhojanos-prod Firebase Auth authorized domains include all production hosts.
  *
+ * Uses Identity Toolkit Admin v2 REST API — firebase-admin v13 projectConfigManager()
+ * returns empty authorizedDomains and must not be used here.
+ *
  * Usage:
  *   npm run firebase:sync-auth-domains          # apply missing domains
  *   npm run firebase:sync-auth-domains -- --dry-run
@@ -10,35 +13,23 @@
  * Requires FIREBASE_PROJECT_ID=bhojanos-prod and service account credentials
  * (FIREBASE_SERVICE_ACCOUNT or GOOGLE_APPLICATION_CREDENTIALS).
  */
-import { getAuth } from 'firebase-admin/auth';
 import { FirebaseAdminProvider } from '../../backend-lib/firebase/FirebaseAdminProvider.js';
-
-/** Keep in sync with docs/firebase/AUTHORIZED-DOMAINS.md */
-export const REQUIRED_AUTH_DOMAINS = [
-  'localhost',
-  'bhojanos.com',
-  'www.bhojanos.com',
-  'orderbhojan.web.app',
-  'orderbhojan.firebaseapp.com',
-  'orderbhojan.com',
-  'www.orderbhojan.com',
-  'manaintibojanam.web.app',
-  'manaintibojanam.firebaseapp.com',
-  'bhojanos-owner.web.app',
-  'bhojanos-admin.web.app',
-] as const;
+import {
+  getIdentityToolkitProjectConfig,
+  patchIdentityToolkitAuthorizedDomains,
+} from './identityToolkitAdmin.js';
+import { REQUIRED_AUTH_DOMAINS } from './requiredAuthDomains.js';
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
   const checkOnly = process.argv.includes('--check');
 
   await FirebaseAdminProvider.initialize({ skipProbe: true });
-  const manager = getAuth().projectConfigManager();
-  const config = await manager.getProjectConfig();
+  const config = await getIdentityToolkitProjectConfig();
   const current = [...(config.authorizedDomains ?? [])].sort();
   const missing = REQUIRED_AUTH_DOMAINS.filter((domain) => !current.includes(domain));
 
-  console.log(`Project: ${config.projectId ?? 'bhojanos-prod'}`);
+  console.log(`Project: bhojanos-prod`);
   console.log(`Authorized domains (${current.length}): ${current.join(', ')}`);
 
   if (missing.length === 0) {
@@ -59,7 +50,7 @@ async function main() {
   }
 
   const merged = [...new Set([...current, ...missing])].sort();
-  await manager.updateProjectConfig({ authorizedDomains: merged });
+  await patchIdentityToolkitAuthorizedDomains(merged);
   console.log(`\n✔ Updated authorized domains (${merged.length} total).`);
 }
 
