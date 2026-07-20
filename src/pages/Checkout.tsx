@@ -30,6 +30,7 @@ import { formatTenantPickupAddress, getEnabledPaymentMethods } from '../lib/tena
 import { buildUpiPayUrl } from '../lib/upiValidation';
 import { buildDeliveryTimeSlots, isAsapSlot } from '../lib/deliveryTimeSlots';
 import { getStoreClosedMessage, type ResolvedStoreSettings } from '../lib/tenantStoreOperations';
+import { couponBelongsToTenant } from '../lib/couponTenantScope';
 
 // Countdown removed by request
 
@@ -70,11 +71,6 @@ const Checkout: React.FC = () => {
     if (!tenantId) return;
     const loadCoupons = async () => {
       try {
-        if (tenantId === 'mana-inti') {
-          const snap = await getDocs(query(collection(getDb(), 'coupons'), where('isActive', '==', true), limit(1)));
-          setHasTenantCoupons(!snap.empty);
-          return;
-        }
         const snap = await getDocs(
           query(collection(getDb(), 'coupons'), where('tenantId', '==', tenantId), where('isActive', '==', true), limit(1))
         );
@@ -738,8 +734,7 @@ const Checkout: React.FC = () => {
       const match = snap.docs.find((docSnap) => {
         const coupon = docSnap.data();
         if (!coupon.isActive) return false;
-        if (tenantId === 'mana-inti') return !coupon.tenantId || coupon.tenantId === 'mana-inti';
-        return coupon.tenantId === tenantId;
+        return couponBelongsToTenant(coupon, tenantId, tenantSlug);
       });
 
       if (!match) {

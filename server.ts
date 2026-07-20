@@ -2490,8 +2490,9 @@ app.post("/api/admin/send-report", requireAdmin, async (req: any, res: any) => {
 
 // ================= COUPON VALIDATION =================
 app.post("/api/coupons/validate", async (req, res) => {
-  const { code, subtotal, tenantId, restaurantId } = req.body;
+  const { code, subtotal, tenantId, tenantSlug, restaurantId } = req.body;
   const scopedTenantId = typeof tenantId === 'string' ? tenantId.trim() : typeof restaurantId === 'string' ? restaurantId.trim() : '';
+  const scopedTenantSlug = typeof tenantSlug === 'string' ? tenantSlug.trim() : undefined;
   
   if (!_db) return res.status(500).json({ error: "Database not initialized" });
   if (!scopedTenantId) {
@@ -2506,7 +2507,7 @@ app.post("/api/coupons/validate", async (req, res) => {
       .get();
 
     const matched = couponSnap.docs.find((doc) =>
-      couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId),
+      couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId, scopedTenantSlug),
     );
 
     if (!matched) {
@@ -3778,8 +3779,10 @@ app.post("/api/orders", verifyFirebaseToken, async (req: any, res: any) => {
       deliveryTimeSlot,
       tenantId,
       restaurantId,
+      tenantSlug,
     } = req.body;
     const scopedTenantId = typeof tenantId === 'string' ? tenantId.trim() : typeof restaurantId === 'string' ? restaurantId.trim() : '';
+    const scopedTenantSlug = typeof tenantSlug === 'string' ? tenantSlug.trim() : undefined;
 
     if (!items || !phone || !address) {
       console.warn("⚠️ Order placement failed: Missing required fields", { items: !!items, phone: !!phone, address: !!address });
@@ -3850,7 +3853,7 @@ app.post("/api/orders", verifyFirebaseToken, async (req: any, res: any) => {
         .get();
 
       const matched = couponSnap.docs.find((doc) =>
-        couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId),
+        couponBelongsToTenant(doc.data() as Record<string, unknown>, scopedTenantId, scopedTenantSlug),
       );
 
       if (matched) {
