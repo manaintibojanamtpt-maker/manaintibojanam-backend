@@ -203,8 +203,9 @@ export function v2ToSavedAddressInput(
       ? address.text.pincode
       : cascade.pincode;
 
-  const street = [address.text.flat, address.text.building].filter(Boolean).join(', ').trim();
-  const formattedAddress = address.text.formatted || address.text.shortLabel;
+  const streetParts = [address.text.flat, address.text.building].filter(Boolean).join(', ').trim();
+  const formattedAddress = address.text.formatted || address.text.shortLabel || streetParts;
+  const street = streetParts.length >= 3 ? streetParts : formattedAddress || streetParts || 'Delivery address';
 
   return {
     label,

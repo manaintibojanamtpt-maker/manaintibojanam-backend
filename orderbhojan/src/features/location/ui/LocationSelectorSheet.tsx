@@ -1,5 +1,5 @@
 import { Clock3, LocateFixed } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BottomSheet from '@bhojan/storefront-design-system/layout/BottomSheet';
 import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
@@ -21,6 +21,7 @@ export function LocationSelectorSheet() {
     selectSavedAddress,
     selectRecentLocation,
     startAddSavedAddress,
+    refreshSavedAddresses,
   } = useLocationActions();
   const { uiStatus, uiError } = useLocationUiState();
   const captureInFlight = useLocationSessionStore((s) => s.locationCaptureInFlight);
@@ -33,11 +34,23 @@ export function LocationSelectorSheet() {
   const routeLocation = useLocation();
   const [search, setSearch] = useState('');
   const [manualFormOpen, setManualFormOpen] = useState(false);
-  const signInPath = `/auth?returnTo=${encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`)}`;
+  const [addressSyncFailed, setAddressSyncFailed] = useState(false);
 
-  const handleSignIn = () => {
+  useEffect(() => {
+    if (!open || !isAuthenticated) {
+      setAddressSyncFailed(false);
+      return;
+    }
+    void refreshSavedAddresses().then((ok) => setAddressSyncFailed(!ok));
+  }, [isAuthenticated, open, refreshSavedAddresses]);
+  const signInPath = `/auth?returnTo=${encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`)}`;
+  const returnPath = `${routeLocation.pathname}${routeLocation.search}`;
+
+  const handleSignIn = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    navigate(signInPath, { state: { from: returnPath } });
     closeSelector();
-    navigate(signInPath);
   };
 
   const filteredSaved = saved.filter((a) => {
@@ -127,7 +140,16 @@ export function LocationSelectorSheet() {
               {uiStatus === 'loading' && saved.length === 0 ? (
                 <Skeleton className="h-12 w-full rounded-2xl" />
               ) : null}
-              {filteredSaved.length === 0 ? (
+              {addressSyncFailed ? (
+                <EmptyStateView
+                  title="Could not load saved addresses"
+                  description="Check your connection and try again."
+                  actionLabel="Retry"
+                  onAction={() => {
+                    void refreshSavedAddresses().then((ok) => setAddressSyncFailed(!ok));
+                  }}
+                />
+              ) : filteredSaved.length === 0 ? (
                 <EmptyStateView
                   title={search.trim() ? 'No matching addresses' : 'No saved addresses'}
                   description={
@@ -170,14 +192,15 @@ export function LocationSelectorSheet() {
               </SoftButton>
             </section>
           ) : (
-            <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
+            <GlassCard hoverEffect={false} className="relative z-10 !rounded-2xl !p-4">
               <p className="text-sm text-white/80">Sign in to save addresses for faster checkout.</p>
               <SoftButton
                 type="button"
                 tone="secondary"
                 fullWidth
-                className="mt-3 min-h-11 touch-manipulation"
+                className="relative z-10 mt-3 min-h-11 touch-manipulation"
                 onClick={handleSignIn}
+                onPointerDown={(event) => event.stopPropagation()}
               >
                 Sign in
               </SoftButton>

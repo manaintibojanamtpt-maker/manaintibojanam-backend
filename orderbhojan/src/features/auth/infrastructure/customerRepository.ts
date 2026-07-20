@@ -7,6 +7,12 @@ import {
 } from 'firebase/firestore';
 import { getFirebaseFirestore, isFirestoreConfigured } from '@/firebase';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
+import type { SavedAddressInput } from '@/features/location/domain/location.schema';
+import type { SavedAddress } from '@/features/location/domain/location.types';
+import {
+  listSavedAddresses,
+  saveAddress,
+} from '@/features/location/infrastructure/firestoreAddressRepo';
 import type { AuthProviderId, AuthSessionUser } from '../domain/auth.types';
 
 export interface CustomerDocument {
@@ -84,6 +90,20 @@ export async function readCustomerProfile(uid: string): Promise<CustomerDocument
     if (isFirestorePermissionDenied(error)) return null;
     throw error;
   }
+}
+
+export async function listCustomerSavedAddresses(uid: string): Promise<SavedAddress[]> {
+  return listSavedAddresses(uid);
+}
+
+/** Ensures the customer profile exists before writing address subcollection docs. */
+export async function upsertCustomerSavedAddress(
+  user: AuthSessionUser,
+  input: SavedAddressInput,
+  addressId?: string,
+): Promise<SavedAddress> {
+  await upsertCustomerProfile(user);
+  return saveAddress(user.uid, input, addressId);
 }
 
 function mergeProviders(existing: AuthProviderId[] | undefined, next: AuthProviderId): AuthProviderId[] {

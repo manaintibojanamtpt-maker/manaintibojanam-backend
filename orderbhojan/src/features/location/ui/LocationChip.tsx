@@ -59,7 +59,15 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       {isDetecting ? (
         <Skeleton className="h-4 w-3/5" />
       ) : (
-        <span className="truncate text-sm text-white/90">
+        <span
+          className={`truncate text-sm ${
+            uiError && uiStatus === 'error'
+              ? 'text-red-300/90'
+              : hasCoordsReady
+                ? 'text-white/90'
+                : 'font-semibold text-[#FFB366]'
+          }`}
+        >
           {uiError && uiStatus === 'error' ? uiError.message : label}
         </span>
       )}

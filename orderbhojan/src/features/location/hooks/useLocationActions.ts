@@ -1,13 +1,13 @@
 import { useCallback } from 'react';
 import { getLocationStoreAddress } from '@bhojan/location-core';
 import { bootstrapCustomerSession } from '@/features/auth/application/profileBootstrapService';
+import { upsertCustomerSavedAddress } from '@/features/auth/infrastructure/customerRepository';
 import type { AuthSessionUser } from '@/features/auth/domain/auth.types';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { LOCATION_ERROR_CODES, LocationError } from '../domain/location.errors';
 import type { GeoCoordinates } from '../domain/location.types';
 import { savedAddressInputSchema, type SavedAddressInput } from '../domain/location.schema';
 import {
-  createSavedAddress,
   fetchSavedAddresses,
   hydrateGuestSessionLocation,
   loadRecentLocationEntries,
@@ -48,7 +48,7 @@ async function persistConfirmedAddressForUser(
   uid: string,
   sessionUser: AuthSessionUser,
   options: { force?: boolean; updatingSavedAddressId?: string },
-  refreshSavedAddresses: () => Promise<void>,
+  refreshSavedAddresses: () => Promise<boolean>,
 ): Promise<void> {
   const address = getLocationStoreAddress();
   if (!address) {
@@ -58,6 +58,9 @@ async function persistConfirmedAddressForUser(
   const savedInput = v2ToSavedAddressInput(address);
   const parsed = savedAddressInputSchema.safeParse(savedInput);
   if (!parsed.success) {
+    if (import.meta.env.DEV) {
+      console.warn('[OrderBhojan] Skipped saved-address persist — invalid address payload', parsed.error.flatten());
+    }
     return;
   }
 
@@ -74,7 +77,7 @@ async function persistConfirmedAddressForUser(
     return;
   }
 
-  await createSavedAddress(uid, parsed.data);
+  await upsertCustomerSavedAddress(sessionUser, parsed.data);
   await refreshSavedAddresses();
 }
 
@@ -109,17 +112,22 @@ export function useLocationActions() {
   const geocodeEnabled = useLocationGeocodeEnabled();
   const { sessionUser, isAuthenticated } = useAuth();
 
-  const refreshSavedAddresses = useCallback(async () => {
-    const { setSavedAddresses } = locationStore();
+  const refreshSavedAddresses = useCallback(async (): Promise<boolean> => {
+    const { setSavedAddresses, savedAddresses } = locationStore();
     if (!sessionUser?.uid || sessionUser.provider === 'guest') {
       setSavedAddresses([]);
-      return;
+      return true;
     }
     try {
       const addresses = await fetchSavedAddresses(sessionUser.uid);
       setSavedAddresses(addresses);
+      return true;
     } catch {
-      setSavedAddresses([]);
+      // Keep cached addresses on native resume / offline refresh failures.
+      if (savedAddresses.length === 0) {
+        setSavedAddresses([]);
+      }
+      return false;
     }
   }, [sessionUser]);
 
@@ -171,7 +179,7 @@ export function useLocationActions() {
         throw new LocationError(LOCATION_ERROR_CODES.FIRESTORE_UNAVAILABLE, 'Sign in to save addresses');
       }
       await bootstrapCustomerSession(sessionUser);
-      const saved = await createSavedAddress(sessionUser.uid, input);
+      const saved = await upsertCustomerSavedAddress(sessionUser, input);
       await refreshSavedAddresses();
       await applyObSavedAddress(saved, geocodeEnabled);
       locationStore().setSelectorOpen(false);
@@ -288,9 +296,9 @@ export function useLocationActions() {
   const confirmAddress = useCallback(
     async (input: { flat?: string; building?: string; landmark?: string }) => {
       const store = locationStore();
-      const updatingSavedAddressId =
-        store.activeLocation?.kind === 'saved' ? store.activeLocation.savedAddressId : undefined;
-      const forcePersist = store.pendingSavedAddress;
+      const isUpdatingSaved = store.activeLocation?.kind === 'saved';
+      const updatingSavedAddressId = isUpdatingSaved ? store.activeLocation?.savedAddressId : undefined;
+      const forcePersist = store.pendingSavedAddress || !isUpdatingSaved;
       confirmObLocationDraft(input);
 
       if (sessionUser?.uid && isAuthenticated && sessionUser.provider !== 'guest') {
@@ -301,8 +309,10 @@ export function useLocationActions() {
             { force: forcePersist, updatingSavedAddressId },
             refreshSavedAddresses,
           );
-        } catch {
-          // Session location is still confirmed even if Firestore save fails.
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.warn('[OrderBhojan] Saved-address persist failed after confirmation', error);
+          }
         }
       }
 

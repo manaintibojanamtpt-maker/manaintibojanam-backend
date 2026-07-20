@@ -25,6 +25,7 @@ describe('profile native auth and storage fixes', () => {
       'utf8',
     );
     assert.match(repo, /updateCustomerPreferences/);
+    assert.match(repo, /upsertCustomerSavedAddress/);
     assert.match(repo, /setDoc\([\s\S]*merge: true/);
     assert.doesNotMatch(repo, /updateDoc\(/);
   });

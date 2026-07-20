@@ -323,6 +323,26 @@ html.ob-native .ob-transactional-shell {
   touch-action: manipulation;
 }
 
+.ob-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  touch-action: manipulation;
+  border-radius: 9999px;
+  color: rgba(255, 255, 255, 0.92);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ob-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ob-icon-btn:active {
+  opacity: 0.88;
+}
+
 .ob-press:active {
   transform: scale(0.96);
   opacity: 0.92;
@@ -445,10 +465,11 @@ html.ob-native .ob-auth-shell {
   background: linear-gradient(
     to top,
     #050403 0%,
-    rgba(5, 4, 3, 0.99) 28%,
-    rgba(5, 4, 3, 0.94) 50%,
-    rgba(5, 4, 3, 0.72) 72%,
-    rgba(5, 4, 3, 0.34) 88%,
+    rgba(5, 4, 3, 0.99) 22%,
+    rgba(5, 4, 3, 0.97) 42%,
+    rgba(5, 4, 3, 0.88) 62%,
+    rgba(5, 4, 3, 0.62) 78%,
+    rgba(5, 4, 3, 0.28) 92%,
     transparent 100%
   );
 }
@@ -456,9 +477,10 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__readability {
   background: linear-gradient(
     to top,
-    rgba(5, 4, 3, 0.96) 0%,
-    rgba(5, 4, 3, 0.82) 42%,
-    rgba(5, 4, 3, 0.42) 72%,
+    rgba(5, 4, 3, 0.98) 0%,
+    rgba(5, 4, 3, 0.92) 36%,
+    rgba(5, 4, 3, 0.72) 58%,
+    rgba(5, 4, 3, 0.38) 78%,
     transparent 100%
   );
 }
@@ -505,30 +527,33 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__copy::before {
   content: '';
   position: absolute;
-  inset: -2rem -1.5rem -1.5rem -1.75rem;
+  inset: -2.25rem -1.75rem -1.75rem -2rem;
   z-index: -1;
   border-radius: 1.5rem;
   background:
-    radial-gradient(ellipse 140% 120% at 0% 100%, rgba(5, 4, 3, 0.96), rgba(5, 4, 3, 0.58) 62%, transparent 82%),
-    linear-gradient(to top, rgba(5, 4, 3, 0.88), rgba(5, 4, 3, 0.28) 68%, transparent 92%);
+    radial-gradient(ellipse 150% 130% at 0% 100%, rgba(5, 4, 3, 0.98), rgba(5, 4, 3, 0.72) 58%, transparent 84%),
+    linear-gradient(to top, rgba(5, 4, 3, 0.94), rgba(5, 4, 3, 0.52) 62%, transparent 94%);
   pointer-events: none;
 }
 
 .ds-discovery-hero__eyebrow {
   color: #ffffff;
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.98),
-    0 2px 8px rgba(0, 0, 0, 0.92),
-    0 6px 24px rgba(0, 0, 0, 0.78);
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 6px rgba(0, 0, 0, 0.96),
+    0 8px 28px rgba(0, 0, 0, 0.82);
 }
 
 .ds-discovery-hero__headline {
   color: #ffffff;
+  -webkit-text-stroke: 0.35px rgba(0, 0, 0, 0.42);
+  paint-order: stroke fill;
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
     0 2px 4px rgba(0, 0, 0, 0.98),
-    0 8px 28px rgba(0, 0, 0, 0.88),
-    0 16px 48px rgba(0, 0, 0, 0.72);
+    0 6px 18px rgba(0, 0, 0, 0.92),
+    0 12px 36px rgba(0, 0, 0, 0.82),
+    0 20px 52px rgba(0, 0, 0, 0.68);
 }
 
 .ds-discovery-hero__headline--offer {
@@ -536,11 +561,12 @@ html.ob-native .ob-auth-shell {
 }
 
 .ds-discovery-hero__subline {
-  color: rgba(255, 255, 255, 0.96);
+  color: rgba(255, 255, 255, 0.98);
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.98),
-    0 4px 16px rgba(0, 0, 0, 0.84),
-    0 10px 32px rgba(0, 0, 0, 0.68);
+    0 1px 0 rgba(0, 0, 0, 0.96),
+    0 2px 8px rgba(0, 0, 0, 0.92),
+    0 6px 22px rgba(0, 0, 0, 0.78),
+    0 12px 36px rgba(0, 0, 0, 0.62);
 }
 
 .ds-discovery-hero__cta {

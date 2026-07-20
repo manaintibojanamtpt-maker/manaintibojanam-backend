@@ -34,6 +34,7 @@ function DiscoveryNearbyHeader({
   readonly locationLabel?: string;
   readonly hasActiveLocation: boolean;
 }) {
+  const sectionTitle = hasActiveLocation ? 'Nearby kitchens' : 'Featured kitchens';
   const contextLine = hasActiveLocation
     ? locationLabel
       ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${locationLabel}`
@@ -44,8 +45,10 @@ function DiscoveryNearbyHeader({
     <header className="space-y-1">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
-          <p className="text-xs text-white/60">{contextLine}</p>
+          <h2 className="text-lg font-bold text-white">{sectionTitle}</h2>
+          <p className={`text-xs ${hasActiveLocation ? 'text-white/60' : 'text-[#FFB366]/90'}`}>
+            {contextLine}
+          </p>
         </div>
         <span className="shrink-0 text-xs font-semibold text-[#FF7A00]">
           {kitchenCount} {kitchenCount === 1 ? 'kitchen' : 'kitchens'}

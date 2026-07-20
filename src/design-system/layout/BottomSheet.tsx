@@ -137,6 +137,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
               transform: 'translate3d(0,0,0)',
               WebkitTransform: 'translate3d(0,0,0)',
             }}
+            onPointerDown={(event) => event.stopPropagation()}
           >
             {panelContent}
           </div>

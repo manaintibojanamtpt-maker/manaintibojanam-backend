@@ -97,8 +97,8 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
                   animated && isActive ? kenBurnsVariant : ''
                 } ${
                   offerSlide
-                    ? 'brightness-[0.66] contrast-[1.14] saturate-[1.12]'
-                    : 'brightness-[0.78] contrast-[1.1] saturate-[1.1]'
+                    ? 'brightness-[0.58] contrast-[1.12] saturate-[1.08]'
+                    : 'brightness-[0.56] contrast-[1.08] saturate-[1.06]'
                 }`}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -110,8 +110,8 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
 
         <div className="ds-discovery-hero__vignette pointer-events-none absolute inset-0" aria-hidden />
         <div className="ds-discovery-hero__spotlight pointer-events-none absolute inset-0" aria-hidden />
-        <div className="ds-discovery-hero__scrim pointer-events-none absolute inset-x-0 bottom-0 h-[78%]" aria-hidden />
-        <div className="ds-discovery-hero__readability pointer-events-none absolute inset-x-0 bottom-0 h-[52%]" aria-hidden />
+        <div className="ds-discovery-hero__scrim pointer-events-none absolute inset-x-0 bottom-0 h-[88%]" aria-hidden />
+        <div className="ds-discovery-hero__readability pointer-events-none absolute inset-x-0 bottom-0 h-[68%]" aria-hidden />
         <div className="ds-discovery-hero__glow pointer-events-none absolute inset-0" aria-hidden />
         {animated ? (
           <div className="ds-discovery-hero__steam pointer-events-none absolute inset-0" aria-hidden />
@@ -144,17 +144,17 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           className={`ds-discovery-hero__copy max-w-xl motion-reduce:transition-none ${animated ? 'ds-hero-copy-in' : ''}`}
           aria-live="polite"
         >
-          <p className="ds-discovery-hero__eyebrow text-[10px] font-bold uppercase tracking-[0.28em] sm:text-[11px]">
+          <p className="ds-discovery-hero__eyebrow text-[10px] font-bold uppercase tracking-[0.28em] text-white sm:text-[11px]">
             {displayEyebrow}
           </p>
           <h1
-            className={`ds-discovery-hero__headline mt-2.5 text-balance text-[2rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:mt-3 sm:text-[2.65rem] lg:text-[3rem] ${
+            className={`ds-discovery-hero__headline mt-2.5 text-balance text-[2rem] font-extrabold leading-[1.02] tracking-[-0.035em] text-white sm:mt-3 sm:text-[2.65rem] lg:text-[3rem] ${
               isOfferSlide ? 'ds-discovery-hero__headline--offer' : ''
             }`}
           >
             {displayHeadline}
           </h1>
-          <p className="ds-discovery-hero__subline mt-2.5 max-w-md text-[15px] leading-relaxed sm:mt-3 sm:text-base">
+          <p className="ds-discovery-hero__subline mt-2.5 max-w-md text-[15px] leading-relaxed text-white sm:mt-3 sm:text-base">
             {displaySubline}
           </p>
 

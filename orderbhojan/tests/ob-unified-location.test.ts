@@ -136,5 +136,30 @@ describe('OB unified location (last-mile)', () => {
     assert.equal(input.address.pincode, '411001');
     // normalizeAddressText rebuilds formatted from flat/building/landmark when flat is set.
     assert.equal(input.address.formattedAddress, '402, Green Valley, Near gate, Pune');
+
+    const shortFlat = v2ToSavedAddressInput({
+      version: 2,
+      coordinates: {
+        lat: 18.5362,
+        lng: 73.8958,
+        source: 'gps',
+        capturedAt: Date.now(),
+      },
+      text: normalizeAddressText({
+        flat: '12',
+        formatted: '12, Koregaon Park, Pune',
+        shortLabel: 'Koregaon Park, Pune',
+        city: 'Pune',
+        state: 'Maharashtra',
+        pincode: '411001',
+      }),
+      meta: {
+        provider: 'nominatim',
+        precision: 'exact',
+        capturedAt: Date.now(),
+      },
+    });
+    assert.ok(shortFlat.address.street.length >= 3);
+    assert.match(shortFlat.address.street, /^12/);
   });
 });

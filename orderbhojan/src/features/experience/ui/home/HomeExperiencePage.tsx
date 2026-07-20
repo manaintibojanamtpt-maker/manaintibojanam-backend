@@ -6,9 +6,10 @@ import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
 import { OrderBhojanHomeHero, OrderBhojanHomeCategories } from '@/presentation/discovery';
-import { isNativePlatform } from '@/lib/nativePlatform';
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
+
+const LOCATION_NUDGE_SESSION_KEY = 'ob-location-nudge-v1';
 
 const OrderBhojanHomeTrustStrip = lazy(() =>
   import('@/presentation/discovery/OrderBhojanHomeTrustStrip').then((module) => ({
@@ -44,7 +45,12 @@ export function HomeExperiencePage() {
 
   useEffect(() => {
     if (!locationEnabled || locationPromptedRef.current || activeLocation) return;
-    if (!isNativePlatform()) return;
+    try {
+      if (sessionStorage.getItem(LOCATION_NUDGE_SESSION_KEY)) return;
+      sessionStorage.setItem(LOCATION_NUDGE_SESSION_KEY, '1');
+    } catch {
+      // sessionStorage unavailable — still nudge once this mount.
+    }
     locationPromptedRef.current = true;
     openSelector();
   }, [activeLocation, locationEnabled, openSelector]);

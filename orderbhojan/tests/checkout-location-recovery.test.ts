@@ -46,6 +46,8 @@ describe('checkout location recovery (batch 2)', () => {
     );
 
     assert.match(actions, /persistConfirmedAddressForUser/);
+    assert.match(actions, /upsertCustomerSavedAddress/);
+    assert.match(actions, /forcePersist = store\.pendingSavedAddress \|\| !isUpdatingSaved/);
     assert.match(actions, /updatingSavedAddressId/);
     assert.match(actions, /v2ToSavedAddressInput/);
     assert.match(actions, /startAddSavedAddress/);
@@ -59,7 +61,8 @@ describe('checkout location recovery (batch 2)', () => {
 
     assert.match(selector, /handleSignIn/);
     assert.match(selector, /signInPath/);
-    assert.match(selector, /navigate\(signInPath\)/);
+    assert.match(selector, /navigate\(signInPath,\s*\{\s*state:\s*\{\s*from:\s*returnPath\s*\}\s*\}\)/);
+    assert.match(selector, /returnPath/);
     assert.doesNotMatch(selector, /<Link to="\/auth"/);
   });
 });
