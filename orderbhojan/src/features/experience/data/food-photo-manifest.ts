@@ -47,9 +47,43 @@ export interface FoodPhotoAsset {
 const WARM_BLUR =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCfAB//2Q==';
 
+/** Responsive widths for full-bleed hero carousel (covers 2x–3x DPR on desktop) */
+export const HERO_PHOTO_WIDTHS = [960, 1280, 1600, 1920, 2560, 3200, 3840] as const;
+
+export const HERO_PRIMARY_WIDTH = 3200;
+export const HERO_PRIMARY_QUALITY = 92;
+
+const DEFAULT_THUMB_WIDTHS = [320, 480, 640] as const;
+
 /** Unsplash CDN supports width/quality transforms; local & third-party URLs are served as-is */
 function isUnsplashPhotoUrl(baseUrl: string): boolean {
   return baseUrl.includes('images.unsplash.com');
+}
+
+function inferRemoteImageWidth(url: string): number | undefined {
+  const placehold = url.match(/placehold\.co\/(\d+)x(\d+)/i);
+  if (placehold) return Number(placehold[1]);
+
+  const picsum = url.match(/picsum\.photos\/(\d+)\/(\d+)/i);
+  if (picsum) return Number(picsum[1]);
+
+  if (url.includes('platform-hero')) return HERO_PRIMARY_WIDTH;
+  if (url.startsWith('/hero/')) return 1920;
+
+  return undefined;
+}
+
+/** Upscale known placeholder hosts so hero never stretches low-res mock assets */
+function upgradeHeroImageUrl(url: string, targetWidth: number): string {
+  const placehold = url.match(/^(https?:\/\/placehold\.co\/)(\d+)x(\d+)(\/.*)?$/i);
+  if (placehold) {
+    const currentWidth = Number(placehold[2]);
+    if (currentWidth >= targetWidth) return url;
+    const aspect = Number(placehold[2]) / Number(placehold[3]);
+    const height = Math.max(1, Math.round(targetWidth / aspect));
+    return `${placehold[1]}${targetWidth}x${height}${placehold[4] ?? ''}`;
+  }
+  return url;
 }
 
 function resolveStaticPhoto(asset: FoodPhotoAsset): ResolvedFoodPhoto {
@@ -67,22 +101,25 @@ function resolveStaticPhoto(asset: FoodPhotoAsset): ResolvedFoodPhoto {
 export const FOOD_PHOTO_MANIFEST: Record<FoodPhotoAssetId, FoodPhotoAsset> = {
   'hero-biryani': {
     id: 'hero-biryani',
-    /* Premium Hyderabadi chicken biryani — curated HD hero (1200px source) */
-    baseUrl: '/hero/hyderabadi-chicken-biryani-hero.jpg',
+    baseUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b',
+    fallbackBaseUrl: '/hero/hyderabadi-chicken-biryani-hero.jpg',
     blurDataURL: WARM_BLUR,
-    widths: [960, 1200],
+    widths: HERO_PHOTO_WIDTHS,
+    hero: { quality: 92, focalY: 0.45 },
   },
   'hero-thali': {
     id: 'hero-thali',
     baseUrl: 'https://images.unsplash.com/photo-1626646292532-7e4f2be936e8',
     blurDataURL: WARM_BLUR,
-    widths: [640, 960, 1280, 1600, 1920],
+    widths: HERO_PHOTO_WIDTHS,
+    hero: { quality: 92 },
   },
   'hero-tiffin': {
     id: 'hero-tiffin',
     baseUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc',
     blurDataURL: WARM_BLUR,
-    widths: [640, 960, 1280, 1600, 1920],
+    widths: HERO_PHOTO_WIDTHS,
+    hero: { quality: 92 },
   },
   'cat-pizza': {
     id: 'cat-pizza',
@@ -252,6 +289,8 @@ export type FoodPhotoFormat = 'jpg' | 'webp' | 'avif';
 export interface FoodPhotoCropOptions {
   readonly focalX?: number;
   readonly focalY?: number;
+  /** Match wide hero viewport (~2.2:1) so Unsplash crop retains sharp pixels */
+  readonly heroBanner?: boolean;
 }
 
 export function foodPhotoFormatUrl(
@@ -268,7 +307,10 @@ export function foodPhotoFormatUrl(
   url.searchParams.set('w', String(width));
   url.searchParams.set('q', String(quality));
   url.searchParams.set('fit', 'crop');
-  url.searchParams.set('auto', format === 'jpg' ? 'format' : 'format');
+  url.searchParams.set('auto', 'format');
+  if (crop?.heroBanner && width >= 1280) {
+    url.searchParams.set('h', String(Math.round(width * 0.45)));
+  }
   if (crop?.focalY != null) {
     url.searchParams.set('crop', 'focalpoint');
     url.searchParams.set('fp-x', String(crop.focalX ?? 0.5));
@@ -287,8 +329,10 @@ export function foodPhotoFormatSrcSet(
   crop?: FoodPhotoCropOptions,
 ): string {
   if (!isUnsplashPhotoUrl(baseUrl)) {
-    const maxWidth = widths[widths.length - 1] ?? 1200;
-    return `${baseUrl} ${maxWidth}w`;
+    const upgraded = upgradeHeroImageUrl(baseUrl, widths[widths.length - 1] ?? 1200);
+    const intrinsic = inferRemoteImageWidth(upgraded) ?? inferRemoteImageWidth(baseUrl);
+    const descriptor = intrinsic ?? widths[widths.length - 1] ?? 1200;
+    return `${upgraded} ${descriptor}w`;
   }
   return widths.map((w) => `${foodPhotoFormatUrl(baseUrl, w, format, quality, crop)} ${w}w`).join(', ');
 }
@@ -319,7 +363,13 @@ export function resolveFoodPhoto(assetId: FoodPhotoAssetId, primaryWidth: number
     return resolveStaticPhoto(asset);
   }
   const resolvedQuality = asset.hero?.quality ?? quality;
-  const crop = asset.hero?.focalY != null ? { focalY: asset.hero.focalY } : undefined;
+  const isHeroAsset = asset.widths === HERO_PHOTO_WIDTHS;
+  const crop =
+    asset.hero?.focalY != null
+      ? { focalY: asset.hero.focalY, heroBanner: isHeroAsset }
+      : isHeroAsset
+        ? { heroBanner: true }
+        : undefined;
   return {
     src: foodPhotoFormatUrl(asset.baseUrl, primaryWidth, 'webp', resolvedQuality, crop),
     webpSrcSet: foodPhotoFormatSrcSet(asset.baseUrl, asset.widths, 'webp', resolvedQuality, crop),
@@ -330,22 +380,49 @@ export function resolveFoodPhoto(assetId: FoodPhotoAssetId, primaryWidth: number
   };
 }
 
+function resolveWidthsForUrl(url: string, primaryWidth: number): readonly number[] {
+  if (isUnsplashPhotoUrl(url)) {
+    return primaryWidth >= 1280 ? HERO_PHOTO_WIDTHS : DEFAULT_THUMB_WIDTHS;
+  }
+  return primaryWidth >= 1280 ? HERO_PHOTO_WIDTHS : DEFAULT_THUMB_WIDTHS;
+}
+
 export function resolveFoodPhotoByUrl(url: string, primaryWidth: number, quality = 82): ResolvedFoodPhoto {
   const normalized = url.split('?')[0];
   const asset = Object.values(FOOD_PHOTO_MANIFEST).find(
-    (entry) => normalized === entry.baseUrl || normalized.includes(entry.baseUrl.split('/').pop() ?? ''),
+    (entry) =>
+      normalized === entry.baseUrl ||
+      (entry.fallbackBaseUrl != null && normalized === entry.fallbackBaseUrl) ||
+      normalized.includes(entry.baseUrl.split('/').pop() ?? ''),
   );
   if (asset) return resolveFoodPhoto(asset.id, primaryWidth, quality);
 
-  const widths = [320, 480, 640] as const;
+  const widths = resolveWidthsForUrl(normalized, primaryWidth);
+  const resolvedQuality = primaryWidth >= 1280 ? Math.max(quality, HERO_PRIMARY_QUALITY) : quality;
+  const heroCrop = primaryWidth >= 1280 ? { heroBanner: true as const } : undefined;
+  const upgradedUrl = upgradeHeroImageUrl(normalized, primaryWidth);
   return {
-    src: foodPhotoFormatUrl(normalized, primaryWidth, 'webp', quality),
-    webpSrcSet: foodPhotoFormatSrcSet(normalized, widths, 'webp', quality),
-    avifSrcSet: foodPhotoFormatSrcSet(normalized, widths, 'avif', quality),
+    src: foodPhotoFormatUrl(upgradedUrl, primaryWidth, 'webp', resolvedQuality, heroCrop),
+    webpSrcSet: foodPhotoFormatSrcSet(upgradedUrl, widths, 'webp', resolvedQuality, heroCrop),
+    avifSrcSet: foodPhotoFormatSrcSet(upgradedUrl, widths, 'avif', resolvedQuality, heroCrop),
     blurDataURL: WARM_BLUR,
-    preloadHref: foodPhotoFormatUrl(normalized, 640, 'webp', quality),
+    preloadHref: foodPhotoFormatUrl(
+      upgradedUrl,
+      isUnsplashPhotoUrl(upgradedUrl) ? primaryWidth : inferRemoteImageWidth(upgradedUrl) ?? primaryWidth,
+      'webp',
+      resolvedQuality,
+      heroCrop,
+    ),
     widths,
   };
+}
+
+export function resolveHeroFoodPhoto(assetId: FoodPhotoAssetId): ResolvedFoodPhoto {
+  return resolveFoodPhoto(assetId, HERO_PRIMARY_WIDTH, HERO_PRIMARY_QUALITY);
+}
+
+export function resolveHeroFoodPhotoByUrl(url: string): ResolvedFoodPhoto {
+  return resolveFoodPhotoByUrl(url, HERO_PRIMARY_WIDTH, HERO_PRIMARY_QUALITY);
 }
 
 export function pictureSources(resolved: ResolvedFoodPhoto, sizes: string) {

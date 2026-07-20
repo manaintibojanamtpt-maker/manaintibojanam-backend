@@ -63,4 +63,21 @@ describe('checkout promo sync', () => {
     assert.doesNotMatch(offersSection, /copyCouponCode|navigator\.clipboard/);
     assert.doesNotMatch(hero, /couponCode/);
   });
+
+  it('invalidates prepare cache and refetches when coupon changes', () => {
+    const checkoutFlow = readFileSync(
+      join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'),
+      'utf8',
+    );
+    const checkoutPage = readFileSync(
+      join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
+      'utf8',
+    );
+    assert.match(checkoutFlow, /previousCouponRef/);
+    assert.match(checkoutFlow, /invalidateQueries/);
+    assert.match(checkoutFlow, /isCheckoutPrepareSessionCompatible/);
+    assert.match(checkoutFlow, /getState\(\)\.appliedCouponCode/);
+    assert.doesNotMatch(checkoutPage, /prepareCheckout\(\)/);
+    assert.match(checkoutPage, /setAppliedCouponCode/);
+  });
 });

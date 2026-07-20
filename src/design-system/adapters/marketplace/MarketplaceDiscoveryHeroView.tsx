@@ -75,30 +75,26 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           return (
             <picture
               key={slide.id}
-              className={`absolute inset-0 transition-[opacity,transform] duration-[2200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                isActive ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-[1.02]'
+              className={`absolute inset-0 transition-opacity duration-[2200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                isActive ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
               aria-hidden={!isActive}
             >
               {slide.avifSrcSet ? (
-                <source type="image/avif" srcSet={slide.avifSrcSet} sizes="100vw" />
+                <source type="image/avif" srcSet={slide.avifSrcSet} sizes="103vw" />
               ) : null}
               {slide.webpSrcSet ? (
-                <source type="image/webp" srcSet={slide.webpSrcSet} sizes="100vw" />
+                <source type="image/webp" srcSet={slide.webpSrcSet} sizes="103vw" />
               ) : null}
               <img
                 src={slide.src}
                 alt=""
-                className={`h-full w-full object-cover ${
+                className={`ds-hero-photo object-cover object-center ${
+                  animated && isActive ? 'ds-hero-photo--ken-burns' : 'h-full w-full'
+                } ${
                   offerSlide
                     ? 'brightness-[0.46] contrast-[1.1] saturate-[1.14]'
                     : 'brightness-[0.5] contrast-[1.08] saturate-[1.1]'
-                } ${
-                  animated && isActive
-                    ? 'scale-[1.12] transition-transform duration-[14000ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
-                    : animated
-                      ? 'scale-100'
-                      : ''
                 }`}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -9,12 +9,16 @@ import { markPerf } from '@/lib/perfMarks';
 import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
 import {
   buildCheckoutCartSignature,
+  clearCheckoutPrepareSessionForCart,
   persistCheckoutPrepareSession,
+  cloneCheckoutPrepareForQuery,
+  isCheckoutPrepareSessionCompatible,
 } from '../infrastructure/checkoutQuoteSession';
 import { checkoutKeys, CHECKOUT_PREPARE_GC_MS, CHECKOUT_PREPARE_STALE_MS } from './checkoutQueryKeys';
 
 export function useCheckoutPrefetch(enabled = true): void {
   const queryClient = useQueryClient();
+  const prefetchGenerationRef = useRef(0);
   const lines = useCartStore((s) => s.lines);
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
@@ -59,20 +63,28 @@ export function useCheckoutPrefetch(enabled = true): void {
     );
 
     markPerf('checkout_prepare_start', 'prefetch');
+    const generation = ++prefetchGenerationRef.current;
     void queryClient
       .prefetchQuery({
         queryKey: checkoutKeys.prepare(signature),
         queryFn: async () => {
           const response = await getMarketplaceApiClient().checkoutPrepare(payload);
-          persistCheckoutPrepareSession(signature, cartSignature, response);
+          const next = cloneCheckoutPrepareForQuery(response);
+          if (
+            generation === prefetchGenerationRef.current &&
+            isCheckoutPrepareSessionCompatible(response, appliedCouponCode)
+          ) {
+            persistCheckoutPrepareSession(signature, cartSignature, response);
+          }
           markPerf('checkout_prepare_end', 'prefetch');
           markPerf('checkout_bill_ready', 'prefetch');
-          return response;
+          return next;
         },
         staleTime: CHECKOUT_PREPARE_STALE_MS,
         gcTime: CHECKOUT_PREPARE_GC_MS,
       })
       .catch(() => {
+        clearCheckoutPrepareSessionForCart(cartSignature);
         // Prefetch failures are non-blocking; checkout page will retry.
       });
   }, [activeLocation, appliedCouponCode, canPrefetch, contextToken, coords, lines, queryClient, resolvedRestaurantId]);

@@ -13,6 +13,7 @@ import {
   persistCheckoutPrepareSession,
   readCheckoutPrepareSession,
   cloneCheckoutPrepareForQuery,
+  isCheckoutPrepareSessionCompatible,
   type CheckoutPrepareQueryData,
 } from '../infrastructure/checkoutQuoteSession';
 import {
@@ -34,7 +35,7 @@ import {
   CHECKOUT_PREPARE_GC_MS,
   CHECKOUT_PREPARE_STALE_MS,
 } from './checkoutQueryKeys';
-import type { BillQuote, CheckoutPrepareResponse, CheckoutSchedulingContext } from '@/types/marketplace';
+import type { BillQuote, CheckoutSchedulingContext } from '@/types/marketplace';
 
 export interface CheckoutPlaceResponse {
   readonly orderId?: string;
@@ -150,6 +151,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const placeInFlightRef = useRef(false);
   const upiPollAbortRef = useRef<AbortController | null>(null);
   const previousPrepareSignatureRef = useRef<string | null>(null);
+  const previousCouponRef = useRef<string | null>(appliedCouponCode);
+  const incompatiblePrepareRecoveryRef = useRef<string | null>(null);
 
   const checkoutAuthGate = useMemo(
     () => resolveCheckoutAuthGate({ status: authStatus, sessionUser }),
@@ -197,15 +200,12 @@ export function useCheckoutFlow(): CheckoutFlowState {
   }, [appliedCouponCode, contextToken, lines, resolvedRestaurantId]);
 
   const sessionPrepare = useMemo(() => {
-    if (!cartSignature) return null;
-    const cached = readCheckoutPrepareSession(cartSignature);
+    if (!cartSignature || !prepareSignature) return null;
+    const cached = readCheckoutPrepareSession(cartSignature, prepareSignature);
     if (!cached) return null;
-    if (appliedCouponCode) {
-      const discountLine = cached.quote.lineItems.find((line) => line.label.startsWith('Discount'));
-      if (!discountLine) return null;
-    }
+    if (!isCheckoutPrepareSessionCompatible(cached, appliedCouponCode)) return null;
     return cached;
-  }, [appliedCouponCode, cartSignature]);
+  }, [appliedCouponCode, cartSignature, prepareSignature]);
 
   useEffect(() => {
     if (!prepareSignature || !cartSignature) return;
@@ -221,6 +221,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
     previousPrepareSignatureRef.current = prepareSignature;
   }, [cartSignature, prepareSignature, queryClient]);
 
+  useEffect(() => {
+    if (previousCouponRef.current === appliedCouponCode) return;
+    previousCouponRef.current = appliedCouponCode;
+    if (cartSignature) {
+      clearCheckoutPrepareSessionForCart(cartSignature);
+    }
+    if (!prepareSignature) return;
+    void queryClient.invalidateQueries({
+      queryKey: checkoutKeys.prepare(prepareSignature),
+    });
+  }, [appliedCouponCode, cartSignature, prepareSignature, queryClient]);
+
   const getPayload = useCallback(() => {
     if (!resolvedRestaurantId || !contextToken) {
       throw new Error('Restaurant context is missing. Re-open the menu and try again.');
@@ -234,15 +246,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (!hasReadyDeliveryLocation(activeLocation)) {
       throw new Error('Confirm your flat or house number before checkout.');
     }
+    // Read coupon from store so prepare/place always match the latest applied code,
+    // even when invoked before React re-renders after setAppliedCouponCode.
+    const couponCode = useRestaurantContextStore.getState().appliedCouponCode;
     return buildCheckoutPayload(
       lines,
       resolvedRestaurantId,
       contextToken,
       activeLocation,
       deliveryTimeSlot,
-      appliedCouponCode,
+      couponCode,
     );
-  }, [activeLocation, appliedCouponCode, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
+  }, [activeLocation, contextToken, coords, deliveryTimeSlot, lines, resolvedRestaurantId]);
 
   const prepareQuery = useQuery<CheckoutPrepareQueryData>({
     queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
@@ -265,8 +280,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
     staleTime: CHECKOUT_PREPARE_STALE_MS,
     gcTime: CHECKOUT_PREPARE_GC_MS,
     placeholderData: (previous, query) => {
-      if (previous) return previous;
       if (query?.queryKey[2] !== prepareSignature) return undefined;
+      if (previous && isCheckoutPrepareSessionCompatible(
+        { paymentMethods: previous.paymentMethods, quote: previous.quote, scheduling: previous.scheduling },
+        appliedCouponCode,
+      )) {
+        return previous;
+      }
       return sessionPrepare ? cloneCheckoutPrepareForQuery(sessionPrepare) : undefined;
     },
     refetchOnWindowFocus: false,
@@ -274,17 +294,75 @@ export function useCheckoutFlow(): CheckoutFlowState {
   });
 
   useEffect(() => {
-    if (!prepareQuery.data || !prepareSignature || !cartSignature) return;
+    if (
+      !prepareQuery.data ||
+      !prepareSignature ||
+      !cartSignature ||
+      prepareQuery.isPlaceholderData ||
+      prepareQuery.isFetching
+    ) {
+      return;
+    }
+    if (!isCheckoutPrepareSessionCompatible(prepareQuery.data, appliedCouponCode)) return;
     persistCheckoutPrepareSession(prepareSignature, cartSignature, prepareQuery.data);
-  }, [cartSignature, prepareQuery.data, prepareSignature]);
+  }, [
+    appliedCouponCode,
+    cartSignature,
+    prepareQuery.data,
+    prepareQuery.isFetching,
+    prepareQuery.isPlaceholderData,
+    prepareSignature,
+  ]);
 
   useEffect(() => {
     if (!prepareQuery.isError || !cartSignature) return;
     clearCheckoutPrepareSessionForCart(cartSignature);
   }, [cartSignature, prepareQuery.isError]);
 
-  const hasFreshPrepare = prepareQuery.data != null && !prepareQuery.isError;
+  useEffect(() => {
+    if (
+      !prepareQuery.data ||
+      prepareQuery.isPlaceholderData ||
+      prepareQuery.isFetching ||
+      prepareQuery.isError ||
+      !prepareSignature ||
+      !cartSignature
+    ) {
+      return;
+    }
+    if (isCheckoutPrepareSessionCompatible(prepareQuery.data, appliedCouponCode)) {
+      incompatiblePrepareRecoveryRef.current = null;
+      return;
+    }
+    const recoveryKey = `${prepareSignature}:${appliedCouponCode ?? 'none'}:${prepareQuery.dataUpdatedAt}`;
+    if (incompatiblePrepareRecoveryRef.current === recoveryKey) return;
+    incompatiblePrepareRecoveryRef.current = recoveryKey;
+    clearCheckoutPrepareSessionForCart(cartSignature);
+    void queryClient.invalidateQueries({
+      queryKey: checkoutKeys.prepare(prepareSignature),
+    });
+  }, [
+    appliedCouponCode,
+    cartSignature,
+    prepareQuery.data,
+    prepareQuery.dataUpdatedAt,
+    prepareQuery.isError,
+    prepareQuery.isFetching,
+    prepareQuery.isPlaceholderData,
+    prepareSignature,
+    queryClient,
+  ]);
+
+  const hasFreshPrepare =
+    prepareQuery.data != null &&
+    !prepareQuery.isError &&
+    isCheckoutPrepareSessionCompatible(prepareQuery.data, appliedCouponCode);
   const prepareData = hasFreshPrepare ? prepareQuery.data : null;
+  const awaitingDiscountedQuote =
+    Boolean(appliedCouponCode) &&
+    !hasFreshPrepare &&
+    Boolean(prepareSignature) &&
+    (prepareQuery.isFetching || prepareQuery.isLoading);
   const quote = prepareData?.quote ?? null;
   const scheduling = prepareData?.scheduling ?? null;
   const paymentMethods = prepareData?.paymentMethods ?? [];
@@ -311,11 +389,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (placeStatus === 'success') return 'success';
     if (placeStatus === 'error') return 'error';
     if (prepareQuery.isError) return 'error';
-    if ((prepareQuery.isFetching || !cartValidationReady) && !quote && !sessionPrepare) {
+    if (
+      (prepareQuery.isFetching || !cartValidationReady || awaitingDiscountedQuote) &&
+      !quote &&
+      !sessionPrepare
+    ) {
       return 'preparing';
     }
     return 'idle';
   }, [
+    awaitingDiscountedQuote,
     cartValidationReady,
     placeStatus,
     prepareQuery.isError,
@@ -332,11 +415,19 @@ export function useCheckoutFlow(): CheckoutFlowState {
       const payload = getPayload();
       const nextQuote = await getMarketplaceApiClient().quote(payload);
       if (prepareSignature) {
-        queryClient.setQueryData(checkoutKeys.prepare(prepareSignature), (current: CheckoutPrepareResponse | undefined) => ({
+        const current = queryClient.getQueryData<CheckoutPrepareQueryData>(
+          checkoutKeys.prepare(prepareSignature),
+        );
+        const nextPrepare: CheckoutPrepareQueryData = {
           paymentMethods: current?.paymentMethods ?? [],
           quote: nextQuote,
           scheduling: current?.scheduling,
-        }));
+        };
+        const couponCode = useRestaurantContextStore.getState().appliedCouponCode;
+        if (!isCheckoutPrepareSessionCompatible(nextPrepare, couponCode)) {
+          throw new Error('Promo discount is not reflected in the latest quote. Try again.');
+        }
+        queryClient.setQueryData(checkoutKeys.prepare(prepareSignature), nextPrepare);
       }
       markPerf('checkout_bill_ready', 'refresh-quote');
     } catch (err) {

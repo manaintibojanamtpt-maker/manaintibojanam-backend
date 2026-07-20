@@ -23,6 +23,7 @@ describe('checkout stale quote recovery', () => {
     );
     assert.match(checkoutFlow, /clearCheckoutPrepareSessionForCart/);
     assert.match(checkoutFlow, /hasFreshPrepare/);
+    assert.match(checkoutFlow, /isCheckoutPrepareSessionCompatible\(prepareQuery\.data, appliedCouponCode\)/);
     assert.doesNotMatch(checkoutFlow, /prepareQuery\.data \?\? sessionPrepare/);
   });
 

@@ -103,6 +103,11 @@ export function OrderBhojanCheckoutPage() {
     setPromoInput(primaryCode);
   }, [appliedCouponCode, selectableCodes]);
 
+  useEffect(() => {
+    if (!promoApplying || quoteIsRefreshing) return;
+    setPromoApplying(false);
+  }, [promoApplying, quoteIsRefreshing]);
+
   const checkoutAuthGate = resolveCheckoutAuthGate({ status: authStatus, sessionUser });
 
   const lines = useCartStore((s) => s.lines);
@@ -333,6 +338,15 @@ export function OrderBhojanCheckoutPage() {
             amountLabel:
               item.amount < 0 ? `-₹${Math.abs(item.amount)}` : `₹${item.amount}`,
           })),
+          ...(quote.discountAmount > 0 &&
+          !quote.lineItems.some((item) => item.label.startsWith('Discount'))
+            ? [
+                {
+                  label: appliedCouponCode ? `Discount (${appliedCouponCode})` : 'Discount',
+                  amountLabel: `-₹${quote.discountAmount}`,
+                },
+              ]
+            : []),
           ...(deliveryTimeSlot && !isAsapSlot(deliveryTimeSlot)
             ? [{ label: 'Delivery slot', amountLabel: formatDeliverySlotLabel(deliveryTimeSlot) }]
             : []),
@@ -340,15 +354,31 @@ export function OrderBhojanCheckoutPage() {
         totalLabel: `₹${quote.grandTotal}`,
         deliveryPendingNote: quote.deliveryPending
           ? 'Delivery fee pending address confirmation'
-          : quoteIsStale
+          : quoteIsStale || quoteIsRefreshing
             ? 'Updating taxes and delivery for your address…'
             : undefined,
       }
     : estimatedSubtotal > 0
       ? {
-          lines: [{ label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` }],
-          totalLabel: `₹${estimatedSubtotal}`,
-          deliveryPendingNote: isPreparing ? 'Calculating taxes and delivery…' : undefined,
+          lines: [
+            { label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` },
+            ...(appliedCouponCode
+              ? [
+                  {
+                    label: `Discount (${appliedCouponCode})`,
+                    amountLabel: isPreparing || quoteIsRefreshing ? 'Calculating…' : 'Pending',
+                  },
+                ]
+              : []),
+          ],
+          totalLabel:
+            appliedCouponCode && (isPreparing || quoteIsRefreshing)
+              ? 'Calculating…'
+              : `₹${estimatedSubtotal}`,
+          deliveryPendingNote:
+            isPreparing || (appliedCouponCode && !quote)
+              ? 'Calculating taxes and delivery…'
+              : undefined,
         }
       : undefined;
 
@@ -372,19 +402,20 @@ export function OrderBhojanCheckoutPage() {
     setPromoError(null);
     setAppliedCouponCode(normalized);
     setPromoInput(normalized);
-    window.setTimeout(() => setPromoApplying(false), 300);
   };
 
   const handleSelectPromoChip = (code: string) => {
     setPromoError(null);
     setPromoInput(code);
     setAppliedCouponCode(code);
+    setPromoApplying(true);
   };
 
   const handleClearPromo = () => {
     setPromoError(null);
     setPromoInput('');
     setAppliedCouponCode(null);
+    setPromoApplying(true);
   };
 
   const promoView =

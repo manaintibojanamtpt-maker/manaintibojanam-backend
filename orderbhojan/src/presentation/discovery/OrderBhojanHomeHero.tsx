@@ -4,8 +4,8 @@ import { MarketplaceDiscoveryHeroView } from '@bhojan/storefront-design-system/a
 import { MarketplaceSearchBar } from '@bhojan/storefront-design-system/marketplace/MarketplaceSearchBar';
 import { DEFAULT_HOME_HERO_CONFIG } from '@/features/experience/data/kitchenHeroScenes';
 import {
-  resolveFoodPhoto,
-  resolveFoodPhotoByUrl,
+  resolveHeroFoodPhoto,
+  resolveHeroFoodPhotoByUrl,
   type FoodPhotoAssetId,
 } from '@/features/experience/data/food-photo-manifest';
 import { useHomeHeroConfig } from '@/features/experience/hooks/useHomeHeroConfig';
@@ -15,18 +15,11 @@ import { mergeHomeHeroSlides } from '@/features/experience/utils/buildHomeHeroSl
 import type { HomeHeroSlide } from '@/types/marketplace-home-hero';
 import { OrderBhojanHomeLocationBar } from './OrderBhojanHomeLocationBar';
 
-const HD_PRIMARY_WIDTH = 1920;
-const HD_QUALITY = 92;
-
 function resolveHeroSlidePhoto(slide: HomeHeroSlide) {
   if (slide.imageUrl) {
-    return resolveFoodPhotoByUrl(slide.imageUrl, HD_PRIMARY_WIDTH, HD_QUALITY);
+    return resolveHeroFoodPhotoByUrl(slide.imageUrl);
   }
-  return resolveFoodPhoto(
-    (slide.assetId ?? 'hero-biryani') as FoodPhotoAssetId,
-    HD_PRIMARY_WIDTH,
-    HD_QUALITY,
-  );
+  return resolveHeroFoodPhoto((slide.assetId ?? 'hero-biryani') as FoodPhotoAssetId);
 }
 
 export function OrderBhojanHomeHero() {
@@ -90,7 +83,7 @@ export function OrderBhojanHomeHero() {
       if (index === 0) return;
       const img = new Image();
       img.decoding = 'async';
-      img.src = slide.src;
+      img.src = slide.webpSrcSet?.split(',')[0]?.trim().split(/\s+/)[0] ?? slide.src;
     });
   }, [richMotion, slides]);
 

@@ -50,10 +50,32 @@ export function buildCheckoutCartSignature(input: {
 
 export function readCheckoutPrepareSession(
   cartSignature: string,
+  prepareSignature?: string | null,
 ): CheckoutPrepareResponse | null {
   const entries = readEntries();
-  const match = entries.find((entry) => entry.cartSignature === cartSignature);
+  const match = entries.find((entry) => {
+    if (entry.cartSignature !== cartSignature) return false;
+    if (prepareSignature && entry.signature !== prepareSignature) return false;
+    return true;
+  });
   return match?.response ?? null;
+}
+
+export function isCheckoutPrepareSessionCompatible(
+  response: CheckoutPrepareResponse,
+  couponCode?: string | null,
+): boolean {
+  const normalized = couponCode?.trim().toUpperCase() || null;
+  const discountAmount = Math.max(0, Number(response.quote.discountAmount ?? 0));
+  if (normalized) {
+    if (discountAmount <= 0) return false;
+    return response.quote.lineItems.some(
+      (line) =>
+        line.amount < 0 &&
+        (line.label.startsWith(`Discount (${normalized})`) || line.label.startsWith('Discount')),
+    );
+  }
+  return discountAmount <= 0;
 }
 
 export function persistCheckoutPrepareSession(

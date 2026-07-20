@@ -28,7 +28,14 @@ class StorageService {
    * @param file Image file to compress
    * @returns Compressed image blob
    */
-  private async compressImage(file: File): Promise<Blob> {
+  private async compressImage(
+    file: File,
+    options: { maxWidth?: number; maxHeight?: number; quality?: number } = {},
+  ): Promise<Blob> {
+    const maxWidth = options.maxWidth ?? 1200;
+    const maxHeight = options.maxHeight ?? 1200;
+    const quality = options.quality ?? 0.8;
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -43,31 +50,24 @@ class StorageService {
             return;
           }
 
-          // Set canvas dimensions with max 1200px width
           let width = img.width;
           let height = img.height;
-          const maxWidth = 1200;
-          const maxHeight = 1200;
 
           if (width > height) {
             if (width > maxWidth) {
               height *= maxWidth / width;
               width = maxWidth;
             }
-          } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
+          } else if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
           }
 
           canvas.width = width;
           canvas.height = height;
 
-          // Draw image on canvas
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to blob with 80% JPEG quality
           canvas.toBlob(
             (blob) => {
               if (blob) {
@@ -77,13 +77,18 @@ class StorageService {
               }
             },
             'image/jpeg',
-            0.8
+            quality,
           );
         };
         img.onerror = () => reject(new Error('Failed to load image'));
       };
       reader.onerror = () => reject(new Error('Failed to read file'));
     });
+  }
+
+  /** Full-bleed hero uploads — preserve detail for retina hero carousel */
+  private compressHeroImage(file: File): Promise<Blob> {
+    return this.compressImage(file, { maxWidth: 2400, maxHeight: 1600, quality: 0.92 });
   }
 
   /**
@@ -309,7 +314,7 @@ class StorageService {
 
     await user.getIdToken(true);
 
-    const compressedBlob = await this.compressImage(file);
+    const compressedBlob = await this.compressHeroImage(file);
     const safeId = slideId.replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 48) || 'slide';
     const fileName = `${safeId}-${Date.now()}.jpg`;
     const storageRef = ref(this.storage, `platform-hero/${fileName}`);

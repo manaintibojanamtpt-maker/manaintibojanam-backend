@@ -44,3 +44,40 @@
     animation: none;
   }
 }
+
+@keyframes ds-hero-ken-burns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.028);
+  }
+}
+
+.ds-hero-photo {
+  object-fit: cover;
+  object-position: center;
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Overscan so Ken Burns zoom never upscales past native resolution */
+picture .ds-hero-photo--ken-burns {
+  position: absolute;
+  left: -1.25%;
+  top: -1.25%;
+  width: 102.5%;
+  height: 102.5%;
+  max-width: none;
+  max-height: none;
+  transform-origin: center center;
+  animation: ds-hero-ken-burns 14s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-hero-photo--ken-burns {
+    animation: none;
+    will-change: auto;
+  }
+}
