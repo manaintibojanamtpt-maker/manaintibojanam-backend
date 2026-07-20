@@ -1,21 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { probeSameOriginReachable } from './probeConnectivity';
 
 /** Presentation-only online status for discovery UX banners. Does not alter React Query or API behaviour. */
 export function useOnlineStatus() {
-  const [online, setOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  const [online, setOnline] = useState(true);
+
+  const refresh = useCallback(async () => {
+    const reachable = await probeSameOriginReachable();
+    setOnline(reachable);
+  }, []);
 
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+    void refresh();
+
+    const handleConnectivityChange = () => {
+      void refresh();
     };
-  }, []);
+
+    window.addEventListener('online', handleConnectivityChange);
+    window.addEventListener('offline', handleConnectivityChange);
+    return () => {
+      window.removeEventListener('online', handleConnectivityChange);
+      window.removeEventListener('offline', handleConnectivityChange);
+    };
+  }, [refresh]);
 
   return online;
 }

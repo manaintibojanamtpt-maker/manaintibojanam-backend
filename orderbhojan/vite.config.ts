@@ -82,8 +82,10 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
         globIgnores: ['**/hero/**', '**/categories/**'],
-        navigateFallback: '/offline.html',
+        // Serve the SPA shell on navigation failures — not the dead-end offline page.
+        navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
+        navigationPreload: true,
         runtimeCaching: [
           {
             urlPattern: ({ request }) =>

@@ -93,7 +93,7 @@ export function DiscoveryHomeFeed() {
     );
   }
 
-  if (!online) {
+  if (!online && !feedData) {
     return (
       <div className="space-y-4">
         <DiscoveryFeedControls />
@@ -212,6 +212,10 @@ export function DiscoveryHomeFeed() {
     >
       <div className="space-y-5">
         <DiscoveryFeedControls />
+
+        {!online ? (
+          <OrderBhojanDiscoveryOfflineNotice onRetry={() => void query.refetch()} />
+        ) : null}
 
         <DiscoveryNearbyHeader
           kitchenCount={totalKitchenCount}

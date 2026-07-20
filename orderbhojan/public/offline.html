@@ -59,7 +59,47 @@
     <main>
       <h1>You are offline</h1>
       <p>OrderBhojan needs a connection for live menus, checkout, and order updates. Check your network and try again.</p>
-      <button type="button" onclick="window.location.reload()">Try again</button>
+      <button type="button" id="retry">Try again</button>
     </main>
+    <script>
+      async function probeReachable() {
+        try {
+          const response = await fetch('/favicon.svg', { cache: 'no-store', credentials: 'same-origin' });
+          return response.ok;
+        } catch (error) {
+          return typeof navigator !== 'undefined' ? navigator.onLine : false;
+        }
+      }
+
+      async function tryAgain() {
+        const button = document.getElementById('retry');
+        if (button) {
+          button.disabled = true;
+          button.textContent = 'Reconnecting…';
+        }
+
+        if (await probeReachable()) {
+          const target = new URL('/', window.location.href);
+          target.searchParams.set('_retry', String(Date.now()));
+          window.location.replace(target.toString());
+          return;
+        }
+
+        if ('serviceWorker' in navigator) {
+          try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.update()));
+          } catch (error) {
+            // Ignore SW update errors and fall back to reload.
+          }
+        }
+
+        window.location.reload();
+      }
+
+      document.getElementById('retry')?.addEventListener('click', () => {
+        void tryAgain();
+      });
+    </script>
   </body>
 </html>
