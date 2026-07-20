@@ -40,6 +40,7 @@ export class AnonymousAuthDisabledError extends AuthFlowError {
 }
 
 let recaptchaVerifier: RecaptchaVerifier | null = null;
+let googleRedirectResultPromise: Promise<AuthSessionUser | null> | null = null;
 let phoneConfirmation: ConfirmationResult | null = null;
 let phoneVerificationId: string | null = null;
 let nativePhoneVerificationId: string | null = null;
@@ -168,13 +169,21 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
 }
 
 export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | null> {
-  const auth = requireAuth();
-  const result = await getRedirectResult(auth);
-  if (!result?.user) {
-    return null;
+  if (!googleRedirectResultPromise) {
+    googleRedirectResultPromise = (async () => {
+      const auth = requireAuth();
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result?.user) {
+          return null;
+        }
+        return mapFirebaseUser(result.user);
+      } finally {
+        sessionStorage.removeItem('auth_redirecting');
+      }
+    })();
   }
-  sessionStorage.removeItem('auth_redirecting');
-  return mapFirebaseUser(result.user);
+  return googleRedirectResultPromise;
 }
 
 export async function signInAsGuestAccount(): Promise<AuthSessionUser | null> {

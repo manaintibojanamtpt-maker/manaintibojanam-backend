@@ -9,6 +9,7 @@ import {
 import { shouldUseGoogleAuthRedirect } from './nativePlatform';
 
 const REDIRECT_FLAG = 'auth_redirecting';
+let redirectResultPromise: Promise<User | null> | null = null;
 
 export function createGoogleAuthProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider();
@@ -31,12 +32,20 @@ export async function signInWithGoogleAccount(auth: Auth): Promise<User | null> 
 }
 
 export async function completeGoogleRedirectSignIn(auth: Auth): Promise<User | null> {
-  const result = await getRedirectResult(auth);
-  if (result?.user) {
-    sessionStorage.removeItem(REDIRECT_FLAG);
-    return result.user;
+  if (!redirectResultPromise) {
+    redirectResultPromise = (async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result?.user) {
+          return null;
+        }
+        return result.user;
+      } finally {
+        sessionStorage.removeItem(REDIRECT_FLAG);
+      }
+    })();
   }
-  return null;
+  return redirectResultPromise;
 }
 
 export const OWNER_GOOGLE_REGISTER_KEY = 'owner_google_register_pending';

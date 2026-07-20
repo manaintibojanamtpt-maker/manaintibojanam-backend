@@ -35,16 +35,28 @@ export function OrderBhojanAuthShellPage() {
   const phoneVerificationRequired = needsCheckoutPhoneVerification({ status, sessionUser });
   const showPhoneVerification = phoneVerificationRequired && (tab === 'phone' || redirectTo === '/checkout');
 
+  useEffect(() => {
+    if (status === 'loading' || !isAuthenticated || showPhoneVerification) {
+      return;
+    }
+    navigate(redirectTo, { replace: true });
+  }, [status, isAuthenticated, showPhoneVerification, navigate, redirectTo]);
+
   const handleGoogle = async () => {
     setPending(true);
     setError(null);
     try {
       await signInWithGoogle();
+      if (sessionStorage.getItem('auth_redirecting') === 'true') {
+        return;
+      }
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(formatAuthError(err));
     } finally {
-      setPending(false);
+      if (sessionStorage.getItem('auth_redirecting') !== 'true') {
+        setPending(false);
+      }
     }
   };
 

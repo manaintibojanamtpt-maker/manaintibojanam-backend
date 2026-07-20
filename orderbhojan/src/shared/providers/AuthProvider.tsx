@@ -52,39 +52,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeFirebase();
 
-    void handlePendingGoogleRedirect()
-      .then((result) => {
+    let unsubscribe: (() => void) | undefined;
+
+    void (async () => {
+      try {
+        const result = await handlePendingGoogleRedirect();
         if (result.user) {
           setSessionUser(result.user);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (import.meta.env.DEV) {
           console.warn('[OrderBhojan] Google redirect result skipped', error);
         }
-      });
-
-    return subscribeToAuthState((nextUser) => {
-      setUser(nextUser);
-      const mapped = nextUser ? mapFirebaseUser(nextUser) : null;
-      setSessionUser(mapped);
-      setAuthReady(true);
-      if (mapped && !mapped.isAnonymous && mapped.provider !== 'guest') {
-        useAuthSessionStore.getState().setGuestBrowsing(false);
-        void bootstrapCustomerSession(mapped).catch((error) => {
-          if (import.meta.env.DEV) {
-            console.warn('[OrderBhojan] Customer profile bootstrap skipped', error);
-          }
-        });
       }
-      trackEvent({
-        name: 'auth_state_changed',
-        properties: {
-          authenticated: Boolean(nextUser && !nextUser.isAnonymous),
-          anonymous: Boolean(nextUser?.isAnonymous),
-        },
+
+      unsubscribe = subscribeToAuthState((nextUser) => {
+        setUser(nextUser);
+        const mapped = nextUser ? mapFirebaseUser(nextUser) : null;
+        setSessionUser(mapped);
+        setAuthReady(true);
+        if (mapped && !mapped.isAnonymous && mapped.provider !== 'guest') {
+          useAuthSessionStore.getState().setGuestBrowsing(false);
+          void bootstrapCustomerSession(mapped).catch((error) => {
+            if (import.meta.env.DEV) {
+              console.warn('[OrderBhojan] Customer profile bootstrap skipped', error);
+            }
+          });
+        }
+        trackEvent({
+          name: 'auth_state_changed',
+          properties: {
+            authenticated: Boolean(nextUser && !nextUser.isAnonymous),
+            anonymous: Boolean(nextUser?.isAnonymous),
+          },
+        });
       });
-    });
+    })();
+
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
 
   const status = resolveAuthPhase({
