@@ -83,6 +83,7 @@ import { registerTenantDomainEventSubscribers } from "./backend-lib/marketplace/
 import {
   buildCustomerOrderTrackingUrl,
   getCustomerAppName,
+  getStorefrontBaseUrl,
 } from "./backend-lib/shared/customerOrderLinks.js";
 import {
   buildOrderPushNotification,
@@ -1851,7 +1852,7 @@ const buildOwnerWelcomeEmailHtml = (params: {
   const founderName = getFounderDisplayName();
   const founderEmail = getFounderEmail();
   const setupUrl = `${getPublicAppBaseUrl()}/owner/setup`;
-  const storefrontUrl = `${getPublicAppBaseUrl()}/k/${encodeURIComponent(params.tenantSlug)}`;
+  const storefrontUrl = getStorefrontBaseUrl(params.tenantSlug);
   const safeOwner = escapeHtml(params.ownerName || "there");
   const safeRestaurant = escapeHtml(params.restaurantName || "your kitchen");
 
