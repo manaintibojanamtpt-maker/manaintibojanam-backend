@@ -98,7 +98,6 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
   );
   const tenantId = resolvePreferredOwnerTenantId(ownedIds, currentUser?.email) || contextTenantId;
   const storeSlug = tenantInfo?.slug || tenantSlug || tenantId;
-  const orderBhojanUrl = storeSlug ? EnvironmentConfig.getOrderBhojanRestaurantUrl(storeSlug) : '';
   const storeUrl = storeSlug ? EnvironmentConfig.getStorefrontUrl(storeSlug) : '';
   const customerPreviewUrl = storeUrl ? buildCustomerPreviewStoreUrl(storeUrl) : '';
   const currentPage = getOwnerPageTitle(location.pathname);
@@ -135,9 +134,8 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
   }, [currentUser?.uid]);
 
   const copyStoreLink = () => {
-    const link = orderBhojanUrl || storeUrl;
-    if (!link) return;
-    navigator.clipboard.writeText(link);
+    if (!storeUrl) return;
+    navigator.clipboard.writeText(storeUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -280,7 +278,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <a 
-                  href={orderBhojanUrl || customerPreviewUrl}
+                  href={storeUrl || customerPreviewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center bg-red-600/10 hover:bg-red-600/20 text-red-500 py-2 px-3 rounded-lg text-xs font-bold transition-colors"

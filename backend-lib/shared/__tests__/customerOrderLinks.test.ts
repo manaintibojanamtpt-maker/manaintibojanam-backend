@@ -15,7 +15,7 @@ describe('customerOrderLinks', () => {
     assert.equal(url, `${getOrderBhojanBaseUrl()}/orders/ord-abc/track`);
   });
 
-  it('uses founder storefront URL for legacy mana-inti orders', () => {
+  it('uses OrderBhojan restaurant URL for legacy tenant orders', () => {
     const url = buildCustomerOrderTrackingUrl({
       id: 'ord-legacy',
       tenantId: 'mana-inti',

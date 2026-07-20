@@ -4,8 +4,6 @@
  */
 
 const DEFAULT_ORDERBHOJAN_URL = 'https://orderbhojan.web.app';
-const DEFAULT_STOREFRONT_URL = 'https://www.bhojanos.com/k/mana-inti';
-const DEFAULT_BHOJANOS_URL = 'https://www.bhojanos.com';
 
 function stripTrailingSlash(url: string): string {
   return url.replace(/\/$/, '');
@@ -13,24 +11,20 @@ function stripTrailingSlash(url: string): string {
 
 export function getOrderBhojanBaseUrl(): string {
   return stripTrailingSlash(
-    process.env.ORDERBHOJAN_URL ||
+    process.env.ORDERBHOJAN_PUBLIC_URL ||
+      process.env.ORDERBHOJAN_URL ||
+      process.env.VITE_ORDERBHOJAN_PUBLIC_URL ||
       process.env.VITE_ORDERBHOJAN_URL ||
       process.env.CUSTOMER_APP_URL ||
       DEFAULT_ORDERBHOJAN_URL,
   );
 }
 
+/** Canonical customer-facing storefront URL on OrderBhojan. */
 export function getStorefrontBaseUrl(tenantSlug?: string | null): string {
   const slug = (tenantSlug ?? '').trim().toLowerCase();
-  if (slug === 'mana-inti') {
-    return stripTrailingSlash(
-      process.env.FOUNDER_STOREFRONT_URL ||
-        process.env.MANA_INTI_STOREFRONT_URL ||
-        DEFAULT_STOREFRONT_URL,
-    );
-  }
-  const bhojanos = stripTrailingSlash(process.env.PUBLIC_APP_URL || DEFAULT_BHOJANOS_URL);
-  return slug ? `${bhojanos}/k/${encodeURIComponent(slug)}` : bhojanos;
+  const base = getOrderBhojanBaseUrl();
+  return slug ? `${base}/restaurant/${encodeURIComponent(slug)}` : base;
 }
 
 export function isMarketplaceOrder(order: Record<string, unknown>): boolean {

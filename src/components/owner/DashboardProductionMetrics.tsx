@@ -15,7 +15,7 @@ import {
 import type { OwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
 import { formatInr } from '../../lib/ownerOrderAnalytics';
 import type { Order } from '../../types';
-import { safeParseDate } from '../../lib/utils';
+import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
 
 export interface DashboardProductionMetricsProps {
   metrics: OwnerOrderMetrics;
@@ -49,9 +49,7 @@ const MetricCard: React.FC<{
 );
 
 function formatOrderTime(order: Order): string {
-  const d = safeParseDate(order.createdAt);
-  if (!d) return '—';
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return formatOwnerOrderTime(order.createdAt);
 }
 
 export const DashboardProductionMetrics: React.FC<DashboardProductionMetricsProps> = ({

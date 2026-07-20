@@ -3,7 +3,7 @@
  */
 
 import type { Order } from '../types';
-import { safeParseDate } from './utils';
+import { coerceOwnerOrderDate } from './ownerOrderReadModelMapper';
 
 const EXCLUDED_STATUSES = new Set([
   'CANCELLED',
@@ -75,7 +75,7 @@ export function computeOwnerOrderMetrics(orders: readonly Order[]): OwnerOrderMe
     const amount = orderAmount(order);
     totalRevenue += amount;
 
-    const created = safeParseDate(order.createdAt);
+    const created = coerceOwnerOrderDate(order.createdAt);
     if (created) {
       hourCounts[created.getHours()] += 1;
       if (isSameCalendarDay(created, now)) {
@@ -120,8 +120,8 @@ export function computeOwnerOrderMetrics(orders: readonly Order[]): OwnerOrderMe
 
   const recentOrders = [...orders]
     .sort((a, b) => {
-      const da = safeParseDate(a.createdAt)?.getTime() ?? 0;
-      const db = safeParseDate(b.createdAt)?.getTime() ?? 0;
+      const da = coerceOwnerOrderDate(a.createdAt)?.getTime() ?? 0;
+      const db = coerceOwnerOrderDate(b.createdAt)?.getTime() ?? 0;
       return db - da;
     })
     .slice(0, 5);

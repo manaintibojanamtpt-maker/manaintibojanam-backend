@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   AlertTriangle, CheckCircle2, Copy, ExternalLink, MessageCircle, Store, Users,
   Activity, TrendingUp, AlertOctagon, Heart, Award, Target, PackageX, AlertCircle,
-  BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag, Database, Power,
+  BrainCircuit, BarChart3, LineChart, Zap, ChevronRight, Clock, Box, ShoppingBag,
   X, Rocket
 } from 'lucide-react';
 import { m } from 'framer-motion';
@@ -39,6 +39,7 @@ import {
 import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
+import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
 import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
 import { fetchOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
@@ -50,7 +51,7 @@ import {
   isOwnerPayoutsConfigured,
 } from '../../lib/ownerDashboardStatus';
 
-const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getStorefrontUrl(slugOrId) : '';
+const getStoreUrl = (slugOrId?: string) => slugOrId ? EnvironmentConfig.getOrderBhojanRestaurantUrl(slugOrId) : '';
 
 const SparklineChart = React.lazy(() => import('../../components/owner/widgets/SparklineChart'));
 
@@ -106,7 +107,7 @@ const OwnerDashboard = () => {
 
   const shareToWhatsAppDirect = () => {
     if (!requireStoreUrl('whatsapp_direct')) return;
-    const text = encodeURIComponent(`We are now live on BhojanOS 🎉\n\nFresh homemade food delivered directly from our kitchen.\n\nOrder here:\n${storeUrl}\n\nPlease support us by sharing with your friends and family ❤️`);
+    const text = encodeURIComponent(`We are now live on OrderBhojan 🎉\n\nFresh homemade food delivered directly from our kitchen.\n\nOrder here:\n${storeUrl}\n\nPlease support us by sharing with your friends and family ❤️`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
@@ -231,14 +232,24 @@ const OwnerDashboard = () => {
   );
   const ordersToday = orderMetrics.todayOrderCount;
 
-  // Mock Activity Timeline
-  const timeline = [
-    { time: 'Just now', event: 'Order #1042 received. Prediction confirmed.', icon: <ShoppingBag size={12}/> },
-    { time: '2m ago', event: 'Inventory automatically deducted: 250g Basmati Rice.', icon: <Database size={12}/> },
-    { time: '14m ago', event: 'Kitchen health score recalculated to 98.', icon: <Activity size={12}/> },
-    { time: '30m ago', event: 'VIP Customer Viswa returned after 12 days.', icon: <Heart size={12}/> },
-    { time: '1h ago', event: 'Dashboard ready for dinner service.', icon: <Power size={12}/> },
-  ];
+  const activityTimeline = React.useMemo(() => {
+    const recent = orderMetrics.recentOrders.slice(0, 5);
+    if (recent.length === 0) {
+      return [
+        {
+          time: '',
+          event: 'No recent activity yet. Share your store link to get your first order.',
+          icon: <Activity size={12} />,
+        },
+      ];
+    }
+
+    return recent.map((order) => ({
+      time: formatOwnerOrderTime(order.createdAt),
+      event: `Order #${order.orderNumber || order.id?.slice(-6)} received — ${order.status || 'NEW'}.`,
+      icon: <ShoppingBag size={12} />,
+    }));
+  }, [orderMetrics.recentOrders]);
 
   if (profileLoading || tenantContextLoading) {
     return (
@@ -676,9 +687,9 @@ const OwnerDashboard = () => {
               <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-6">
                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Recent activity</h3>
                  <div className="space-y-5">
-                   {timeline.map((item, i) => (
+                   {activityTimeline.map((item, i) => (
                      <div key={i} className="flex gap-4 relative">
-                        {i !== timeline.length - 1 && (
+                        {i !== activityTimeline.length - 1 && (
                           <div className="absolute left-3.5 top-8 w-px h-full bg-white/5" />
                         )}
                         <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 shrink-0 z-10">

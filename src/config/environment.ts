@@ -82,12 +82,22 @@ export const EnvironmentConfig = {
     return 'https://manaintibojanam-backend.onrender.com';
   },
 
-  getStorefrontUrl(slug: string): string {
+  /** Legacy BhojanOS tenant storefront path on bhojanos.com — not for customer sharing. */
+  getLegacyBhojanOSStorefrontUrl(slug: string): string {
     return `${this.getBaseUrl()}/k/${slug}`;
+  },
+
+  /** Canonical customer-facing storefront URL (OrderBhojan marketplace). */
+  getStorefrontUrl(slug: string): string {
+    return this.getOrderBhojanRestaurantUrl(slug);
   },
 
   /** OrderBhojan consumer marketplace (Firebase hosting). */
   getOrderBhojanBaseUrl(): string {
+    const fromPublicEnv = import.meta.env.VITE_ORDERBHOJAN_PUBLIC_URL;
+    if (typeof fromPublicEnv === 'string' && fromPublicEnv.trim()) {
+      return fromPublicEnv.trim().replace(/\/$/, '');
+    }
     const fromEnv = import.meta.env.VITE_ORDERBHOJAN_URL;
     if (typeof fromEnv === 'string' && fromEnv.trim()) {
       return fromEnv.trim().replace(/\/$/, '');
@@ -96,7 +106,7 @@ export const EnvironmentConfig = {
   },
 
   getOrderBhojanRestaurantUrl(slug: string): string {
-    return `${this.getOrderBhojanBaseUrl()}/restaurant/${slug}`;
+    return `${this.getOrderBhojanBaseUrl()}/restaurant/${encodeURIComponent(slug)}`;
   },
 
   getOrderBhojanHomeUrl(): string {
@@ -150,10 +160,10 @@ export const EnvironmentConfig = {
   },
 
   getWhatsAppShareUrl(slug: string): string {
-    return `${this.getBaseUrl()}/k/${slug}`;
+    return this.getStorefrontUrl(slug);
   },
 
   getQRCodeUrl(slug: string): string {
-    return `${this.getBaseUrl()}/k/${slug}`;
+    return this.getStorefrontUrl(slug);
   }
 };

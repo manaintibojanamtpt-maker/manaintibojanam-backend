@@ -17,7 +17,7 @@ export const PublishStorefrontPanel: React.FC = () => {
     [slug],
   );
   const legacyStoreUrl = useMemo(
-    () => (slug ? EnvironmentConfig.getStorefrontUrl(slug) : ''),
+    () => (slug ? EnvironmentConfig.getLegacyBhojanOSStorefrontUrl(slug) : ''),
     [slug],
   );
 

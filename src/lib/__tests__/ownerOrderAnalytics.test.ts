@@ -64,4 +64,27 @@ describe('ownerOrderAnalytics (GA-2)', () => {
   it('formats INR currency', () => {
     assert.match(formatInr(1500), /1,500|₹/);
   });
+
+  it('sorts recent orders by Firestore serialized createdAt', () => {
+    const orders: Order[] = [
+      {
+        id: 'older',
+        status: 'DELIVERED',
+        totalAmount: 100,
+        createdAt: { _seconds: 1_752_000_000, _nanoseconds: 0 },
+        items: [],
+      } as Order,
+      {
+        id: 'newer',
+        status: 'DELIVERED',
+        totalAmount: 200,
+        createdAt: { _seconds: 1_752_086_400, _nanoseconds: 0 },
+        items: [],
+      } as Order,
+    ];
+
+    const metrics = computeOwnerOrderMetrics(orders);
+    assert.equal(metrics.recentOrders[0]?.id, 'newer');
+    assert.equal(metrics.recentOrders[1]?.id, 'older');
+  });
 });
