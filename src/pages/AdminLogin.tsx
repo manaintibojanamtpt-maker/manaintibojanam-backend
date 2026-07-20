@@ -9,7 +9,12 @@ import logo from '../assets/logo.webp';
 import { useAuth } from '../context/AuthContext';
 import { logIncident } from '../lib/monitoring';
 import { EnvironmentConfig } from '../config/environment';
+import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../config/firebaseClientConfig';
+import { formatPortalAuthError } from '../lib/ownerAuthErrors';
 import SoftButton from '../components/ui/SoftButton';
+
+const initialFirebaseConfig = getFirebaseClientConfig();
+const initialConfigReady = isFirebaseClientConfigReady(initialFirebaseConfig);
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -48,22 +53,20 @@ const AdminLogin: React.FC = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Logged in successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Admin login error:', error);
-      logIncident('security_events', { reason: 'Admin Login Failed', email, error: error.message });
-      
-      if (error.code === 'auth/network-request-failed') {
-        setErrorDetails("Network connection failed. This usually happens if your internet is unstable or if the Firebase Auth domain is not allowlisted in the Firebase Console.");
-        toast.error("Network Error. Please check your connection.");
-      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        toast.error("Invalid admin credentials. Please check your email and password.");
-      } else if (error.code === 'auth/invalid-email') {
-        toast.error("Please enter a valid admin email address.");
-      } else if (error.code === 'auth/too-many-requests') {
-        toast.error("Too many login attempts. Please try again after a few minutes.");
-      } else {
-        toast.error(error.message || 'Login failed. Please check your credentials.');
-      }
+      const authMessage =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: string }).message ?? '')
+          : '';
+      logIncident('security_events', { reason: 'Admin Login Failed', email, error: authMessage });
+
+      const message = formatPortalAuthError(error, {
+        configReady: initialConfigReady,
+        portal: 'admin',
+      });
+      setErrorDetails(message);
+      toast.error(message.split('.')[0] || 'Login failed.');
     } finally {
       setLoading(false);
     }

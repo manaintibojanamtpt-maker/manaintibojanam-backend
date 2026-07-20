@@ -32,6 +32,7 @@
     "deploy:all": "npm run deploy:orderbhojan && npm run deploy:founder:all && npm run deploy:owner && npm run deploy:admin",
     "firebase:compose-hosting": "node scripts/firebase/compose-firebase-hosting.mjs",
     "firebase:validate-hosting": "node scripts/firebase/validate-hosting.mjs",
+    "firebase:sync-auth-domains": "tsx scripts/check-firestore-auth.ts && tsx scripts/firebase/sync-auth-authorized-domains.ts",
     "clean": "node scripts/clean-workspace.mjs",
     "clean:dist": "node -e \"const fs=require('fs');['dist','orderbhojan/dist','build','coverage'].forEach(p=>{try{fs.rmSync(p,{recursive:true,force:true})}catch{}})\"",
     "lint": "tsc --noEmit",

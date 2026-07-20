@@ -10,7 +10,12 @@ import { useAuth } from '../context/AuthContext';
 import { logIncident } from '../lib/monitoring';
 import { EnvironmentConfig } from '../config/environment';
 import { hasSuperadminPortalAccess } from '../lib/authProfile';
+import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../config/firebaseClientConfig';
+import { formatPortalAuthError } from '../lib/ownerAuthErrors';
 import SoftButton from '../components/ui/SoftButton';
+
+const initialFirebaseConfig = getFirebaseClientConfig();
+const initialConfigReady = isFirebaseClientConfigReady(initialFirebaseConfig);
 
 const BhojanOSSuperAdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -42,32 +47,29 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       await auth.currentUser?.getIdToken(true);
       toast.success('Signed in — verifying super admin access…');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Super Admin login error:', error);
-      logIncident('security_events', { reason: 'Super Admin Login Failed', email, error: error.message, code: error.code });
+      const authCode =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: string }).code ?? '')
+          : '';
+      const authMessage =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: string }).message ?? '')
+          : '';
+      logIncident('security_events', {
+        reason: 'Super Admin Login Failed',
+        email,
+        error: authMessage,
+        code: authCode,
+      });
 
-      if (error.code === 'auth/network-request-failed') {
-        setErrorDetails(
-          'Network connection failed. Check your internet or add bhojanos.com to Firebase Auth authorized domains (bhojanos-prod project).',
-        );
-        toast.error('Network error. Please check your connection.');
-      } else if (
-        error.code === 'auth/wrong-password' ||
-        error.code === 'auth/user-not-found' ||
-        error.code === 'auth/invalid-credential' ||
-        error.code === 'auth/invalid-login-credentials'
-      ) {
-        setErrorDetails(
-          'This email/password is not registered in bhojanos-prod Firebase Auth, or the password is wrong. Create the account in Firebase Console, then grant superadmin via /api/platform/grant-superadmin.',
-        );
-        toast.error('Invalid super admin credentials for this environment.');
-      } else if (error.code === 'auth/invalid-email') {
-        toast.error('Please enter a valid super admin email.');
-      } else if (error.code === 'auth/too-many-requests') {
-        toast.error('Too many attempts. Try again in a few minutes.');
-      } else {
-        toast.error(error.message || 'Login failed.');
-      }
+      const message = formatPortalAuthError(error, {
+        configReady: initialConfigReady,
+        portal: 'superadmin',
+      });
+      setErrorDetails(message);
+      toast.error(message.split('.')[0] || 'Login failed.');
     } finally {
       setLoading(false);
     }
