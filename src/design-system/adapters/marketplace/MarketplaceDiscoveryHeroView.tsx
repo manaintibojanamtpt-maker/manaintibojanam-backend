@@ -97,8 +97,8 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
                   animated && isActive ? kenBurnsVariant : ''
                 } ${
                   offerSlide
-                    ? 'brightness-[0.58] contrast-[1.12] saturate-[1.08]'
-                    : 'brightness-[0.56] contrast-[1.08] saturate-[1.06]'
+                    ? 'brightness-[0.92] contrast-[1.04] saturate-[1.06]'
+                    : 'saturate-[1.08] contrast-[1.02]'
                 }`}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -108,15 +108,12 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           );
         })}
 
-        <div className="ds-discovery-hero__vignette pointer-events-none absolute inset-0" aria-hidden />
         <div className="ds-discovery-hero__spotlight pointer-events-none absolute inset-0" aria-hidden />
-        <div className="ds-discovery-hero__scrim pointer-events-none absolute inset-x-0 bottom-0 h-[88%]" aria-hidden />
-        <div className="ds-discovery-hero__readability pointer-events-none absolute inset-x-0 bottom-0 h-[68%]" aria-hidden />
+        <div className="ds-discovery-hero__scrim pointer-events-none absolute inset-x-0 bottom-0 h-[42%]" aria-hidden />
         <div className="ds-discovery-hero__glow pointer-events-none absolute inset-0" aria-hidden />
         {animated ? (
           <div className="ds-discovery-hero__steam pointer-events-none absolute inset-0" aria-hidden />
         ) : null}
-        <div className="ds-discovery-hero__edge-fade pointer-events-none absolute inset-0" aria-hidden />
       </div>
 
       {activeSlide && slideIsOffer(activeSlide) && activeSlide.offerBadge ? (

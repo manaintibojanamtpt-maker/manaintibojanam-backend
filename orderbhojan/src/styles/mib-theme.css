@@ -449,38 +449,18 @@ html.ob-native .ob-auth-shell {
   background: #050403;
 }
 
-.ds-discovery-hero__vignette {
-  background:
-    radial-gradient(ellipse 92% 78% at 50% 42%, transparent 0%, rgba(5, 4, 3, 0.28) 48%, rgba(5, 4, 3, 0.82) 100%),
-    radial-gradient(circle at 50% 50%, transparent 28%, rgba(0, 0, 0, 0.68) 100%);
-}
-
 .ds-discovery-hero__spotlight {
   background: radial-gradient(ellipse 72% 58% at 50% 34%, rgba(255, 140, 40, 0.1) 0%, transparent 68%);
   mix-blend-mode: screen;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .ds-discovery-hero__scrim {
   background: linear-gradient(
     to top,
-    #050403 0%,
-    rgba(5, 4, 3, 0.99) 22%,
-    rgba(5, 4, 3, 0.97) 42%,
-    rgba(5, 4, 3, 0.88) 62%,
-    rgba(5, 4, 3, 0.62) 78%,
-    rgba(5, 4, 3, 0.28) 92%,
-    transparent 100%
-  );
-}
-
-.ds-discovery-hero__readability {
-  background: linear-gradient(
-    to top,
-    rgba(5, 4, 3, 0.98) 0%,
-    rgba(5, 4, 3, 0.92) 36%,
-    rgba(5, 4, 3, 0.72) 58%,
-    rgba(5, 4, 3, 0.38) 78%,
+    rgba(5, 4, 3, 0.78) 0%,
+    rgba(5, 4, 3, 0.48) 32%,
+    rgba(5, 4, 3, 0.2) 62%,
     transparent 100%
   );
 }
@@ -490,10 +470,6 @@ html.ob-native .ob-auth-shell {
     radial-gradient(ellipse 55% 38% at 50% 30%, rgba(255, 122, 0, 0.1), transparent 70%),
     radial-gradient(ellipse 40% 28% at 18% 78%, rgba(255, 107, 53, 0.06), transparent 72%);
   mix-blend-mode: screen;
-}
-
-.ds-discovery-hero__edge-fade {
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.42);
 }
 
 @keyframes ds-discovery-hero-steam {
@@ -527,12 +503,15 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__copy::before {
   content: '';
   position: absolute;
-  inset: -2.25rem -1.75rem -1.75rem -2rem;
+  inset: -1.5rem -1.25rem -1rem -1.5rem;
   z-index: -1;
-  border-radius: 1.5rem;
-  background:
-    radial-gradient(ellipse 150% 130% at 0% 100%, rgba(5, 4, 3, 0.98), rgba(5, 4, 3, 0.72) 58%, transparent 84%),
-    linear-gradient(to top, rgba(5, 4, 3, 0.94), rgba(5, 4, 3, 0.52) 62%, transparent 94%);
+  border-radius: 1rem;
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 3, 0.42) 0%,
+    rgba(5, 4, 3, 0.18) 48%,
+    transparent 88%
+  );
   pointer-events: none;
 }
 

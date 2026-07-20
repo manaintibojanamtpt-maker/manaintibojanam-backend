@@ -29,7 +29,7 @@ describe('home hero carousel', () => {
     assert.doesNotMatch(view, /\{animated && slides\.length > 1 \? \(/);
   });
 
-  it('uses readable hero copy classes with scrim-backed text shadows', () => {
+  it('keeps food photos bright with bottom scrim and text-shadow readability', () => {
     const view = readFileSync(
       join(root, '../src/design-system/adapters/marketplace/MarketplaceDiscoveryHeroView.tsx'),
       'utf8',
@@ -40,10 +40,14 @@ describe('home hero carousel', () => {
     assert.match(view, /ds-discovery-hero__headline/);
     assert.match(view, /ds-discovery-hero__subline/);
     assert.doesNotMatch(view, /bg-clip-text text-transparent/);
-    assert.match(view, /ds-discovery-hero__readability/);
+    assert.match(view, /ds-discovery-hero__scrim[\s\S]*h-\[42%\]/);
+    assert.doesNotMatch(view, /ds-discovery-hero__readability/);
+    assert.doesNotMatch(view, /brightness-\[0\.5/);
+    assert.doesNotMatch(view, /ds-discovery-hero__vignette/);
+    assert.doesNotMatch(view, /ds-discovery-hero__edge-fade/);
     assert.match(theme, /\.ds-discovery-hero__headline[\s\S]*text-shadow/);
-    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.99\)/);
-    assert.match(theme, /\.ds-discovery-hero__readability/);
+    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.78\)/);
+    assert.doesNotMatch(theme, /\.ds-discovery-hero__readability/);
   });
 
   it('defaults hero rotation interval to 12 seconds', () => {
