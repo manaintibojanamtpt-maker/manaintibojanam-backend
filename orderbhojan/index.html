@@ -23,6 +23,13 @@
       if (window.location.protocol === 'capacitor:') {
         window.__SKIP_SPLASH__ = true;
       }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(function (registration) {
+          if (registration) {
+            registration.update();
+          }
+        });
+      }
     </script>
   </head>
   <body>

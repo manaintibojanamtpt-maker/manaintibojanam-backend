@@ -48,7 +48,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'OrderBhojan',
         short_name: 'OrderBhojan',
@@ -80,12 +80,15 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cacheId: 'orderbhojan-pwa-v3',
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
-        globIgnores: ['**/hero/**', '**/categories/**'],
+        globIgnores: ['**/hero/**', '**/categories/**', 'offline.html'],
         // Serve the SPA shell on navigation failures — not the dead-end offline page.
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/offline\.html$/],
         navigationPreload: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: ({ request }) =>

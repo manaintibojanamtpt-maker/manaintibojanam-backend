@@ -1,6 +1,21 @@
-const DEFAULT_PROBE_PATH = '/favicon.svg';
+const DEFAULT_PROBE_PATHS = ['/favicon.svg', '/manifest.webmanifest'] as const;
 const DEFAULT_PROBE_TIMEOUT_MS = 5000;
 
+async function probePath(
+  origin: string,
+  path: string,
+  signal: AbortSignal,
+): Promise<boolean> {
+  const response = await fetch(`${origin}${path}`, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    signal,
+  });
+  return response.ok;
+}
+
+/** Presentation-only reachability probe. Defaults to online when evidence is inconclusive. */
 export async function probeSameOriginReachable(options?: {
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
@@ -14,18 +29,23 @@ export async function probeSameOriginReachable(options?: {
   const onAbort = () => controller.abort();
   options?.signal?.addEventListener('abort', onAbort, { once: true });
 
+  const paths = options?.path ? [options.path] : DEFAULT_PROBE_PATHS;
+
   try {
-    const response = await fetch(`${window.location.origin}${options?.path ?? DEFAULT_PROBE_PATH}`, {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'same-origin',
-      signal: controller.signal,
-    });
-    return response.ok;
-  } catch {
-    // iOS Safari can report navigator.onLine=false while the network still works.
-    // Prefer staying usable when the browser thinks it is online.
-    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+    for (const path of paths) {
+      try {
+        if (await probePath(window.location.origin, path, controller.signal)) {
+          return true;
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          break;
+        }
+      }
+    }
+
+    // Never hard-block the app on a flaky offline signal.
+    return true;
   } finally {
     window.clearTimeout(timer);
     options?.signal?.removeEventListener('abort', onAbort);

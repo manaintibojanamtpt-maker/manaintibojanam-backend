@@ -17,6 +17,8 @@ describe('OrderBhojan connectivity probe', () => {
     const viteConfig = readFileSync(join(root, 'vite.config.ts'), 'utf8');
     assert.match(viteConfig, /navigateFallback: '\/index\.html'/);
     assert.doesNotMatch(viteConfig, /navigateFallback: '\/offline\.html'/);
+    assert.match(viteConfig, /navigateFallbackDenylist:.*offline\\.html/s);
+    assert.match(viteConfig, /globIgnores:.*offline\.html/s);
   });
 
   it('useOnlineStatus probes connectivity instead of trusting navigator.onLine alone', () => {
@@ -25,10 +27,19 @@ describe('OrderBhojan connectivity probe', () => {
     assert.doesNotMatch(hook, /navigator\.onLine/);
   });
 
-  it('offline.html retry reconnects to the app shell when reachable', () => {
+  it('probeSameOriginReachable stays optimistic when probes are inconclusive', () => {
+    const probe = readFileSync(join(root, 'src/presentation/states/probeConnectivity.ts'), 'utf8');
+    assert.match(probe, /Never hard-block the app on a flaky offline signal/);
+    assert.match(probe, /return true;/);
+    assert.doesNotMatch(probe, /navigator\.onLine/);
+  });
+
+  it('offline.html auto-recovers and resets stale service workers', () => {
     const offlineHtml = readFileSync(join(root, 'public/offline.html'), 'utf8');
     assert.match(offlineHtml, /window\.location\.replace/);
     assert.match(offlineHtml, /probeReachable/);
+    assert.match(offlineHtml, /resetStaleServiceWorker/);
+    assert.match(offlineHtml, /recoverFromOfflineShell/);
     assert.doesNotMatch(offlineHtml, /onclick="window\.location\.reload\(\)"/);
   });
 

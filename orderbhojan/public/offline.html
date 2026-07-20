@@ -53,6 +53,10 @@
         outline: 2px solid #ff7a00;
         outline-offset: 2px;
       }
+      button:disabled {
+        opacity: 0.72;
+        cursor: wait;
+      }
     </style>
   </head>
   <body>
@@ -62,44 +66,81 @@
       <button type="button" id="retry">Try again</button>
     </main>
     <script>
+      const PROBE_PATHS = ['/favicon.svg', '/manifest.webmanifest'];
+
       async function probeReachable() {
-        try {
-          const response = await fetch('/favicon.svg', { cache: 'no-store', credentials: 'same-origin' });
-          return response.ok;
-        } catch (error) {
-          return typeof navigator !== 'undefined' ? navigator.onLine : false;
+        for (const path of PROBE_PATHS) {
+          try {
+            const response = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
+            if (response.ok) return true;
+          } catch (error) {
+            // Keep probing other same-origin assets.
+          }
         }
+        return false;
       }
 
-      async function tryAgain() {
-        const button = document.getElementById('retry');
-        if (button) {
-          button.disabled = true;
-          button.textContent = 'Reconnecting…';
-        }
-
-        if (await probeReachable()) {
-          const target = new URL('/', window.location.href);
-          target.searchParams.set('_retry', String(Date.now()));
-          window.location.replace(target.toString());
-          return;
-        }
-
+      async function resetStaleServiceWorker() {
         if ('serviceWorker' in navigator) {
           try {
             const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map((registration) => registration.update()));
+            await Promise.all(registrations.map((registration) => registration.unregister()));
           } catch (error) {
-            // Ignore SW update errors and fall back to reload.
+            // Best-effort cleanup only.
           }
         }
 
-        window.location.reload();
+        if ('caches' in window) {
+          try {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => caches.delete(key)));
+          } catch (error) {
+            // Best-effort cleanup only.
+          }
+        }
+      }
+
+      async function reopenApp() {
+        const target = new URL('/', window.location.href);
+        target.searchParams.set('_recovery', String(Date.now()));
+        window.location.replace(target.toString());
+      }
+
+      async function recoverFromOfflineShell(options) {
+        const button = document.getElementById('retry');
+        if (button) {
+          button.disabled = true;
+          button.textContent = options?.label ?? 'Reconnecting…';
+        }
+
+        await resetStaleServiceWorker();
+
+        if (options?.reloadWhenOffline) {
+          window.location.reload();
+          return;
+        }
+
+        await reopenApp();
+      }
+
+      async function tryAgain() {
+        if (await probeReachable()) {
+          await recoverFromOfflineShell({ label: 'Reconnecting…' });
+          return;
+        }
+
+        await recoverFromOfflineShell({ label: 'Retrying…', reloadWhenOffline: true });
       }
 
       document.getElementById('retry')?.addEventListener('click', () => {
         void tryAgain();
       });
+
+      void (async () => {
+        if (await probeReachable()) {
+          await recoverFromOfflineShell({ label: 'Reconnecting…' });
+        }
+      })();
     </script>
   </body>
 </html>
