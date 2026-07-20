@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -7,6 +7,18 @@ import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, useActiveLocation 
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { buildCheckoutCartSignature } from '@/features/checkout/infrastructure/checkoutQuoteSession';
 import { applyCartValidationResult } from '@/features/cart/domain/applyCartValidationResult';
+
+function resolveCartLocationGateError(
+  activeLocation: ReturnType<typeof useActiveLocation>,
+): string | null {
+  if (!hasActiveDeliveryLocation(activeLocation)) {
+    return 'Set your delivery location before checkout';
+  }
+  if (!hasReadyDeliveryLocation(activeLocation)) {
+    return 'Confirm your flat or house number before checkout.';
+  }
+  return null;
+}
 
 export function useCartValidation(options?: { enabled?: boolean; autoApply?: boolean }) {
   const enabled = options?.enabled ?? true;
@@ -105,12 +117,15 @@ export function useCartValidation(options?: { enabled?: boolean; autoApply?: boo
     isValid: query.data?.valid ?? blockingIssues.length === 0,
     result: query.data ?? null,
     syncMessages,
-    error:
-      query.error instanceof Error
+    error: (() => {
+      const locationGateError = resolveCartLocationGateError(activeLocation);
+      if (locationGateError) return locationGateError;
+      return query.error instanceof Error
         ? query.error.message === 'Restaurant not found'
           ? 'This kitchen is not available for checkout. Clear your cart, pick a live restaurant from home, and add items again.'
           : query.error.message
-        : null,
+        : null;
+    })(),
     reset,
   };
 }

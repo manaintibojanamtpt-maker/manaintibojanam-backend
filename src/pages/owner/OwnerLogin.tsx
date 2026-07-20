@@ -10,7 +10,7 @@ import { redirectToOwnerDashboard, cacheOwnerTenantIds } from '../../lib/ownerRe
 import { resolveOwnerTenantIds } from '../../lib/ownerAccess';
 import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
-import { getFirebaseClientConfig } from '../../config/firebaseClientConfig';
+import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../../config/firebaseClientConfig';
 import { formatOwnerAuthError, isBenignOwnerAuthDismiss } from '../../lib/ownerAuthErrors';
 import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
 
@@ -25,13 +25,21 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const initialFirebaseConfig = getFirebaseClientConfig();
+const initialConfigReady = isFirebaseClientConfigReady(initialFirebaseConfig);
+
 const OwnerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [configError, setConfigError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(() => {
+    if (isProductionBhojanHost() && !initialConfigReady) {
+      return 'Firebase is not configured for production. Hard-refresh (Ctrl+Shift+R). If this persists, contact hello@bhojanos.com.';
+    }
+    return null;
+  });
   const redirectHandled = useRef(false);
 
   const marketingHome = EnvironmentConfig.getMarketingHomePath();
@@ -61,10 +69,9 @@ const OwnerLogin = () => {
   }, []);
 
   useEffect(() => {
-    const cfg = getFirebaseClientConfig();
-    if (isProductionBhojanHost() && !cfg.apiKey) {
+    if (isProductionBhojanHost() && !isFirebaseClientConfigReady()) {
       setConfigError(
-        'Firebase is not configured for production. Add VITE_FIREBASE_* on Vercel or FIREBASE_WEB_* on Render, then redeploy.',
+        'Firebase is not configured for production. Hard-refresh (Ctrl+Shift+R). If this persists, contact hello@bhojanos.com.',
       );
       return;
     }
@@ -115,6 +122,13 @@ const OwnerLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    if (!isFirebaseClientConfigReady()) {
+      const message = formatOwnerAuthError(new Error('Firebase not configured'), { configReady: false });
+      setConfigError(message);
+      setLoginError(message);
+      toast.error(message);
+      return;
+    }
     setLoginError(null);
     setLoading(true);
     try {
@@ -127,7 +141,7 @@ const OwnerLogin = () => {
         email,
         error: error instanceof Error ? error.message : String(error),
       });
-      const message = formatOwnerAuthError(error);
+      const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
       setLoginError(message);
       toast.error(message);
       setLoading(false);
@@ -138,6 +152,13 @@ const OwnerLogin = () => {
 
   const handleGoogleLogin = async () => {
     if (loading) return;
+    if (!isFirebaseClientConfigReady()) {
+      const message = formatOwnerAuthError(new Error('Firebase not configured'), { configReady: false });
+      setConfigError(message);
+      setLoginError(message);
+      toast.error(message);
+      return;
+    }
     setLoginError(null);
     setLoading(true);
     try {
@@ -152,7 +173,7 @@ const OwnerLogin = () => {
           reason: 'Google Login Failed',
           error: error instanceof Error ? error.message : String(error),
         });
-        const message = formatOwnerAuthError(error);
+        const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
         setLoginError(message);
         toast.error(message);
       }

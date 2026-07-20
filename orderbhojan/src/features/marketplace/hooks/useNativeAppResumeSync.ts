@@ -5,7 +5,7 @@ import { isNativePlatform } from '@/lib/nativePlatform';
 
 /**
  * Soft refresh on native resume — revision sync handles pool invalidation;
- * this only refetches stale active queries without wiping cached UI.
+ * this refetches stale active queries and refreshes customer session data.
  */
 export function useNativeAppResumeSync(enabled = isLiveStorefrontSyncEnabled()): void {
   const queryClient = useQueryClient();
@@ -21,6 +21,7 @@ export function useNativeAppResumeSync(enabled = isLiveStorefrontSyncEnabled()):
       const handle = await App.addListener('appStateChange', ({ isActive }) => {
         if (!isActive || cancelled) return;
         void queryClient.refetchQueries({ stale: true, type: 'active' });
+        void queryClient.invalidateQueries({ queryKey: ['customer', 'profile'] });
       });
       removeListener = () => void handle.remove();
     })();

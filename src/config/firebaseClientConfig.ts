@@ -1,4 +1,5 @@
 import { EnvironmentConfig } from './environment';
+import { BHOJANOS_PROD_FIREBASE_PUBLIC } from './bhojanosProdFirebase';
 import { isProductionBhojanHost, readRuntimeFirebaseConfig } from '../lib/runtimeFirebaseConfig';
 
 /** Local / staging Firebase project (bhojanos2). Never use on bhojanos.com. */
@@ -23,23 +24,40 @@ export type FirebaseClientConfig = {
 };
 
 function pickEnv(key: string): string | undefined {
-  const value = import.meta.env[key];
+  const value = import.meta.env?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function defaultsForProject(projectId: string): FirebaseClientConfig {
+  return projectId === BHOJANOS_PROD_FIREBASE_PUBLIC.projectId
+    ? { ...BHOJANOS_PROD_FIREBASE_PUBLIC }
+    : { ...DEV_FIREBASE };
+}
+
+function normalizeFirebaseConfig(partial: Partial<FirebaseClientConfig>): FirebaseClientConfig {
+  const projectId = partial.projectId?.trim() || BHOJANOS_PROD_FIREBASE_PUBLIC.projectId;
+  const defaults = defaultsForProject(projectId);
+  return {
+    apiKey: partial.apiKey?.trim() || defaults.apiKey,
+    authDomain: partial.authDomain?.trim() || defaults.authDomain,
+    projectId,
+    storageBucket: partial.storageBucket?.trim() || defaults.storageBucket,
+    messagingSenderId: partial.messagingSenderId?.trim() || defaults.messagingSenderId,
+    appId: partial.appId?.trim() || defaults.appId,
+    measurementId: partial.measurementId?.trim() || undefined,
+  };
+}
+
+export function isFirebaseClientConfigReady(config?: FirebaseClientConfig): boolean {
+  const cfg = config ?? getFirebaseClientConfig();
+  return Boolean(cfg.apiKey && cfg.projectId && cfg.authDomain && cfg.appId && cfg.messagingSenderId);
 }
 
 /** Single source of truth for browser Firebase SDK config. */
 export function getFirebaseClientConfig(): FirebaseClientConfig {
   const runtime = readRuntimeFirebaseConfig();
   if (runtime) {
-    return {
-      apiKey: runtime.apiKey,
-      authDomain: runtime.authDomain || `${runtime.projectId}.firebaseapp.com`,
-      projectId: runtime.projectId,
-      storageBucket: runtime.storageBucket || `${runtime.projectId}.firebasestorage.app`,
-      messagingSenderId: runtime.messagingSenderId || DEV_FIREBASE.messagingSenderId,
-      appId: runtime.appId || DEV_FIREBASE.appId,
-      measurementId: runtime.measurementId,
-    };
+    return normalizeFirebaseConfig(runtime);
   }
 
   const fromEnv: Partial<FirebaseClientConfig> = {
@@ -53,31 +71,14 @@ export function getFirebaseClientConfig(): FirebaseClientConfig {
   };
 
   if (fromEnv.projectId && fromEnv.apiKey) {
-    return {
-      apiKey: fromEnv.apiKey,
-      authDomain: fromEnv.authDomain || `${fromEnv.projectId}.firebaseapp.com`,
-      projectId: fromEnv.projectId,
-      storageBucket: fromEnv.storageBucket || `${fromEnv.projectId}.firebasestorage.app`,
-      messagingSenderId: fromEnv.messagingSenderId || DEV_FIREBASE.messagingSenderId,
-      appId: fromEnv.appId || DEV_FIREBASE.appId,
-      measurementId: fromEnv.measurementId,
-    };
+    return normalizeFirebaseConfig(fromEnv);
   }
 
   if (isProductionBhojanHost()) {
-    console.error(
-      '[Firebase] CRITICAL: bhojanos.com is not configured for bhojanos-prod. ' +
-        'Set VITE_FIREBASE_* on Vercel OR FIREBASE_WEB_* on Render (/api/client-config). ' +
-        'Auth and owner login will fail until fixed.',
+    console.warn(
+      '[Firebase] Runtime bootstrap and VITE_FIREBASE_* are unavailable — using embedded bhojanos-prod config.',
     );
-    return {
-      apiKey: '',
-      authDomain: 'bhojanos-prod.firebaseapp.com',
-      projectId: 'bhojanos-prod',
-      storageBucket: 'bhojanos-prod.firebasestorage.app',
-      messagingSenderId: pickEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || '',
-      appId: pickEnv('VITE_FIREBASE_APP_ID') || '',
-    };
+    return { ...BHOJANOS_PROD_FIREBASE_PUBLIC };
   }
 
   if (EnvironmentConfig.isProduction()) {

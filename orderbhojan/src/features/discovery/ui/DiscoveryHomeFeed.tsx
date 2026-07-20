@@ -12,7 +12,11 @@ import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { hasDiscoveryFilterOverrides } from '../domain/filterState';
 import { CONSUMER_MAX_DISCOVERY_DISTANCE_KM } from '../domain/discoveryPolicy';
 import { useActiveLocation, useLocationFeatureEnabled, useLocationActions } from '@/features/location';
-import { DEFAULT_MARKETPLACE_CITY_LABEL } from '@/lib/marketplaceDefaults';
+import {
+  DEFAULT_LOCATION_DISCOVERY_CTA,
+  DEFAULT_LOCATION_DISCOVERY_HINT,
+  DEFAULT_MARKETPLACE_CITY_LABEL,
+} from '@/lib/marketplaceDefaults';
 import { OrderBhojanHomeFeedSkeleton } from '@/presentation/discovery';
 import {
   OrderBhojanDiscoveryOfflineNotice,
@@ -34,7 +38,7 @@ function DiscoveryNearbyHeader({
     ? locationLabel
       ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${locationLabel}`
       : `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`
-    : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location`;
+    : DEFAULT_LOCATION_DISCOVERY_HINT;
 
   return (
     <header className="space-y-1">
@@ -131,7 +135,7 @@ export function DiscoveryHomeFeed() {
     let title = `No kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`;
     let description = activeLocation
       ? `We could not find published kitchens delivering to ${locationLabel}.`
-      : `Showing ${DEFAULT_MARKETPLACE_CITY_LABEL} kitchens until you set your location. We could not find kitchens matching your current view.`;
+      : `${DEFAULT_LOCATION_DISCOVERY_HINT}. We could not find kitchens matching your current view.`;
     let primaryLabel = filtersActive ? 'Clear filters' : locationEnabled ? 'Set your location' : undefined;
     let onPrimary = filtersActive
       ? () => {
@@ -143,7 +147,7 @@ export function DiscoveryHomeFeed() {
         : undefined;
 
     if (usingPuneFallback && locationEnabled) {
-      title = 'Set your delivery location';
+      title = DEFAULT_LOCATION_DISCOVERY_CTA;
       primaryLabel = 'Set your location';
       onPrimary = () => openSelector();
     } else if (filtersActive && !usingPuneFallback) {

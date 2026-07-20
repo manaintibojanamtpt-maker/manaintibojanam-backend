@@ -1,6 +1,6 @@
 import { Clock3, LocateFixed } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BottomSheet from '@bhojan/storefront-design-system/layout/BottomSheet';
 import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
@@ -11,6 +11,7 @@ import { useActiveLocation, useRecentLocationsList, useSavedAddressesList } from
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationUiState } from '../hooks/useActiveLocation';
 import { useLocationSessionStore } from '../store/locationSessionStore';
+import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
   const open = useLocationSessionStore((s) => s.selectorOpen);
@@ -28,7 +29,16 @@ export function LocationSelectorSheet() {
   const saved = useSavedAddressesList();
   const recent = useRecentLocationsList();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const routeLocation = useLocation();
   const [search, setSearch] = useState('');
+  const [manualFormOpen, setManualFormOpen] = useState(false);
+
+  const handleSignIn = () => {
+    closeSelector();
+    const returnTo = encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`);
+    navigate(`/auth?returnTo=${returnTo}`);
+  };
 
   const filteredSaved = saved.filter((a) => {
     const label = `${a.label} ${a.customLabel ?? ''} ${a.address.formattedAddress ?? ''}`.toLowerCase();
@@ -45,7 +55,7 @@ export function LocationSelectorSheet() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search saved addresses"
             aria-label="Search addresses"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none placeholder:text-white/40 focus:border-[#FF7A00]/50"
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none placeholder:text-white/55 focus:border-[#FF7A00]/50"
           />
 
           <SoftButton
@@ -102,7 +112,8 @@ export function LocationSelectorSheet() {
             fullWidth
             disabled={isDetecting}
             onClick={() => {
-              void requestCurrentLocation();
+              closeSelector();
+              setManualFormOpen(true);
             }}
           >
             Enter address manually
@@ -115,7 +126,12 @@ export function LocationSelectorSheet() {
                 <Skeleton className="h-12 w-full rounded-2xl" />
               ) : null}
               {filteredSaved.length === 0 ? (
-                <EmptyStateView title="No saved addresses" description="Add home, work, or other addresses." />
+                <EmptyStateView
+                  title="No saved addresses"
+                  description="Add home, work, or other addresses for faster checkout."
+                  actionLabel="Add address"
+                  onAction={() => void startAddSavedAddress()}
+                />
               ) : (
                 filteredSaved.map((addr) => (
                   <SoftButton
@@ -149,15 +165,14 @@ export function LocationSelectorSheet() {
           ) : (
             <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
               <p className="text-sm text-white/80">Sign in to save addresses for faster checkout.</p>
-              <Link to="/auth" className="mt-3 block">
-                <SoftButton type="button" tone="secondary" fullWidth>
-                  Sign in
-                </SoftButton>
-              </Link>
+              <SoftButton type="button" tone="secondary" fullWidth className="mt-3" onClick={handleSignIn}>
+                Sign in
+              </SoftButton>
             </GlassCard>
           )}
         </div>
       </BottomSheet>
+      <AddressFormSheet open={manualFormOpen} onClose={() => setManualFormOpen(false)} />
     </>
   );
 }

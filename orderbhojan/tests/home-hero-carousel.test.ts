@@ -29,6 +29,21 @@ describe('home hero carousel', () => {
     assert.doesNotMatch(view, /\{animated && slides\.length > 1 \? \(/);
   });
 
+  it('uses readable hero copy classes with scrim-backed text shadows', () => {
+    const view = readFileSync(
+      join(root, '../src/design-system/adapters/marketplace/MarketplaceDiscoveryHeroView.tsx'),
+      'utf8',
+    );
+    const theme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
+
+    assert.match(view, /ds-discovery-hero__eyebrow/);
+    assert.match(view, /ds-discovery-hero__headline/);
+    assert.match(view, /ds-discovery-hero__subline/);
+    assert.doesNotMatch(view, /bg-clip-text text-transparent/);
+    assert.match(theme, /\.ds-discovery-hero__headline[\s\S]*text-shadow/);
+    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.98\)/);
+  });
+
   it('defaults hero rotation interval to 12 seconds', () => {
     const scenes = readFileSync(
       join(root, 'src/features/experience/data/kitchenHeroScenes.ts'),

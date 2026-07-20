@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getLocationStoreAddress, subscribeLocationStore } from '@bhojan/location-core';
 import { AddressConfirmationSheet } from '@bhojan/location-v2/components/AddressConfirmationSheet';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { isNativePlatform } from '@/lib/nativePlatform';
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationFeatureEnabled } from '../hooks/useLocationFeature';
 import { useLocationSessionStore } from '../store/locationSessionStore';
@@ -25,6 +26,27 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!enabled || !isAuthenticated || !sessionUser?.uid) return;
     void refreshSavedAddresses();
+  }, [enabled, isAuthenticated, refreshSavedAddresses, sessionUser?.uid]);
+
+  useEffect(() => {
+    if (!enabled || !isAuthenticated || !sessionUser?.uid || !isNativePlatform()) return;
+
+    let cancelled = false;
+    let removeListener: (() => void) | undefined;
+
+    void (async () => {
+      const { App } = await import('@capacitor/app');
+      const handle = await App.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive || cancelled) return;
+        void refreshSavedAddresses();
+      });
+      removeListener = () => void handle.remove();
+    })();
+
+    return () => {
+      cancelled = true;
+      removeListener?.();
+    };
   }, [enabled, isAuthenticated, refreshSavedAddresses, sessionUser?.uid]);
 
   return (

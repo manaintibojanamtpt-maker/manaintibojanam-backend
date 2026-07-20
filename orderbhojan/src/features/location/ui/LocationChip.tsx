@@ -50,7 +50,7 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       tone="ghost"
       fullWidth={variant !== 'compact'}
       disabled={isDetecting}
-      className={`!justify-start gap-2 ${variant === 'compact' ? 'w-full max-w-full !px-2 !py-1.5' : ''} ${className}`.trim()}
+      className={`!justify-start gap-2 min-h-11 touch-manipulation ${variant === 'compact' ? 'w-full max-w-full !px-2 !py-2' : ''} ${className}`.trim()}
       aria-label={hasCoordsReady ? `Delivery location: ${label}` : USE_CURRENT_LABEL}
       aria-expanded={selectorOpen}
       onClick={handleClick}
@@ -59,7 +59,7 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       {isDetecting ? (
         <Skeleton className="h-4 w-3/5" />
       ) : (
-        <span className="truncate text-sm text-white/80">
+        <span className="truncate text-sm text-white/90">
           {uiError && uiStatus === 'error' ? uiError.message : label}
         </span>
       )}

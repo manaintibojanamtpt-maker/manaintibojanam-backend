@@ -34,8 +34,8 @@ describe('checkout location recovery (batch 2)', () => {
     assert.match(selector, /startAddSavedAddress/);
     assert.match(selector, /requestCurrentLocation/);
     assert.match(selector, /Enter address manually/);
+    assert.match(selector, /AddressFormSheet/);
     assert.match(selector, /Add new address/);
-    assert.doesNotMatch(selector, /AddressFormSheet/);
     assert.doesNotMatch(selector, /openWizard/);
   });
 
@@ -45,8 +45,20 @@ describe('checkout location recovery (batch 2)', () => {
       'utf8',
     );
 
-    assert.match(actions, /pendingSavedAddress/);
+    assert.match(actions, /persistConfirmedAddressForUser/);
+    assert.match(actions, /priorSavedAddressId/);
     assert.match(actions, /v2ToSavedAddressInput/);
     assert.match(actions, /startAddSavedAddress/);
+  });
+
+  it('location selector sign-in navigates to auth with returnTo', () => {
+    const selector = readFileSync(
+      join(root, 'src/features/location/ui/LocationSelectorSheet.tsx'),
+      'utf8',
+    );
+
+    assert.match(selector, /handleSignIn/);
+    assert.match(selector, /navigate\(`\/auth\?returnTo=\$\{returnTo\}`\)/);
+    assert.doesNotMatch(selector, /<Link to="\/auth"/);
   });
 });

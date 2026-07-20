@@ -92,13 +92,14 @@ describe('sanitizeRestaurantSlugContext', () => {
 });
 
 describe('recovery-01 discovery copy', () => {
-  it('home feed surfaces Pune fallback messaging when location is unset', () => {
+  it('home feed surfaces pan-India fallback messaging when location is unset', () => {
     const feed = readFileSync(
       join(root, 'src/features/discovery/ui/DiscoveryHomeFeed.tsx'),
       'utf8',
     );
     assert.match(feed, /DEFAULT_MARKETPLACE_CITY_LABEL/);
-    assert.match(feed, /until you set your location/);
+    assert.match(feed, /DEFAULT_LOCATION_DISCOVERY_HINT/);
+    assert.match(feed, /DEFAULT_LOCATION_DISCOVERY_CTA/);
     assert.match(feed, /Set your location/);
     assert.doesNotMatch(feed, /primaryLabel="Show all kitchens"/);
   });

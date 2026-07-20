@@ -29,6 +29,42 @@ function locationStore() {
 
 let locationCapturePromise: Promise<void> | null = null;
 
+function isDuplicateSavedAddress(
+  savedAddresses: ReturnType<typeof locationStore>['savedAddresses'],
+  input: SavedAddressInput,
+): boolean {
+  return savedAddresses.some(
+    (entry) =>
+      entry.address.formattedAddress === input.address.formattedAddress &&
+      Math.abs(entry.address.coordinates.lat - input.address.coordinates.lat) < 0.0001 &&
+      Math.abs(entry.address.coordinates.lng - input.address.coordinates.lng) < 0.0001,
+  );
+}
+
+async function persistConfirmedAddressForUser(
+  uid: string,
+  options: { force?: boolean; priorSavedAddressId?: string },
+  refreshSavedAddresses: () => Promise<void>,
+): Promise<void> {
+  if (options.priorSavedAddressId && !options.force) {
+    return;
+  }
+
+  const address = getLocationStoreAddress();
+  if (!address) {
+    return;
+  }
+
+  const savedInput = v2ToSavedAddressInput(address);
+  const store = locationStore();
+  if (!options.force && isDuplicateSavedAddress(store.savedAddresses, savedInput)) {
+    return;
+  }
+
+  await createSavedAddress(uid, savedInput);
+  await refreshSavedAddresses();
+}
+
 async function runLocationCapture(
   capture: () => Promise<void>,
   onError: (error: unknown) => void,
@@ -238,18 +274,19 @@ export function useLocationActions() {
   const confirmAddress = useCallback(
     async (input: { flat?: string; building?: string; landmark?: string }) => {
       const store = locationStore();
+      const priorSavedAddressId = store.activeLocation?.savedAddressId;
+      const forcePersist = store.pendingSavedAddress;
       confirmObLocationDraft(input);
 
-      if (store.pendingSavedAddress && sessionUser?.uid && isAuthenticated) {
-        const address = getLocationStoreAddress();
-        if (address) {
-          try {
-            const savedInput = v2ToSavedAddressInput(address);
-            await createSavedAddress(sessionUser.uid, savedInput);
-            await refreshSavedAddresses();
-          } catch {
-            // Session location is still confirmed even if Firestore save fails.
-          }
+      if (sessionUser?.uid && isAuthenticated && sessionUser.provider !== 'guest') {
+        try {
+          await persistConfirmedAddressForUser(
+            sessionUser.uid,
+            { force: forcePersist, priorSavedAddressId },
+            refreshSavedAddresses,
+          );
+        } catch {
+          // Session location is still confirmed even if Firestore save fails.
         }
       }
 

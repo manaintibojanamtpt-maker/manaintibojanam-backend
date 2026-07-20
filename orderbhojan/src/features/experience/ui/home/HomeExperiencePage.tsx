@@ -6,6 +6,7 @@ import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
 import { OrderBhojanHomeHero, OrderBhojanHomeCategories } from '@/presentation/discovery';
+import { isNativePlatform } from '@/lib/nativePlatform';
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
 
@@ -40,6 +41,13 @@ export function HomeExperiencePage() {
     next.delete('openLocation');
     setSearchParams(next, { replace: true });
   }, [locationEnabled, openSelector, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!locationEnabled || locationPromptedRef.current || activeLocation) return;
+    if (!isNativePlatform()) return;
+    locationPromptedRef.current = true;
+    openSelector();
+  }, [activeLocation, locationEnabled, openSelector]);
 
   useEffect(() => {
     if (!locationEnabled || !discoveryEnabled || locationPromptedRef.current) return;

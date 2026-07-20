@@ -439,9 +439,10 @@ html.ob-native .ob-auth-shell {
   background: linear-gradient(
     to top,
     #050403 0%,
-    rgba(5, 4, 3, 0.96) 18%,
-    rgba(5, 4, 3, 0.72) 42%,
-    rgba(5, 4, 3, 0.18) 72%,
+    rgba(5, 4, 3, 0.98) 22%,
+    rgba(5, 4, 3, 0.88) 44%,
+    rgba(5, 4, 3, 0.52) 68%,
+    rgba(5, 4, 3, 0.16) 86%,
     transparent 100%
   );
 }
@@ -488,11 +489,39 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__copy::before {
   content: '';
   position: absolute;
-  inset: -1.5rem -1rem -1rem -1.25rem;
+  inset: -1.75rem -1.25rem -1.25rem -1.5rem;
   z-index: -1;
   border-radius: 1.5rem;
-  background: radial-gradient(ellipse 120% 100% at 0% 100%, rgba(5, 4, 3, 0.72), transparent 68%);
+  background:
+    radial-gradient(ellipse 130% 110% at 0% 100%, rgba(5, 4, 3, 0.92), rgba(5, 4, 3, 0.42) 58%, transparent 78%),
+    linear-gradient(to top, rgba(5, 4, 3, 0.78), transparent 72%);
   pointer-events: none;
+}
+
+.ds-discovery-hero__eyebrow {
+  color: #ffe8cc;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.92),
+    0 4px 18px rgba(0, 0, 0, 0.72);
+}
+
+.ds-discovery-hero__headline {
+  color: #fffaf3;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.95),
+    0 8px 32px rgba(0, 0, 0, 0.82),
+    0 0 1px rgba(0, 0, 0, 1);
+}
+
+.ds-discovery-hero__headline--offer {
+  color: #fff7ed;
+}
+
+.ds-discovery-hero__subline {
+  color: rgba(255, 250, 243, 0.94);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 6px 24px rgba(0, 0, 0, 0.68);
 }
 
 .ds-discovery-hero__cta {

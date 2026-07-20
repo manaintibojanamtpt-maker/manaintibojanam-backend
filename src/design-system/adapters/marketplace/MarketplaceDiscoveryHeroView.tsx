@@ -143,19 +143,17 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           className={`ds-discovery-hero__copy max-w-xl motion-reduce:transition-none ${animated ? 'ds-hero-copy-in' : ''}`}
           aria-live="polite"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#FF7A00] sm:text-[11px]">
+          <p className="ds-discovery-hero__eyebrow text-[10px] font-bold uppercase tracking-[0.28em] sm:text-[11px]">
             {displayEyebrow}
           </p>
           <h1
-            className={`mt-2.5 text-balance text-[2rem] font-extrabold leading-[1.02] tracking-[-0.035em] text-white sm:mt-3 sm:text-[2.65rem] lg:text-[3rem] ${
-              isOfferSlide
-                ? 'bg-gradient-to-r from-white via-[#FFF4EA] to-[#FFB366] bg-clip-text text-transparent'
-                : ''
+            className={`ds-discovery-hero__headline mt-2.5 text-balance text-[2rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:mt-3 sm:text-[2.65rem] lg:text-[3rem] ${
+              isOfferSlide ? 'ds-discovery-hero__headline--offer' : ''
             }`}
           >
             {displayHeadline}
           </h1>
-          <p className="mt-2.5 max-w-md text-[15px] leading-relaxed text-white/78 sm:mt-3 sm:text-base">
+          <p className="ds-discovery-hero__subline mt-2.5 max-w-md text-[15px] leading-relaxed sm:mt-3 sm:text-base">
             {displaySubline}
           </p>
 
