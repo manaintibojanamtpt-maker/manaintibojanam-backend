@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -13,6 +13,7 @@ import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../../config/firebaseClientConfig';
 import { formatOwnerAuthError, isBenignOwnerAuthDismiss } from '../../lib/ownerAuthErrors';
 import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
+import { completeGoogleRedirectSignIn, signInWithGoogleAccount } from '../../lib/googleWebAuth';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -77,6 +78,25 @@ const OwnerLogin = () => {
     }
 
     let cancelled = false;
+
+    void completeGoogleRedirectSignIn(auth)
+      .then(async (user) => {
+        if (cancelled || redirectHandled.current || !user) return;
+        redirectHandled.current = true;
+        toast.success('Welcome back!');
+        await afterSignIn();
+      })
+      .catch((error: unknown) => {
+        if (cancelled || redirectHandled.current) return;
+        if (!isBenignOwnerAuthDismiss(error)) {
+          const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
+          setLoginError(message);
+          toast.error(message);
+        }
+        setLoading(false);
+        setRedirecting(false);
+      });
+
     void auth.authStateReady().then(() => {
       if (cancelled || redirectHandled.current) return;
       if (auth.currentUser) {
@@ -162,9 +182,8 @@ const OwnerLogin = () => {
     setLoginError(null);
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
+      const user = await signInWithGoogleAccount(auth);
+      if (!user) return;
       toast.success('Welcome back!');
       await afterSignIn();
     } catch (error: unknown) {

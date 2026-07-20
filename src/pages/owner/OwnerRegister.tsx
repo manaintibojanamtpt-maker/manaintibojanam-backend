@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from 'lucide-react';
@@ -15,6 +15,13 @@ import { waitForOwnerTenantIds, resolveOwnerTenantIds } from '../../lib/ownerAcc
 import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
 import { resolveOwnerDestination } from '../../lib/ownerRouting';
 import { provisionOwnerStore } from '../../lib/ownerProvisioning';
+import {
+  clearOwnerGoogleRegisterPending,
+  completeGoogleRedirectSignIn,
+  loadOwnerGoogleRegisterPending,
+  saveOwnerGoogleRegisterPending,
+  signInWithGoogleAccount,
+} from '../../lib/googleWebAuth';
 
 const RESERVED_SLUGS = ['dominos', 'swiggy', 'zomato', 'kfc', 'mcdonalds', 'burgerking', 'subway', 'admin', 'support', 'api', 'system', 'bhojanos'];
 
@@ -47,6 +54,7 @@ const OwnerRegister = () => {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = React.useRef<ReCAPTCHA>(null);
   const redirectChecked = useRef(false);
+  const googleRedirectHandled = useRef(false);
   const navigate = useNavigate();
   const { currentUser, userProfile, loading: authLoading, profileLoading, refreshProfile } = useAuth();
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
@@ -110,6 +118,57 @@ const OwnerRegister = () => {
     toast.success('Welcome!');
     window.location.href = `${EnvironmentConfig.getBaseUrl()}${path}`;
   };
+
+  const completeGoogleRegistration = async (
+    user: { uid: string; email: string | null; displayName: string | null },
+    pending: { name: string; restaurantName: string; mobileNumber: string; email: string },
+  ) => {
+    clearOwnerGoogleRegisterPending();
+    setProvisioning(true);
+    const tenantSlug = await provisionOwnerStore({
+      name: pending.name || user.displayName || 'Owner',
+      email: user.email || pending.email,
+      restaurantName: pending.restaurantName,
+      mobileNumber: pending.mobileNumber,
+    });
+    await finishOwnerRegistration(user.uid, user.email, tenantSlug);
+  };
+
+  useEffect(() => {
+    if (googleRedirectHandled.current) return;
+
+    void completeGoogleRedirectSignIn(auth)
+      .then(async (user) => {
+        if (googleRedirectHandled.current || !user) return;
+        const pending = loadOwnerGoogleRegisterPending();
+        if (!pending) return;
+
+        googleRedirectHandled.current = true;
+        setLoading(true);
+        try {
+          await completeGoogleRegistration(user, pending);
+        } catch (error: unknown) {
+          clearOwnerGoogleRegisterPending();
+          const message = error instanceof Error ? error.message : 'Google signup failed';
+          toast.error(message);
+        } finally {
+          setLoading(false);
+          setProvisioning(false);
+        }
+      })
+      .catch((error: unknown) => {
+        clearOwnerGoogleRegisterPending();
+        const code =
+          error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: string }).code ?? '')
+            : '';
+        if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+          toast.error(error instanceof Error ? error.message : 'Google signup failed');
+        }
+        setLoading(false);
+        setProvisioning(false);
+      });
+  }, []);
 
   if (authLoading || profileLoading || provisioning || linkingStore) {
     return (
@@ -195,20 +254,23 @@ const OwnerRegister = () => {
     setLoading(true);
     setProvisioning(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const tenantSlug = await provisionOwnerStore({
-        name: name.trim() || user.displayName || 'Owner',
-        email: user.email || email,
+      saveOwnerGoogleRegisterPending({
+        name: name.trim(),
         restaurantName: restaurantName.trim(),
         mobileNumber,
+        email,
       });
+      const user = await signInWithGoogleAccount(auth);
+      if (!user) return;
 
-      await finishOwnerRegistration(user.uid, user.email, tenantSlug);
+      await completeGoogleRegistration(user, {
+        name: name.trim(),
+        restaurantName: restaurantName.trim(),
+        mobileNumber,
+        email,
+      });
     } catch (error: any) {
+      clearOwnerGoogleRegisterPending();
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         toast.error(error.message || 'Google signup failed');
       }

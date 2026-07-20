@@ -3,10 +3,6 @@ import {
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
   ConfirmationResult,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { m, AnimatePresence } from 'framer-motion';
@@ -21,7 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { resolvePostLoginRedirect } from '../hooks/useStorefrontPath';
 import { exitCustomerPreviewMode, isCustomerPreviewMode } from '../lib/storefrontPreview';
-import { shouldUseGoogleAuthRedirect } from '../lib/nativePlatform';
+import { completeGoogleRedirectSignIn, signInWithGoogleAccount } from '../lib/googleWebAuth';
 import { SoftButton } from '../design-system';
 
 const BIOMETRIC_ONBOARDING_DISMISSED_KEY = 'biometricOnboardingDismissed';
@@ -84,9 +80,9 @@ const Login: React.FC = () => {
     
     const handleRedirectResult = async () => {
       try {
-        const result = await getRedirectResult(auth);
+        const user = await completeGoogleRedirectSignIn(auth);
         
-        if (result?.user) {
+        if (user) {
           toast.success('Sign-in successful!');
           exitCustomerPreviewMode();
           if (shouldOfferBiometricOnboarding()) {
@@ -145,36 +141,26 @@ const Login: React.FC = () => {
     
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      // Force "select_account" to ensure user always gets the choice
-      provider.setCustomParameters({ prompt: 'select_account' });
+      const user = await signInWithGoogleAccount(auth);
+      if (!user) return;
 
-      if (shouldUseGoogleAuthRedirect()) {
-        // Popups fail in PWA standalone and Capacitor WebView shells
-        sessionStorage.setItem('auth_redirecting', 'true');
-        await signInWithRedirect(auth, provider);
+      toast.success('Sign-in successful!');
+      exitCustomerPreviewMode();
+
+      let currentSupported = biometricsSupported;
+      let currentEnabled = hasLocalBiometrics;
+      
+      if (bioLoading) {
+        const status = await refreshStatus();
+        currentSupported = status.supported;
+        currentEnabled = status.enabled;
+      }
+
+      if (currentSupported && !currentEnabled && !sessionStorage.getItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY)) {
+        setShowBiometricOnboarding(true);
+        setLoading(false);
       } else {
-        const result = await signInWithPopup(auth, provider);
-        if (result.user) {
-          toast.success('Sign-in successful!');
-          exitCustomerPreviewMode();
-
-          let currentSupported = biometricsSupported;
-          let currentEnabled = hasLocalBiometrics;
-          
-          if (bioLoading) {
-            const status = await refreshStatus();
-            currentSupported = status.supported;
-            currentEnabled = status.enabled;
-          }
-
-          if (currentSupported && !currentEnabled && !sessionStorage.getItem(BIOMETRIC_ONBOARDING_DISMISSED_KEY)) {
-            setShowBiometricOnboarding(true);
-            setLoading(false);
-          } else {
-            finishLogin();
-          }
-        }
+        finishLogin();
       }
     } catch (error: any) {
       setLoading(false); // Reset loading on error

@@ -17,13 +17,10 @@ export function skipPwaInstallPrompt(): boolean {
 
 export function shouldUseGoogleAuthRedirect(): boolean {
   if (typeof window === 'undefined') return false;
-  if (isNativePlatform()) return true;
-
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-  return isStandalone;
+  // Capacitor Android/iOS use native Firebase Authentication — not web redirect/popup.
+  if (isNativePlatform()) return false;
+  // Hosted sites send Cross-Origin-Opener-Policy headers that break signInWithPopup.
+  return true;
 }
 
 function launchAnchorFallback(url: string): void {

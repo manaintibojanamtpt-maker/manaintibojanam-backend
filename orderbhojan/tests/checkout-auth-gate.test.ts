@@ -115,4 +115,16 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /signInWithGoogleNative/);
     assert.match(firebaseAuth, /sendPhoneOtpNative/);
   });
+
+  it('uses redirect google sign-in on web to avoid COOP popup failures', () => {
+    const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
+    const firebaseAuth = readFileSync(
+      join(root, 'src/features/auth/infrastructure/firebaseAuth.ts'),
+      'utf8',
+    );
+    assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
+    assert.match(firebaseAuth, /shouldUseGoogleAuthRedirect\(\)/);
+    assert.match(firebaseAuth, /signInWithRedirect/);
+    assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
+  });
 });
