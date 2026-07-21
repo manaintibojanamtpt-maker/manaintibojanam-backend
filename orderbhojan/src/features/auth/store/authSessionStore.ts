@@ -21,7 +21,7 @@ function createDeviceId(): string {
 export const useAuthSessionStore = create<AuthSessionStore>()(
   persist(
     (set, get) => ({
-      guestBrowsing: true,
+      guestBrowsing: false,
       anonymousAuthBlocked: false,
       deviceId: createDeviceId(),
       setGuestBrowsing: (value) => set({ guestBrowsing: value }),

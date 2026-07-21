@@ -102,7 +102,6 @@ export const FOOD_PHOTO_MANIFEST: Record<FoodPhotoAssetId, FoodPhotoAsset> = {
   'hero-biryani': {
     id: 'hero-biryani',
     baseUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8',
-    fallbackBaseUrl: '/hero/hyderabadi-chicken-biryani-hero.jpg',
     blurDataURL: WARM_BLUR,
     widths: HERO_PHOTO_WIDTHS,
     hero: { quality: 94, focalY: 0.42 },

@@ -2,7 +2,7 @@ import type { PersistentSessionRecord } from '@/lib/persistentSessionStore';
 import { readPersistentSessionRecord, writePersistentSessionRecord } from '@/lib/persistentSessionStore';
 import type { DiscoveryFilters, DiscoveryHomeResponse } from '@/types/marketplace-discovery';
 
-const STORAGE_KEY = 'ob-discovery-feed-v1';
+const STORAGE_KEY = 'ob-discovery-feed-v2';
 const IDB_PREFIX = 'discovery:';
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_ENTRIES = 8;

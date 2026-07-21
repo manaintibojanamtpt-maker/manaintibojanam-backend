@@ -14,6 +14,7 @@ import { mapFirebaseUser } from '@/features/auth/infrastructure/firebaseAuth';
 import { resolveAuthPhase, type AuthPhase, type AuthSessionUser } from '@/features/auth/domain/auth.types';
 import { useAuthSessionStore } from '@/features/auth/store/authSessionStore';
 import {
+  ensureAuthPersistence,
   initializeFirebase,
   isFirebaseConfigured,
   subscribeToAuthState,
@@ -55,10 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe: (() => void) | undefined;
 
     void (async () => {
+      let redirectSessionUser: AuthSessionUser | null = null;
+
       try {
+        await ensureAuthPersistence();
         const result = await handlePendingGoogleRedirect();
-        if (result.user) {
-          setSessionUser(result.user);
+        redirectSessionUser = result.user;
+        if (redirectSessionUser) {
+          setSessionUser(redirectSessionUser);
+          useAuthSessionStore.getState().setGuestBrowsing(false);
         }
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -69,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribe = subscribeToAuthState((nextUser) => {
         setUser(nextUser);
         const mapped = nextUser ? mapFirebaseUser(nextUser) : null;
-        setSessionUser(mapped);
+        setSessionUser((previous) => mapped ?? previous ?? redirectSessionUser);
         setAuthReady(true);
         if (mapped && !mapped.isAnonymous && mapped.provider !== 'guest') {
           useAuthSessionStore.getState().setGuestBrowsing(false);

@@ -22,6 +22,5 @@ export function useHomeHeroConfig() {
     staleTime: HOME_HERO_STALE_MS,
     gcTime: HOME_HERO_STALE_MS * 2,
     refetchOnWindowFocus: false,
-    placeholderData: DEFAULT_HOME_HERO_CONFIG,
   });
 }

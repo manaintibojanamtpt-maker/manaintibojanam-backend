@@ -42,6 +42,7 @@ export class AnonymousAuthDisabledError extends AuthFlowError {
 
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let googleRedirectResultPromise: Promise<AuthSessionUser | null> | null = null;
+const AUTH_REDIRECT_ATTEMPT_KEY = 'auth_redirect_attempted';
 let phoneConfirmation: ConfirmationResult | null = null;
 let phoneVerificationId: string | null = null;
 let nativePhoneVerificationId: string | null = null;
@@ -162,12 +163,22 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   if (shouldUseGoogleAuthRedirect()) {
     persistAuthReturnToFromCurrentUrl();
     sessionStorage.setItem('auth_redirecting', 'true');
+    sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
     await signInWithRedirect(auth, provider);
     throw new AuthFlowError('Google sign-in redirect in progress.');
   }
 
   const credential = await signInWithPopup(auth, provider);
   return mapFirebaseUser(credential.user);
+}
+
+export function readGoogleRedirectAttempt(): boolean {
+  if (typeof sessionStorage === 'undefined') return false;
+  return sessionStorage.getItem(AUTH_REDIRECT_ATTEMPT_KEY) != null;
+}
+
+export function clearGoogleRedirectAttempt(): void {
+  sessionStorage.removeItem(AUTH_REDIRECT_ATTEMPT_KEY);
 }
 
 export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | null> {
@@ -179,6 +190,7 @@ export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | 
         if (!result?.user) {
           return null;
         }
+        clearGoogleRedirectAttempt();
         return mapFirebaseUser(result.user);
       } finally {
         sessionStorage.removeItem('auth_redirecting');

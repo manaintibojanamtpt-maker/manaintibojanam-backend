@@ -1,5 +1,6 @@
 export {
   initializeFirebase,
+  ensureAuthPersistence,
   getFirebaseAuth,
   getFirebaseFirestore,
   subscribeToAuthState,

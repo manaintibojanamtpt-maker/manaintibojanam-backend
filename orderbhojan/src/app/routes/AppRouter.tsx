@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { MarketplaceLayout, AuthLayout, FullScreenLayout } from '@/shared/layouts';
 import { HomePage } from '@/app/pages/HomePage';
 import { RequireAuth } from '@/features/auth';
+import { RequireBrowseAuth } from '@/features/auth/ui/RequireBrowseAuth';
 import { AuthReturnNavigator } from '@/presentation/auth/AuthReturnNavigator';
 import { CartExperiencePage } from '@/features/experience';
 import { CheckoutPage } from '@/features/checkout';
@@ -88,7 +89,7 @@ export function AppRouter() {
       <AuthReturnNavigator />
       <Routes>
       <Route element={<MarketplaceLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<RequireBrowseAuth><HomePage /></RequireBrowseAuth>} />
 
         {import.meta.env.DEV ? (
           <Route

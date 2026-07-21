@@ -450,6 +450,34 @@ html.ob-native .ob-auth-shell {
   min-height: calc(100dvh - var(--ob-safe-top) - var(--ob-safe-bottom));
 }
 
+/* Onboarding — Zomato-style hero carousel + bottom auth sheet */
+.ob-onboarding-slide {
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+.ob-onboarding-slide--active {
+  opacity: 1;
+}
+
+.ob-onboarding-hero-scrim {
+  background:
+    linear-gradient(180deg, rgba(7, 5, 4, 0.55) 0%, rgba(7, 5, 4, 0.08) 42%, rgba(7, 5, 4, 0.72) 100%),
+    linear-gradient(180deg, transparent 58%, rgba(12, 9, 8, 0.95) 100%);
+}
+
+.ob-onboarding-hero-title {
+  font-family: 'Fraunces', var(--bds-font-serif, ui-serif, Georgia, serif);
+  text-wrap: balance;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+}
+
+.ob-onboarding-sheet {
+  background:
+    radial-gradient(circle at top left, rgba(255, 159, 28, 0.08), transparent 38%),
+    linear-gradient(180deg, rgba(12, 9, 8, 0.98), rgba(7, 5, 4, 1));
+}
+
 /* Discovery home hero — premium food-brand cinematic layer */
 .ds-discovery-hero {
   isolation: isolate;

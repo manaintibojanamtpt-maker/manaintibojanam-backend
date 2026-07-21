@@ -13,6 +13,7 @@ import { getAppConfig } from '@/config';
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let firestore: Firestore | null = null;
+let authPersistenceReady: Promise<void> | null = null;
 
 function buildFirebaseConfig() {
   const { firebase } = getAppConfig();
@@ -40,11 +41,20 @@ export function initializeFirebase(): { app: FirebaseApp | null; auth: Auth | nu
   if (!app) {
     app = getApps()[0] ?? initializeApp(buildFirebaseConfig());
     auth = getAuth(app);
-    void setPersistence(auth, browserLocalPersistence);
+    authPersistenceReady = setPersistence(auth, browserLocalPersistence).then(() => undefined);
     firestore = getFirestore(app);
   }
 
   return { app, auth: auth!, firestore: firestore! };
+}
+
+/** Await before getRedirectResult so redirect sessions restore reliably on web. */
+export async function ensureAuthPersistence(): Promise<void> {
+  initializeFirebase();
+  if (!authPersistenceReady) {
+    return;
+  }
+  await authPersistenceReady;
 }
 
 export function getFirebaseAuth(): Auth | null {

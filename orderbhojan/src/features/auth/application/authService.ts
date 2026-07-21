@@ -2,6 +2,7 @@ import { getFirebaseAuth, isFirebaseConfigured } from '@/firebase';
 import { bootstrapCustomerSession } from './profileBootstrapService';
 import {
   completeGoogleRedirectSignIn,
+  clearGoogleRedirectAttempt,
   getCurrentIdToken,
   isAnonymousAuthDisabled,
   signInAsGuestAccount,
@@ -51,6 +52,7 @@ export async function continueAsGuest(): Promise<AuthActionResult> {
 export async function signInWithGoogle(): Promise<AuthActionResult> {
   try {
     const user = await signInWithGoogleAccount();
+    clearGoogleRedirectAttempt();
     return { user: await finalizeAuthenticatedSession(user) };
   } catch (error) {
     if (error instanceof AuthFlowError && error.message.includes('redirect')) {
@@ -65,6 +67,7 @@ export async function handlePendingGoogleRedirect(): Promise<AuthActionResult> {
   if (!user) {
     return { user: null };
   }
+  clearGoogleRedirectAttempt();
   return { user: await finalizeAuthenticatedSession(user) };
 }
 
