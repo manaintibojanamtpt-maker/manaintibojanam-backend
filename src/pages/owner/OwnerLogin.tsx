@@ -13,7 +13,12 @@ import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../../config/firebaseClientConfig';
 import { formatOwnerAuthError, isBenignOwnerAuthDismiss, resolveOwnerLoginError } from '../../lib/ownerAuthErrors';
 import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
-import { completeGoogleRedirectSignIn, signInWithGoogleAccount } from '../../lib/googleWebAuth';
+import {
+  clearGoogleRedirectAttempt,
+  completeGoogleRedirectSignIn,
+  isGoogleRedirectPending,
+  signInWithGoogleAccount,
+} from '../../lib/googleWebAuth';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -78,6 +83,7 @@ const OwnerLogin = () => {
     }
 
     let cancelled = false;
+    let authUnsub: (() => void) | undefined;
 
     void (async () => {
       try {
@@ -85,13 +91,28 @@ const OwnerLogin = () => {
         if (cancelled || redirectHandled.current) return;
 
         const user = await completeGoogleRedirectSignIn(auth);
-        if (cancelled || redirectHandled.current || !user) return;
+        if (cancelled || redirectHandled.current) return;
 
-        redirectHandled.current = true;
-        toast.success('Welcome back!');
-        await afterSignIn();
+        const signedInUser = user ?? auth.currentUser;
+        if (signedInUser) {
+          redirectHandled.current = true;
+          toast.success('Welcome back!');
+          await afterSignIn();
+          return;
+        }
+
+        if (isGoogleRedirectPending()) {
+          const message =
+            'Google sign-in did not complete. Disable ad blockers, hard-refresh (Ctrl+Shift+R), and try Continue with Google again.';
+          setLoginError(message);
+          toast.error(message);
+          clearGoogleRedirectAttempt();
+          setLoading(false);
+          setRedirecting(false);
+        }
       } catch (error: unknown) {
         if (cancelled || redirectHandled.current) return;
+        clearGoogleRedirectAttempt();
         if (!isBenignOwnerAuthDismiss(error)) {
           const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
           setLoginError(message);
@@ -99,27 +120,21 @@ const OwnerLogin = () => {
         }
         setLoading(false);
         setRedirecting(false);
-      }
-    })();
-
-    void auth.authStateReady().then(() => {
-      if (cancelled || redirectHandled.current) return;
-      if (auth.currentUser) {
-        redirectHandled.current = true;
-        void afterSignIn();
         return;
       }
-    });
 
-    const sub = onAuthStateChanged(auth, (user) => {
-      if (cancelled || redirectHandled.current || !user) return;
-      redirectHandled.current = true;
-      void afterSignIn();
-    });
+      if (cancelled || redirectHandled.current) return;
+
+      authUnsub = onAuthStateChanged(auth, (nextUser) => {
+        if (cancelled || redirectHandled.current || !nextUser) return;
+        redirectHandled.current = true;
+        void afterSignIn();
+      });
+    })();
 
     return () => {
       cancelled = true;
-      sub();
+      authUnsub?.();
     };
   }, [afterSignIn]);
 

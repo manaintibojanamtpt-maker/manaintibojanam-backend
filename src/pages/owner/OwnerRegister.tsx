@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { auth, ensureAuthPersistence } from '../../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -137,8 +137,12 @@ const OwnerRegister = () => {
   useEffect(() => {
     if (googleRedirectHandled.current) return;
 
-    void completeGoogleRedirectSignIn(auth)
-      .then(async (user) => {
+    void (async () => {
+      try {
+        await ensureAuthPersistence();
+        if (googleRedirectHandled.current) return;
+
+        const user = await completeGoogleRedirectSignIn(auth);
         if (googleRedirectHandled.current || !user) return;
         const pending = loadOwnerGoogleRegisterPending();
         if (!pending) return;
@@ -155,8 +159,7 @@ const OwnerRegister = () => {
           setLoading(false);
           setProvisioning(false);
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         clearOwnerGoogleRegisterPending();
         const code =
           error && typeof error === 'object' && 'code' in error
@@ -167,7 +170,8 @@ const OwnerRegister = () => {
         }
         setLoading(false);
         setProvisioning(false);
-      });
+      }
+    })();
   }, []);
 
   if (authLoading || profileLoading || provisioning || linkingStore) {

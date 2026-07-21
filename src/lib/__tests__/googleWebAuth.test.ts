@@ -21,6 +21,8 @@ describe('google web auth COOP-safe redirect', () => {
     assert.match(ownerLogin, /ensureAuthPersistence/);
     assert.match(ownerLogin, /signInWithGoogleAccount/);
     assert.match(ownerLogin, /resolveOwnerLoginError/);
+    assert.match(ownerLogin, /isGoogleRedirectPending/);
+    assert.doesNotMatch(ownerLogin, /auth\.authStateReady/);
     assert.doesNotMatch(ownerLogin, /signInWithPopup/);
   });
 
@@ -31,6 +33,9 @@ describe('google web auth COOP-safe redirect', () => {
     assert.match(helper, /ensureAuthPersistence/);
     assert.match(helper, /shouldUseGoogleAuthRedirect/);
     assert.match(helper, /AUTH_RETURN_TO_KEY = 'auth_return_to'/);
+    assert.match(helper, /AUTH_REDIRECT_ATTEMPT_KEY/);
+    assert.match(helper, /isGoogleRedirectPending/);
+    assert.match(helper, /resolveGoogleRedirectSessionUser/);
     assert.match(helper, /persistAuthReturnToFromCurrentUrl/);
   });
 });

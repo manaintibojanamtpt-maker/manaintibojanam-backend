@@ -10,8 +10,33 @@ import { ensureAuthPersistence } from '../firebase';
 import { shouldUseGoogleAuthRedirect } from './nativePlatform';
 
 const REDIRECT_FLAG = 'auth_redirecting';
+export const AUTH_REDIRECT_ATTEMPT_KEY = 'auth_redirect_attempted';
+const AUTH_REDIRECT_ATTEMPT_TTL_MS = 15 * 60 * 1000;
 export const AUTH_RETURN_TO_KEY = 'auth_return_to';
 let redirectResultPromise: Promise<User | null> | null = null;
+
+function readRedirectAttemptTimestamp(): number | null {
+  if (typeof sessionStorage === 'undefined') return null;
+  const raw = sessionStorage.getItem(AUTH_REDIRECT_ATTEMPT_KEY);
+  if (!raw) return null;
+  const timestamp = Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function clearGoogleRedirectAttempt(): void {
+  sessionStorage.removeItem(AUTH_REDIRECT_ATTEMPT_KEY);
+}
+
+/** True when this tab recently started a Google redirect sign-in. */
+export function isGoogleRedirectPending(): boolean {
+  const timestamp = readRedirectAttemptTimestamp();
+  if (timestamp == null) return false;
+  if (Date.now() - timestamp > AUTH_REDIRECT_ATTEMPT_TTL_MS) {
+    clearGoogleRedirectAttempt();
+    return false;
+  }
+  return true;
+}
 
 function isSafeReturnPath(path: string | null | undefined): path is string {
   if (!path) return false;
@@ -50,6 +75,7 @@ export async function signInWithGoogleAccount(auth: Auth): Promise<User | null> 
   if (shouldUseGoogleAuthRedirect()) {
     persistAuthReturnToFromCurrentUrl();
     sessionStorage.setItem(REDIRECT_FLAG, 'true');
+    sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
     await signInWithRedirect(auth, provider);
     return null;
   }
@@ -58,16 +84,35 @@ export async function signInWithGoogleAccount(auth: Auth): Promise<User | null> 
   return result.user;
 }
 
+/** Recover redirect sign-in when getRedirectResult races persistence or a stale SW drops callback params. */
+function resolveGoogleRedirectSessionUser(auth: Auth): User | null {
+  const current = auth.currentUser;
+  if (!current || current.isAnonymous) return null;
+  const isGoogle = current.providerData.some((entry) => entry.providerId === 'google.com');
+  return isGoogle ? current : null;
+}
+
 export async function completeGoogleRedirectSignIn(auth: Auth): Promise<User | null> {
   if (!redirectResultPromise) {
     redirectResultPromise = (async () => {
       try {
         await ensureAuthPersistence();
         const result = await getRedirectResult(auth);
-        if (!result?.user) {
-          return null;
+        if (result?.user) {
+          clearGoogleRedirectAttempt();
+          return result.user;
         }
-        return result.user;
+        if (isGoogleRedirectPending()) {
+          const recovered = resolveGoogleRedirectSessionUser(auth);
+          if (recovered) {
+            clearGoogleRedirectAttempt();
+            return recovered;
+          }
+        }
+        return null;
+      } catch (error) {
+        clearGoogleRedirectAttempt();
+        throw error;
       } finally {
         sessionStorage.removeItem(REDIRECT_FLAG);
       }
