@@ -27,14 +27,15 @@ describe('checkout stale quote recovery', () => {
     assert.doesNotMatch(checkoutFlow, /prepareQuery\.data \?\? sessionPrepare/);
   });
 
-  it('validates cart before checkout prepare runs', () => {
+  it('runs cart validation in parallel with checkout prepare', () => {
     const checkoutFlow = readFileSync(
       join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'),
       'utf8',
     );
     assert.match(checkoutFlow, /useCartValidation/);
-    assert.match(checkoutFlow, /cartValidationReady/);
-    assert.match(checkoutFlow, /cartIsValid/);
+    assert.match(checkoutFlow, /enabled: canCheckout && Boolean\(prepareSignature\)/);
+    assert.doesNotMatch(checkoutFlow, /cartValidationReady/);
+    assert.match(checkoutFlow, /CHECKOUT_PREPARE_TIMEOUT_MS/);
   });
 
   it('shows cart sync messages on checkout page', () => {
