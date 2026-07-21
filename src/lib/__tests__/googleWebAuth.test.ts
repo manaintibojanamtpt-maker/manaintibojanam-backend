@@ -18,7 +18,9 @@ describe('google web auth COOP-safe redirect', () => {
   it('owner login completes Google redirect results on return', () => {
     const ownerLogin = readFileSync(join(root, 'src/pages/owner/OwnerLogin.tsx'), 'utf8');
     assert.match(ownerLogin, /completeGoogleRedirectSignIn/);
+    assert.match(ownerLogin, /ensureAuthPersistence/);
     assert.match(ownerLogin, /signInWithGoogleAccount/);
+    assert.match(ownerLogin, /resolveOwnerLoginError/);
     assert.doesNotMatch(ownerLogin, /signInWithPopup/);
   });
 
@@ -26,6 +28,7 @@ describe('google web auth COOP-safe redirect', () => {
     const helper = readFileSync(join(root, 'src/lib/googleWebAuth.ts'), 'utf8');
     assert.match(helper, /signInWithRedirect/);
     assert.match(helper, /getRedirectResult/);
+    assert.match(helper, /ensureAuthPersistence/);
     assert.match(helper, /shouldUseGoogleAuthRedirect/);
     assert.match(helper, /AUTH_RETURN_TO_KEY = 'auth_return_to'/);
     assert.match(helper, /persistAuthReturnToFromCurrentUrl/);

@@ -7,7 +7,25 @@ const firebaseConfig = getFirebaseClientConfig();
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-setPersistence(auth, browserLocalPersistence).catch((err) => console.error('Auth Persistence Error:', err));
+let authPersistenceReady: Promise<void> | null = setPersistence(auth, browserLocalPersistence).then(
+  () => undefined,
+  (err) => {
+    console.error('Auth Persistence Error:', err);
+  },
+);
+
+/** Await before getRedirectResult so Google redirect sessions restore reliably on web. */
+export async function ensureAuthPersistence(): Promise<void> {
+  if (!authPersistenceReady) {
+    authPersistenceReady = setPersistence(auth, browserLocalPersistence).then(
+      () => undefined,
+      (err) => {
+        console.error('Auth Persistence Error:', err);
+      },
+    );
+  }
+  await authPersistenceReady;
+}
 
 auth.onAuthStateChanged(
   (user) => {

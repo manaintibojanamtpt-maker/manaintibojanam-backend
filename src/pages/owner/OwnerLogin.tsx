@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { auth, ensureAuthPersistence } from '../../firebase';
 import { Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import SoftButton from '../../components/ui/SoftButton';
@@ -11,7 +11,7 @@ import { resolveOwnerTenantIds } from '../../lib/ownerAccess';
 import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../../config/firebaseClientConfig';
-import { formatOwnerAuthError, isBenignOwnerAuthDismiss } from '../../lib/ownerAuthErrors';
+import { formatOwnerAuthError, isBenignOwnerAuthDismiss, resolveOwnerLoginError } from '../../lib/ownerAuthErrors';
 import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
 import { completeGoogleRedirectSignIn, signInWithGoogleAccount } from '../../lib/googleWebAuth';
 
@@ -79,14 +79,18 @@ const OwnerLogin = () => {
 
     let cancelled = false;
 
-    void completeGoogleRedirectSignIn(auth)
-      .then(async (user) => {
+    void (async () => {
+      try {
+        await ensureAuthPersistence();
+        if (cancelled || redirectHandled.current) return;
+
+        const user = await completeGoogleRedirectSignIn(auth);
         if (cancelled || redirectHandled.current || !user) return;
+
         redirectHandled.current = true;
         toast.success('Welcome back!');
         await afterSignIn();
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (cancelled || redirectHandled.current) return;
         if (!isBenignOwnerAuthDismiss(error)) {
           const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
@@ -95,7 +99,8 @@ const OwnerLogin = () => {
         }
         setLoading(false);
         setRedirecting(false);
-      });
+      }
+    })();
 
     void auth.authStateReady().then(() => {
       if (cancelled || redirectHandled.current) return;
@@ -161,7 +166,7 @@ const OwnerLogin = () => {
         email,
         error: error instanceof Error ? error.message : String(error),
       });
-      const message = formatOwnerAuthError(error, { configReady: isFirebaseClientConfigReady() });
+      const message = await resolveOwnerLoginError(error, email, { configReady: isFirebaseClientConfigReady() }, auth);
       setLoginError(message);
       toast.error(message);
       setLoading(false);
@@ -181,6 +186,7 @@ const OwnerLogin = () => {
     }
     setLoginError(null);
     setLoading(true);
+    setRedirecting(true);
     try {
       const user = await signInWithGoogleAccount(auth);
       if (!user) return;

@@ -1,6 +1,14 @@
+import { fetchSignInMethodsForEmail, type Auth } from 'firebase/auth';
 import { isFirebaseClientConfigReady } from '../config/firebaseClientConfig';
 
 export type PortalAuthPortal = 'owner' | 'admin' | 'superadmin';
+
+const CREDENTIAL_ERROR_CODES = new Set([
+  'auth/invalid-credential',
+  'auth/wrong-password',
+  'auth/user-not-found',
+  'auth/invalid-login-credentials',
+]);
 
 export type OwnerAuthErrorContext = {
   configReady?: boolean;
@@ -32,7 +40,19 @@ function invalidCredentialMessage(portal: PortalAuthPortal | undefined): string 
   if (portal === 'admin') {
     return 'Invalid admin credentials for bhojanos-prod. Check your email and password, or create the account in Firebase Console → Authentication.';
   }
-  return 'Invalid email or password. If you originally signed up with Google, use Continue with Google instead.';
+  return 'Invalid email or password. If you originally signed up with Google, click Continue with Google below.';
+}
+
+function ownerGoogleOnlyMessage(): string {
+  return 'This account uses Google sign-in only — no password is set. Click Continue with Google below to log in.';
+}
+
+function ownerNoAccountMessage(): string {
+  return 'No BhojanOS owner account exists for this email. Create one at /owner/register, or sign in with Google if you used that method.';
+}
+
+function ownerWrongPasswordMessage(): string {
+  return 'Incorrect password for this email. Try again, or use Continue with Google if that is how you registered.';
 }
 
 function networkFailureMessage(host: string): string {
@@ -94,6 +114,42 @@ export function formatOwnerAuthError(error: unknown, context: OwnerAuthErrorCont
 
 /** Alias for admin/super-admin portals — same mapper, portal-specific credential copy. */
 export function formatPortalAuthError(error: unknown, context: OwnerAuthErrorContext = {}): string {
+  return formatOwnerAuthError(error, context);
+}
+
+/** Resolve credential errors with sign-in method lookup when an email is available. */
+export async function resolveOwnerLoginError(
+  error: unknown,
+  email: string | undefined,
+  context: OwnerAuthErrorContext = {},
+  authInstance?: Auth,
+): Promise<string> {
+  const code = readAuthErrorCode(error);
+  const portal = context.portal ?? 'owner';
+  const trimmedEmail = email?.trim().toLowerCase();
+
+  if (
+    portal === 'owner' &&
+    trimmedEmail &&
+    CREDENTIAL_ERROR_CODES.has(code) &&
+    authInstance
+  ) {
+    try {
+      const methods = await fetchSignInMethodsForEmail(authInstance, trimmedEmail);
+      if (methods.length === 0) {
+        return ownerNoAccountMessage();
+      }
+      if (methods.includes('google.com') && !methods.includes('password')) {
+        return ownerGoogleOnlyMessage();
+      }
+      if (methods.includes('password')) {
+        return ownerWrongPasswordMessage();
+      }
+    } catch {
+      // Email enumeration protection or network — fall back to generic copy.
+    }
+  }
+
   return formatOwnerAuthError(error, context);
 }
 

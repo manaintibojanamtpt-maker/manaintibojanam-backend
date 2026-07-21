@@ -6,6 +6,7 @@ import {
   type Auth,
   type User,
 } from 'firebase/auth';
+import { ensureAuthPersistence } from '../firebase';
 import { shouldUseGoogleAuthRedirect } from './nativePlatform';
 
 const REDIRECT_FLAG = 'auth_redirecting';
@@ -61,6 +62,7 @@ export async function completeGoogleRedirectSignIn(auth: Auth): Promise<User | n
   if (!redirectResultPromise) {
     redirectResultPromise = (async () => {
       try {
+        await ensureAuthPersistence();
         const result = await getRedirectResult(auth);
         if (!result?.user) {
           return null;

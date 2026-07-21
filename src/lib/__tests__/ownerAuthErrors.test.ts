@@ -6,11 +6,15 @@ describe('formatOwnerAuthError', () => {
   it('maps invalid credentials separately from network failures', () => {
     assert.match(
       formatOwnerAuthError({ code: 'auth/invalid-credential' }, { configReady: true }),
-      /Invalid email or password/,
+      /Continue with Google/,
     );
     assert.match(
       formatOwnerAuthError({ code: 'auth/wrong-password' }, { configReady: true }),
-      /Invalid email or password/,
+      /Continue with Google/,
+    );
+    assert.match(
+      formatOwnerAuthError({ code: 'auth/user-not-found' }, { configReady: true }),
+      /Continue with Google/,
     );
   });
 
