@@ -40,4 +40,22 @@ describe('profile native auth and storage fixes', () => {
     const favorites = readFileSync(join(root, 'src/features/favorites/hooks/useFavoritesSync.ts'), 'utf8');
     assert.match(favorites, /onError:[\s\S]*toggle\(restaurantId\)/);
   });
+
+  it('completes pending Google redirect before auth state subscription', () => {
+    const authProvider = readFileSync(join(root, 'src/shared/providers/AuthProvider.tsx'), 'utf8');
+    assert.match(authProvider, /handlePendingGoogleRedirect/);
+    assert.match(authProvider, /subscribeToAuthState/);
+    const redirectIndex = authProvider.indexOf('handlePendingGoogleRedirect');
+    const subscribeIndex = authProvider.indexOf('subscribeToAuthState');
+    assert.ok(redirectIndex >= 0 && subscribeIndex > redirectIndex);
+  });
+
+  it('location sheet sign-in persists returnTo before auth navigation', () => {
+    const locationSheet = readFileSync(
+      join(root, 'src/features/location/ui/LocationSelectorSheet.tsx'),
+      'utf8',
+    );
+    assert.match(locationSheet, /persistAuthReturnTo\(returnPath\)/);
+    assert.match(locationSheet, /returnTo=\$\{encodeURIComponent/);
+  });
 });

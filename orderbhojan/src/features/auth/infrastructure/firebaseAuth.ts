@@ -16,6 +16,7 @@ import {
 import { getFirebaseAuth, isFirebaseConfigured } from '@/firebase';
 import { isNativePlatform, shouldUseGoogleAuthRedirect } from '@/lib/nativePlatform';
 import { obDebugLog } from '@/lib/obDebug';
+import { persistAuthReturnToFromCurrentUrl } from '../domain/authReturnTo';
 import type { AuthProviderId, AuthSessionUser } from '../domain/auth.types';
 
 export class AuthConfigurationError extends Error {
@@ -159,6 +160,7 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   }
 
   if (shouldUseGoogleAuthRedirect()) {
+    persistAuthReturnToFromCurrentUrl();
     sessionStorage.setItem('auth_redirecting', 'true');
     await signInWithRedirect(auth, provider);
     throw new AuthFlowError('Google sign-in redirect in progress.');

@@ -10,6 +10,7 @@ import { useAuthSessionStore } from '@/features/auth/store/authSessionStore';
 import { formatAuthError } from '@/lib/authErrors';
 import { OrderBhojanPhoneOtpForm } from './OrderBhojanPhoneOtpForm';
 import { resolveAuthRedirect } from './resolveAuthRedirect';
+import { persistAuthReturnTo, clearAuthReturnTo } from '@/features/auth/domain/authReturnTo';
 
 function sessionLabel(displayName?: string | null, phone?: string | null, email?: string | null) {
   return displayName ?? phone ?? email ?? 'your account';
@@ -39,6 +40,7 @@ export function OrderBhojanAuthShellPage() {
     if (status === 'loading' || !isAuthenticated || showPhoneVerification) {
       return;
     }
+    clearAuthReturnTo();
     navigate(redirectTo, { replace: true });
   }, [status, isAuthenticated, showPhoneVerification, navigate, redirectTo]);
 
@@ -46,6 +48,7 @@ export function OrderBhojanAuthShellPage() {
     setPending(true);
     setError(null);
     try {
+      persistAuthReturnTo(redirectTo);
       await signInWithGoogle();
       if (sessionStorage.getItem('auth_redirecting') === 'true') {
         return;

@@ -9,7 +9,32 @@ import {
 import { shouldUseGoogleAuthRedirect } from './nativePlatform';
 
 const REDIRECT_FLAG = 'auth_redirecting';
+export const AUTH_RETURN_TO_KEY = 'auth_return_to';
 let redirectResultPromise: Promise<User | null> | null = null;
+
+function isSafeReturnPath(path: string | null | undefined): path is string {
+  if (!path) return false;
+  const trimmed = path.trim();
+  return trimmed.startsWith('/') && !trimmed.startsWith('//');
+}
+
+export function persistAuthReturnTo(returnTo: string): void {
+  if (!isSafeReturnPath(returnTo)) return;
+  sessionStorage.setItem(AUTH_RETURN_TO_KEY, returnTo.trim());
+}
+
+function readReturnToFromSearch(): string | null {
+  if (typeof window === 'undefined') return null;
+  const returnTo = new URLSearchParams(window.location.search).get('returnTo')?.trim();
+  return isSafeReturnPath(returnTo) ? returnTo : null;
+}
+
+export function persistAuthReturnToFromCurrentUrl(): void {
+  const returnTo = readReturnToFromSearch();
+  if (returnTo) {
+    persistAuthReturnTo(returnTo);
+  }
+}
 
 export function createGoogleAuthProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider();
@@ -22,6 +47,7 @@ export async function signInWithGoogleAccount(auth: Auth): Promise<User | null> 
   const provider = createGoogleAuthProvider();
 
   if (shouldUseGoogleAuthRedirect()) {
+    persistAuthReturnToFromCurrentUrl();
     sessionStorage.setItem(REDIRECT_FLAG, 'true');
     await signInWithRedirect(auth, provider);
     return null;

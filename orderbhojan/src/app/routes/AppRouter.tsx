@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { MarketplaceLayout, AuthLayout, FullScreenLayout } from '@/shared/layouts';
 import { HomePage } from '@/app/pages/HomePage';
 import { RequireAuth } from '@/features/auth';
+import { AuthReturnNavigator } from '@/presentation/auth/AuthReturnNavigator';
 import { CartExperiencePage } from '@/features/experience';
 import { CheckoutPage } from '@/features/checkout';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
@@ -83,7 +84,9 @@ function LazyRoute({ children, fallback }: { children: ReactNode; fallback?: Rea
 
 export function AppRouter() {
   return (
-    <Routes>
+    <>
+      <AuthReturnNavigator />
+      <Routes>
       <Route element={<MarketplaceLayout />}>
         <Route index element={<HomePage />} />
 
@@ -208,5 +211,6 @@ export function AppRouter() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

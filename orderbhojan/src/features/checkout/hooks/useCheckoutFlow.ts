@@ -34,6 +34,7 @@ import {
   checkoutKeys,
   CHECKOUT_PREPARE_GC_MS,
   CHECKOUT_PREPARE_STALE_MS,
+  CHECKOUT_PREPARE_TIMEOUT_MS,
 } from './checkoutQueryKeys';
 import type { BillQuote, CheckoutSchedulingContext } from '@/types/marketplace';
 
@@ -172,11 +173,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     Boolean(contextToken) &&
     hasReadyDeliveryLocation(activeLocation);
 
-  const {
-    isReady: cartValidationReady,
-    isValid: cartIsValid,
-    syncMessages: cartSyncMessages,
-  } = useCartValidation({ enabled: canCheckout, autoApply: true });
+  const { syncMessages: cartSyncMessages } = useCartValidation({ enabled: canCheckout, autoApply: true });
 
   const prepareSignature = useMemo(() => {
     if (!resolvedRestaurantId || !contextToken || !coords) return null;
@@ -262,10 +259,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const prepareQuery = useQuery<CheckoutPrepareQueryData>({
     queryKey: checkoutKeys.prepare(prepareSignature ?? 'inactive'),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       markPerf('checkout_prepare_start', 'checkout-page');
       const payload = getPayload();
-      const response = await getMarketplaceApiClient().checkoutPrepare(payload);
+      const response = await getMarketplaceApiClient().checkoutPrepare(payload, {
+        signal,
+        timeoutMs: CHECKOUT_PREPARE_TIMEOUT_MS,
+      });
       markPerf('checkout_prepare_end', 'checkout-page');
       markPerf('checkout_bill_ready', 'checkout-page');
       if (prepareSignature && cartSignature) {
@@ -273,11 +273,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
       }
       return cloneCheckoutPrepareForQuery(response);
     },
-    enabled:
-      canCheckout &&
-      cartValidationReady &&
-      cartIsValid &&
-      Boolean(prepareSignature),
+    enabled: canCheckout && Boolean(prepareSignature),
     staleTime: CHECKOUT_PREPARE_STALE_MS,
     gcTime: CHECKOUT_PREPARE_GC_MS,
     placeholderData: (previous, query) => {
@@ -391,7 +387,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (placeStatus === 'error') return 'error';
     if (prepareQuery.isError) return 'error';
     if (
-      (prepareQuery.isFetching || !cartValidationReady || awaitingDiscountedQuote) &&
+      (prepareQuery.isFetching || awaitingDiscountedQuote) &&
       !quote &&
       !sessionPrepare
     ) {
@@ -400,7 +396,6 @@ export function useCheckoutFlow(): CheckoutFlowState {
     return 'idle';
   }, [
     awaitingDiscountedQuote,
-    cartValidationReady,
     placeStatus,
     prepareQuery.isError,
     prepareQuery.isFetching,

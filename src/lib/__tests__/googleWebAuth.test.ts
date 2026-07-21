@@ -27,5 +27,7 @@ describe('google web auth COOP-safe redirect', () => {
     assert.match(helper, /signInWithRedirect/);
     assert.match(helper, /getRedirectResult/);
     assert.match(helper, /shouldUseGoogleAuthRedirect/);
+    assert.match(helper, /AUTH_RETURN_TO_KEY = 'auth_return_to'/);
+    assert.match(helper, /persistAuthReturnToFromCurrentUrl/);
   });
 });

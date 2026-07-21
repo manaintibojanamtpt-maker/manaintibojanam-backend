@@ -14,7 +14,7 @@ import {
   cloneCheckoutPrepareForQuery,
   isCheckoutPrepareSessionCompatible,
 } from '../infrastructure/checkoutQuoteSession';
-import { checkoutKeys, CHECKOUT_PREPARE_GC_MS, CHECKOUT_PREPARE_STALE_MS } from './checkoutQueryKeys';
+import { checkoutKeys, CHECKOUT_PREPARE_GC_MS, CHECKOUT_PREPARE_STALE_MS, CHECKOUT_PREPARE_TIMEOUT_MS } from './checkoutQueryKeys';
 
 export function useCheckoutPrefetch(enabled = true): void {
   const queryClient = useQueryClient();
@@ -67,8 +67,11 @@ export function useCheckoutPrefetch(enabled = true): void {
     void queryClient
       .prefetchQuery({
         queryKey: checkoutKeys.prepare(signature),
-        queryFn: async () => {
-          const response = await getMarketplaceApiClient().checkoutPrepare(payload);
+        queryFn: async ({ signal }) => {
+          const response = await getMarketplaceApiClient().checkoutPrepare(payload, {
+            signal,
+            timeoutMs: CHECKOUT_PREPARE_TIMEOUT_MS,
+          });
           const next = cloneCheckoutPrepareForQuery(response);
           if (
             generation === prefetchGenerationRef.current &&

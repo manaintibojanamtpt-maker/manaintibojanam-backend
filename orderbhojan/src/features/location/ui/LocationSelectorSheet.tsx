@@ -11,6 +11,7 @@ import { useActiveLocation, useRecentLocationsList, useSavedAddressesList } from
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationUiState } from '../hooks/useActiveLocation';
 import { useLocationSessionStore } from '../store/locationSessionStore';
+import { persistAuthReturnTo } from '@/features/auth/domain/authReturnTo';
 import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
@@ -49,6 +50,7 @@ export function LocationSelectorSheet() {
   const handleSignIn = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    persistAuthReturnTo(returnPath);
     navigate(signInPath, { state: { from: returnPath } });
     closeSelector();
   };

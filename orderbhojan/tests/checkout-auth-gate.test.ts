@@ -126,5 +126,60 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /shouldUseGoogleAuthRedirect\(\)/);
     assert.match(firebaseAuth, /signInWithRedirect/);
     assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
+    assert.match(firebaseAuth, /persistAuthReturnToFromCurrentUrl/);
+    assert.match(firebaseAuth, /auth_return_to|persistAuthReturnToFromCurrentUrl/);
+  });
+
+  it('RequireAuth preserves returnTo query over router state alone', () => {
+    const requireAuth = readFileSync(join(root, 'src/features/auth/ui/RequireAuth.tsx'), 'utf8');
+    assert.match(requireAuth, /returnTo=\$\{encodeURIComponent\(returnTo\)\}/);
+    assert.match(requireAuth, /state=\{\{ from: returnTo \}\}/);
+  });
+
+  it('prepare checkout in parallel with cart validation', () => {
+    const flow = readFileSync(join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'), 'utf8');
+    assert.match(flow, /enabled: canCheckout && Boolean\(prepareSignature\)/);
+    assert.doesNotMatch(flow, /cartValidationReady/);
+    assert.match(flow, /CHECKOUT_PREPARE_TIMEOUT_MS/);
+    assert.match(flow, /signal/);
+  });
+
+  it('persists auth return destination before Google redirect', () => {
+    const authShell = readFileSync(
+      join(root, 'src/presentation/auth/OrderBhojanAuthShellPage.tsx'),
+      'utf8',
+    );
+    const authReturn = readFileSync(
+      join(root, 'src/features/auth/domain/authReturnTo.ts'),
+      'utf8',
+    );
+    assert.match(authShell, /persistAuthReturnTo\(redirectTo\)/);
+    assert.match(authReturn, /AUTH_RETURN_TO_KEY = 'auth_return_to'/);
+    assert.match(authReturn, /sessionStorage\.setItem\(AUTH_RETURN_TO_KEY/);
+  });
+
+  it('resumes stored returnTo after auth redirect', () => {
+    const authProvider = readFileSync(join(root, 'src/shared/providers/AuthProvider.tsx'), 'utf8');
+    const navigator = readFileSync(
+      join(root, 'src/presentation/auth/AuthReturnNavigator.tsx'),
+      'utf8',
+    );
+    const resolveRedirect = readFileSync(
+      join(root, 'src/presentation/auth/resolveAuthRedirect.ts'),
+      'utf8',
+    );
+    assert.match(authProvider, /handlePendingGoogleRedirect/);
+    assert.match(navigator, /readPersistedAuthReturnTo/);
+    assert.match(resolveRedirect, /readPersistedAuthReturnTo/);
+  });
+
+  it('skips native cart-to-checkout route transition delay', () => {
+    const transition = readFileSync(
+      join(root, 'src/presentation/shell/OrderBhojanRouteTransition.tsx'),
+      'utf8',
+    );
+    assert.match(transition, /isNativePlatform\(\)/);
+    assert.match(transition, /from === '\/cart' && to === '\/checkout'/);
+    assert.match(transition, /mode=\{fastCheckout \? 'sync' : 'wait'\}/);
   });
 });
