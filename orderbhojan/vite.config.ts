@@ -86,7 +86,8 @@ export default defineConfig({
         // Serve the SPA shell on navigation failures — not the dead-end offline page.
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/offline\.html$/],
-        navigationPreload: true,
+        // Disabled: preloadResponse often cancels on SPA navigations and spams the console.
+        navigationPreload: false,
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [

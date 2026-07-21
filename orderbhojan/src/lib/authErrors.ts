@@ -13,6 +13,12 @@ export function formatAuthError(error: unknown): string {
   if (code === 'auth/network-request-failed') {
     return 'Network error during sign-in. Check your connection and try again.';
   }
+  if (code === 'auth/operation-not-allowed') {
+    return 'This sign-in method is disabled for this app. Contact support.';
+  }
+  if (code === 'auth/account-exists-with-different-credential') {
+    return 'An account already exists with a different sign-in method. Try phone OTP or another Google account.';
+  }
   if (code === 'auth/admin-restricted-operation') {
     return 'Guest browsing is available without Firebase anonymous sign-in.';
   }

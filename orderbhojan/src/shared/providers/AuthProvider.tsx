@@ -11,6 +11,7 @@ import {
 } from '@/features/auth/application/authService';
 import { bootstrapCustomerSession } from '@/features/auth/application/profileBootstrapService';
 import { mapFirebaseUser } from '@/features/auth/infrastructure/firebaseAuth';
+import { formatAuthError } from '@/lib/authErrors';
 import { resolveAuthPhase, type AuthPhase, type AuthSessionUser } from '@/features/auth/domain/auth.types';
 import { useAuthSessionStore } from '@/features/auth/store/authSessionStore';
 import {
@@ -30,6 +31,7 @@ export interface AuthContextValue {
   readonly sessionUser: AuthSessionUser | null;
   readonly isGuest: boolean;
   readonly isAuthenticated: boolean;
+  readonly redirectError: string | null;
   readonly getIdToken: () => Promise<string | null>;
   readonly signInWithGoogle: () => Promise<void>;
   readonly continueAsGuest: () => Promise<void>;
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(!isFirebaseConfigured());
   const [user, setUser] = useState<User | null>(null);
   const [sessionUser, setSessionUser] = useState<AuthSessionUser | null>(null);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured()) {
@@ -65,8 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (redirectSessionUser) {
           setSessionUser(redirectSessionUser);
           useAuthSessionStore.getState().setGuestBrowsing(false);
+          setRedirectError(null);
         }
       } catch (error) {
+        setRedirectError(formatAuthError(error));
         if (import.meta.env.DEV) {
           console.warn('[OrderBhojan] Google redirect result skipped', error);
         }
@@ -145,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionUser,
       isGuest: status === 'guest' || status === 'unconfigured',
       isAuthenticated: status === 'authenticated',
+      redirectError,
       getIdToken: () => fetchBearerToken(),
       signInWithGoogle: signInWithGoogleAction,
       continueAsGuest: continueAsGuestAction,
@@ -156,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status,
       user,
       sessionUser,
+      redirectError,
       signInWithGoogleAction,
       continueAsGuestAction,
       startPhoneSignInAction,

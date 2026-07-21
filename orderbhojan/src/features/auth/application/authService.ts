@@ -3,6 +3,7 @@ import { bootstrapCustomerSession } from './profileBootstrapService';
 import {
   completeGoogleRedirectSignIn,
   clearGoogleRedirectAttempt,
+  readGoogleRedirectAttempt,
   getCurrentIdToken,
   isAnonymousAuthDisabled,
   signInAsGuestAccount,
@@ -63,12 +64,20 @@ export async function signInWithGoogle(): Promise<AuthActionResult> {
 }
 
 export async function handlePendingGoogleRedirect(): Promise<AuthActionResult> {
-  const user = await completeGoogleRedirectSignIn();
-  if (!user) {
+  if (!readGoogleRedirectAttempt()) {
     return { user: null };
   }
-  clearGoogleRedirectAttempt();
-  return { user: await finalizeAuthenticatedSession(user) };
+  try {
+    const user = await completeGoogleRedirectSignIn();
+    if (!user) {
+      clearGoogleRedirectAttempt();
+      return { user: null };
+    }
+    return { user: await finalizeAuthenticatedSession(user) };
+  } catch (error) {
+    clearGoogleRedirectAttempt();
+    throw error;
+  }
 }
 
 export async function startPhoneSignIn(phone: string, containerId: string): Promise<string> {

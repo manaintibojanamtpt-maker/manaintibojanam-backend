@@ -43,6 +43,7 @@ export class AnonymousAuthDisabledError extends AuthFlowError {
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let googleRedirectResultPromise: Promise<AuthSessionUser | null> | null = null;
 const AUTH_REDIRECT_ATTEMPT_KEY = 'auth_redirect_attempted';
+const AUTH_REDIRECT_ATTEMPT_TTL_MS = 15 * 60 * 1000;
 let phoneConfirmation: ConfirmationResult | null = null;
 let phoneVerificationId: string | null = null;
 let nativePhoneVerificationId: string | null = null;
@@ -172,9 +173,22 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   return mapFirebaseUser(credential.user);
 }
 
+function readGoogleRedirectAttemptTimestamp(): number | null {
+  if (typeof sessionStorage === 'undefined') return null;
+  const raw = sessionStorage.getItem(AUTH_REDIRECT_ATTEMPT_KEY);
+  if (!raw) return null;
+  const timestamp = Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 export function readGoogleRedirectAttempt(): boolean {
-  if (typeof sessionStorage === 'undefined') return false;
-  return sessionStorage.getItem(AUTH_REDIRECT_ATTEMPT_KEY) != null;
+  const timestamp = readGoogleRedirectAttemptTimestamp();
+  if (timestamp == null) return false;
+  if (Date.now() - timestamp > AUTH_REDIRECT_ATTEMPT_TTL_MS) {
+    clearGoogleRedirectAttempt();
+    return false;
+  }
+  return true;
 }
 
 export function clearGoogleRedirectAttempt(): void {
@@ -188,10 +202,19 @@ export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | 
       try {
         const result = await getRedirectResult(auth);
         if (!result?.user) {
+          clearGoogleRedirectAttempt();
           return null;
         }
         clearGoogleRedirectAttempt();
         return mapFirebaseUser(result.user);
+      } catch (error) {
+        clearGoogleRedirectAttempt();
+        obDebugLog('auth', 'Google redirect result failed', error);
+        throw error instanceof AuthFlowError
+          ? error
+          : new AuthFlowError(
+              error instanceof Error ? error.message : 'Google sign-in redirect failed.',
+            );
       } finally {
         sessionStorage.removeItem('auth_redirecting');
       }

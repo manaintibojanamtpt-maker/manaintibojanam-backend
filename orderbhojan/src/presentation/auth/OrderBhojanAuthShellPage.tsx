@@ -17,15 +17,13 @@ function sessionLabel(displayName?: string | null, phone?: string | null, email?
 }
 
 function isRedirectResumePending(): boolean {
-  return (
-    sessionStorage.getItem('auth_redirecting') === 'true' || readGoogleRedirectAttempt()
-  );
+  return sessionStorage.getItem('auth_redirecting') === 'true';
 }
 
 export function OrderBhojanAuthShellPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { status, sessionUser, isAuthenticated, signInWithGoogle, continueAsGuest, signOut } = useAuth();
+  const { status, sessionUser, isAuthenticated, signInWithGoogle, continueAsGuest, signOut, redirectError } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,11 +42,17 @@ export function OrderBhojanAuthShellPage() {
   }, [authLoading, isAuthenticated, showPhoneVerification, navigate, redirectTo]);
 
   useEffect(() => {
-    if (authLoading || isAuthenticated || !readGoogleRedirectAttempt()) {
+    if (status === 'loading' || isAuthenticated) {
       return;
     }
-    setError('Google sign-in did not complete. Allow cookies for this site and try again.');
-  }, [authLoading, isAuthenticated]);
+    if (redirectError) {
+      setError(redirectError);
+      return;
+    }
+    if (readGoogleRedirectAttempt()) {
+      setError('Google sign-in did not complete. Allow cookies for this site and try again.');
+    }
+  }, [isAuthenticated, redirectError, status]);
 
   const handleGoogle = async () => {
     setPending(true);

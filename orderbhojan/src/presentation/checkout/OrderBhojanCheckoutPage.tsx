@@ -67,6 +67,7 @@ export function OrderBhojanCheckoutPage() {
     placingMethod,
     quoteIsRefreshing,
     quoteIsStale,
+    discountQuoteLoading,
     cartSyncMessages,
     appliedCouponCode,
     setAppliedCouponCode,
@@ -104,9 +105,9 @@ export function OrderBhojanCheckoutPage() {
   }, [appliedCouponCode, selectableCodes]);
 
   useEffect(() => {
-    if (!promoApplying || quoteIsRefreshing) return;
+    if (!promoApplying || discountQuoteLoading) return;
     setPromoApplying(false);
-  }, [promoApplying, quoteIsRefreshing]);
+  }, [discountQuoteLoading, promoApplying]);
 
   const checkoutAuthGate = resolveCheckoutAuthGate({ status: authStatus, sessionUser });
 
@@ -125,7 +126,7 @@ export function OrderBhojanCheckoutPage() {
 
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
-  const billRefreshing = quoteIsRefreshing || (quoteIsStale && isPreparing);
+  const billRefreshing = quoteIsRefreshing && !discountQuoteLoading;
   const checkoutActionsDisabled = isPlacing || !quote || Boolean(error);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
@@ -366,17 +367,17 @@ export function OrderBhojanCheckoutPage() {
               ? [
                   {
                     label: `Discount (${appliedCouponCode})`,
-                    amountLabel: isPreparing || quoteIsRefreshing ? 'Calculating…' : 'Pending',
+                    amountLabel: discountQuoteLoading ? 'Calculating…' : 'Pending',
                   },
                 ]
               : []),
           ],
           totalLabel:
-            appliedCouponCode && (isPreparing || quoteIsRefreshing)
+            appliedCouponCode && (isPreparing || discountQuoteLoading)
               ? 'Calculating…'
               : `₹${estimatedSubtotal}`,
           deliveryPendingNote:
-            isPreparing || (appliedCouponCode && !quote)
+            isPreparing || discountQuoteLoading
               ? 'Calculating taxes and delivery…'
               : undefined,
         }
@@ -430,7 +431,7 @@ export function OrderBhojanCheckoutPage() {
           })),
           hint: 'Tap a code to apply instantly — discount updates in your bill',
           error: promoError ?? undefined,
-          busy: promoApplying || quoteIsRefreshing,
+          busy: promoApplying,
         }
       : undefined;
 

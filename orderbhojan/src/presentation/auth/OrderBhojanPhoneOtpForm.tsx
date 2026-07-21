@@ -11,6 +11,7 @@ import {
 } from '@/features/auth/domain/auth.types';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { isAuthFlowError } from '@/features/auth/application/authService';
+import { formatAuthError } from '@/lib/authErrors';
 import { isNativePlatform } from '@/lib/nativePlatform';
 import { resolveAuthRedirect } from './resolveAuthRedirect';
 
@@ -44,7 +45,7 @@ export function OrderBhojanPhoneOtpForm() {
       otpForm.setValue('phone', values.phone);
       setStep('otp');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send OTP.');
+      setError(formatAuthError(err));
     } finally {
       setPending(false);
     }
@@ -57,7 +58,7 @@ export function OrderBhojanPhoneOtpForm() {
       await completePhoneSignIn(values.otp);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(isAuthFlowError(err) ? err.message : 'Invalid OTP. Try again.');
+      setError(isAuthFlowError(err) ? err.message : formatAuthError(err));
     } finally {
       setPending(false);
     }

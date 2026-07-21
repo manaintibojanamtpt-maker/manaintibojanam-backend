@@ -100,6 +100,7 @@ export interface CheckoutFlowState {
   readonly placingMethod: 'cod' | 'razorpay' | 'upi' | null;
   readonly quoteIsRefreshing: boolean;
   readonly quoteIsStale: boolean;
+  readonly discountQuoteLoading: boolean;
   readonly cartSyncMessages: readonly string[];
   readonly appliedCouponCode: string | null;
   readonly setAppliedCouponCode: (code: string | null) => void;
@@ -367,6 +368,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const quoteIsRefreshing = prepareQuery.isFetching && Boolean(quote) && !prepareQuery.isError;
   const quoteIsStale =
     Boolean(quote) && prepareQuery.isFetching && !prepareQuery.isError && hasFreshPrepare;
+  const discountQuoteLoading =
+    Boolean(appliedCouponCode) &&
+    (awaitingDiscountedQuote || (prepareQuery.isFetching && !hasFreshPrepare));
 
   const prepareErrorMessage =
     prepareQuery.isError && prepareQuery.error instanceof Error
@@ -809,6 +813,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     placingMethod,
     quoteIsRefreshing,
     quoteIsStale,
+    discountQuoteLoading,
     cartSyncMessages,
     appliedCouponCode,
     setAppliedCouponCode,
