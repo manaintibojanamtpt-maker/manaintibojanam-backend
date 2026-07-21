@@ -55,12 +55,12 @@ export const CategorySkeleton = () => (
 );
 
 export const RecommendedSkeleton = () => (
-  <div className="flex gap-6 items-center bg-white/[0.03] p-6 rounded-2xl border border-white/10">
-    <Skeleton className="w-32 h-32 rounded-2xl flex-shrink-0" />
-    <div className="flex-1 space-y-3">
-      <Skeleton className="h-6 rounded w-1/2" />
-      <Skeleton className="h-4 rounded w-1/4" />
-      <Skeleton className="h-10 rounded w-full" />
+  <div className="flex gap-3 items-center bg-white/[0.03] p-3 rounded-2xl border border-white/10">
+    <Skeleton className="w-20 h-20 rounded-xl flex-shrink-0" />
+    <div className="flex-1 space-y-2">
+      <Skeleton className="h-4 rounded w-1/2" />
+      <Skeleton className="h-3 rounded w-1/4" />
+      <Skeleton className="h-8 rounded w-full" />
     </div>
   </div>
 );
@@ -92,11 +92,11 @@ export const HomeBentoSkeleton = () => (
 
 export const RestaurantHeroSkeleton = () => (
   <div className="space-y-0" aria-busy="true" aria-label="Loading restaurant">
-    <Skeleton className="h-[46vh] min-h-[220px] w-full rounded-none" />
-    <div className="relative z-10 mx-auto max-w-3xl px-4 -mt-16 space-y-4 pb-6">
-      <Skeleton className="h-40 w-full rounded-[1.75rem]" />
-      <Skeleton className="h-32 w-full rounded-2xl" />
-      <Skeleton className="h-48 w-full rounded-2xl" />
+    <Skeleton className="h-[min(160px,32vw)] min-h-[120px] max-h-[160px] w-full rounded-none" />
+    <div className="relative z-10 mx-auto max-w-3xl px-4 -mt-10 space-y-3 pb-6">
+      <Skeleton className="h-28 w-full rounded-[1.75rem]" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <Skeleton className="h-36 w-full rounded-2xl" />
     </div>
   </div>
 );

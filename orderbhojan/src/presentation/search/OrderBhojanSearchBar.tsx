@@ -57,7 +57,7 @@ export function OrderBhojanSearchBar({ onSubmit, onSelectTerm, inputRef }: Order
     <div
       ref={inputRef}
       className="sticky z-40 -mx-4 border-b border-white/5 bg-[#030303]/95 px-4 py-4 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
-      style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      style={{ top: 0 }}
     >
       <MarketplaceSearchBar
         value={query}

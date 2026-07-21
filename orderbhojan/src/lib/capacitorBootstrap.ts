@@ -21,6 +21,8 @@ declare global {
 
 const ANDROID_STATUS_BAR_FALLBACK_PX = 28;
 
+const ANDROID_GESTURE_BAR_FALLBACK_PX = 32;
+
 const IOS_STATUS_BAR_FALLBACK_PX = 47;
 
 
@@ -61,7 +63,9 @@ function applyNativeSafeAreaInsets(): void {
 
   const top = Math.max(envTop, viewportTop, fallbackTop);
 
-  const bottom = Math.max(envBottom, platform === 'ios' ? 20 : 0);
+  const bottomFallback = platform === 'ios' ? 20 : ANDROID_GESTURE_BAR_FALLBACK_PX;
+
+  const bottom = Math.max(envBottom, bottomFallback);
 
 
 
@@ -70,6 +74,30 @@ function applyNativeSafeAreaInsets(): void {
   document.documentElement.style.setProperty('--ob-safe-bottom', `${bottom}px`);
 
   obDebugLog('safe-area', 'Applied native insets', { top, bottom, platform });
+
+}
+
+
+
+async function unregisterServiceWorkersOnNative(): Promise<void> {
+
+  if (!isNativePlatform() || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+
+
+  try {
+
+    const registrations = await navigator.serviceWorker.getRegistrations();
+
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    obDebugLog('sw', 'Unregistered service workers on native');
+
+  } catch {
+
+    // Non-fatal if unregister fails.
+
+  }
 
 }
 
@@ -114,6 +142,10 @@ export async function bootstrapCapacitorNative(): Promise<void> {
   window.__SKIP_SPLASH__ = true;
 
   document.getElementById('ob-boot-shell')?.remove();
+
+
+
+  await unregisterServiceWorkersOnNative();
 
 
 

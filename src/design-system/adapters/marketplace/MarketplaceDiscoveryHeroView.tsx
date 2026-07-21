@@ -66,7 +66,6 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
       aria-label="Home kitchens"
       style={
         {
-          paddingTop: 'env(safe-area-inset-top, 0px)',
           '--ds-hero-ken-burns-duration': `${kenBurnsSeconds}s`,
           '--ds-hero-crossfade-duration': '2s',
         } as React.CSSProperties
@@ -118,7 +117,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
 
       {activeSlide && slideIsOffer(activeSlide) && activeSlide.offerBadge ? (
         <div
-          className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top,0px)+5.5rem)] z-[2] flex justify-end sm:inset-x-6 lg:top-[calc(env(safe-area-inset-top,0px)+6rem)]"
+          className="pointer-events-none absolute inset-x-4 top-[5.5rem] z-[2] flex justify-end sm:inset-x-6 lg:top-[6rem]"
           aria-hidden
         >
           <div className="ds-discovery-hero__offer-card max-w-[min(19rem,calc(100vw-2rem))] rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4">

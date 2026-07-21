@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { MapPin, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed, useDiscoveryHome } from '@/features/discovery';
 import { useLocationActions, useLocationFeatureEnabled, useActiveLocation } from '@/features/location';
@@ -7,9 +8,10 @@ import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
 import { OrderBhojanHomeHero, OrderBhojanHomeCategories } from '@/presentation/discovery';
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
+import { DEFAULT_LOCATION_DISCOVERY_CTA } from '@/lib/marketplaceDefaults';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
 
-const LOCATION_NUDGE_SESSION_KEY = 'ob-location-nudge-v1';
+const LOCATION_NUDGE_DISMISSED_KEY = 'ob-location-nudge-dismissed-v1';
 
 const OrderBhojanHomeTrustStrip = lazy(() =>
   import('@/presentation/discovery/OrderBhojanHomeTrustStrip').then((module) => ({
@@ -21,6 +23,53 @@ function MockRestaurantFeed({ categoryId }: { categoryId: FoodCategoryId | null 
   return <HomeSpotlightMockFeed categoryId={categoryId} />;
 }
 
+function HomeLocationNudgeBanner({
+  onSetLocation,
+  onDismiss,
+}: {
+  readonly onSetLocation: () => void;
+  readonly onDismiss: () => void;
+}) {
+  return (
+    <div
+      className="mx-4 mt-4 rounded-2xl border border-[#FF7A00]/25 bg-[#FF7A00]/10 px-4 py-3 sm:mx-6"
+      role="region"
+      aria-label="Set delivery location"
+    >
+      <div className="flex items-start gap-3">
+        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#FF7A00]" aria-hidden />
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-sm font-semibold text-white">{DEFAULT_LOCATION_DISCOVERY_CTA}</p>
+          <p className="text-xs text-white/60">Choose your area to see kitchens that deliver to you.</p>
+          <button
+            type="button"
+            className="ob-press inline-flex min-h-10 items-center rounded-full bg-[#FF7A00] px-4 text-xs font-bold uppercase tracking-wide text-white touch-manipulation"
+            onClick={onSetLocation}
+          >
+            Set location
+          </button>
+        </div>
+        <button
+          type="button"
+          className="ob-press ob-touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 touch-manipulation"
+          aria-label="Dismiss location reminder"
+          onClick={onDismiss}
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function readLocationNudgeDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(LOCATION_NUDGE_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function HomeExperiencePage() {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
   const locationEnabled = useLocationFeatureEnabled();
@@ -29,7 +78,7 @@ export function HomeExperiencePage() {
   const { openSelector } = useLocationActions();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedId } = useCategoryStore();
-  const locationPromptedRef = useRef(false);
+  const [locationNudgeDismissed, setLocationNudgeDismissed] = useState(readLocationNudgeDismissed);
 
   useEffect(() => {
     preloadMarketplaceRouteChunks();
@@ -43,39 +92,32 @@ export function HomeExperiencePage() {
     setSearchParams(next, { replace: true });
   }, [locationEnabled, openSelector, searchParams, setSearchParams]);
 
-  useEffect(() => {
-    if (!locationEnabled || locationPromptedRef.current || activeLocation) return;
-    try {
-      if (sessionStorage.getItem(LOCATION_NUDGE_SESSION_KEY)) return;
-      sessionStorage.setItem(LOCATION_NUDGE_SESSION_KEY, '1');
-    } catch {
-      // sessionStorage unavailable — still nudge once this mount.
-    }
-    locationPromptedRef.current = true;
-    openSelector();
-  }, [activeLocation, locationEnabled, openSelector]);
+  const discoverySettled = !discoveryQuery.isPending && !discoveryQuery.isFetching;
+  const showLocationNudge =
+    locationEnabled &&
+    !activeLocation &&
+    !locationNudgeDismissed &&
+    (!discoveryEnabled || discoverySettled);
 
-  useEffect(() => {
-    if (!locationEnabled || !discoveryEnabled || locationPromptedRef.current) return;
-    if (activeLocation || discoveryQuery.isPending || discoveryQuery.isFetching) return;
-    const collections = discoveryQuery.data?.collections ?? [];
-    const hasKitchens = collections.some((collection) => collection.restaurants.length > 0);
-    if (hasKitchens) return;
-    locationPromptedRef.current = true;
-    openSelector();
-  }, [
-    activeLocation,
-    discoveryEnabled,
-    discoveryQuery.data?.collections,
-    discoveryQuery.isFetching,
-    discoveryQuery.isPending,
-    locationEnabled,
-    openSelector,
-  ]);
+  const dismissLocationNudge = () => {
+    try {
+      sessionStorage.setItem(LOCATION_NUDGE_DISMISSED_KEY, '1');
+    } catch {
+      // Ignore storage failures; still hide for this session.
+    }
+    setLocationNudgeDismissed(true);
+  };
 
   return (
     <div className="bg-[#030303] pb-6 text-white">
       <OrderBhojanHomeHero />
+
+      {locationEnabled && showLocationNudge ? (
+        <HomeLocationNudgeBanner
+          onSetLocation={() => openSelector()}
+          onDismiss={dismissLocationNudge}
+        />
+      ) : null}
 
       {discoveryEnabled ? (
         <div className="px-4 pt-4 sm:px-6">

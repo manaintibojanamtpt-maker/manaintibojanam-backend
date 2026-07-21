@@ -175,6 +175,14 @@
   padding-right: var(--ob-safe-right);
 }
 
+.pt-safe {
+  padding-top: var(--ob-safe-top);
+}
+
+.pb-safe {
+  padding-bottom: var(--ob-safe-bottom);
+}
+
 .ob-fullscreen-shell.ob-app-shell {
   width: 100%;
   max-width: 100%;
