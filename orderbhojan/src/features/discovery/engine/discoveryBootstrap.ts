@@ -1,12 +1,12 @@
-import { DEFAULT_MARKETPLACE_COORDS } from '@/lib/marketplaceDefaults';
 import { isFeatureEnabled, loadFeatureFlags } from '@/featureFlags';
 import { markPerf } from '@/lib/perfMarks';
 import { queryClient } from '@/shared/queryClient';
-import { hydrateObLocationFromV2 } from '@/features/location/unifiedLocationSync';
+import {
+  readPersistedActiveLocationCoords,
+  resolveActiveDeliveryCoords,
+} from '@/features/location/domain/activeDeliveryLocation';
 import {
   loadDiscoveryHome,
-  readPersistedActiveLocationCoords,
-  resolveDiscoveryCoords,
 } from './discoveryEngine';
 import { discoveryKeys, DISCOVERY_STALE_TIME_MS } from '../hooks/discoveryQueryKeys';
 import {
@@ -18,19 +18,11 @@ import {
 const DEFAULT_FILTERS = {};
 
 /** Resolve delivery coords synchronously before React / zustand rehydration. */
-export function resolveBootstrapDiscoveryCoords(): { lat: number; lng: number } {
+export function resolveBootstrapDiscoveryCoords(): { lat: number; lng: number } | null {
   const persisted = readPersistedActiveLocationCoords();
   if (persisted) return persisted;
 
-  const fromV2 = hydrateObLocationFromV2();
-  if (fromV2) return resolveDiscoveryCoords(fromV2);
-
-  const latestSessionEntry = listDiscoverySessionCacheEntries()[0];
-  if (latestSessionEntry) {
-    return { lat: latestSessionEntry.lat, lng: latestSessionEntry.lng };
-  }
-
-  return { ...DEFAULT_MARKETPLACE_COORDS };
+  return resolveActiveDeliveryCoords(null);
 }
 
 export function seedDiscoveryQueryCacheFromSession(): void {
@@ -43,6 +35,8 @@ export function seedDiscoveryQueryCacheFromSession(): void {
   }
 
   const coords = resolveBootstrapDiscoveryCoords();
+  if (!coords) return;
+
   const cached = readDiscoverySessionCache(coords.lat, coords.lng, DEFAULT_FILTERS);
   if (!cached) return;
 
@@ -87,15 +81,15 @@ export function warmDiscoveryHome(
         markPerf('discovery_fetch_end', source);
         return result;
       },
-      staleTime: DISCOVERY_STALE_TIME_MS,
     })
     .catch(() => {
       // Network errors are surfaced by the mounted query.
     });
 }
 
-/** Fire-and-forget discovery warm start — safe before React mounts. */
+/** @deprecated Do not warm discovery without confirmed coordinates — use warmDiscoveryHome directly. */
 export function warmDefaultDiscoveryHome(): void {
   const coords = resolveBootstrapDiscoveryCoords();
+  if (!coords) return;
   warmDiscoveryHome(coords.lat, coords.lng, DEFAULT_FILTERS, 'bootstrap');
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { DEFAULT_MARKETPLACE_COORDS } from '../src/lib/marketplaceDefaults';
+import { setLocationStoreAddress } from '@bhojan/location-core';
 import {
   resolveBootstrapDiscoveryCoords,
   seedDiscoveryQueryCacheFromSession,
@@ -54,6 +54,7 @@ describe('discovery bootstrap performance', () => {
     clearDiscoverySessionCacheForTests();
     queryClient.clear();
     localStorage.removeItem(LOCATION_SESSION_STORAGE_KEY);
+    setLocationStoreAddress(null);
   });
 
   afterEach(() => {
@@ -76,8 +77,9 @@ describe('discovery bootstrap performance', () => {
     );
 
     const coords = resolveBootstrapDiscoveryCoords();
-    assert.equal(coords.lat.toFixed(4), '18.5362');
-    assert.equal(coords.lng.toFixed(4), '73.8937');
+    assert.ok(coords);
+    assert.equal(coords!.lat.toFixed(4), '18.5362');
+    assert.equal(coords!.lng.toFixed(4), '73.8937');
   });
 
   it('seedDiscoveryQueryCacheFromSession hydrates react-query for saved coords', () => {
@@ -89,10 +91,13 @@ describe('discovery bootstrap performance', () => {
     assert.deepEqual(cached, SAMPLE_HOME);
   });
 
-  it('resolveBootstrapDiscoveryCoords falls back to marketplace defaults', () => {
+  it('resolveBootstrapDiscoveryCoords returns null without confirmed location', () => {
     const coords = resolveBootstrapDiscoveryCoords();
-    assert.equal(coords.lat, DEFAULT_MARKETPLACE_COORDS.lat);
-    assert.equal(coords.lng, DEFAULT_MARKETPLACE_COORDS.lng);
+    assert.equal(coords, null);
+  });
+
+  it('resolveDiscoveryCoords returns null without confirmed location', () => {
+    assert.equal(resolveDiscoveryCoords(null), null);
   });
 
   it('resolveDiscoveryCoords uses persisted location before zustand rehydrates', () => {
@@ -109,8 +114,9 @@ describe('discovery bootstrap performance', () => {
     );
 
     const coords = resolveDiscoveryCoords(null);
-    assert.equal(coords.lat.toFixed(4), '18.5362');
-    assert.equal(coords.lng.toFixed(4), '73.8937');
+    assert.ok(coords);
+    assert.equal(coords!.lat.toFixed(4), '18.5362');
+    assert.equal(coords!.lng.toFixed(4), '73.8937');
   });
 
   it('location invalidation skips the first hydrated coords', () => {

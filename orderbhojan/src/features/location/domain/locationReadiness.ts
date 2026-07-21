@@ -2,19 +2,17 @@ import type { CustomerLocation } from './location.types';
 import {
   getLocationStoreAddress,
   hasValidDeliveryCoordinates,
-  isValidCoordinatePair,
   resolveDeliveryLocationGate,
   type DeliveryLocationGateState,
 } from '@bhojan/location-core';
 import { marketplaceLocationToV2 } from '@bhojan/location-v2/adapters/marketplaceAdapter';
+import { resolveActiveDeliveryLocation } from './activeDeliveryLocation';
 
 export function hasActiveDeliveryLocation(
   activeLocation: CustomerLocation | null | undefined,
 ): boolean {
-  const coords = activeLocation?.coordinates;
-  return isValidCoordinatePair(coords?.lat, coords?.lng);
+  return resolveActiveDeliveryLocation(activeLocation) != null;
 }
-
 function resolveGateFromActiveLocation(
   activeLocation: CustomerLocation | null | undefined,
 ): DeliveryLocationGateState {

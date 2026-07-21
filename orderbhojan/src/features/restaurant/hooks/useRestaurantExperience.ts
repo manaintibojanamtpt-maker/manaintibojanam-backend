@@ -15,15 +15,17 @@ export function useRestaurantExperience(slug: string | undefined) {
   const enabled = useRestaurantFeatureEnabled();
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
+  const lat = coords?.lat ?? 0;
+  const lng = coords?.lng ?? 0;
   const liveQuery = getMarketplaceQueryBehavior();
 
   return useQuery({
-    queryKey: restaurantKeys.experience(slug ?? '', coords.lat, coords.lng),
+    queryKey: restaurantKeys.experience(slug ?? '', lat, lng),
     queryFn: () =>
       loadRestaurantExperience({
         slug: slug!,
-        lat: coords.lat,
-        lng: coords.lng,
+        lat,
+        lng,
       }),
     enabled: enabled && Boolean(slug),
     ...liveQuery,

@@ -30,6 +30,7 @@ export function usePrefetchDiscoveryKitchens(feed: DiscoveryHomeResponse | undef
     prefetchedRef.current = signature;
 
     const coords = resolveRestaurantCoords(activeLocation);
+    if (!coords) return;
 
     for (const kitchen of kitchens) {
       const slug = kitchen.restaurantSlug;

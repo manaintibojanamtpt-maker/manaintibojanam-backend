@@ -651,14 +651,28 @@ export function buildDiscoveryHome(
   };
 }
 
-const DEFAULT_DISCOVERY_COORDS = {
-  lat: 18.49959440695956,
-  lng: 73.97858993491619,
-} as const;
+function requireDiscoveryCoordinates(url: URL): { lat: number; lng: number } {
+  const latParam = url.searchParams.get('lat');
+  const lngParam = url.searchParams.get('lng');
+  if (latParam == null || lngParam == null || latParam === '' || lngParam === '') {
+    throw Object.assign(new Error('lat and lng are required'), {
+      statusCode: 400,
+      code: 'LOCATION_REQUIRED',
+    });
+  }
+  const lat = Number(latParam);
+  const lng = Number(lngParam);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+    throw Object.assign(new Error('lat and lng are required'), {
+      statusCode: 400,
+      code: 'LOCATION_REQUIRED',
+    });
+  }
+  return { lat, lng };
+}
 
 export function parseDiscoveryRequest(url: URL): DiscoveryRequestParams {
-  const lat = Number(url.searchParams.get('lat') ?? String(DEFAULT_DISCOVERY_COORDS.lat));
-  const lng = Number(url.searchParams.get('lng') ?? String(DEFAULT_DISCOVERY_COORDS.lng));
+  const { lat, lng } = requireDiscoveryCoordinates(url);
   const page = Number(url.searchParams.get('page') ?? '1');
   const limit = Number(url.searchParams.get('limit') ?? '6');
   const maxDistanceKm = url.searchParams.get('maxDistanceKm');

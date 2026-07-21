@@ -20,15 +20,19 @@ export function useSearchResults(rawQuery: string) {
   const searchQuery = getSearchQueryBehavior();
 
   return useQuery({
-    queryKey: searchKeys.results(query, coords.lat, coords.lng, filters),
-    queryFn: () =>
-      executeSearch({
+    queryKey: coords
+      ? searchKeys.results(query, coords.lat, coords.lng, filters)
+      : [...searchKeys.all, 'results', query, 'unconfirmed', filters],
+    queryFn: () => {
+      if (!coords) throw new Error('Delivery location is required for search');
+      return executeSearch({
         q: query,
         lat: coords.lat,
         lng: coords.lng,
         filters,
-      }),
-    enabled: enabled && hasQuery,
+      });
+    },
+    enabled: enabled && hasQuery && coords != null,
     ...searchQuery,
     retry: 2,
     placeholderData: (previous) => previous,

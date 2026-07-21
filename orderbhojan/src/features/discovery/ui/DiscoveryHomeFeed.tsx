@@ -1,7 +1,7 @@
 import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
 import { usePrefetchDiscoveryKitchens } from '../hooks/usePrefetchDiscoveryKitchens';
 import { readDiscoverySessionCache } from '../engine/discoverySessionCache';
-import { resolveDiscoveryCoords } from '../engine/discoveryEngine';
+import { resolveActiveDeliveryLocation } from '@/features/location/domain/activeDeliveryLocation';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
 import { DiscoveryFiltersBar } from './DiscoveryFiltersBar';
 import { TrendingFoodsSection } from '@/features/experience/ui/home/TrendingFoodsSection';
@@ -27,18 +27,16 @@ import { PullToRefresh } from '@/presentation/ui/PullToRefresh';
 
 function DiscoveryNearbyHeader({
   kitchenCount,
-  locationLabel,
-  hasActiveLocation,
+  deliveryLocation,
 }: {
   readonly kitchenCount: number;
-  readonly locationLabel?: string;
-  readonly hasActiveLocation: boolean;
+  readonly deliveryLocation: ReturnType<typeof resolveActiveDeliveryLocation>;
 }) {
-  const sectionTitle = hasActiveLocation ? 'Nearby kitchens' : 'Featured kitchens';
-  const contextLine = hasActiveLocation
-    ? locationLabel
-      ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${locationLabel}`
-      : `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`
+  const sectionTitle = deliveryLocation ? 'Nearby kitchens' : 'Featured kitchens';
+  const contextLine = deliveryLocation
+    ? deliveryLocation.mode === 'current'
+      ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of your current location`
+      : `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${deliveryLocation.text.shortLabel}`
     : DEFAULT_LOCATION_DISCOVERY_HINT;
 
   return (
@@ -46,7 +44,7 @@ function DiscoveryNearbyHeader({
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-white">{sectionTitle}</h2>
-          <p className={`text-xs ${hasActiveLocation ? 'text-white/60' : 'text-[#FFB366]/90'}`}>
+          <p className={`text-xs ${deliveryLocation ? 'text-white/60' : 'text-[#FFB366]/90'}`}>
             {contextLine}
           </p>
         </div>
@@ -74,15 +72,33 @@ export function DiscoveryHomeFeed() {
   const setFilters = useDiscoveryFilterStore((s) => s.setFilters);
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
-  const coords = resolveDiscoveryCoords(activeLocation);
+  const deliveryLocation = resolveActiveDeliveryLocation(activeLocation);
+  const coords = deliveryLocation?.coordinates ?? null;
   const { openSelector } = useLocationActions();
   const online = useOnlineStatus();
   const filtersActive = hasDiscoveryFilterOverrides(filters);
-  const sessionCachedFeed = readDiscoverySessionCache(coords.lat, coords.lng, filters);
+  const sessionCachedFeed =
+    coords != null ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined;
   const feedData = query.data ?? sessionCachedFeed;
-  const showInitialSkeleton = query.isPending && !feedData;
+  const showInitialSkeleton = deliveryLocation != null && query.isPending && !feedData;
+  const needsLocationPrompt = locationEnabled && deliveryLocation == null;
 
   usePrefetchDiscoveryKitchens(feedData);
+
+  if (needsLocationPrompt) {
+    return (
+      <div className="space-y-4">
+        <DiscoveryFeedControls />
+        <OrderBhojanDiscoveryUxState
+          variant="location-disabled"
+          title={DEFAULT_LOCATION_DISCOVERY_CTA}
+          description={DEFAULT_LOCATION_DISCOVERY_HINT}
+          primaryLabel="Set your location"
+          onPrimary={() => openSelector()}
+        />
+      </div>
+    );
+  }
 
   if (showInitialSkeleton) {
     return (
@@ -131,12 +147,11 @@ export function DiscoveryHomeFeed() {
   const totalKitchenCount = spotlightPlan.uniqueKitchenCount;
 
   if (visibleCollections.length === 0) {
-    const usingPuneFallback = !activeLocation;
-    const locationLabel = feedData?.locationLabel ?? DEFAULT_MARKETPLACE_CITY_LABEL;
+    const locationLabel = feedData?.locationLabel ?? deliveryLocation?.text.shortLabel ?? DEFAULT_MARKETPLACE_CITY_LABEL;
     const openNowBlocking = Boolean(filters.openNowOnly);
 
     let title = `No kitchens within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km`;
-    let description = activeLocation
+    let description = deliveryLocation
       ? `We could not find published kitchens delivering to ${locationLabel}.`
       : `${DEFAULT_LOCATION_DISCOVERY_HINT}. We could not find kitchens matching your current view.`;
     let primaryLabel = filtersActive ? 'Clear filters' : locationEnabled ? 'Set your location' : undefined;
@@ -149,11 +164,7 @@ export function DiscoveryHomeFeed() {
         ? () => openSelector()
         : undefined;
 
-    if (usingPuneFallback && locationEnabled) {
-      title = DEFAULT_LOCATION_DISCOVERY_CTA;
-      primaryLabel = 'Set your location';
-      onPrimary = () => openSelector();
-    } else if (filtersActive && !usingPuneFallback) {
+    if (filtersActive) {
       title = 'No kitchens match your filters';
       description = `Try clearing filters or updating your location near ${locationLabel}.`;
       primaryLabel = 'Clear filters';
@@ -165,33 +176,26 @@ export function DiscoveryHomeFeed() {
 
     const secondaryLabel = openNowBlocking
       ? 'Include closed kitchens'
-      : usingPuneFallback && filtersActive && locationEnabled
-        ? 'Clear filters'
-        : locationEnabled && activeLocation && !filtersActive
+      : filtersActive && locationEnabled
+        ? 'Update location'
+        : locationEnabled && deliveryLocation && !filtersActive
           ? 'Update location'
-          : filtersActive && locationEnabled && !usingPuneFallback
-            ? 'Update location'
-            : undefined;
+          : undefined;
 
     const onSecondary = openNowBlocking
       ? () => {
           setFilters({ openNowOnly: false });
           void query.refetch();
         }
-      : secondaryLabel === 'Clear filters'
-        ? () => {
-            resetFilters();
-            void query.refetch();
-          }
-        : secondaryLabel === 'Update location'
-          ? () => openSelector()
-          : undefined;
+      : secondaryLabel === 'Update location'
+        ? () => openSelector()
+        : undefined;
 
     return (
       <div className="space-y-4">
         <DiscoveryFeedControls />
         <OrderBhojanDiscoveryUxState
-          variant={usingPuneFallback && locationEnabled ? 'location-disabled' : 'no-restaurants'}
+          variant={filtersActive ? 'no-restaurants' : 'no-restaurants'}
           title={title}
           description={description}
           primaryLabel={primaryLabel}
@@ -219,8 +223,7 @@ export function DiscoveryHomeFeed() {
 
         <DiscoveryNearbyHeader
           kitchenCount={totalKitchenCount}
-          locationLabel={feedData?.locationLabel}
-          hasActiveLocation={Boolean(activeLocation)}
+          deliveryLocation={deliveryLocation}
         />
 
         {spotlightPlan.sparseCopy ? (

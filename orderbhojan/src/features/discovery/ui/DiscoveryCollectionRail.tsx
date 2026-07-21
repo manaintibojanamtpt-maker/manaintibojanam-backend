@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { DiscoveryCollection } from '@/types/marketplace-discovery';
-import { loadDiscoveryCollection, resolveDiscoveryCoords } from '../engine/discoveryEngine';
+import { loadDiscoveryCollection } from '../engine/discoveryEngine';
 import { useActiveLocation } from '@/features/location';
+import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { OrderBhojanKitchenCard } from '@/presentation/discovery/OrderBhojanKitchenCard';
@@ -20,7 +21,7 @@ export function DiscoveryCollectionRail({
 }: DiscoveryCollectionRailProps) {
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
-  const coords = resolveDiscoveryCoords(activeLocation);
+  const coords = resolveActiveDeliveryCoords(activeLocation);
 
   const [restaurants, setRestaurants] = useState(collection.restaurants);
   const [page, setPage] = useState(collection.pagination?.page ?? 1);
@@ -29,7 +30,7 @@ export function DiscoveryCollectionRail({
   const [loadError, setLoadError] = useState(false);
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore || !coords) return;
     setLoading(true);
     setLoadError(false);
     try {

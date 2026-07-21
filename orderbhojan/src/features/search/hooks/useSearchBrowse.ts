@@ -13,9 +13,14 @@ export function useSearchBrowse() {
   const searchQuery = getSearchQueryBehavior();
 
   return useQuery({
-    queryKey: searchKeys.browse(coords.lat, coords.lng),
-    queryFn: () => loadSearchBrowse(coords),
-    enabled,
+    queryKey: coords
+      ? searchKeys.browse(coords.lat, coords.lng)
+      : [...searchKeys.all, 'browse', 'unconfirmed'],
+    queryFn: () => {
+      if (!coords) throw new Error('Delivery location is required for search');
+      return loadSearchBrowse(coords);
+    },
+    enabled: enabled && coords != null,
     ...searchQuery,
     retry: 2,
     placeholderData: (previous) => previous,

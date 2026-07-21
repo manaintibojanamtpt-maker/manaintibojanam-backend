@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { useActiveLocation } from '@/features/location';
+import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { queryClient } from '@/shared/queryClient';
 import { warmDiscoveryHome } from '../engine/discoveryBootstrap';
-import { resolveDiscoveryCoords } from '../engine/discoveryEngine';
 import { useDiscoveryLocationInvalidation } from '../hooks/useDiscoveryHome';
 import { discoveryKeys } from '../hooks/discoveryQueryKeys';
 import { useDiscoveryFeatureEnabled } from '../hooks/useDiscoveryFeature';
@@ -19,7 +19,8 @@ export function DiscoveryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!enabled) return;
-    const coords = resolveDiscoveryCoords(activeLocation);
+    const coords = resolveActiveDeliveryCoords(activeLocation);
+    if (!coords) return;
     const queryKey = discoveryKeys.home(coords.lat, coords.lng, DEFAULT_FILTERS);
     if (queryClient.getQueryData(queryKey)) return;
     warmDiscoveryHome(coords.lat, coords.lng, DEFAULT_FILTERS, 'provider');

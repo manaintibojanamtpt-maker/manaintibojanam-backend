@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDiscoveryFeatureEnabled } from '@/features/discovery/hooks/useDiscoveryFeature';
 import { getDiscoveryApiClient } from '@/features/discovery/infrastructure/discoveryApiClient';
-import { resolveDiscoveryCoords } from '@/features/discovery/engine/discoveryEngine';
+import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { useActiveLocation } from '@/features/location';
 import type { RestaurantPublic } from '@/types/marketplace';
 
@@ -14,11 +14,14 @@ export function homeHeroOffersQueryKey(lat: number, lng: number) {
 export function useHomeHeroOfferRestaurants(enabled: boolean) {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
   const activeLocation = useActiveLocation();
-  const coords = resolveDiscoveryCoords(activeLocation);
+  const coords = resolveActiveDeliveryCoords(activeLocation);
 
   return useQuery({
-    queryKey: homeHeroOffersQueryKey(coords.lat, coords.lng),
+    queryKey: coords
+      ? homeHeroOffersQueryKey(coords.lat, coords.lng)
+      : ['marketplace', 'discovery', 'offers', 'hero', 'unconfirmed'],
     queryFn: async (): Promise<readonly RestaurantPublic[]> => {
+      if (!coords) return [];
       const response = await getDiscoveryApiClient().fetchOffers({
         lat: coords.lat,
         lng: coords.lng,
@@ -27,7 +30,7 @@ export function useHomeHeroOfferRestaurants(enabled: boolean) {
       });
       return response.collection.restaurants;
     },
-    enabled: enabled && discoveryEnabled,
+    enabled: enabled && discoveryEnabled && coords != null,
     staleTime: HERO_OFFERS_STALE_MS,
     gcTime: HERO_OFFERS_STALE_MS * 2,
     refetchOnWindowFocus: false,

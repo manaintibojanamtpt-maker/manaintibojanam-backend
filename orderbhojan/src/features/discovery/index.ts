@@ -13,7 +13,8 @@ export {
   loadDiscoveryHome,
   loadDiscoveryCollection,
   resolveDiscoveryCoords,
-  DEFAULT_DISCOVERY_COORDS,
+  resolveActiveDeliveryLocation,
+  resolveActiveDeliveryCoords,
 } from './engine/discoveryEngine';
 export { applyDiscoveryFilters, sortRestaurants } from './domain/filters';
 export { DISCOVERY_COLLECTIONS, HOME_COLLECTION_IDS } from './domain/collections';

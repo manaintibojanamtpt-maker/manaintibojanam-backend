@@ -37,8 +37,11 @@ export function useMenuItemSearchSuggestions(rawQuery: string, limit = 8) {
   );
 
   const apiQuery = useQuery<SearchSuggestion[]>({
-    queryKey: [...searchKeys.all, 'menu-suggestions', query, coords.lat, coords.lng, limit] as const,
+    queryKey: coords
+      ? ([...searchKeys.all, 'menu-suggestions', query, coords.lat, coords.lng, limit] as const)
+      : ([...searchKeys.all, 'menu-suggestions', query, 'unconfirmed', limit] as const),
     queryFn: async () => {
+      if (!coords) throw new Error('Delivery location is required for search');
       const localItems = filterLocalMenuItems(query, getCachedMenuItemsForSearch(), limit);
       try {
         const response = await withSearchClientTimeout(
@@ -55,7 +58,7 @@ export function useMenuItemSearchSuggestions(rawQuery: string, limit = 8) {
         return [...menuItemsToSuggestions(localItems)];
       }
     },
-    enabled: enabled && hasQuery,
+    enabled: enabled && hasQuery && coords != null,
     ...searchQuery,
     retry: 0,
     placeholderData: (previous) => {

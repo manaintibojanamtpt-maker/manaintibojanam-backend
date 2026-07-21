@@ -119,6 +119,7 @@ export function OrderBhojanRestaurantExperience() {
   const prefetchMenu = useCallback(() => {
     if (!restaurantSlug) return;
     const coords = resolveRestaurantCoords(activeLocation);
+    if (!coords) return;
     void queryClient.prefetchQuery({
       queryKey: foodKeys.menu(restaurantSlug, coords.lat, coords.lng),
       queryFn: () =>

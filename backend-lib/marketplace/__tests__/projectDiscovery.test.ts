@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildDiscoveryHome,
   isMarketplaceVisibleTenant,
+  parseDiscoveryRequest,
   projectRestaurantPublic,
 } from '../projectDiscovery.js';
 import { parseFirestoreTenant } from '../projectFoodMenuV1.js';
@@ -31,6 +32,26 @@ describe('projectDiscovery', () => {
     assert.equal(restaurant.restaurantSlug, 'hari-mess');
     assert.equal(restaurant.displayName, 'Hari Mess');
     assert.equal(restaurant.distanceKm, undefined);
+  });
+
+  it('parseDiscoveryRequest rejects missing lat/lng with LOCATION_REQUIRED', () => {
+    assert.throws(
+      () => parseDiscoveryRequest(new URL('http://localhost/api/marketplace/discovery')),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal((error as { code?: string }).code, 'LOCATION_REQUIRED');
+        assert.equal((error as { statusCode?: number }).statusCode, 400);
+        return true;
+      },
+    );
+  });
+
+  it('parseDiscoveryRequest accepts explicit coordinates', () => {
+    const params = parseDiscoveryRequest(
+      new URL('http://localhost/api/marketplace/discovery?lat=17.44&lng=78.35'),
+    );
+    assert.equal(params.lat, 17.44);
+    assert.equal(params.lng, 78.35);
   });
 
   it('builds home collections from live tenant pool', () => {

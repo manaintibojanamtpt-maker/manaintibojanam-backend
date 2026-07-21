@@ -16,7 +16,7 @@ export function useReorderFromTracking() {
   const reorder = async (payload: NonNullable<OrderTrackingResponse['reorder']>) => {
     setBusy(true);
     try {
-      const coords = resolveRestaurantCoords(activeLocation);
+      const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
       const experience = await getMarketplaceApiClient().restaurantExperience(payload.restaurantSlug, coords);
       useRestaurantContextStore.getState().setContext({
         restaurantId: payload.restaurantId,

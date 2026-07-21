@@ -7,10 +7,13 @@ import { getDiscoveryApiClient } from '../infrastructure/discoveryApiClient';
 import { writeDiscoverySessionCache } from './discoverySessionCache';
 
 export {
-  DEFAULT_DISCOVERY_COORDS,
   readPersistedActiveLocationCoords,
   resolveDiscoveryCoords,
 } from '@/features/location/resolveDeliveryCoords';
+export {
+  resolveActiveDeliveryLocation,
+  resolveActiveDeliveryCoords,
+} from '@/features/location/domain/activeDeliveryLocation';
 
 const inFlightHome = new Map<string, Promise<DiscoveryHomeResponse>>();
 

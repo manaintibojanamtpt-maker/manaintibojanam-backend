@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { MapPin, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useDiscoveryFeatureEnabled, DiscoveryHomeFeed, useDiscoveryHome } from '@/features/discovery';
-import { useLocationActions, useLocationFeatureEnabled, useActiveLocation } from '@/features/location';
+import { useLocationActions, useLocationFeatureEnabled, useActiveLocation, hasActiveDeliveryLocation } from '@/features/location';
 import { useCategoryStore } from '../../store/categoryStore';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { HomeSpotlightMockFeed } from './HomeSpotlightMockFeed';
@@ -95,7 +95,7 @@ export function HomeExperiencePage() {
   const discoverySettled = !discoveryQuery.isPending && !discoveryQuery.isFetching;
   const showLocationNudge =
     locationEnabled &&
-    !activeLocation &&
+    !hasActiveDeliveryLocation(activeLocation) &&
     !locationNudgeDismissed &&
     (!discoveryEnabled || discoverySettled);
 

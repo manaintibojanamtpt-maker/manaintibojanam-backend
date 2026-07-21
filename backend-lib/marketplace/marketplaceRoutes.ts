@@ -252,8 +252,10 @@ export function registerMarketplaceRoutes(
           { cacheMaxAgeSec: DISCOVERY_CACHE_MAX_AGE_SEC },
         );
       } catch (error: unknown) {
+        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const code = (error as { code?: string }).code ?? 'INTERNAL';
         const message = error instanceof Error ? error.message : 'Failed to load discovery';
-        res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+        res.status(status).json({ ok: false, error: { code, message, retryable: status >= 500 } });
       }
     });
   };
@@ -279,8 +281,10 @@ export function registerMarketplaceRoutes(
         { cacheMaxAgeSec: DISCOVERY_CACHE_MAX_AGE_SEC },
       );
     } catch (error: unknown) {
+      const status = (error as { statusCode?: number }).statusCode ?? 500;
+      const code = (error as { code?: string }).code ?? 'INTERNAL';
       const message = error instanceof Error ? error.message : 'Failed to load discovery collection';
-      res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+      res.status(status).json({ ok: false, error: { code, message, retryable: status >= 500 } });
     }
   });
 

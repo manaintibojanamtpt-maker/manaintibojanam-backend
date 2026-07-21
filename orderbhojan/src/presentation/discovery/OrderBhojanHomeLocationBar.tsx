@@ -1,7 +1,7 @@
 import { MapPin } from 'lucide-react';
 import {
   LocationChip,
-  hasActiveDeliveryLocation,
+  resolveActiveDeliveryLocation,
   useActiveLocation,
   useLocationFeatureEnabled,
 } from '@/features/location';
@@ -9,8 +9,14 @@ import {
 export function OrderBhojanHomeLocationBar() {
   const locationEnabled = useLocationFeatureEnabled();
   const activeLocation = useActiveLocation();
-  const hasDeliveryArea = hasActiveDeliveryLocation(activeLocation);
-  const needsLocation = locationEnabled && !hasDeliveryArea;
+  const deliveryLocation = resolveActiveDeliveryLocation(activeLocation);
+  const needsLocation = locationEnabled && deliveryLocation == null;
+  const modeLabel =
+    deliveryLocation?.mode === 'current'
+      ? 'Current location'
+      : deliveryLocation
+        ? 'Delivering to'
+        : 'Deliver to';
 
   return (
     <div
@@ -23,9 +29,7 @@ export function OrderBhojanHomeLocationBar() {
       aria-label={needsLocation ? 'Set your delivery area to see nearby kitchens' : 'Delivery area'}
     >
       <MapPin className="h-3.5 w-3.5 shrink-0 text-[#FF7A00]" aria-hidden />
-      <span className="shrink-0 font-medium text-white/70">
-        {needsLocation ? 'Deliver to' : 'Delivering to'}
-      </span>
+      <span className="shrink-0 font-medium text-white/70">{modeLabel}</span>
       {locationEnabled ? (
         <LocationChip variant="compact" className="min-w-0 !border-0 !bg-transparent !p-0 !text-white/90 touch-manipulation" />
       ) : (

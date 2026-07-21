@@ -8,25 +8,13 @@ import type {
   SearchSuggestionsResponse,
   SearchTrendingResponse,
 } from '@/types/marketplace-search';
+import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { passthroughSynonymAdapter, passthroughTypoAdapter } from '../domain/adapters';
 import { trackSearchEvent } from '../analytics/searchAnalytics';
 import { getSearchApiClient } from '../infrastructure/searchApiClient';
 
-export const DEFAULT_SEARCH_COORDS = {
-  lat: 17.4401,
-  lng: 78.3489,
-} as const;
-
-export function resolveSearchCoords(activeLocation?: {
-  coordinates: { lat: number; lng: number };
-} | null): { lat: number; lng: number } {
-  if (activeLocation?.coordinates) {
-    return {
-      lat: activeLocation.coordinates.lat,
-      lng: activeLocation.coordinates.lng,
-    };
-  }
-  return { ...DEFAULT_SEARCH_COORDS };
+export function resolveSearchCoords(activeLocation?: import('@/features/location/domain/activeDeliveryLocation').ActiveDeliveryLocationInput): { lat: number; lng: number } | null {
+  return resolveActiveDeliveryCoords(activeLocation);
 }
 
 function normalizeQuery(query: string): string {

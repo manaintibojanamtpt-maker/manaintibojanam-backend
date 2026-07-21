@@ -14,17 +14,19 @@ export function useCheckoutPromoOffers(enabled = true) {
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
+  const lat = coords?.lat ?? 0;
+  const lng = coords?.lng ?? 0;
   const liveQuery = getMarketplaceQueryBehavior();
 
   const shouldFetch = enabled && Boolean(restaurantSlug);
 
   const query = useQuery({
-    queryKey: restaurantKeys.experience(restaurantSlug ?? '', coords.lat, coords.lng),
+    queryKey: restaurantKeys.experience(restaurantSlug ?? '', lat, lng),
     queryFn: () =>
       loadRestaurantExperience({
         slug: restaurantSlug!,
-        lat: coords.lat,
-        lng: coords.lng,
+        lat,
+        lng,
       }),
     enabled: shouldFetch,
     ...liveQuery,

@@ -29,8 +29,11 @@ export function useMenuItemSearch(rawQuery: string, limit = 12) {
   }, [hasQuery, limit, rawQuery]);
 
   const result = useQuery({
-    queryKey: [...searchKeys.all, 'menu-items', query, coords.lat, coords.lng, filters, limit] as const,
+    queryKey: coords
+      ? ([...searchKeys.all, 'menu-items', query, coords.lat, coords.lng, filters, limit] as const)
+      : ([...searchKeys.all, 'menu-items', query, 'unconfirmed', filters, limit] as const),
     queryFn: async () => {
+      if (!coords) throw new Error('Delivery location is required for search');
       const localItems = filterLocalMenuItems(query, getCachedMenuItemsForSearch(), limit);
       try {
         return await withSearchClientTimeout(
@@ -54,7 +57,7 @@ export function useMenuItemSearch(rawQuery: string, limit = 12) {
         };
       }
     },
-    enabled: enabled && hasQuery,
+    enabled: enabled && hasQuery && coords != null,
     ...searchQuery,
     retry: 0,
     placeholderData: (previous) => {

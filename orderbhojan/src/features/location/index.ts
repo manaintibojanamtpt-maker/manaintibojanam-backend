@@ -9,3 +9,9 @@ export { useActiveLocation, useLocationUiState, useSavedAddressesList, useRecent
 export { useLocationActions } from './hooks/useLocationActions';
 export type { CustomerLocation, SavedAddress, IndiaAddress } from './domain/location.types';
 export { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, resolveObDeliveryLocationGate } from './domain/locationReadiness';
+export {
+  resolveActiveDeliveryLocation,
+  resolveActiveDeliveryCoords,
+  activeDeliveryLocationLabel,
+  type ActiveDeliveryLocation,
+} from './domain/activeDeliveryLocation';

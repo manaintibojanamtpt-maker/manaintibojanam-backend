@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
+import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { markPerf } from '@/lib/perfMarks';
-import { loadDiscoveryHome, resolveDiscoveryCoords } from '../engine/discoveryEngine';
+import { loadDiscoveryHome } from '../engine/discoveryEngine';
 import {
   getDiscoverySessionCacheUpdatedAt,
   readDiscoverySessionCache,
@@ -15,11 +16,17 @@ export function useDiscoveryHome() {
   const enabled = useDiscoveryFeatureEnabled();
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
-  const coords = resolveDiscoveryCoords(activeLocation);
+  const coords = resolveActiveDeliveryCoords(activeLocation);
+  const hasConfirmedCoords = coords != null;
 
   return useQuery({
-    queryKey: discoveryKeys.home(coords.lat, coords.lng, filters),
+    queryKey: hasConfirmedCoords
+      ? discoveryKeys.home(coords.lat, coords.lng, filters)
+      : [...discoveryKeys.all, 'home', 'unconfirmed', filters],
     queryFn: async () => {
+      if (!coords) {
+        throw new Error('Delivery location is required for discovery');
+      }
       markPerf('discovery_fetch_start');
       const result = await loadDiscoveryHome({
         lat: coords.lat,
@@ -31,14 +38,17 @@ export function useDiscoveryHome() {
       markPerf('discovery_fetch_end');
       return result;
     },
-    enabled,
+    enabled: enabled && hasConfirmedCoords,
     staleTime: DISCOVERY_STALE_TIME_MS,
     gcTime: DISCOVERY_GC_TIME_MS,
-    initialData: () => readDiscoverySessionCache(coords.lat, coords.lng, filters),
+    initialData: () =>
+      coords ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined,
     initialDataUpdatedAt: () =>
-      getDiscoverySessionCacheUpdatedAt(coords.lat, coords.lng, filters) ?? undefined,
+      coords
+        ? getDiscoverySessionCacheUpdatedAt(coords.lat, coords.lng, filters) ?? undefined
+        : undefined,
     placeholderData: (previous) =>
-      previous ?? readDiscoverySessionCache(coords.lat, coords.lng, filters),
+      previous ?? (coords ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined),
     refetchOnWindowFocus: false,
     refetchInterval: false,
     retry: 1,

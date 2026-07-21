@@ -29,7 +29,6 @@ interface AddressFormSheetProps {
   readonly onClose: () => void;
 }
 
-const PUNE_COORDS = { lat: 18.5362, lng: 73.8958, source: 'map_pin' as const, capturedAt: new Date().toISOString() };
 const FIELD_CLASS = 'flex w-full flex-col gap-1.5';
 const SELECT_CLASS =
   'w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#FF7A00]/50';
@@ -43,7 +42,7 @@ function resolveInitialCascade(displayLabel?: string): AddressCascadeSelection {
 }
 
 function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) {
-  const { saveNewAddress, setManualSession } = useLocationActions();
+  const { saveNewAddress, setManualSession, requestCurrentLocation } = useLocationActions();
   const { isAuthenticated } = useAuth();
   const active = useActiveLocation();
   const [label, setLabel] = useState<SavedAddressInput['label']>('home');
@@ -54,7 +53,9 @@ function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) 
   const [house, setHouse] = useState('');
   const [building, setBuilding] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [coordinates, setCoordinates] = useState(() => active?.coordinates ?? PUNE_COORDS);
+  const [coordinates, setCoordinates] = useState<IndiaAddress['coordinates'] | null>(
+    () => active?.coordinates ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -66,6 +67,9 @@ function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) 
   const areas = useMemo(() => listAreas(cityCode), [cityCode]);
 
   const buildAddress = (): IndiaAddress => {
+    if (!coordinates) {
+      throw new Error('Map pin is required');
+    }
     const state = states.find((s) => s.code === stateCode)!;
     const district = districts.find((d) => d.code === districtCode)!;
     const city = cities.find((c) => c.code === cityCode)!;
@@ -94,6 +98,10 @@ function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) 
     setError(null);
     if (!house.trim()) {
       setError('House / flat number is required');
+      return;
+    }
+    if (!coordinates) {
+      setError('Set a map pin or use current location before saving');
       return;
     }
     if (!validatePincodeForArea(areaCode, pincode)) {
@@ -210,7 +218,23 @@ function AddressFormSheetContent({ onClose }: { readonly onClose: () => void }) 
         <TextFieldView label="Building / Apartment" value={building} onChange={(e) => setBuilding(e.target.value)} />
         <TextFieldView label="Landmark (optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} />
 
-        <MapPinPicker coordinates={coordinates} onChange={setCoordinates} />
+        <MapPinPicker
+          coordinates={
+            coordinates ?? {
+              lat: 0,
+              lng: 0,
+              source: 'manual',
+              capturedAt: new Date().toISOString(),
+            }
+          }
+          onChange={setCoordinates}
+        />
+
+        {!coordinates ? (
+          <SoftButton type="button" tone="secondary" fullWidth onClick={() => void requestCurrentLocation()}>
+            Use current location for map pin
+          </SoftButton>
+        ) : null}
 
         {error ? (
           <p className="text-sm text-red-400" role="alert">{error}</p>

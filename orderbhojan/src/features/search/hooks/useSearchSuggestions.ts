@@ -17,9 +17,14 @@ export function useSearchSuggestions(rawQuery: string) {
   const searchQuery = getSearchQueryBehavior();
 
   return useQuery({
-    queryKey: searchKeys.suggestions(query, coords.lat, coords.lng),
-    queryFn: () => loadSearchSuggestions({ ...coords, q: query }),
-    enabled: enabled && query.length > 0,
+    queryKey: coords
+      ? searchKeys.suggestions(query, coords.lat, coords.lng)
+      : [...searchKeys.all, 'suggestions', query, 'unconfirmed'],
+    queryFn: () => {
+      if (!coords) throw new Error('Delivery location is required for search');
+      return loadSearchSuggestions({ ...coords, q: query });
+    },
+    enabled: enabled && query.length > 0 && coords != null,
     ...searchQuery,
     retry: 1,
   });

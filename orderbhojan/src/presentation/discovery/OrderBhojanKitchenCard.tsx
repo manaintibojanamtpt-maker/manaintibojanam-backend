@@ -75,6 +75,7 @@ export function OrderBhojanKitchenCard({
   const prefetchRestaurant = useCallback(() => {
     if (!restaurantEnabled || !restaurant.restaurantSlug) return;
     const coords = resolveRestaurantCoords(activeLocation);
+    if (!coords) return;
     void queryClient.prefetchQuery({
       queryKey: restaurantKeys.experience(restaurant.restaurantSlug, coords.lat, coords.lng),
       queryFn: () =>
@@ -96,6 +97,10 @@ export function OrderBhojanKitchenCard({
   const prefetchKitchenNavigation = useCallback(() => {
     if (!restaurant.restaurantSlug) return;
     const coords = resolveRestaurantCoords(activeLocation);
+    if (!coords) {
+      prefetchRestaurant();
+      return;
+    }
     prefetchRestaurant();
     void queryClient.prefetchQuery({
       queryKey: foodKeys.menu(restaurant.restaurantSlug, coords.lat, coords.lng),

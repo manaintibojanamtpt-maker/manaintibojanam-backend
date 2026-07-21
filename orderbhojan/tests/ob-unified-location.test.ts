@@ -162,4 +162,76 @@ describe('OB unified location (last-mile)', () => {
     assert.ok(shortFlat.address.street.length >= 3);
     assert.match(shortFlat.address.street, /^12/);
   });
+
+  it('resolveActiveDeliveryLocation returns null without confirmed location', async () => {
+    const { resolveActiveDeliveryLocation, resolveActiveDeliveryCoords } = await import(
+      '../src/features/location/domain/activeDeliveryLocation.ts'
+    );
+    const { resolveDeliveryCoords } = await import('../src/features/location/resolveDeliveryCoords.ts');
+
+    assert.equal(resolveActiveDeliveryLocation(null), null);
+    assert.equal(resolveActiveDeliveryCoords(null), null);
+    assert.equal(resolveDeliveryCoords(null), null);
+  });
+
+  it('resolveActiveDeliveryLocation maps GPS to current mode and saved to selected', async () => {
+    const { resolveActiveDeliveryLocation } = await import(
+      '../src/features/location/domain/activeDeliveryLocation.ts'
+    );
+
+    const gps = resolveActiveDeliveryLocation({
+      kind: 'session',
+      displayLabel: 'Koregaon Park',
+      coordinates: {
+        lat: 18.5362,
+        lng: 73.8958,
+        source: 'gps',
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+    assert.ok(gps);
+    assert.equal(gps!.mode, 'current');
+    assert.equal(gps!.coordinates.source, 'gps');
+    assert.equal(gps!.isConfirmed, true);
+
+    const selected = resolveActiveDeliveryLocation({
+      kind: 'saved',
+      displayLabel: 'Parents home, Hyderabad',
+      savedAddressId: 'addr-1',
+      coordinates: {
+        lat: 17.44,
+        lng: 78.35,
+        source: 'map_pin',
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+    assert.ok(selected);
+    assert.equal(selected!.mode, 'selected');
+    assert.equal(selected!.coordinates.source, 'saved');
+  });
+
+  it('discovery does not fetch without confirmed coordinates', () => {
+    const hook = readFileSync(
+      join(root, 'src/features/discovery/hooks/useDiscoveryHome.ts'),
+      'utf8',
+    );
+    assert.match(hook, /resolveActiveDeliveryCoords/);
+    assert.match(hook, /enabled:\s*enabled && hasConfirmedCoords/);
+  });
+
+  it('AddressFormSheet does not default to Pune coordinates', () => {
+    const form = readFileSync(join(root, 'src/features/location/ui/AddressFormSheet.tsx'), 'utf8');
+    assert.doesNotMatch(form, /PUNE_COORDS/);
+    assert.match(form, /Set a map pin or use current location before saving/);
+  });
+
+  it('OrderBhojanHomeLocationBar shows delivery mode context', () => {
+    const bar = readFileSync(
+      join(root, 'src/presentation/discovery/OrderBhojanHomeLocationBar.tsx'),
+      'utf8',
+    );
+    assert.match(bar, /resolveActiveDeliveryLocation/);
+    assert.match(bar, /Current location/);
+    assert.match(bar, /Delivering to/);
+  });
 });

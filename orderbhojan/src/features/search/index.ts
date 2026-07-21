@@ -17,7 +17,6 @@ export {
   loadSearchBrowse,
   loadSearchSuggestions,
   resolveSearchCoords,
-  DEFAULT_SEARCH_COORDS,
 } from './engine/searchPlatform';
 export { useSearchFilterStore, useSearchHistoryStore, useSearchSessionStore } from './store/searchStore';
 export {

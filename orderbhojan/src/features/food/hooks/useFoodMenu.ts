@@ -45,6 +45,8 @@ export function useFoodMenu(slug: string | undefined) {
   const enabled = useFoodFeatureEnabled();
   const activeLocation = useActiveLocation();
   const coords = resolveRestaurantCoords(activeLocation);
+  const lat = coords?.lat ?? 0;
+  const lng = coords?.lng ?? 0;
   const setRestaurant = useCartStore((s) => s.setRestaurant);
   const liveQuery = getMarketplaceQueryBehavior();
   const queryClient = useQueryClient();
@@ -54,14 +56,14 @@ export function useFoodMenu(slug: string | undefined) {
       setActiveMenuRouteSlug(null);
       return;
     }
-    syncMenuContextForSlug(slug, coords.lat, coords.lng, queryClient, setRestaurant);
+    syncMenuContextForSlug(slug, lat, lng, queryClient, setRestaurant);
     return () => setActiveMenuRouteSlug(null);
-  }, [slug, coords.lat, coords.lng, queryClient, setRestaurant]);
+  }, [slug, lat, lng, queryClient, setRestaurant]);
 
   useLayoutEffect(() => {
     if (!slug) return;
     const resync = () => {
-      syncMenuContextForSlug(slug, coords.lat, coords.lng, queryClient, setRestaurant);
+      syncMenuContextForSlug(slug, lat, lng, queryClient, setRestaurant);
     };
 
     const unsubContext = useRestaurantContextStore.persist.onFinishHydration(resync);
@@ -75,49 +77,49 @@ export function useFoodMenu(slug: string | undefined) {
       unsubContext();
       unsubCart();
     };
-  }, [slug, coords.lat, coords.lng, queryClient, setRestaurant]);
+  }, [slug, lat, lng, queryClient, setRestaurant]);
 
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
-    void hydrateFoodSessionCacheFromIdb(slug, coords.lat, coords.lng).then(() => {
+    void hydrateFoodSessionCacheFromIdb(slug, lat, lng).then(() => {
       if (cancelled) return;
-      const cached = readFoodSessionCache(slug, coords.lat, coords.lng);
+      const cached = readFoodSessionCache(slug, lat, lng);
       if (!cached) return;
-      syncMenuRestaurantContext(slug, coords.lat, coords.lng, cached);
-      queryClient.setQueryData(foodKeys.menu(slug, coords.lat, coords.lng), cached, {
-        updatedAt: getFoodSessionCacheUpdatedAt(slug, coords.lat, coords.lng),
+      syncMenuRestaurantContext(slug, lat, lng, cached);
+      queryClient.setQueryData(foodKeys.menu(slug, lat, lng), cached, {
+        updatedAt: getFoodSessionCacheUpdatedAt(slug, lat, lng),
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [slug, coords.lat, coords.lng, queryClient]);
+  }, [slug, lat, lng, queryClient]);
 
   const query = useQuery({
-    queryKey: foodKeys.menu(slug ?? '', coords.lat, coords.lng),
+    queryKey: foodKeys.menu(slug ?? '', lat, lng),
     queryFn: () =>
       loadFoodMenu({
         slug: slug!,
-        lat: coords.lat,
-        lng: coords.lng,
+        lat,
+        lng,
       }),
     enabled: enabled && Boolean(slug),
     ...liveQuery,
     initialData: () =>
-      slug ? readFoodSessionCache(slug, coords.lat, coords.lng) : undefined,
+      slug ? readFoodSessionCache(slug, lat, lng) : undefined,
     initialDataUpdatedAt: () =>
-      slug ? getFoodSessionCacheUpdatedAt(slug, coords.lat, coords.lng) : undefined,
+      slug ? getFoodSessionCacheUpdatedAt(slug, lat, lng) : undefined,
     placeholderData: (previous) =>
       previous ??
-      (slug ? readFoodSessionCache(slug, coords.lat, coords.lng) : undefined),
+      (slug ? readFoodSessionCache(slug, lat, lng) : undefined),
     retry: 2,
   });
 
   useLayoutEffect(() => {
     if (!slug || !query.data) return;
-    syncMenuRestaurantContext(slug, coords.lat, coords.lng, query.data);
-  }, [slug, coords.lat, coords.lng, query.data]);
+    syncMenuRestaurantContext(slug, lat, lng, query.data);
+  }, [slug, lat, lng, query.data]);
 
   return query;
 }

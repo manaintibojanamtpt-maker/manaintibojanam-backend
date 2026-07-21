@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
-import { seedDiscoveryQueryCacheFromSession, warmDefaultDiscoveryHome, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
+import { seedDiscoveryQueryCacheFromSession, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
 import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { bootstrapCapacitorNative } from '@/lib/capacitorBootstrap';
@@ -55,9 +55,10 @@ async function bootstrap() {
   await bootstrapCapacitorNative();
 
   const bootstrapCoords = resolveBootstrapDiscoveryCoords();
-  await hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng);
+  if (bootstrapCoords) {
+    await hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng);
+  }
   seedDiscoveryQueryCacheFromSession();
-  warmDefaultDiscoveryHome();
 
   const config = await ensureAppConfig();
   renderApp();

@@ -18,7 +18,7 @@ export function useSearchMenuCacheBootstrap() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !coords) return;
     if (queryClient.getQueryData(searchKeys.browse(coords.lat, coords.lng)) == null) return;
 
     let cancelled = false;
@@ -41,5 +41,5 @@ export function useSearchMenuCacheBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [coords.lat, coords.lng, enabled, queryClient]);
+  }, [coords?.lat, coords?.lng, enabled, queryClient]);
 }
