@@ -337,7 +337,10 @@ export class MarketplaceApiClient {
     });
   }
 
-  checkoutPrepare(body: Record<string, unknown>): Promise<{
+  checkoutPrepare(
+    body: Record<string, unknown>,
+    options?: { signal?: AbortSignal; timeoutMs?: number },
+  ): Promise<{
     paymentMethods: string[];
     quote: BillQuote;
     scheduling?: {
@@ -357,7 +360,8 @@ export class MarketplaceApiClient {
       method: 'POST',
       path: `${MARKETPLACE_PREFIX}/checkout/prepare`,
       body,
-      timeoutMs: 12_000,
+      signal: options?.signal,
+      timeoutMs: options?.timeoutMs ?? 12_000,
     });
   }
 
@@ -369,6 +373,7 @@ export class MarketplaceApiClient {
     paymentMethod?: string;
     paymentStatus?: string;
     amount?: number;
+    amountInPaise?: number;
     expiresAt?: string;
   }> {
     return this.http.request({

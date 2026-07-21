@@ -45,6 +45,7 @@ export interface CheckoutPlaceResponse {
   readonly paymentMethod?: string;
   readonly paymentStatus?: string;
   readonly amount?: number;
+  readonly amountInPaise?: number;
   readonly expiresAt?: string;
 }
 
@@ -520,6 +521,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
           throw new Error('Payment session is missing a draft id');
         }
 
+        const expectedPaise = Math.round((quote?.grandTotal ?? 0) * 100);
+        const placeAmountPaise = response.amountInPaise;
+        if (
+          expectedPaise <= 0 ||
+          placeAmountPaise == null ||
+          placeAmountPaise !== expectedPaise
+        ) {
+          throw new Error(
+            'Payment amount does not match your bill. Please refresh checkout and try again.',
+          );
+        }
+
         const confirmed = await runRazorpayCheckoutFlow({
           draftId,
           phone: phone.trim(),
@@ -547,7 +560,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
         setPlacingMethod(null);
       }
     },
-    [assertCanPlaceOrder, getPayload, sessionUser],
+    [assertCanPlaceOrder, getPayload, quote?.grandTotal, sessionUser],
   );
 
   const finalizeUpiPaymentSuccess = useCallback((placed: PlacedOrderConfirmation) => {

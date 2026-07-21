@@ -46,6 +46,12 @@ import {
   type FirebaseAuthUser,
 } from "./backend-lib/orderAccess";
 import {
+  amountToPaise,
+  assertDraftRazorpayAmountIntegrity,
+  fetchAndAssertRazorpayDraftPaymentAmounts,
+  resolveCreateRazorpayOrderAmount,
+} from "./backend-lib/marketplace/razorpayAmountIntegrity.js";
+import {
   GuestOrderTokenError,
   signGuestOrderToken,
 } from "./backend-lib/guestOrderToken";
@@ -995,17 +1001,29 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
       const paymentEntity = payload.payload?.payment?.entity;
       const draftId = paymentEntity?.notes?.draftId;
       
-      if (draftId) {
+      if (draftId && _db && razorpay) {
         try {
-          await promoteDraftTransaction(
-            draftId,
-            { 
-              razorpayOrderId: paymentEntity.order_id, 
-              razorpayPaymentId: paymentEntity.id 
-            },
-            'webhook_recovery',
-            eventId as string
-          );
+          const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
+          if (!draftDoc.exists) {
+            logger.warn({ message: "Webhook draft not found", draftId, eventId });
+          } else {
+            const draftData = draftDoc.data() || {};
+            const razorpayOrder = await razorpay.orders.fetch(paymentEntity.order_id);
+            assertDraftRazorpayAmountIntegrity(
+              draftData as Record<string, unknown>,
+              razorpayOrder.amount,
+              paymentEntity.amount,
+            );
+            await promoteDraftTransaction(
+              draftId,
+              { 
+                razorpayOrderId: paymentEntity.order_id, 
+                razorpayPaymentId: paymentEntity.id 
+              },
+              'webhook_recovery',
+              eventId as string
+            );
+          }
         } catch (promoErr: any) {
           logger.error({ message: "Webhook Promotion Failed", draftId, eventId, err: promoErr.message });
         }
@@ -3519,28 +3537,16 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
         }
       }
 
-      const draft = draftDocData.orderPayload || draftDocData;
-
-      let calculatedSubtotal = 0;
-      if (draft.items && Array.isArray(draft.items)) {
-        for (const item of draft.items) {
-          if (!item.menuItemId) continue;
-          const menuDoc = await _db.collection('menu').doc(item.menuItemId).get();
-          if (menuDoc.exists) {
-            calculatedSubtotal += (menuDoc.data().price * item.quantity);
-          }
-        }
+      try {
+        finalAmount = resolveCreateRazorpayOrderAmount(draftDocData as Record<string, unknown>);
+      } catch (amountErr: any) {
+        const status = amountErr.statusCode || 409;
+        return res.status(status).json({
+          success: false,
+          error: amountErr.message || 'Draft total amount is invalid',
+          code: amountErr.code,
+        });
       }
-
-      // Reconstruct totals
-      const tax = calculatedSubtotal * 0.05; // 5% GST
-      const packingFee = draft.packingFee || 0;
-      const deliveryFee = draft.deliveryFee || 0;
-      const discount = draft.discountAmount || 0;
-      
-      finalAmount = calculatedSubtotal > 0 
-        ? calculatedSubtotal + tax + packingFee + deliveryFee - discount
-        : draft.totalAmount; // Fallback
     } else if (planId) {
       // Hardcoded Authoritative Subscription Prices
       if (planId === '1_meal') finalAmount = 3000;
@@ -3574,8 +3580,9 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
       return res.status(500).json({ success: false, error: message });
     }
 
+    const amountInPaise = amountToPaise(amount);
     const options = {
-      amount: Math.round(amount * 100), // amount in the smallest currency unit
+      amount: amountInPaise,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
       notes: {
@@ -3584,7 +3591,14 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
       }
     };
     const order = await razorpay.orders.create(options);
-    logger.info({ message: "Razorpay order created", amount, orderId: order.id, draftId, correlationId: (req as any).correlationId });
+    logger.info({
+      message: "Razorpay order created",
+      amount,
+      amountInPaise,
+      orderId: order.id,
+      draftId,
+      correlationId: (req as any).correlationId,
+    });
 
     if (draftId) {
       await _db.collection('order_drafts').doc(draftId).update({
@@ -3647,6 +3661,32 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
       return res.status(410).json({ success: false, error: 'Payment session expired. Please place the order again.' });
     }
 
+    if (!razorpay) {
+      return res.status(500).json({ success: false, error: 'Razorpay is not configured for amount verification.' });
+    }
+
+    try {
+      await fetchAndAssertRazorpayDraftPaymentAmounts(
+        razorpay,
+        draftData as Record<string, unknown>,
+        razorpay_order_id,
+        razorpay_payment_id,
+      );
+    } catch (amountErr: any) {
+      logger.warn({
+        message: 'Verify rejected: Razorpay amount mismatch',
+        draftId,
+        razorpay_order_id,
+        error: amountErr.message,
+      });
+      return res.status(amountErr.statusCode || 409).json({
+        success: false,
+        verified: false,
+        error: amountErr.message || 'Razorpay payment amount does not match draft total.',
+        code: amountErr.code,
+      });
+    }
+
     const promotion = await promoteDraftTransaction(
       draftId,
       { razorpayOrderId: razorpay_order_id, razorpayPaymentId: razorpay_payment_id },
@@ -3666,7 +3706,7 @@ app.post("/api/verify-razorpay-payment", async (req, res) => {
     console.error("Razorpay Payment Verification Error:", err);
     logger.error({ message: 'Razorpay payment verification error', draftId: req.body?.draftId, error: err.message });
     const errorMessage = err.message || "Failed to verify Razorpay payment.";
-    res.status(500).json({ success: false, error: errorMessage });
+    res.status(err.statusCode || 500).json({ success: false, error: errorMessage });
   }
 });
 
