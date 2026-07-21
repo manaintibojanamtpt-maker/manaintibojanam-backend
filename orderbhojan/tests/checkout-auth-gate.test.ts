@@ -127,10 +127,12 @@ describe('checkout auth wiring', () => {
       'utf8',
     );
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
-    assert.match(nativePlatform, /isMobileWebClient/);
+    assert.match(nativePlatform, /Cross-Origin-Opener-Policy/);
+    assert.match(nativePlatform, /return true;/);
+    assert.doesNotMatch(nativePlatform, /isMobileWebClient/);
     assert.match(firebaseAuth, /shouldUseGoogleAuthRedirect\(\)/);
     assert.match(firebaseAuth, /signInWithRedirect/);
-    assert.match(firebaseAuth, /signInWithPopup/);
+    assert.doesNotMatch(firebaseAuth, /signInWithPopup/);
     assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
     assert.match(firebaseAuth, /persistAuthReturnToFromCurrentUrl/);
     assert.match(firebaseAuth, /auth_return_to|persistAuthReturnToFromCurrentUrl/);

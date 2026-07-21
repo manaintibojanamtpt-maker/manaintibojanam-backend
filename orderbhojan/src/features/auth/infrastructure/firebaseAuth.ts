@@ -7,7 +7,6 @@ import {
   signInAnonymously,
   signInWithCredential,
   signInWithPhoneNumber,
-  signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
   type ConfirmationResult,
@@ -152,14 +151,6 @@ async function signInWithGoogleNative(): Promise<AuthSessionUser> {
   }
 }
 
-function isPopupBlockedError(error: unknown): boolean {
-  const code =
-    error && typeof error === 'object' && 'code' in error
-      ? String((error as { code?: string }).code ?? '')
-      : '';
-  return code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request';
-}
-
 async function beginGoogleRedirectSignIn(
   auth: ReturnType<typeof requireAuth>,
   provider: GoogleAuthProvider,
@@ -184,17 +175,7 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
     return beginGoogleRedirectSignIn(auth, provider);
   }
 
-  try {
-    const credential = await signInWithPopup(auth, provider);
-    clearGoogleRedirectAttempt();
-    return mapFirebaseUser(credential.user);
-  } catch (error) {
-    if (isPopupBlockedError(error)) {
-      obDebugLog('auth', 'Popup blocked — falling back to Google redirect');
-      return beginGoogleRedirectSignIn(auth, provider);
-    }
-    throw error;
-  }
+  throw new AuthFlowError('Google sign-in is only supported via redirect on web.');
 }
 
 function readGoogleRedirectAttemptTimestamp(): number | null {

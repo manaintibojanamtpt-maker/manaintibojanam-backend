@@ -19,10 +19,18 @@
         window.__SKIP_SPLASH__ = true;
       }
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then(function (registration) {
-          if (registration) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          registrations.forEach(function (registration) {
+            var worker = registration.active || registration.waiting || registration.installing;
+            var scriptUrl = worker && worker.scriptURL ? worker.scriptURL : '';
+            var isOrderBhojanSw = /\/sw\.js(\?|$)/.test(scriptUrl);
+            var isFirebaseMessagingSw = /\/firebase-messaging-sw\.js(\?|$)/.test(scriptUrl);
+            if (scriptUrl && !isOrderBhojanSw && !isFirebaseMessagingSw) {
+              registration.unregister();
+              return;
+            }
             registration.update();
-          }
+          });
         });
       }
     </script>
