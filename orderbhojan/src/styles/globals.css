@@ -1,3 +1,4 @@
+@import "./fonts.css";
 @import "tailwindcss";
 @source "../../../src/design-system/**/*.{ts,tsx}";
 @import "../../../src/design-system/styles/index.css";

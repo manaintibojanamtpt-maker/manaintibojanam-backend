@@ -152,6 +152,25 @@ async function signInWithGoogleNative(): Promise<AuthSessionUser> {
   }
 }
 
+function isPopupBlockedError(error: unknown): boolean {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: string }).code ?? '')
+      : '';
+  return code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request';
+}
+
+async function beginGoogleRedirectSignIn(
+  auth: ReturnType<typeof requireAuth>,
+  provider: GoogleAuthProvider,
+): Promise<never> {
+  persistAuthReturnToFromCurrentUrl();
+  sessionStorage.setItem('auth_redirecting', 'true');
+  sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
+  await signInWithRedirect(auth, provider);
+  throw new AuthFlowError('Google sign-in redirect in progress.');
+}
+
 export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   const auth = requireAuth();
   const provider = new GoogleAuthProvider();
@@ -162,15 +181,20 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
   }
 
   if (shouldUseGoogleAuthRedirect()) {
-    persistAuthReturnToFromCurrentUrl();
-    sessionStorage.setItem('auth_redirecting', 'true');
-    sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
-    await signInWithRedirect(auth, provider);
-    throw new AuthFlowError('Google sign-in redirect in progress.');
+    return beginGoogleRedirectSignIn(auth, provider);
   }
 
-  const credential = await signInWithPopup(auth, provider);
-  return mapFirebaseUser(credential.user);
+  try {
+    const credential = await signInWithPopup(auth, provider);
+    clearGoogleRedirectAttempt();
+    return mapFirebaseUser(credential.user);
+  } catch (error) {
+    if (isPopupBlockedError(error)) {
+      obDebugLog('auth', 'Popup blocked — falling back to Google redirect');
+      return beginGoogleRedirectSignIn(auth, provider);
+    }
+    throw error;
+  }
 }
 
 function readGoogleRedirectAttemptTimestamp(): number | null {
@@ -202,7 +226,6 @@ export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | 
       try {
         const result = await getRedirectResult(auth);
         if (!result?.user) {
-          clearGoogleRedirectAttempt();
           return null;
         }
         clearGoogleRedirectAttempt();

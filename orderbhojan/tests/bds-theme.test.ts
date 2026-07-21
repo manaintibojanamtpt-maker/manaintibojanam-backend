@@ -17,11 +17,18 @@ describe('Storefront design system theme certification', () => {
     assert.match(constants, /BDS_FROZEN = true/);
   });
 
-  it('index.html uses Evening Kitchen theme-color and display fonts', () => {
+  it('index.html uses Evening Kitchen theme-color without external font CDN', () => {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
     assert.match(html, /theme-color" content="#070504"/i);
-    assert.match(html, /Fraunces/);
-    assert.match(html, /Figtree/);
+    assert.doesNotMatch(html, /fonts\.googleapis\.com/);
+  });
+
+  it('globals.css self-hosts Fraunces and Figtree display fonts', () => {
+    const globals = readFileSync(join(root, 'src/styles/globals.css'), 'utf8');
+    const fonts = readFileSync(join(root, 'src/styles/fonts.css'), 'utf8');
+    assert.match(globals, /fonts\.css/);
+    assert.match(fonts, /figtree/i);
+    assert.match(fonts, /fraunces/i);
   });
 
   it('vite PWA manifest uses Evening Kitchen colors', () => {

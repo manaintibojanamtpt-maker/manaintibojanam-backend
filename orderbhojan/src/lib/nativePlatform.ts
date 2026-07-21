@@ -17,8 +17,18 @@ export function shouldUseGoogleAuthRedirect(): boolean {
   if (typeof window === 'undefined') return false;
   // Capacitor Android/iOS use @capacitor-firebase/authentication — not web redirect/popup.
   if (isNativePlatform()) return false;
-  // Hosted sites send Cross-Origin-Opener-Policy headers that break signInWithPopup.
-  return true;
+  // Desktop web uses signInWithPopup (COOP: same-origin-allow-popups). Mobile web uses redirect
+  // because popups are often blocked; redirect briefly hops through authDomain (firebaseapp.com).
+  return isMobileWebClient();
+}
+
+function isMobileWebClient(): boolean {
+  if (typeof window === 'undefined') return false;
+  const mobileUa = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  return mobileUa || coarsePointer;
 }
 
 function launchAnchorFallback(url: string): void {

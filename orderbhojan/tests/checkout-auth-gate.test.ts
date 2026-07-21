@@ -116,18 +116,26 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /sendPhoneOtpNative/);
   });
 
-  it('uses redirect google sign-in on web to avoid COOP popup failures', () => {
+  it('uses redirect google sign-in on mobile web and popup on desktop', () => {
     const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
     const firebaseAuth = readFileSync(
       join(root, 'src/features/auth/infrastructure/firebaseAuth.ts'),
       'utf8',
     );
+    const authService = readFileSync(
+      join(root, 'src/features/auth/application/authService.ts'),
+      'utf8',
+    );
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
+    assert.match(nativePlatform, /isMobileWebClient/);
     assert.match(firebaseAuth, /shouldUseGoogleAuthRedirect\(\)/);
     assert.match(firebaseAuth, /signInWithRedirect/);
+    assert.match(firebaseAuth, /signInWithPopup/);
     assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
     assert.match(firebaseAuth, /persistAuthReturnToFromCurrentUrl/);
     assert.match(firebaseAuth, /auth_return_to|persistAuthReturnToFromCurrentUrl/);
+    assert.match(authService, /handlePendingGoogleRedirect/);
+    assert.doesNotMatch(authService, /if \(!readGoogleRedirectAttempt\(\)\)/);
   });
 
   it('RequireAuth preserves returnTo query over router state alone', () => {
