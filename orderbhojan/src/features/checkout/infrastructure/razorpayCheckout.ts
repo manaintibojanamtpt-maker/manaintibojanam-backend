@@ -1,5 +1,6 @@
 import { getAppConfig } from '@/config';
 import { fetchBearerToken } from '@/features/auth/application/authService';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 
 const RAZORPAY_SCRIPT_ID = 'razorpay-checkout-js';
@@ -266,11 +267,40 @@ export async function runRazorpayCheckoutFlow(params: {
   readonly userId?: string | null;
   readonly merchantName?: string;
   readonly orderNumber?: number | string | null;
+  readonly expectedAmountPaise?: number;
 }): Promise<{ orderId: string; orderNumber: string }> {
+  obDebugTrustEvent(
+    'razorpay',
+    'before create-razorpay-order',
+    {
+      draftId: params.draftId,
+      expectedAmountPaise: params.expectedAmountPaise ?? null,
+    },
+    {
+      razorpayAmountPaise: params.expectedAmountPaise ?? null,
+    },
+  );
+
   const session = await createRazorpayOrder({
     draftId: params.draftId,
     userId: params.userId,
   });
+
+  obDebugTrustEvent(
+    'razorpay',
+    'create-razorpay-order response',
+    {
+      draftId: params.draftId,
+      amountPaise: session.amount,
+      razorpayOrderId: session.razorpayOrderId,
+      expectedAmountPaise: params.expectedAmountPaise ?? null,
+      amountMatchesExpected:
+        params.expectedAmountPaise == null ? null : session.amount === params.expectedAmountPaise,
+    },
+    {
+      razorpayAmountPaise: session.amount,
+    },
+  );
 
   const paymentResponse = await openRazorpayCheckout({
     draftId: params.draftId,

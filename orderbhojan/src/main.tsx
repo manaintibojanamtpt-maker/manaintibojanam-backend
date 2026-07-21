@@ -7,6 +7,7 @@ import { seedDiscoveryQueryCacheFromSession, resolveBootstrapDiscoveryCoords } f
 import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { bootstrapCapacitorNative } from '@/lib/capacitorBootstrap';
+import { bootstrapObDebugFromUrl } from '@/lib/obDebug';
 import { isNativePlatform } from '@/lib/nativePlatform';
 import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
@@ -50,6 +51,7 @@ function renderApp(): void {
 
 async function bootstrap() {
   markPerf('app_start');
+  bootstrapObDebugFromUrl();
   suppressFirestorePermissionRejections();
 
   await bootstrapCapacitorNative();

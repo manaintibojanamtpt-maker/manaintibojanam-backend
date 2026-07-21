@@ -2,6 +2,8 @@ import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
 import { usePrefetchDiscoveryKitchens } from '../hooks/usePrefetchDiscoveryKitchens';
 import { readDiscoverySessionCache } from '../engine/discoverySessionCache';
 import { resolveActiveDeliveryLocation } from '@/features/location/domain/activeDeliveryLocation';
+import { obDebugTrustEvent } from '@/lib/obDebug';
+import { useEffect } from 'react';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
 import { DiscoveryFiltersBar } from './DiscoveryFiltersBar';
 import { TrendingFoodsSection } from '@/features/experience/ui/home/TrendingFoodsSection';
@@ -82,6 +84,44 @@ export function DiscoveryHomeFeed() {
   const feedData = query.data ?? sessionCachedFeed;
   const showInitialSkeleton = deliveryLocation != null && query.isPending && !feedData;
   const needsLocationPrompt = locationEnabled && deliveryLocation == null;
+
+  useEffect(() => {
+    const collections = feedData?.collections ?? [];
+    const visibleCollections = collections.filter((c) => c.restaurants.length > 0);
+    const spotlightPlan = feedData ? buildDiscoverySpotlightFeed(visibleCollections) : null;
+    obDebugTrustEvent(
+      'discovery',
+      'DiscoveryHomeFeed render',
+      {
+        needsLocationPrompt,
+        queryEnabled: query.isFetched || query.isFetching,
+        queryStatus: query.status,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        mode: deliveryLocation?.mode ?? null,
+        isConfirmed: deliveryLocation?.isConfirmed ?? false,
+        shownKitchens: spotlightPlan?.uniqueKitchenCount ?? 0,
+        collectionCount: visibleCollections.length,
+      },
+      {
+        locationMode: deliveryLocation?.mode ?? null,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        isConfirmed: deliveryLocation?.isConfirmed ?? false,
+        shownKitchens: spotlightPlan?.uniqueKitchenCount ?? 0,
+      },
+    );
+  }, [
+    coords?.lat,
+    coords?.lng,
+    deliveryLocation?.isConfirmed,
+    deliveryLocation?.mode,
+    feedData,
+    needsLocationPrompt,
+    query.isFetched,
+    query.isFetching,
+    query.status,
+  ]);
 
   usePrefetchDiscoveryKitchens(feedData);
 

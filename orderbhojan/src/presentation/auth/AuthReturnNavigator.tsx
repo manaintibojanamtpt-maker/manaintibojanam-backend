@@ -4,7 +4,9 @@ import { useAuth } from '@/shared/providers/AuthProvider';
 import {
   clearAuthReturnTo,
   readPersistedAuthReturnTo,
+  readReturnToFromSearch,
 } from '@/features/auth/domain/authReturnTo';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 
 /** After Google redirect sign-in, resume stored destination when landing off /auth. */
 export function AuthReturnNavigator() {
@@ -16,10 +18,22 @@ export function AuthReturnNavigator() {
     if (status === 'loading' || !isAuthenticated || location.pathname === '/auth') return;
 
     const stored = readPersistedAuthReturnTo();
+    const queryReturnTo = readReturnToFromSearch(location.search);
     if (!stored) return;
 
     clearAuthReturnTo();
     const currentPath = `${location.pathname}${location.search}`;
+    obDebugTrustEvent(
+      'auth',
+      'AuthReturnNavigator resume',
+      {
+        storedReturnTo: stored,
+        queryReturnTo,
+        currentPath,
+        willNavigate: currentPath !== stored,
+      },
+      { authReturnTo: stored },
+    );
     if (currentPath !== stored) {
       navigate(stored, { replace: true });
     }

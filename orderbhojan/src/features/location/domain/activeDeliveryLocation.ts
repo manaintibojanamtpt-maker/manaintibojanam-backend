@@ -1,5 +1,6 @@
 import { readDeliveryAddressV2, readDeliverySessionV2 } from '@bhojan/location-core';
 import { v2ToMarketplaceLocation } from '@bhojan/location-v2/adapters/marketplaceAdapter';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 import type { CustomerLocation } from './location.types';
 
 const LOCATION_SESSION_STORAGE_KEY = 'ob-location-session-v1';
@@ -145,26 +146,52 @@ function fromCustomerLocation(location: CustomerLocation): ActiveDeliveryLocatio
   };
 }
 
+function logActiveDeliveryLocationResolution(
+  source: 'input' | 'persisted' | 'v2' | 'none',
+  location: ActiveDeliveryLocation | null,
+): ActiveDeliveryLocation | null {
+  obDebugTrustEvent(
+    'location',
+    'resolveActiveDeliveryLocation',
+    {
+      source,
+      mode: location?.mode ?? null,
+      lat: location?.coordinates.lat ?? null,
+      lng: location?.coordinates.lng ?? null,
+      isConfirmed: location?.isConfirmed ?? false,
+      coordinateSource: location?.coordinates.source ?? null,
+      shortLabel: location?.text.shortLabel ?? null,
+    },
+    {
+      locationMode: location?.mode ?? null,
+      lat: location?.coordinates.lat ?? null,
+      lng: location?.coordinates.lng ?? null,
+      isConfirmed: location?.isConfirmed ?? false,
+    },
+  );
+  return location;
+}
+
 /** Single source of truth for marketplace delivery location — no city fallbacks. */
 export function resolveActiveDeliveryLocation(
   activeLocation?: ActiveDeliveryLocationInput,
 ): ActiveDeliveryLocation | null {
   const direct = asCustomerLocation(activeLocation ?? null);
   if (direct) {
-    return fromCustomerLocation(direct);
+    return logActiveDeliveryLocationResolution('input', fromCustomerLocation(direct));
   }
 
   const persisted = readPersistedActiveLocation();
   if (persisted) {
-    return fromCustomerLocation(persisted);
+    return logActiveDeliveryLocationResolution('persisted', fromCustomerLocation(persisted));
   }
 
   const fromV2 = readObLocationFromV2Sync();
   if (fromV2) {
-    return fromCustomerLocation(fromV2);
+    return logActiveDeliveryLocationResolution('v2', fromCustomerLocation(fromV2));
   }
 
-  return null;
+  return logActiveDeliveryLocationResolution('none', null);
 }
 
 export function resolveActiveDeliveryCoords(

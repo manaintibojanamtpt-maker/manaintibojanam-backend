@@ -30,6 +30,7 @@ import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 import {
   checkoutKeys,
   CHECKOUT_PREPARE_GC_MS,
@@ -405,6 +406,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const error = placeError ?? prepareErrorMessage;
 
+  useEffect(() => {
+    if (quote?.grandTotal == null) return;
+    obDebugTrustEvent(
+      'checkout',
+      'quote ready',
+      { grandTotal: quote.grandTotal },
+      { checkoutGrandTotal: quote.grandTotal },
+    );
+  }, [quote?.grandTotal]);
+
   const refreshQuote = useCallback(async () => {
     markPerf('checkout_prepare_start', 'refresh-quote');
     try {
@@ -518,6 +529,20 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
         const expectedPaise = Math.round((quote?.grandTotal ?? 0) * 100);
         const placeAmountPaise = response.amountInPaise;
+        obDebugTrustEvent(
+          'checkout',
+          'placeRazorpayOrder before Razorpay',
+          {
+            quoteGrandTotal: quote?.grandTotal ?? null,
+            expectedPaise,
+            placeAmountPaise: placeAmountPaise ?? null,
+            draftId: response.draftId ?? response.orderId ?? null,
+          },
+          {
+            checkoutGrandTotal: quote?.grandTotal ?? null,
+            razorpayAmountPaise: placeAmountPaise ?? expectedPaise,
+          },
+        );
         if (
           expectedPaise <= 0 ||
           placeAmountPaise == null ||
@@ -535,6 +560,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
           customerEmail: resolvedEmail ?? undefined,
           userId: sessionUser?.uid ?? null,
           orderNumber: response.orderNumber,
+          expectedAmountPaise: expectedPaise,
         });
 
         setOrderId(confirmed.orderId);

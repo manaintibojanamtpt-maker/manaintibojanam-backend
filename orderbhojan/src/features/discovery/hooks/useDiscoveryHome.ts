@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
-import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
+import {
+  resolveActiveDeliveryCoords,
+  resolveActiveDeliveryLocation,
+} from '@/features/location/domain/activeDeliveryLocation';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 import { markPerf } from '@/lib/perfMarks';
 import { loadDiscoveryHome } from '../engine/discoveryEngine';
 import {
@@ -18,6 +22,38 @@ export function useDiscoveryHome() {
   const filters = useDiscoveryFilterStore((s) => s.filters);
   const coords = resolveActiveDeliveryCoords(activeLocation);
   const hasConfirmedCoords = coords != null;
+  const deliveryLocation = resolveActiveDeliveryLocation(activeLocation);
+
+  useEffect(() => {
+    obDebugTrustEvent(
+      'discovery',
+      'useDiscoveryHome state',
+      {
+        enabled,
+        hasConfirmedCoords,
+        queryEnabled: enabled && hasConfirmedCoords,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        mode: deliveryLocation?.mode ?? null,
+        isConfirmed: deliveryLocation?.isConfirmed ?? false,
+        filters,
+      },
+      {
+        locationMode: deliveryLocation?.mode ?? null,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        isConfirmed: deliveryLocation?.isConfirmed ?? false,
+      },
+    );
+  }, [
+    coords?.lat,
+    coords?.lng,
+    deliveryLocation?.isConfirmed,
+    deliveryLocation?.mode,
+    enabled,
+    filters,
+    hasConfirmedCoords,
+  ]);
 
   return useQuery({
     queryKey: hasConfirmedCoords

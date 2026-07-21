@@ -3,8 +3,31 @@ import type {
   DiscoveryHomeResponse,
   DiscoveryQueryParams,
 } from '@/types/marketplace-discovery';
+import { obDebugTrustEvent } from '@/lib/obDebug';
 import { getDiscoveryApiClient } from '../infrastructure/discoveryApiClient';
 import { writeDiscoverySessionCache } from './discoverySessionCache';
+
+function readOptionalExcludedKitchenCount(result: DiscoveryHomeResponse): number | null {
+  const meta = (result as DiscoveryHomeResponse & {
+    meta?: { excludedKitchenCount?: number; excludedCount?: number };
+    excludedKitchenCount?: number;
+  }).meta;
+  const direct = (result as DiscoveryHomeResponse & { excludedKitchenCount?: number })
+    .excludedKitchenCount;
+  const fromMeta = meta?.excludedKitchenCount ?? meta?.excludedCount;
+  const value = direct ?? fromMeta;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function countShownKitchens(result: DiscoveryHomeResponse): number {
+  const ids = new Set<string>();
+  for (const collection of result.collections) {
+    for (const restaurant of collection.restaurants) {
+      ids.add(restaurant.restaurantId);
+    }
+  }
+  return ids.size;
+}
 
 export {
   readPersistedActiveLocationCoords,
@@ -32,6 +55,26 @@ export async function loadDiscoveryHome(
   const promise = getDiscoveryApiClient()
     .fetchHome(params)
     .then((result) => {
+      const shownKitchens = countShownKitchens(result);
+      const excludedKitchens = readOptionalExcludedKitchenCount(result);
+      obDebugTrustEvent(
+        'discovery',
+        'loadDiscoveryHome response',
+        {
+          lat: params.lat,
+          lng: params.lng,
+          shownKitchens,
+          excludedKitchens,
+          collectionCount: result.collections.length,
+          locationLabel: result.locationLabel ?? null,
+        },
+        {
+          lat: params.lat,
+          lng: params.lng,
+          shownKitchens,
+          excludedKitchens,
+        },
+      );
       writeDiscoverySessionCache(params.lat, params.lng, params.filters ?? {}, result);
       return result;
     })
