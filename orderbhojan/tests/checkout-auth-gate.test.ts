@@ -116,7 +116,7 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /sendPhoneOtpNative/);
   });
 
-  it('uses redirect google sign-in on mobile web and popup on desktop', () => {
+  it('uses redirect google sign-in on web without popup', () => {
     const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
     const firebaseAuth = readFileSync(
       join(root, 'src/features/auth/infrastructure/firebaseAuth.ts'),
@@ -134,6 +134,8 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /signInWithRedirect/);
     assert.doesNotMatch(firebaseAuth, /signInWithPopup/);
     assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
+    assert.match(firebaseAuth, /resolveGoogleRedirectSessionUser/);
+    assert.match(firebaseAuth, /Recovered Google redirect session from currentUser/);
     assert.match(firebaseAuth, /persistAuthReturnToFromCurrentUrl/);
     assert.match(firebaseAuth, /auth_return_to|persistAuthReturnToFromCurrentUrl/);
     assert.match(authService, /handlePendingGoogleRedirect/);
@@ -164,6 +166,7 @@ describe('checkout auth wiring', () => {
       'utf8',
     );
     assert.match(authShell, /persistAuthReturnTo\(redirectTo\)/);
+    assert.match(authShell, /useEffect\(\(\) => \{[\s\S]*persistAuthReturnTo\(redirectTo\)/);
     assert.match(authReturn, /AUTH_RETURN_TO_KEY = 'auth_return_to'/);
     assert.match(authReturn, /sessionStorage\.setItem\(AUTH_RETURN_TO_KEY/);
   });

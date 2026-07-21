@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach } from 'node:test';
+import { readStorefrontDesignSystemFile } from './testPaths';
 import {
   RESTAURANT_SLUG_MISMATCH_TOAST,
   sanitizeRestaurantSlugContext,
@@ -119,14 +120,8 @@ describe('recovery-01 discovery copy', () => {
       join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
       'utf8',
     );
-    const pageView = readFileSync(
-      resolve(root, '../src/design-system/cart/CheckoutPageView.tsx'),
-      'utf8',
-    );
-    const deliveryView = readFileSync(
-      resolve(root, '../src/design-system/cart/CheckoutDeliveryAddressView.tsx'),
-      'utf8',
-    );
+    const pageView = readStorefrontDesignSystemFile('cart/CheckoutPageView.tsx');
+    const deliveryView = readStorefrontDesignSystemFile('cart/CheckoutDeliveryAddressView.tsx');
     assert.match(checkout, /openSelector/);
     assert.match(pageView, /<button[\s\S]*onClick=\{onAddressAction\}/);
     assert.doesNotMatch(deliveryView, /<SoftButton/);

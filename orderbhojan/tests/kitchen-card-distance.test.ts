@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 import { mapRestaurantPublicToKitchenCard } from '../src/presentation/discovery/mapRestaurantToKitchenCard';
 import type { RestaurantPublic } from '@/types/marketplace';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(__dirname, '../..');
+import {
+  readOrderBhojanFile,
+  readStorefrontDesignSystemFile,
+} from './testPaths';
 
 function baseRestaurant(overrides: Partial<RestaurantPublic> = {}): RestaurantPublic {
   return {
@@ -42,10 +40,7 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
   });
 
   it('does not default unknown distance to zero in mapper source', () => {
-    const source = readFileSync(
-      join(repoRoot, 'orderbhojan/src/presentation/discovery/mapRestaurantToKitchenCard.ts'),
-      'utf8',
-    );
+    const source = readOrderBhojanFile('src/presentation/discovery/mapRestaurantToKitchenCard.ts');
     assert.doesNotMatch(source, /distanceKm:\s*restaurant\.distanceKm\s*\?\?\s*0/);
   });
 
@@ -61,10 +56,7 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
 
 describe('MarketplaceKitchenCardView distance rendering', () => {
   it('conditionally renders distance only when distanceKm is displayable', () => {
-    const source = readFileSync(
-      join(repoRoot, 'src/design-system/marketplace/MarketplaceKitchenCard.tsx'),
-      'utf8',
-    );
+    const source = readStorefrontDesignSystemFile('marketplace/MarketplaceKitchenCard.tsx');
     assert.match(source, /showDistance/);
     assert.match(source, /isDisplayableDistanceKm/);
     assert.doesNotMatch(source, /kitchen\.distanceKm\.toFixed/);
