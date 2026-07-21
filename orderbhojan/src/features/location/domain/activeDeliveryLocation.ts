@@ -1,6 +1,6 @@
-import { getLocationStoreAddress } from '@bhojan/location-core';
+import { readDeliveryAddressV2, readDeliverySessionV2 } from '@bhojan/location-core';
+import { v2ToMarketplaceLocation } from '@bhojan/location-v2/adapters/marketplaceAdapter';
 import type { CustomerLocation } from './location.types';
-import { hydrateObLocationFromV2 } from '../unifiedLocationSync';
 
 const LOCATION_SESSION_STORAGE_KEY = 'ob-location-session-v1';
 
@@ -91,6 +91,17 @@ export type ActiveDeliveryLocationInput =
   | null
   | undefined;
 
+/** Read-only V2 lookup for render paths — must not hydrate/notify the location store. */
+function readStoredV2AddressForRender() {
+  return readDeliveryAddressV2() ?? readDeliverySessionV2();
+}
+
+function readObLocationFromV2Sync(): CustomerLocation | null {
+  const address = readStoredV2AddressForRender();
+  if (!address) return null;
+  return v2ToMarketplaceLocation(address);
+}
+
 function asCustomerLocation(input: ActiveDeliveryLocationInput): CustomerLocation | null {
   if (!input) return null;
   if ('kind' in input && 'displayLabel' in input) return input;
@@ -111,7 +122,7 @@ function fromCustomerLocation(location: CustomerLocation): ActiveDeliveryLocatio
   const { lat, lng } = location.coordinates;
   if (!isUsableCoord(lat, lng)) return null;
 
-  const v2 = getLocationStoreAddress();
+  const v2 = readStoredV2AddressForRender();
   const latMatch =
     v2 != null && Math.abs(v2.coordinates.lat - lat) < 0.0001 && Math.abs(v2.coordinates.lng - lng) < 0.0001;
   const shortLabel =
@@ -148,7 +159,7 @@ export function resolveActiveDeliveryLocation(
     return fromCustomerLocation(persisted);
   }
 
-  const fromV2 = hydrateObLocationFromV2();
+  const fromV2 = readObLocationFromV2Sync();
   if (fromV2) {
     return fromCustomerLocation(fromV2);
   }
