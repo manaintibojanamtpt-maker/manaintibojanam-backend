@@ -189,7 +189,7 @@ export function CheckoutSuccessView({
   onBrowse,
 }: CheckoutSuccessViewProps) {
   return (
-    <TransactionalPageShell title={title} subtitle={subtitle}>
+    <TransactionalPageShell title={title} subtitle={subtitle} embedded>
       <div className="flex flex-wrap gap-3">
         <SoftButton type="button" onClick={onTrack}>
           {trackLabel}

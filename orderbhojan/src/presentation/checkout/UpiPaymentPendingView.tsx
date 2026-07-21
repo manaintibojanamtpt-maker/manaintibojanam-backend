@@ -242,6 +242,8 @@ export function UpiPaymentPendingView({
 
       subtitle={`${formatAmount(amount)} · payment pending`}
 
+      embedded
+
     >
 
       <div className="space-y-4">

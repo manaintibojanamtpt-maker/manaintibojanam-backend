@@ -16,7 +16,7 @@ export function CheckoutAuthGateView() {
   const isPhoneGate = gate.reason === 'phone_verification_required';
 
   return (
-    <TransactionalPageShell title="Checkout" subtitle="">
+    <TransactionalPageShell title="Checkout" subtitle="" embedded>
       <MarketplaceUxStateView
         title={isPhoneGate ? 'Verify your mobile number' : 'Sign in to place order'}
         description={gate.message}

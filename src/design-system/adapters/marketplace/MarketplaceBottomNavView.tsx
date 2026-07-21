@@ -90,7 +90,7 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
         animate={{ y: reducedMotion || isVisible ? 0 : 100, opacity: reducedMotion || isVisible ? 1 : 0 }}
         transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 40 }}
         className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4 pointer-events-none"
-        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        style={{ paddingBottom: 'calc(1rem + var(--ob-safe-bottom))' }}
         aria-label="Primary"
       >
         {activeOrderSlot}

@@ -16,7 +16,7 @@ export const MarketplaceCompactHeaderView: React.FC<MarketplaceCompactHeaderView
   return (
     <header
       className={`sticky top-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/5 ${className}`}
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      style={{ paddingTop: 0 }}
     >
       <div className="px-4 py-2 max-w-7xl mx-auto">
         <div className="flex min-h-10 items-center justify-between gap-3">

@@ -97,7 +97,7 @@ export interface CartEmptyViewProps {
 
 export function CartEmptyView({ onBrowse }: CartEmptyViewProps) {
   return (
-    <TransactionalPageShell title="Your cart" subtitle="">
+    <TransactionalPageShell title="Your cart" subtitle="" embedded>
       <MarketplaceUxStateView
         title="Your cart is empty"
         description="Add dishes from a restaurant menu to start an order."

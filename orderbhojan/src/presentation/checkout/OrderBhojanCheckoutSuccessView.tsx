@@ -32,6 +32,7 @@ export function OrderBhojanCheckoutSuccessView({
     <TransactionalPageShell
       title={confirming ? 'Placing your order' : 'Order confirmed'}
       subtitle={subtitle}
+      embedded
     >
       <OrderBhojanOrderTrustPanel
         orderNumber={orderNumber}

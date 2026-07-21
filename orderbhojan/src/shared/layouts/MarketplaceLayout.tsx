@@ -22,6 +22,7 @@ export function MarketplaceLayout() {
   const { pathname } = useLocation();
   const onHome = isHomeRoute(pathname);
   const focusRoute = isFocusRoute(pathname);
+  // Focus routes use OrderBhojanScreenHeader for title/back; page shells pass embedded.
   const showCompactHeader = !onHome;
   const showChrome = !focusRoute;
 

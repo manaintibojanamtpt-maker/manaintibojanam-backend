@@ -42,7 +42,7 @@ export function OrderBhojanTrackingPage() {
 
   if (!orderId) {
     return (
-      <TransactionalPageShell title="Track order" subtitle="">
+      <TransactionalPageShell title="Track order" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Missing order"
           primaryLabel="View orders"
@@ -70,7 +70,7 @@ export function OrderBhojanTrackingPage() {
 
   if (trackingQuery.isError || !trackingQuery.data) {
     return (
-      <TransactionalPageShell title="Track order" subtitle="">
+      <TransactionalPageShell title="Track order" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Could not load tracking"
           description="Check the order ID and phone number, then try again."

@@ -271,7 +271,7 @@ export function OrderBhojanCheckoutPage() {
 
   if (itemCount === 0) {
     return (
-      <TransactionalPageShell title="Checkout" subtitle="">
+      <TransactionalPageShell title="Checkout" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Nothing to checkout"
           description="Add dishes from a restaurant menu before checking out."
@@ -284,7 +284,7 @@ export function OrderBhojanCheckoutPage() {
 
   if (locationEnabled && !hasDeliveryLocation) {
     return (
-      <TransactionalPageShell title="Checkout" subtitle="">
+      <TransactionalPageShell title="Checkout" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Set your delivery area"
           description="Add your delivery address to complete checkout."
@@ -297,7 +297,7 @@ export function OrderBhojanCheckoutPage() {
 
   if (locationEnabled && requiresFlatConfirmation) {
     return (
-      <TransactionalPageShell title="Checkout" subtitle="">
+      <TransactionalPageShell title="Checkout" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Confirm delivery address"
           description="Add your flat or house number to complete checkout."
@@ -310,7 +310,7 @@ export function OrderBhojanCheckoutPage() {
 
   if (!canCheckout) {
     return (
-      <TransactionalPageShell title="Checkout" subtitle="">
+      <TransactionalPageShell title="Checkout" subtitle="" embedded>
         <MarketplaceUxStateView
           title="Session expired"
           description="Open the restaurant menu again to refresh checkout context."

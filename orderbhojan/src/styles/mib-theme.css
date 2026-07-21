@@ -170,6 +170,7 @@
 }
 
 .ob-app-shell {
+  /* MarketplaceLayout shell — sole top/side safe-area padding for marketplace routes. */
   padding-top: var(--ob-safe-top);
   padding-left: var(--ob-safe-left);
   padding-right: var(--ob-safe-right);
@@ -194,6 +195,7 @@
 
 html.ob-native-android {
   --ob-safe-top: max(env(safe-area-inset-top, 0px), 28px);
+  --ob-safe-bottom: max(env(safe-area-inset-bottom, 0px), 32px);
 }
 
 html.ob-native-ios {

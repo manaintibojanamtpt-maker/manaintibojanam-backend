@@ -55,12 +55,12 @@ export const CategorySkeleton = () => (
 );
 
 export const RecommendedSkeleton = () => (
-  <div className="flex gap-3 items-center bg-white/[0.03] p-3 rounded-2xl border border-white/10">
-    <Skeleton className="w-20 h-20 rounded-xl flex-shrink-0" />
-    <div className="flex-1 space-y-2">
-      <Skeleton className="h-4 rounded w-1/2" />
-      <Skeleton className="h-3 rounded w-1/4" />
-      <Skeleton className="h-8 rounded w-full" />
+  <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+    <Skeleton className="h-16 w-16 flex-shrink-0 rounded-xl" />
+    <div className="flex-1 space-y-1.5">
+      <Skeleton className="h-3.5 w-1/2 rounded" />
+      <Skeleton className="h-2.5 w-1/4 rounded" />
+      <Skeleton className="h-7 w-full rounded-lg" />
     </div>
   </div>
 );
