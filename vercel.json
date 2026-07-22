@@ -3,6 +3,15 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    },
+    {
       "source": "/sw.js",
       "headers": [
         {
@@ -52,6 +61,14 @@
     {
       "source": "/api/:path*",
       "destination": "https://manaintibojanam-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://bhojanos-prod.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://bhojanos-prod.firebaseapp.com/__/firebase/:path*"
     },
     {
       "source": "/",

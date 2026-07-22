@@ -7,13 +7,18 @@ import {
   signInAnonymously,
   signInWithCredential,
   signInWithPhoneNumber,
+  signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
   type ConfirmationResult,
   type User,
 } from 'firebase/auth';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/firebase';
-import { isNativePlatform, shouldUseGoogleAuthRedirect } from '@/lib/nativePlatform';
+import {
+  isNativePlatform,
+  shouldFallbackGoogleAuthRedirect,
+  shouldUseGoogleAuthRedirect,
+} from '@/lib/nativePlatform';
 import { obDebugLog } from '@/lib/obDebug';
 import { persistAuthReturnToFromCurrentUrl } from '../domain/authReturnTo';
 import type { AuthProviderId, AuthSessionUser } from '../domain/auth.types';
@@ -171,11 +176,23 @@ export async function signInWithGoogleAccount(): Promise<AuthSessionUser> {
     return signInWithGoogleNative();
   }
 
-  if (shouldUseGoogleAuthRedirect()) {
-    return beginGoogleRedirectSignIn(auth, provider);
+  // Popup avoids Chrome bounce-tracking on the cross-origin firebaseapp.com hop.
+  if (!shouldUseGoogleAuthRedirect()) {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      clearGoogleRedirectAttempt();
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      if (!shouldFallbackGoogleAuthRedirect(error)) {
+        throw error instanceof AuthFlowError
+          ? error
+          : new AuthFlowError(error instanceof Error ? error.message : 'Google sign-in failed.');
+      }
+      obDebugLog('auth', 'Popup blocked; falling back to redirect', error);
+    }
   }
 
-  throw new AuthFlowError('Google sign-in is only supported via redirect on web.');
+  return beginGoogleRedirectSignIn(auth, provider);
 }
 
 function readGoogleRedirectAttemptTimestamp(): number | null {

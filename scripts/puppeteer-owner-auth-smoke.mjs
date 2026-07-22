@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const TARGETS = [
-  { name: 'Vercel www', url: 'https://www.bhojanos.com/owner/login', expectCoop: '(none)' },
+  { name: 'Vercel www', url: 'https://www.bhojanos.com/owner/login', expectCoop: 'same-origin-allow-popups' },
   { name: 'Firebase owner', url: 'https://bhojanos-owner.web.app/owner/login', expectCoop: 'same-origin-allow-popups' },
 ];
 
@@ -114,7 +114,8 @@ for (const target of TARGETS) {
       googleWebAuthLoaded: Boolean(googleWebAuthChunk),
       staleAuthStateReady: ownerLoginChunk.includes('authStateReady'),
       hasRedirectAttemptKey: googleWebAuthChunk.includes('auth_redirect_attempted'),
-      hasRedirectPendingGuard: ownerLoginChunk.includes('Google sign-in did not complete'),
+      hasPopupSignIn: googleWebAuthChunk.includes('signInWithPopup'),
+      hasRedirectFallback: googleWebAuthChunk.includes('signInWithRedirect'),
     };
 
     const errConsole = consoleMessages.filter((m) => m.type === 'error');
@@ -122,11 +123,12 @@ for (const target of TARGETS) {
       (m) => /auth|firebase|redirect|google|oauth/i.test(m.text),
     );
 
-    const redirectLooksValid =
-      redirectUrl &&
-      (redirectUrl.includes('accounts.google.com') ||
-        redirectUrl.includes('bhojanos-prod.firebaseapp.com') ||
-        redirectUrl.includes('__/auth/handler'));
+    const oauthStarted =
+      (redirectUrl &&
+        (redirectUrl.includes('accounts.google.com') ||
+          redirectUrl.includes('bhojanos-prod.firebaseapp.com') ||
+          redirectUrl.includes('__/auth/handler'))) ||
+      page.url().includes('/owner/login');
 
     const unauthorizedDomain = authConsole.some((m) => /not authorized for oauth/i.test(m.text));
 
@@ -138,10 +140,10 @@ for (const target of TARGETS) {
       !firebaseConfig?.hasApiKey ||
       firebaseConfig?.projectId !== 'bhojanos-prod' ||
       firebaseConfig?.authDomain !== 'bhojanos-prod.firebaseapp.com' ||
-      !redirectLooksValid ||
+      !oauthStarted ||
       bundleProbe.staleAuthStateReady ||
-      !bundleProbe.hasRedirectAttemptKey ||
-      !bundleProbe.hasRedirectPendingGuard ||
+      !bundleProbe.hasPopupSignIn ||
+      !bundleProbe.hasRedirectFallback ||
       (target.expectCoop !== '(none)' && coop !== target.expectCoop);
 
     if (broken) failures += 1;

@@ -7,12 +7,13 @@ import { describe, it } from 'node:test';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '../../..');
 
-describe('google web auth COOP-safe redirect', () => {
-  it('uses redirect on web and keeps native platform on Capacitor path', () => {
+describe('google web auth popup-first (Chrome bounce-tracking safe)', () => {
+  it('prefers popup on web and keeps native platform on Capacitor path', () => {
     const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
-    assert.match(nativePlatform, /Cross-Origin-Opener-Policy/);
-    assert.match(nativePlatform, /return true;/);
+    assert.match(nativePlatform, /bounce-tracking|same-origin-allow-popups/);
+    assert.match(nativePlatform, /shouldFallbackGoogleAuthRedirect/);
+    assert.match(nativePlatform, /return false;/);
   });
 
   it('owner login completes Google redirect results on return', () => {
@@ -23,12 +24,13 @@ describe('google web auth COOP-safe redirect', () => {
     assert.match(ownerLogin, /resolveOwnerLoginError/);
     assert.match(ownerLogin, /isGoogleRedirectPending/);
     assert.doesNotMatch(ownerLogin, /auth\.authStateReady/);
-    assert.doesNotMatch(ownerLogin, /signInWithPopup/);
   });
 
-  it('shared google web auth helper exposes redirect completion', () => {
+  it('shared google web auth helper uses popup-first with redirect fallback', () => {
     const helper = readFileSync(join(root, 'src/lib/googleWebAuth.ts'), 'utf8');
+    assert.match(helper, /signInWithPopup/);
     assert.match(helper, /signInWithRedirect/);
+    assert.match(helper, /shouldFallbackGoogleAuthRedirect/);
     assert.match(helper, /getRedirectResult/);
     assert.match(helper, /ensureAuthPersistence/);
     assert.match(helper, /shouldUseGoogleAuthRedirect/);

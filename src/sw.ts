@@ -8,7 +8,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 declare let self: ServiceWorkerGlobalScope;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v44-native-menu-swr-cache';
+const SW_VERSION = 'v45-google-popup-auth';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
 
 // Take control of all clients as soon as the service worker activates

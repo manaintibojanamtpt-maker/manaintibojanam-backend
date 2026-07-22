@@ -15,12 +15,29 @@ export function skipPwaInstallPrompt(): boolean {
   return isNativePlatform();
 }
 
+/**
+ * Prefer redirect only when popup is unavailable.
+ * Chrome bounce-tracking breaks cross-origin redirect via *.firebaseapp.com,
+ * so web clients must use signInWithPopup (hosting sends same-origin-allow-popups).
+ */
 export function shouldUseGoogleAuthRedirect(): boolean {
   if (typeof window === 'undefined') return false;
   // Capacitor Android/iOS use native Firebase Authentication — not web redirect/popup.
   if (isNativePlatform()) return false;
-  // Hosted sites send Cross-Origin-Opener-Policy headers that break signInWithPopup.
-  return true;
+  return false;
+}
+
+/** True when a popup failure should fall back to redirect (popup blockers / COOP edge cases). */
+export function shouldFallbackGoogleAuthRedirect(error: unknown): boolean {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: string }).code ?? '')
+      : '';
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    code === 'auth/popup-blocked' ||
+    /cross-origin-opener|window\.closed|Unable to establish a connection/i.test(message)
+  );
 }
 
 function launchAnchorFallback(url: string): void {

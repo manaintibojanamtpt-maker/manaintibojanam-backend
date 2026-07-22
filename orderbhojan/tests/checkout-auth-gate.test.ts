@@ -116,7 +116,7 @@ describe('checkout auth wiring', () => {
     assert.match(firebaseAuth, /sendPhoneOtpNative/);
   });
 
-  it('uses redirect google sign-in on web without popup', () => {
+  it('uses popup-first google sign-in on web with redirect fallback', () => {
     const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
     const firebaseAuth = readFileSync(
       join(root, 'src/features/auth/infrastructure/firebaseAuth.ts'),
@@ -127,12 +127,14 @@ describe('checkout auth wiring', () => {
       'utf8',
     );
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
-    assert.match(nativePlatform, /Cross-Origin-Opener-Policy/);
-    assert.match(nativePlatform, /return true;/);
+    assert.match(nativePlatform, /same-origin-allow-popups|bounce-tracking/);
+    assert.match(nativePlatform, /shouldFallbackGoogleAuthRedirect/);
+    assert.match(nativePlatform, /return false;/);
     assert.doesNotMatch(nativePlatform, /isMobileWebClient/);
     assert.match(firebaseAuth, /shouldUseGoogleAuthRedirect\(\)/);
+    assert.match(firebaseAuth, /signInWithPopup/);
     assert.match(firebaseAuth, /signInWithRedirect/);
-    assert.doesNotMatch(firebaseAuth, /signInWithPopup/);
+    assert.match(firebaseAuth, /shouldFallbackGoogleAuthRedirect/);
     assert.match(firebaseAuth, /completeGoogleRedirectSignIn/);
     assert.match(firebaseAuth, /resolveGoogleRedirectSessionUser/);
     assert.match(firebaseAuth, /Recovered Google redirect session from currentUser/);

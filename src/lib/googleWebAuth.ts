@@ -7,7 +7,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { ensureAuthPersistence } from '../firebase';
-import { shouldUseGoogleAuthRedirect } from './nativePlatform';
+import { shouldFallbackGoogleAuthRedirect, shouldUseGoogleAuthRedirect } from './nativePlatform';
 
 const REDIRECT_FLAG = 'auth_redirecting';
 export const AUTH_REDIRECT_ATTEMPT_KEY = 'auth_redirect_attempted';
@@ -68,20 +68,30 @@ export function createGoogleAuthProvider(): GoogleAuthProvider {
   return provider;
 }
 
-/** Web Google sign-in: redirect on hosted sites (COOP-safe), popup only when redirect is disabled. */
+/**
+ * Web Google sign-in: popup-first.
+ * Redirect through *.firebaseapp.com is broken by Chrome bounce tracking / 3P storage blocks.
+ */
 export async function signInWithGoogleAccount(auth: Auth): Promise<User | null> {
   const provider = createGoogleAuthProvider();
 
-  if (shouldUseGoogleAuthRedirect()) {
-    persistAuthReturnToFromCurrentUrl();
-    sessionStorage.setItem(REDIRECT_FLAG, 'true');
-    sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
-    await signInWithRedirect(auth, provider);
-    return null;
+  if (!shouldUseGoogleAuthRedirect()) {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      clearGoogleRedirectAttempt();
+      return result.user;
+    } catch (error) {
+      if (!shouldFallbackGoogleAuthRedirect(error)) {
+        throw error;
+      }
+    }
   }
 
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
+  persistAuthReturnToFromCurrentUrl();
+  sessionStorage.setItem(REDIRECT_FLAG, 'true');
+  sessionStorage.setItem(AUTH_REDIRECT_ATTEMPT_KEY, String(Date.now()));
+  await signInWithRedirect(auth, provider);
+  return null;
 }
 
 /** Recover redirect sign-in when getRedirectResult races persistence or a stale SW drops callback params. */

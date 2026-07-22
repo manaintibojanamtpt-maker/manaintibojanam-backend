@@ -6,7 +6,10 @@ import { OrderBhojanAuthShellView } from './OrderBhojanAuthShellView';
 import { OrderBhojanOnboardingView } from './OrderBhojanOnboardingView';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { needsCheckoutPhoneVerification } from '@/features/auth/domain/checkoutAuth';
-import { readGoogleRedirectAttempt } from '@/features/auth/infrastructure/firebaseAuth';
+import {
+  clearGoogleRedirectAttempt,
+  readGoogleRedirectAttempt,
+} from '@/features/auth/infrastructure/firebaseAuth';
 import { formatAuthError } from '@/lib/authErrors';
 import { OrderBhojanPhoneOtpForm } from './OrderBhojanPhoneOtpForm';
 import { resolveAuthRedirect } from './resolveAuthRedirect';
@@ -53,8 +56,9 @@ export function OrderBhojanAuthShellPage() {
       setError(redirectError);
       return;
     }
-    if (readGoogleRedirectAttempt()) {
-      setError('Google sign-in did not complete. Allow cookies for this site and try again.');
+    // Stale redirect flags from Chrome bounce-tracking failures — clear so popup sign-in can proceed.
+    if (readGoogleRedirectAttempt() && !isRedirectResumePending()) {
+      clearGoogleRedirectAttempt();
     }
   }, [isAuthenticated, redirectError, status]);
 

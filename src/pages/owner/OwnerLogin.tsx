@@ -102,10 +102,7 @@ const OwnerLogin = () => {
         }
 
         if (isGoogleRedirectPending()) {
-          const message =
-            'Google sign-in did not complete. Disable ad blockers, hard-refresh (Ctrl+Shift+R), and try Continue with Google again.';
-          setLoginError(message);
-          toast.error(message);
+          // Stale flag from prior redirect attempts (Chrome bounce tracking). Clear and prefer popup.
           clearGoogleRedirectAttempt();
           setLoading(false);
           setRedirecting(false);
