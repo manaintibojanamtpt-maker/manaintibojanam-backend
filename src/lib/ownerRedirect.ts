@@ -24,7 +24,11 @@ export function readCachedOwnerTenantIds(): string[] {
   }
 }
 
-/** Immediate full-page redirect — never block on API/Firestore during login. */
+/**
+ * Immediate navigation to the owner dashboard.
+ * Login uses a slim bootstrap (`ownerAuthBootstrap`), so a full reload is required
+ * to enter the full owner app shell after auth.
+ */
 export function redirectToOwnerDashboard(): void {
   const url = `${EnvironmentConfig.getBaseUrl()}${OWNER_DASHBOARD}`;
   window.location.assign(url);
