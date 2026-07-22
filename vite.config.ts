@@ -95,11 +95,33 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       cssCodeSplit: true,
-      modulePreload: true,  // Re-enabled: allows browser to prefetch lazy chunks
       target: 'es2020',
       minify: 'esbuild',
       brotliSize: false,
       chunkSizeWarningLimit: 700,
+      // Strip portal/firebase deps from marketing.html modulepreload list only.
+      modulePreload: {
+        resolveDependencies(filename, deps) {
+          const file = filename.replace(/\\/g, '/');
+          const isMarketingEntry =
+            file.endsWith('/marketing.html') ||
+            /\/assets\/marketing-[^/]+\.js$/.test(file) ||
+            file.includes('/marketing.html');
+          if (!isMarketingEntry) return deps;
+          return deps.filter((dep) => {
+            const d = dep.replace(/\\/g, '/');
+            return !(
+              d.includes('owner-shell') ||
+              d.includes('vendor-firebase') ||
+              d.includes('vendor-capacitor') ||
+              d.includes('checkout') ||
+              d.includes('admin-panel') ||
+              d.includes('my-orders') ||
+              d.includes('appBootstrap')
+            );
+          });
+        },
+      },
       rollupOptions: {
         input: {
           main: path.resolve(root, 'index.html'),
@@ -114,6 +136,10 @@ export default defineConfig(({ mode }) => {
               }
               if (normalizedId.includes('/framer-motion/')) {
                 return 'vendor-motion';
+              }
+              // Keep icons out of owner-shell — otherwise marketing imports owner-shell for Lucide.
+              if (normalizedId.includes('/lucide-react/')) {
+                return 'vendor-lucide';
               }
               if (normalizedId.includes('/react-dom/') || normalizedId.includes('/react/') || normalizedId.includes('/scheduler/')) {
                 return 'vendor-react';
@@ -138,17 +164,10 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('/src/pages/MyOrders.tsx')) {
               return 'my-orders';
             }
-            // Shell only — do NOT force pages/shared config here.
-            // pricing.ts / SoftButton / footer are shared with owner; putting them in
-            // marketing-core created a cycle that modulepreloaded owner-shell + firebase.
+            // MarketingApp router shell only — never force marketing components here
+            // (MarketplaceHome also imports EnterpriseHeader; forced chrome ↔ owner cycles).
             if (normalizedId.includes('/src/MarketingApp.tsx')) {
               return 'marketing-core';
-            }
-            if (
-              normalizedId.includes('/src/components/marketing/') &&
-              !normalizedId.includes('MarketingLandingSections')
-            ) {
-              return 'marketing-chrome';
             }
             if (normalizedId.includes('/src/components/marketing/MarketingLandingSections')) {
               return 'marketing-sections';

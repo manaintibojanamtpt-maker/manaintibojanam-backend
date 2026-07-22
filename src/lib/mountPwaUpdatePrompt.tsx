@@ -1,6 +1,16 @@
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
-import { skipPwaInstallPrompt } from './nativePlatform';
+
+/** Avoid importing nativePlatform/Capacitor here — that pulled owner-shell into marketing. */
+function skipPwaInstallPrompt(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const cap = (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    return Boolean(cap?.isNativePlatform?.());
+  } catch {
+    return false;
+  }
+}
 
 let mounted = false;
 let pwaRoot: Root | null = null;
