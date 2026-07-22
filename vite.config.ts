@@ -39,7 +39,17 @@ export default defineConfig(({ mode }) => {
     plugins: [
       {
         name: 'inject-app-version-bootstrap',
-        transformIndexHtml(html) {
+        transformIndexHtml(html, ctx) {
+          const isMarketing = (ctx.filename || '').replace(/\\/g, '/').endsWith('/marketing.html');
+          // Marketing must stay Firebase-free — no blocking config XHR in <head>.
+          if (isMarketing) {
+            return html
+              .replace('<!--FIREBASE_CONFIG_BOOTSTRAP-->', '')
+              .replace(
+                '<!--APP_VERSION_BOOTSTRAP-->',
+                `<script>${versionBootstrap}</script>`,
+              );
+          }
           return html
             .replace('<!--FIREBASE_CONFIG_BOOTSTRAP-->', `<script>${firebaseBootstrap}</script>`)
             .replace('<!--APP_VERSION_BOOTSTRAP-->', `<script>${versionBootstrap}</script>`);
@@ -60,7 +70,15 @@ export default defineConfig(({ mode }) => {
         injectManifest: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,json}'],
-          globIgnores: ['**/version.json'],
+          // Keep SW lean: skip heavy portal/admin chunks not needed for marketing first visit.
+          globIgnores: [
+            '**/version.json',
+            '**/assets/admin-panel-*.js',
+            '**/assets/checkout-*.js',
+            '**/assets/my-orders-*.js',
+            '**/assets/owner-shell-*.js',
+            '**/assets/vendor-firebase-*.js',
+          ],
         },
       }),
     ],
@@ -120,20 +138,17 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('/src/pages/MyOrders.tsx')) {
               return 'my-orders';
             }
-            if (
-              normalizedId.includes('/src/MarketingApp.tsx') ||
-              normalizedId.includes('/src/pages/OnboardKitchen.tsx') ||
-              normalizedId.includes('/src/pages/marketing/') ||
-              (normalizedId.includes('/src/components/marketing/') &&
-                !normalizedId.includes('MarketingLandingSections')) ||
-              normalizedId.includes('/src/components/EnterpriseFooter.tsx') ||
-              normalizedId.includes('/src/components/EnterpriseSchema.tsx') ||
-              normalizedId.includes('/src/hooks/useMarketingHashScroll.ts') ||
-              normalizedId.includes('/src/utils/haptics.ts') ||
-              normalizedId.includes('/src/config/landing.ts') ||
-              normalizedId.includes('/src/config/pricing.ts')
-            ) {
+            // Shell only — do NOT force pages/shared config here.
+            // pricing.ts / SoftButton / footer are shared with owner; putting them in
+            // marketing-core created a cycle that modulepreloaded owner-shell + firebase.
+            if (normalizedId.includes('/src/MarketingApp.tsx')) {
               return 'marketing-core';
+            }
+            if (
+              normalizedId.includes('/src/components/marketing/') &&
+              !normalizedId.includes('MarketingLandingSections')
+            ) {
+              return 'marketing-chrome';
             }
             if (normalizedId.includes('/src/components/marketing/MarketingLandingSections')) {
               return 'marketing-sections';

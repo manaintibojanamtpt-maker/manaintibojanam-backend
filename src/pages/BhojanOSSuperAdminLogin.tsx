@@ -31,10 +31,11 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
 
     if (currentUser && userProfile) {
       if (hasSuperadminPortalAccess(currentUser.email, userProfile.role)) {
-        navigate('/super-admin');
+        // Full reload into appBootstrap — slim login shell cannot host the dashboard.
+        window.location.href = '/super-admin';
       } else if (userProfile.role === 'admin') {
         toast.error('You are a store admin. Redirecting to the admin portal.');
-        navigate('/admin');
+        window.location.href = '/admin';
       }
     }
   }, [currentUser, userProfile, authLoading, profileLoading, navigate]);

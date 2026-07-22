@@ -5758,25 +5758,54 @@ app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, re
         ),
       );
 
-    const analyticsEntries = await Promise.all(
-      tenants.map(async (tenant) => {
-        const tenantId = String((tenant as { id?: string }).id ?? '');
-        if (!tenantId) return [tenantId, {}] as const;
-        const analyticsSnap = await db.doc(`tenants/${tenantId}/analytics/overview`).get();
+    // Batched getAll instead of N+1 per-tenant analytics reads.
+    const analyticsByTenantId: Record<string, { totalOrders: number; totalRevenue: number }> = {};
+    const tenantIds = tenants
+      .map((tenant) => String((tenant as { id?: string }).id ?? ''))
+      .filter(Boolean);
+    const ANALYTICS_CHUNK = 100;
+    for (let i = 0; i < tenantIds.length; i += ANALYTICS_CHUNK) {
+      const chunk = tenantIds.slice(i, i + ANALYTICS_CHUNK);
+      const refs = chunk.map((id) => db.doc(`tenants/${id}/analytics/overview`));
+      const snaps = refs.length ? await db.getAll(...refs) : [];
+      snaps.forEach((analyticsSnap, idx) => {
+        const tenantId = chunk[idx];
         const data = analyticsSnap.exists
           ? (serializeFirestoreValue(analyticsSnap.data()) as Record<string, unknown>)
           : {};
-        return [
-          tenantId,
-          {
-            totalOrders: Number(data.totalOrders ?? 0),
-            totalRevenue: Number(data.totalRevenue ?? 0),
-          },
-        ] as const;
-      }),
-    );
-    const analyticsByTenantId = Object.fromEntries(analyticsEntries);
+        analyticsByTenantId[tenantId] = {
+          totalOrders: Number(data.totalOrders ?? 0),
+          totalRevenue: Number(data.totalRevenue ?? 0),
+        };
+      });
+    }
     const metrics = computePlatformSuperadminMetrics(tenants, analyticsByTenantId);
+
+    const pendingKyc = tenants
+      .filter((tenant) => {
+        const kyc = (tenant as { kyc?: { status?: string; verificationLevel?: number } }).kyc;
+        return kyc?.status === 'pending_verification' || kyc?.verificationLevel === 1;
+      })
+      .map((tenant) => {
+        const row = tenant as {
+          id?: string;
+          slug?: string;
+          name?: string;
+          status?: string;
+          kyc?: Record<string, unknown>;
+          fssai?: unknown;
+          updatedAt?: unknown;
+        };
+        return {
+          tenantId: String(row.id ?? ''),
+          slug: String(row.slug ?? row.id ?? ''),
+          name: String(row.name ?? row.slug ?? row.id ?? ''),
+          status: String(row.status ?? ''),
+          kyc: row.kyc ?? {},
+          fssai: row.fssai,
+          updatedAt: row.updatedAt,
+        };
+      });
 
     res.json({
       success: true,
@@ -5784,6 +5813,7 @@ app.get('/api/platform/superadmin-data', requireSuperadmin, async (_req: any, re
       leads,
       releases,
       metrics,
+      pendingKyc,
       projectId: process.env.FIREBASE_PROJECT_ID || appAdmin.options?.projectId || null,
       syncedAt: new Date().toISOString(),
     });

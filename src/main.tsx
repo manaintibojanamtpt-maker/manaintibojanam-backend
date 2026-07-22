@@ -12,6 +12,12 @@ function isOwnerAuthPath(pathname?: string): boolean {
   return path === '/owner/login' || path === '/owner/register';
 }
 
+function isSuperAdminAuthPath(pathname?: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const path = pathname ?? window.location.pathname;
+  return path === '/super-admin/login';
+}
+
 if (isNativePlatform()) {
   (window as Window & { __SKIP_SPLASH__?: boolean }).__SKIP_SPLASH__ = true;
 }
@@ -65,6 +71,12 @@ async function bootstrap() {
   if (isOwnerAuthPath()) {
     clearBootFallback();
     await import('./ownerAuthBootstrap');
+    return;
+  }
+
+  if (isSuperAdminAuthPath()) {
+    clearBootFallback();
+    await import('./superAdminAuthBootstrap');
     return;
   }
 

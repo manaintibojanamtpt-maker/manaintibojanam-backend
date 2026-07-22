@@ -932,20 +932,43 @@ export const fetchOnboardingLeads = async () => {
     });
 };
 
+export type PendingKycTenant = {
+  tenantId: string;
+  slug: string;
+  name: string;
+  status: string;
+  kyc: {
+    ownerName?: string;
+    businessName?: string;
+    email?: string;
+    phone?: string;
+    gstNumber?: string;
+    panNumber?: string;
+    status?: string;
+    verificationLevel?: number;
+    documents?: Record<string, unknown>;
+  };
+  fssai?: unknown;
+  updatedAt?: unknown;
+};
+
 export type SuperadminPlatformPayload = {
   tenants: any[];
   leads: any[];
   releases: ReleaseNote[];
   metrics: PlatformSuperadminMetrics;
+  pendingKyc?: PendingKycTenant[];
   projectId?: string | null;
   syncedAt?: string | null;
 };
 
 /** Load tenants + leads + releases + metrics via Render API (Admin SDK) — reliable on bhojanos-prod cutover. */
-export const fetchSuperadminPlatformData = async (): Promise<SuperadminPlatformPayload> => {
+export const fetchSuperadminPlatformData = async (options?: {
+  forceRefreshToken?: boolean;
+}): Promise<SuperadminPlatformPayload> => {
   const payload = await platformSuperadminFetch(
     `/api/platform/superadmin-data?_=${Date.now()}`,
-    { cache: 'no-store' },
+    { cache: 'no-store', forceRefreshToken: options?.forceRefreshToken },
   );
 
   const metrics = payload.metrics as PlatformSuperadminMetrics | undefined;
@@ -974,6 +997,9 @@ export const fetchSuperadminPlatformData = async (): Promise<SuperadminPlatformP
         betaPublishedCount: 0,
         firstOrdersCount: 0,
       } satisfies PlatformSuperadminMetrics),
+    pendingKyc: Array.isArray(payload.pendingKyc)
+      ? (payload.pendingKyc as PendingKycTenant[])
+      : undefined,
     projectId: payload.projectId ?? null,
     syncedAt: typeof payload.syncedAt === 'string' ? payload.syncedAt : null,
   };
@@ -995,7 +1021,7 @@ export const updatePlatformTenantSubscription = async (params: {
   const user = auth.currentUser;
   if (!user) throw new Error('You must be signed in.');
 
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
   const apiBase =
     typeof window !== 'undefined' &&
     (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
@@ -1021,32 +1047,17 @@ export const updateLeadStage = async (leadId: string, stage: string) => {
   return updateDoc(doc(getDb(), 'salesPipeline', leadId), { stage, updatedAt: serverTimestamp() });
 };
 
-export type PendingKycTenant = {
-  tenantId: string;
-  slug: string;
-  name: string;
-  status: string;
-  kyc: {
-    ownerName?: string;
-    businessName?: string;
-    email?: string;
-    phone?: string;
-    gstNumber?: string;
-    panNumber?: string;
-    status?: string;
-    verificationLevel?: number;
-    documents?: Record<string, unknown>;
-  };
-  fssai?: unknown;
-  updatedAt?: unknown;
-};
-
-async function platformSuperadminFetch(path: string, init?: RequestInit) {
+async function platformSuperadminFetch(
+  path: string,
+  init?: RequestInit & { forceRefreshToken?: boolean },
+) {
   const { auth } = await import('../firebase');
   const user = auth.currentUser;
   if (!user) throw new Error('You must be signed in.');
 
-  const token = await user.getIdToken(true);
+  const { forceRefreshToken, ...fetchInit } = init ?? {};
+  // Avoid forced token refresh on every poll — only bust cache when explicitly requested.
+  const token = await user.getIdToken(Boolean(forceRefreshToken));
   const apiBase =
     typeof window !== 'undefined' &&
     (window.location.hostname === 'bhojanos.com' || window.location.hostname === 'www.bhojanos.com')
@@ -1055,13 +1066,13 @@ async function platformSuperadminFetch(path: string, init?: RequestInit) {
 
   const res = await fetch(`${apiBase}${path}`, {
     cache: 'no-store',
-    ...init,
+    ...fetchInit,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
-      ...(init?.headers ?? {}),
+      ...(fetchInit.headers ?? {}),
     },
   });
   const payload = await res.json().catch(() => ({}));

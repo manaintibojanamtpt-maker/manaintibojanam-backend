@@ -25,8 +25,28 @@ const MarketingShell = () => (
   </div>
 );
 
+/** Prefetch common secondary routes after first paint for app-like nav. */
+function prefetchMarketingRoutes() {
+  const run = () => {
+    void import('./pages/marketing/PricingPage');
+    void import('./pages/marketing/AboutPage');
+    void import('./pages/marketing/PlatformPage');
+    void import('./pages/OnboardKitchen');
+  };
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+      .requestIdleCallback(run, { timeout: 3500 });
+  } else {
+    window.setTimeout(run, 1500);
+  }
+}
+
 /** Public marketing shell — no Firebase, cart, or owner/admin bundles. */
 export default function MarketingApp() {
+  React.useEffect(() => {
+    prefetchMarketingRoutes();
+  }, []);
+
   return (
     <BrowserRouter>
       <Suspense fallback={<MarketingShell />}>

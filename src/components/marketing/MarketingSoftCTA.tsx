@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SoftButtonTone, SoftButtonSize } from '../ui/SoftButton';
+
+type SoftButtonTone = 'primary' | 'ghost' | 'danger' | 'secondary';
+type SoftButtonSize = 'default' | 'compact';
 
 interface MarketingSoftCTAProps {
   children: React.ReactNode;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +11,7 @@ import {
   updatePlatformTenantSubscription, 
   fetchOnboardingLeads, updateLeadStage,
   fetchSuperadminPlatformData,
+  type PendingKycTenant,
 } from '../services/api';
 
 import { logIncident } from '../lib/monitoring';
@@ -23,17 +24,40 @@ import { getDb } from '../lib/firebase-db';
 import { logAuditEvent } from '../lib/audit';
 import logo from '../assets/bhojan-os-logo.png';
 import { auth } from '../firebase';
-import { ReleaseCenter } from '../components/admin/ReleaseCenter';
-import { InvestorDataRoomPanel } from '../components/admin/InvestorDataRoomPanel';
-import { TenantsCrmPanel } from '../components/admin/TenantsCrmPanel';
-import { KycReviewPanel } from '../components/admin/KycReviewPanel';
-import { OrderBhojanHomeHeroPanel } from '../components/admin/OrderBhojanHomeHeroPanel';
-import { exportInvestorReportPdf } from '../lib/exportInvestorReportPdf';
 import {
   computePlatformSuperadminMetrics,
   type PlatformSuperadminMetrics,
 } from '../lib/platformSuperadminMetrics';
+import {
+  readSuperadminCache,
+  writeSuperadminCache,
+  patchSuperadminTenants,
+} from '../lib/platformSuperadminCache';
 import type { ReleaseNote } from '../types';
+
+const ReleaseCenter = lazy(() =>
+  import('../components/admin/ReleaseCenter').then((m) => ({ default: m.ReleaseCenter })),
+);
+const InvestorDataRoomPanel = lazy(() =>
+  import('../components/admin/InvestorDataRoomPanel').then((m) => ({ default: m.InvestorDataRoomPanel })),
+);
+const TenantsCrmPanel = lazy(() =>
+  import('../components/admin/TenantsCrmPanel').then((m) => ({ default: m.TenantsCrmPanel })),
+);
+const KycReviewPanel = lazy(() =>
+  import('../components/admin/KycReviewPanel').then((m) => ({ default: m.KycReviewPanel })),
+);
+const OrderBhojanHomeHeroPanel = lazy(() =>
+  import('../components/admin/OrderBhojanHomeHeroPanel').then((m) => ({
+    default: m.OrderBhojanHomeHeroPanel,
+  })),
+);
+
+const PanelFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="w-8 h-8 border-2 border-white/10 border-t-orange-500 rounded-full animate-spin" />
+  </div>
+);
 
 type SuperAdminTab = 'overview' | 'tenants' | 'beta' | 'leads' | 'pmf' | 'investors' | 'releases' | 'orderbhojan' | 'settings';
 
@@ -48,15 +72,17 @@ type PlatformAlert = {
 
 export default function BhojanOSSuperAdmin() {
   const navigate = useNavigate();
+  const cached = typeof window !== 'undefined' ? readSuperadminCache() : null;
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('overview');
-  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>(() => cached?.tenants ?? []);
   const [leads, setLeads] = useState<any[]>([]);
   const [releases, setReleases] = useState<ReleaseNote[]>([]);
+  const [pendingKyc, setPendingKyc] = useState<PendingKycTenant[]>([]);
   const [platformMetrics, setPlatformMetrics] = useState<PlatformSuperadminMetrics>(() =>
-    computePlatformSuperadminMetrics([]),
+    computePlatformSuperadminMetrics(cached?.tenants ?? []),
   );
   const [syncGeneration, setSyncGeneration] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(cached?.tenants?.length));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
@@ -66,9 +92,15 @@ export default function BhojanOSSuperAdmin() {
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
-  const [dataSource, setDataSource] = useState<'server' | 'client' | null>(null);
-  const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(() =>
+    cached?.fetchedAt ? new Date(cached.fetchedAt) : null,
+  );
+  const [dataSource, setDataSource] = useState<'server' | 'client' | null>(
+    () => (cached?.dataSource as 'server' | 'client' | null) ?? null,
+  );
+  const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(
+    () => cached?.firebaseProjectId ?? null,
+  );
 
   useEffect(() => {
     if (userProfile?.displayName) {
@@ -77,12 +109,13 @@ export default function BhojanOSSuperAdmin() {
   }, [userProfile]);
 
   useEffect(() => {
-    loadData();
+    loadData({ silent: Boolean(cached?.tenants?.length) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async (options?: { silent?: boolean }) => {
-    const isInitial = tenants.length === 0 && leads.length === 0;
-    if (isInitial && !options?.silent) {
+  const loadData = async (options?: { silent?: boolean; forceRefreshToken?: boolean }) => {
+    const hasCache = tenants.length > 0;
+    if (!hasCache && !options?.silent) {
       setLoading(true);
     } else {
       setRefreshing(true);
@@ -96,18 +129,25 @@ export default function BhojanOSSuperAdmin() {
       let tenantsData: any[] = [];
       let leadsData: any[] = [];
       let releasesData: ReleaseNote[] = [];
+      let pendingKycData: PendingKycTenant[] = [];
 
       try {
         const serverPayload = await Promise.race([
-          fetchSuperadminPlatformData(),
+          fetchSuperadminPlatformData({ forceRefreshToken: options?.forceRefreshToken }),
           timeoutPromise,
         ]);
         tenantsData = serverPayload.tenants;
         leadsData = serverPayload.leads;
         releasesData = serverPayload.releases;
+        pendingKycData = serverPayload.pendingKyc ?? [];
         setPlatformMetrics(serverPayload.metrics);
         setDataSource('server');
         setFirebaseProjectId(serverPayload.projectId ?? null);
+        writeSuperadminCache({
+          tenants: tenantsData,
+          firebaseProjectId: serverPayload.projectId ?? null,
+          dataSource: 'server',
+        });
       } catch (serverError) {
         console.warn('Superadmin server fetch failed, falling back to Firestore client', serverError);
         const [tenantResult, leadResult] = await Promise.allSettled([
@@ -124,20 +164,28 @@ export default function BhojanOSSuperAdmin() {
         }
         setPlatformMetrics(computePlatformSuperadminMetrics(tenantsData));
         setDataSource('client');
+        writeSuperadminCache({
+          tenants: tenantsData,
+          firebaseProjectId,
+          dataSource: 'client',
+        });
       }
 
       if (timeoutId) clearTimeout(timeoutId);
       setTenants(tenantsData);
       setLeads(leadsData);
       setReleases(releasesData);
+      setPendingKyc(pendingKycData);
       setSyncGeneration((current) => current + 1);
       setLastSyncedAt(new Date());
-      if (!isInitial && !options?.silent) {
+      if (hasCache && !options?.silent) {
         toast.success('Platform data synced from production');
       }
     } catch (error: any) {
       console.error("Failed to load SuperAdmin data", error);
-      toast.error(error.message || "Failed to load platform data");
+      if (!hasCache) {
+        toast.error(error.message || "Failed to load platform data");
+      }
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
@@ -146,6 +194,17 @@ export default function BhojanOSSuperAdmin() {
   };
 
   const handleUpdateTenantStatus = async (tenantId: string, status: string, storeStatus?: string) => {
+    const previous = tenants;
+    setTenants((current) =>
+      current.map((t) =>
+        t.id === tenantId ? { ...t, status, ...(storeStatus ? { storeStatus } : {}) } : t,
+      ),
+    );
+    patchSuperadminTenants((rows) =>
+      rows.map((t) =>
+        t.id === tenantId ? { ...t, status, ...(storeStatus ? { storeStatus } : {}) } : t,
+      ),
+    );
     try {
       const db = getDb();
       const updates: any = { status };
@@ -164,8 +223,9 @@ export default function BhojanOSSuperAdmin() {
         metadata: { newStatus: status, storeStatus }
       });
 
-      loadData();
+      void loadData({ silent: true });
     } catch (error: any) {
+      setTenants(previous);
       logIncident('merchant_blockers', {
         blockerType: 'Store Publish Failure',
         severity: 'Critical',
@@ -202,7 +262,7 @@ export default function BhojanOSSuperAdmin() {
         actorRole: 'superadmin',
         metadata: { action, ...options },
       });
-      loadData();
+      void loadData({ silent: true });
     } catch (error: any) {
       toast.error(error?.message || 'Failed to update tenant subscription');
     }
@@ -212,7 +272,10 @@ export default function BhojanOSSuperAdmin() {
     try {
       await updateLeadStage(leadId, stage);
       toast.success(`Lead moved to ${stage}`);
-      loadData();
+      setLeads((current) =>
+        current.map((lead) => (lead.id === leadId ? { ...lead, stage } : lead)),
+      );
+      void loadData({ silent: true });
     } catch (error) {
       toast.error('Failed to update lead stage');
     }
@@ -369,6 +432,7 @@ export default function BhojanOSSuperAdmin() {
   const handleExportInvestorPdf = async () => {
     setExportingPdf(true);
     try {
+      const { exportInvestorReportPdf } = await import('../lib/exportInvestorReportPdf');
       await exportInvestorReportPdf({
         generatedAt: new Date(),
         generatedBy: userProfile?.displayName || currentUser?.email || undefined,
@@ -595,7 +659,8 @@ export default function BhojanOSSuperAdmin() {
             </span>
           </div>
           <button 
-            onClick={() => loadData()}  
+            onClick={() => void loadData({ forceRefreshToken: true })}  
+
             className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-300 hover:bg-white/10 transition-colors border border-white/5"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -612,7 +677,8 @@ export default function BhojanOSSuperAdmin() {
 
           <div className="flex items-center gap-5">
             <button 
-              onClick={() => loadData()}  
+              onClick={() => void loadData({ forceRefreshToken: true })}  
+
               className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-bold transition-all border border-white/5 shadow-sm group"
             >
               <RefreshCw size={14} className={`text-gray-400 group-hover:text-white ${refreshing ? 'animate-spin' : ''}`} />
@@ -684,15 +750,24 @@ export default function BhojanOSSuperAdmin() {
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto p-5 sm:p-10 pb-32 md:pb-10 z-10">
-          {loading ? (
-            <div className="flex items-center justify-center h-[60vh]">
-              <div className="flex flex-col items-center gap-5">
-                <div className="w-10 h-10 border-4 border-white/10 border-t-white rounded-full animate-spin"></div>
-                <div className="text-sm font-bold text-gray-400 tracking-wider uppercase">Syncing Platform...</div>
+          {loading && tenants.length === 0 ? (
+            <div className="max-w-[1200px] mx-auto space-y-6">
+              <div className="h-10 w-64 rounded-xl bg-white/5 animate-pulse" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-28 rounded-3xl bg-[#151515] border border-white/5 animate-pulse" />
+                ))}
               </div>
+              <div className="h-64 rounded-3xl bg-[#151515] border border-white/5 animate-pulse" />
             </div>
           ) : (
             <div className="max-w-[1200px] mx-auto">
+              {refreshing && (
+                <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <RefreshCw size={12} className="animate-spin text-orange-400" />
+                  Syncing…
+                </div>
+              )}
               
               {/* OVERVIEW TAB */}
               {activeTab === 'overview' && (
@@ -823,7 +898,13 @@ export default function BhojanOSSuperAdmin() {
                   </AnimatePresence>
 
                   <m.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}>
-                    <KycReviewPanel refreshToken={syncGeneration} />
+                    <Suspense fallback={<PanelFallback />}>
+                      <KycReviewPanel
+                        refreshToken={syncGeneration}
+                        initialPending={pendingKyc}
+                        seedTenants={tenants}
+                      />
+                    </Suspense>
                   </m.div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1108,19 +1189,21 @@ export default function BhojanOSSuperAdmin() {
 
               {/* TENANTS CRM TAB */}
               {activeTab === 'tenants' && (
-                <TenantsCrmPanel
-                  filteredTenants={filteredTenants}
-                  totalTenants={tenants.length}
-                  activeCount={activeTenantsCount}
-                  trialCount={trialTenantsCount}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  getStatusIndicator={getStatusIndicator}
-                  getTrustScore={calculateTrustScore}
-                  onUpdateStatus={handleUpdateTenantStatus}
-                  onSubscriptionAction={handleTenantSubscriptionAction}
-                  onSeedDefault={handleSeedDefaultDatabase}
-                />
+                <Suspense fallback={<PanelFallback />}>
+                  <TenantsCrmPanel
+                    filteredTenants={filteredTenants}
+                    totalTenants={tenants.length}
+                    activeCount={activeTenantsCount}
+                    trialCount={trialTenantsCount}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    getStatusIndicator={getStatusIndicator}
+                    getTrustScore={calculateTrustScore}
+                    onUpdateStatus={handleUpdateTenantStatus}
+                    onSubscriptionAction={handleTenantSubscriptionAction}
+                    onSeedDefault={handleSeedDefaultDatabase}
+                  />
+                </Suspense>
               )}
 
               {/* LEADS TAB */}
@@ -1324,29 +1407,31 @@ export default function BhojanOSSuperAdmin() {
 
               {/* INVESTOR DATA ROOM TAB (Priority 8) */}
               {activeTab === 'investors' && (
-                <InvestorDataRoomPanel
-                  mrr={mrr}
-                  arr={arr}
-                  activeTenantsCount={activeTenantsCount}
-                  trialTenantsCount={trialTenantsCount}
-                  suspendedTenantsCount={suspendedTenantsCount}
-                  activeSubscriptions={activeSubscriptions}
-                  totalTenants={tenants.length}
-                  totalLeads={leads.length}
-                  demoRequests={demoRequests}
-                  newLeadsCount={newLeadsCount}
-                  verifiedMerchants={verifiedMerchants}
-                  fssaiVerified={fssaiVerified}
-                  ordersProcessed={ordersProcessed}
-                  leadToTrialConv={leadToTrialConv}
-                  trialToPaidConv={trialToPaidConv}
-                  funnel={investorFunnel}
-                  exportingPdf={exportingPdf}
-                  loading={loading}
-                  refreshing={refreshing}
-                  lastSyncedAt={lastSyncedAt}
-                  onExportPdf={() => void handleExportInvestorPdf()}
-                />
+                <Suspense fallback={<PanelFallback />}>
+                  <InvestorDataRoomPanel
+                    mrr={mrr}
+                    arr={arr}
+                    activeTenantsCount={activeTenantsCount}
+                    trialTenantsCount={trialTenantsCount}
+                    suspendedTenantsCount={suspendedTenantsCount}
+                    activeSubscriptions={activeSubscriptions}
+                    totalTenants={tenants.length}
+                    totalLeads={leads.length}
+                    demoRequests={demoRequests}
+                    newLeadsCount={newLeadsCount}
+                    verifiedMerchants={verifiedMerchants}
+                    fssaiVerified={fssaiVerified}
+                    ordersProcessed={ordersProcessed}
+                    leadToTrialConv={leadToTrialConv}
+                    trialToPaidConv={trialToPaidConv}
+                    funnel={investorFunnel}
+                    exportingPdf={exportingPdf}
+                    loading={loading}
+                    refreshing={refreshing}
+                    lastSyncedAt={lastSyncedAt}
+                    onExportPdf={() => void handleExportInvestorPdf()}
+                  />
+                </Suspense>
               )}
 
               {/* RELEASES TAB */}
@@ -1356,11 +1441,13 @@ export default function BhojanOSSuperAdmin() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <ReleaseCenter
-                    releases={releases}
-                    syncToken={syncGeneration}
-                    onReleasesChanged={() => void loadData({ silent: true })}
-                  />
+                  <Suspense fallback={<PanelFallback />}>
+                    <ReleaseCenter
+                      releases={releases}
+                      syncToken={syncGeneration}
+                      onReleasesChanged={() => void loadData({ silent: true })}
+                    />
+                  </Suspense>
                 </m.div>
               )}
 
@@ -1370,7 +1457,9 @@ export default function BhojanOSSuperAdmin() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <OrderBhojanHomeHeroPanel />
+                  <Suspense fallback={<PanelFallback />}>
+                    <OrderBhojanHomeHeroPanel />
+                  </Suspense>
                 </m.div>
               )}
 

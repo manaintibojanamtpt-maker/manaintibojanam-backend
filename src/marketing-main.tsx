@@ -1,10 +1,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { mountPwaUpdatePrompt } from './lib/mountPwaUpdatePrompt';
+
+function deferPwa() {
+  const run = () => {
+    void import('./lib/mountPwaUpdatePrompt').then(({ mountPwaUpdatePrompt }) => {
+      void mountPwaUpdatePrompt();
+    });
+  };
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+      .requestIdleCallback(run, { timeout: 4000 });
+  } else {
+    window.setTimeout(run, 2000);
+  }
+}
 
 async function start() {
-  void mountPwaUpdatePrompt();
-
   const { default: MarketingApp } = await import('./MarketingApp');
   const rootEl = document.getElementById('root');
   if (!rootEl) return;
@@ -14,8 +25,10 @@ async function start() {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
       <MarketingApp />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
+
+  deferPwa();
 }
 
 start().catch((error) => {

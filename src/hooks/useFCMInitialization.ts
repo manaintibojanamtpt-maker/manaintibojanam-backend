@@ -24,8 +24,12 @@ export function useFCMInitialization() {
     const initializeFCM = async () => {
       if (authLoading || fcmInitialized || hasAttemptedInit || initializing) return;
 
-      // Owner portal doesn't need customer push bootstrap on first paint.
-      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/owner')) {
+      // Owner / super-admin portals don't need customer push bootstrap on first paint.
+      if (
+        typeof window !== 'undefined' &&
+        (window.location.pathname.startsWith('/owner') ||
+          window.location.pathname.startsWith('/super-admin'))
+      ) {
         return;
       }
 
