@@ -72,18 +72,26 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Fallback for navigation requests (SPA routing)
-// If the user navigates to a new URL, serve the precached index.html
+// Fallback for navigation requests (SPA routing).
+// Vercel renames the app shell to app.html; Capacitor/Firebase keep index.html.
 registerRoute(
   new NavigationRoute(async ({ request }) => {
     try {
-      // Try to fetch from network first for the freshest index.html if possible
       const response = await fetch(request);
       return response;
-    } catch (error) {
-      // If offline or network fails, fallback to precached index.html
-      const cache = await caches.match('/index.html');
-      return cache || Response.error();
+    } catch {
+      const url = new URL(request.url);
+      const marketingPath =
+        url.pathname === '/' ||
+        /\/(onboard|pricing|about|platform|security|contact|blog)\/?$/.test(url.pathname);
+      const candidates = marketingPath
+        ? ['/marketing.html', '/index.html', '/app.html']
+        : ['/app.html', '/index.html', '/marketing.html'];
+      for (const path of candidates) {
+        const cached = await caches.match(path);
+        if (cached) return cached;
+      }
+      return Response.error();
     }
   })
 );
