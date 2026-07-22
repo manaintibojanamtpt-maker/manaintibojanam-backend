@@ -144,7 +144,7 @@ try {
       redirectUrl.includes('__/auth/handler'));
 
   record('HTTP 200 on /auth', status === 200, `status=${status}`);
-  record('COOP same-origin-allow-popups', coop === 'same-origin-allow-popups', coop);
+  record('COOP omitted for Firebase popup auth', !coop || coop === 'unsafe-none', coop || '(none)');
   record(
     '/auth Cache-Control is no-cache',
     /no-cache/i.test(cacheControl),

@@ -127,7 +127,7 @@ describe('checkout auth wiring', () => {
       'utf8',
     );
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
-    assert.match(nativePlatform, /same-origin-allow-popups|bounce-tracking/);
+    assert.match(nativePlatform, /bounce-tracking|window\.closed/);
     assert.match(nativePlatform, /shouldFallbackGoogleAuthRedirect/);
     assert.match(nativePlatform, /return false;/);
     assert.doesNotMatch(nativePlatform, /isMobileWebClient/);

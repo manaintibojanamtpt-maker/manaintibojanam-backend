@@ -10,8 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const TARGETS = [
-  { name: 'Vercel www', url: 'https://www.bhojanos.com/owner/login', expectCoop: 'same-origin-allow-popups' },
-  { name: 'Firebase owner', url: 'https://bhojanos-owner.web.app/owner/login', expectCoop: 'same-origin-allow-popups' },
+  { name: 'Vercel www', url: 'https://www.bhojanos.com/owner/login', expectCoop: '(none)' },
+  { name: 'Firebase owner', url: 'https://bhojanos-owner.web.app/owner/login', expectCoop: '(none)' },
 ];
 
 const browser = await puppeteer.launch({
@@ -144,7 +144,7 @@ for (const target of TARGETS) {
       bundleProbe.staleAuthStateReady ||
       !bundleProbe.hasPopupSignIn ||
       !bundleProbe.hasRedirectFallback ||
-      (target.expectCoop !== '(none)' && coop !== target.expectCoop);
+      (target.expectCoop === '(none)' ? Boolean(coop && coop !== 'unsafe-none') : coop !== target.expectCoop);
 
     if (broken) failures += 1;
 

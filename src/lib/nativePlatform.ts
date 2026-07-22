@@ -18,7 +18,7 @@ export function skipPwaInstallPrompt(): boolean {
 /**
  * Prefer redirect only when popup is unavailable.
  * Chrome bounce-tracking breaks cross-origin redirect via *.firebaseapp.com,
- * so web clients must use signInWithPopup (hosting sends same-origin-allow-popups).
+ * so web clients must use signInWithPopup (hosting omits COOP so window.closed works).
  */
 export function shouldUseGoogleAuthRedirect(): boolean {
   if (typeof window === 'undefined') return false;

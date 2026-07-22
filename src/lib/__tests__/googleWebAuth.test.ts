@@ -11,7 +11,7 @@ describe('google web auth popup-first (Chrome bounce-tracking safe)', () => {
   it('prefers popup on web and keeps native platform on Capacitor path', () => {
     const nativePlatform = readFileSync(join(root, 'src/lib/nativePlatform.ts'), 'utf8');
     assert.match(nativePlatform, /if \(isNativePlatform\(\)\) return false/);
-    assert.match(nativePlatform, /bounce-tracking|same-origin-allow-popups/);
+    assert.match(nativePlatform, /bounce-tracking|window\.closed/);
     assert.match(nativePlatform, /shouldFallbackGoogleAuthRedirect/);
     assert.match(nativePlatform, /return false;/);
   });
