@@ -39,6 +39,15 @@
       ]
     },
     {
+      "source": "/app.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/marketing.html",
       "headers": [
         {
@@ -71,7 +80,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
     }
   ]
 }

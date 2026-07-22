@@ -18,7 +18,7 @@
     "sync:orderbhojan-repo": "node scripts/sync-orderbhojan-repo.mjs",
     "sync:orderbhojan-repo:push": "node scripts/sync-orderbhojan-repo.mjs --push",
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin --external:vite --external:node-cron",
-    "build:web": "node scripts/verify-vercel-firebase-env.mjs && node scripts/write-version-json.mjs && vite build",
+    "build:web": "node scripts/verify-vercel-firebase-env.mjs && node scripts/write-version-json.mjs && vite build && node scripts/vercel-marketing-index.mjs",
     "build:server": "node scripts/build-server.mjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
