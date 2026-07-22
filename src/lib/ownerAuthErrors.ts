@@ -56,7 +56,7 @@ function ownerWrongPasswordMessage(): string {
 }
 
 function networkFailureMessage(host: string): string {
-  return `Network error during sign-in from ${host}. Check your connection, disable VPN/ad blockers blocking identitytoolkit.googleapis.com, hard-refresh (Ctrl+Shift+R), and verify the bhojanos-prod API key HTTP referrer restrictions include ${host}, bhojanos.com, and www.bhojanos.com.`;
+  return `Network error during sign-in from ${host}. Hard-refresh (Ctrl+Shift+R), disable VPN/ad blockers blocking identitytoolkit.googleapis.com, then retry. If it persists, open the site in a private window (rules out a stale service worker).`;
 }
 
 function looksLikeUnauthorizedDomain(code: string, message: string): boolean {

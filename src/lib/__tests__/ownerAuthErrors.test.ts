@@ -60,14 +60,12 @@ describe('formatOwnerAuthError', () => {
     );
   });
 
-  it('network failures mention API key referrers and current host', () => {
-    assert.match(
-      formatOwnerAuthError({ code: 'auth/network-request-failed' }, { configReady: true, portal: 'superadmin' }),
-      /Network error during sign-in/,
+  it('network failures mention hard-refresh and private-window recovery', () => {
+    const message = formatOwnerAuthError(
+      { code: 'auth/network-request-failed' },
+      { configReady: true, portal: 'superadmin' },
     );
-    assert.match(
-      formatOwnerAuthError({ code: 'auth/network-request-failed' }, { configReady: true, portal: 'superadmin' }),
-      /bhojanos\.com/,
-    );
+    assert.match(message, /Network error during sign-in/);
+    assert.match(message, /private window|Hard-refresh/i);
   });
 });

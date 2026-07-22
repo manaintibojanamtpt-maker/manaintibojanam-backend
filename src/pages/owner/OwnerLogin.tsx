@@ -12,6 +12,10 @@ import { EnvironmentConfig } from '../../config/environment';
 import { isProductionBhojanHost } from '../../lib/runtimeFirebaseConfig';
 import { getFirebaseClientConfig, isFirebaseClientConfigReady } from '../../config/firebaseClientConfig';
 import { formatOwnerAuthError, isBenignOwnerAuthDismiss, resolveOwnerLoginError } from '../../lib/ownerAuthErrors';
+import {
+  clearAuthNetworkRecoveryFlag,
+  recoverAuthNetworkFailure,
+} from '../../lib/recoverAuthNetworkFailure';
 import { isFounderOwnerEmail, FOUNDER_TENANT_ID } from '../../config/founder';
 import {
   clearGoogleRedirectAttempt,
@@ -75,6 +79,8 @@ const OwnerLogin = () => {
   }, []);
 
   useEffect(() => {
+    clearAuthNetworkRecoveryFlag();
+
     if (isProductionBhojanHost() && !isFirebaseClientConfigReady()) {
       setConfigError(
         'Firebase is not configured for production. Hard-refresh (Ctrl+Shift+R). If this persists, contact hello@bhojanos.com.',
@@ -170,9 +176,14 @@ const OwnerLogin = () => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
+      clearAuthNetworkRecoveryFlag();
       toast.success('Welcome back!');
       await afterSignIn();
     } catch (error: unknown) {
+      if (await recoverAuthNetworkFailure(error)) {
+        toast.error('Connection glitch — refreshing to clear a stale app cache…');
+        return;
+      }
       logIncident('security_events', {
         reason: 'Owner Login Failed',
         email,
@@ -202,10 +213,15 @@ const OwnerLogin = () => {
     try {
       const user = await signInWithGoogleAccount(auth);
       if (!user) return;
+      clearAuthNetworkRecoveryFlag();
       toast.success('Welcome back!');
       await afterSignIn();
     } catch (error: unknown) {
       if (!isBenignOwnerAuthDismiss(error)) {
+        if (await recoverAuthNetworkFailure(error)) {
+          toast.error('Connection glitch — refreshing to clear a stale app cache…');
+          return;
+        }
         logIncident('security_events', {
           reason: 'Google Login Failed',
           error: error instanceof Error ? error.message : String(error),
