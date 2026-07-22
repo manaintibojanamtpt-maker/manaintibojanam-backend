@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
 import { useOwnerTenantId } from '../hooks/useOwnerTenantId';
-import { fetchOwnerMenuItems } from '../lib/ownerMenuApi';
+import { fetchOwnerMenuItemsCached } from '../lib/ownerMenuCache';
 import { FOUNDER_TENANT_ID, isFounderOwnerEmail } from '../config/founder';
 import { useDashboardMenu, useIsDashboardRealtimeActive } from '../context/DashboardRealtimeProvider';
 
-const MENU_COUNT_POLL_MS = 8_000;
+const MENU_COUNT_POLL_MS = 45_000;
 
 /** Menu item count for owner setup progress — shared dashboard poll when inside owner layout. */
 export function useOwnerMenuCount(): number {
@@ -29,7 +29,7 @@ export function useOwnerMenuCount(): number {
       return;
     }
     try {
-      const response = await fetchOwnerMenuItems(activeTenantId);
+      const response = await fetchOwnerMenuItemsCached(activeTenantId);
       setFallbackMenuCount(response.items?.length ?? 0);
     } catch (error) {
       console.error('useOwnerMenuCount failed:', error);

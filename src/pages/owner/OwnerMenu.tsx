@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
-import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
+import {
+  fetchOwnerMenuItemsCached,
+  invalidateOwnerMenuCache,
+  peekOwnerMenuCache,
+  seedOwnerMenuCache,
+} from '../../lib/ownerMenuCache';
 import type { MenuItem } from '../../types';
+import { useDashboardMenu } from '../../context/DashboardRealtimeProvider';
 import type {
   StorefrontAddonGroupSnapshot,
   StorefrontVariantSnapshot,
@@ -75,12 +80,20 @@ const compressImage = async (file: File, magicEnhance: boolean = false): Promise
 };
 
 const OwnerMenu = () => {
-  const { loading: authLoading } = useAuth();
-  const { tenantInfo, loading: tenantLoading } = useTenant();
+  const { tenantInfo } = useTenant();
   const tenantId = useOwnerTenantId();
-  
-  const [items, setItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const dashboardMenu = useDashboardMenu();
+
+  const [items, setItems] = useState<MenuItem[]>(() => {
+    if (tenantId) {
+      const cached = peekOwnerMenuCache(tenantId);
+      if (cached?.items?.length) return cached.items;
+    }
+    if (dashboardMenu.items.length) return dashboardMenu.items;
+    return [];
+  });
+  const [loading, setLoading] = useState(() => items.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,29 +115,47 @@ const OwnerMenu = () => {
   const [variants, setVariants] = useState<StorefrontVariantSnapshot[]>([]);
   const [addonGroups, setAddonGroups] = useState<StorefrontAddonGroupSnapshot[]>([]);
 
-  const loadMenuItems = async (activeTenantId: string) => {
-    setLoading(true);
+  const loadMenuItems = async (activeTenantId: string, opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? items.length > 0;
+    if (soft) setRefreshing(true);
+    else setLoading(true);
     try {
-      const response = await fetchOwnerMenuItems(activeTenantId);
+      const response = await fetchOwnerMenuItemsCached(activeTenantId, (fresh) => {
+        setItems(fresh.items ?? []);
+      });
       setItems(response.items ?? []);
     } catch (error) {
       console.error('Menu load error:', error);
-      toast.error('Failed to load menu. Check your connection and try again.');
-      setItems([]);
+      if (items.length === 0) {
+        toast.error('Failed to load menu. Check your connection and try again.');
+        setItems([]);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    if (authLoading || tenantLoading) return;
     if (!tenantId) {
       setItems([]);
       setLoading(false);
       return;
     }
-    void loadMenuItems(tenantId);
-  }, [tenantId, authLoading, tenantLoading]);
+
+    const cached = peekOwnerMenuCache(tenantId);
+    if (cached?.items?.length) {
+      setItems(cached.items);
+      setLoading(false);
+    } else if (dashboardMenu.items.length) {
+      setItems(dashboardMenu.items);
+      seedOwnerMenuCache(tenantId, dashboardMenu.items);
+      setLoading(false);
+    }
+
+    void loadMenuItems(tenantId, { soft: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   const handleOpenModal = (item?: MenuItem) => {
     if (item) {
@@ -165,12 +196,25 @@ const OwnerMenu = () => {
   };
 
   const handleToggleAvailability = async (item: MenuItem) => {
+    const nextAvailable = !item.isAvailable;
+    setItems((prev) =>
+      prev.map((row) => (row.id === item.id ? { ...row, isAvailable: nextAvailable } : row)),
+    );
     try {
-      await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
-      if (tenantId) await loadMenuItems(tenantId);
-      toast.success(`${item.name} is now ${!item.isAvailable ? 'Available' : 'Sold Out'}`);
+      await updateMenuItem(item.id, { isAvailable: nextAvailable });
+      if (tenantId) {
+        invalidateOwnerMenuCache(tenantId);
+        seedOwnerMenuCache(
+          tenantId,
+          items.map((row) => (row.id === item.id ? { ...row, isAvailable: nextAvailable } : row)),
+        );
+      }
+      toast.success(`${item.name} is now ${nextAvailable ? 'Available' : 'Sold Out'}`);
     } catch (err) {
       console.error(err);
+      setItems((prev) =>
+        prev.map((row) => (row.id === item.id ? { ...row, isAvailable: item.isAvailable } : row)),
+      );
       toast.error('Failed to update availability');
     }
   };
@@ -229,7 +273,8 @@ const OwnerMenu = () => {
         toast.success('Item added successfully');
       }
       handleCloseModal();
-      if (tenantId) await loadMenuItems(tenantId);
+      invalidateOwnerMenuCache(tenantId);
+      await loadMenuItems(tenantId, { soft: true });
     } catch (error) {
       console.error('Save failed:', error);
       const message = error instanceof Error ? error.message : 'Failed to save menu item';
@@ -243,7 +288,14 @@ const OwnerMenu = () => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
         await deleteMenuItem(id);
-        if (tenantId) await loadMenuItems(tenantId);
+        setItems((prev) => prev.filter((row) => row.id !== id));
+        if (tenantId) {
+          invalidateOwnerMenuCache(tenantId);
+          seedOwnerMenuCache(
+            tenantId,
+            items.filter((row) => row.id !== id),
+          );
+        }
         toast.success('Item deleted');
       } catch (error) {
         console.error('Delete failed:', error);
@@ -251,14 +303,6 @@ const OwnerMenu = () => {
       }
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20 text-white">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-      </div>
-    );
-  }
 
   if (!tenantId) {
     return (
@@ -277,13 +321,29 @@ const OwnerMenu = () => {
     );
   }
 
+  if (loading && items.length === 0) {
+    return (
+      <div className="p-6 md:p-12 text-white">
+        <div className="max-w-5xl mx-auto space-y-3">
+          <div className="h-10 w-48 rounded-xl bg-white/5 animate-pulse" />
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 md:p-12 text-white">
       <div className="max-w-5xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Menu Builder</h1>
-            <p className="text-white/50 mt-1">Manage your catalog items and prices.</p>
+            <p className="text-white/50 mt-1">
+              Manage your catalog items and prices.
+              {refreshing ? <span className="ml-2 text-orange-400/80">· updating…</span> : null}
+            </p>
           </div>
           <button
             onClick={() => handleOpenModal()}

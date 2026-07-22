@@ -15,6 +15,7 @@ import {
   type OwnerOrderSnapshot,
 } from './ownerOrderReadModelMapper';
 import { isSdkOwnerOrdersEnabled } from './sdkFeatureFlags';
+import { peekOwnerOrdersCache, seedOwnerOrdersCache } from './ownerOrdersCache';
 
 export type OwnerOrder = OwnerOrderSnapshot;
 
@@ -51,12 +52,21 @@ export const subscribeOwnerOrders = (
   let cancelled = false;
   const useSdkMapping = isSdkOwnerOrdersEnabled();
 
+  // Instant paint from session/memory cache (native-app feel).
+  const cached = peekOwnerOrdersCache(tenantId, orderLimit);
+  if (cached?.orders?.length) {
+    callback(cached.orders.slice(0, orderLimit), cached.hasMore || cached.orders.length >= orderLimit);
+  }
+
   const poll = async () => {
     try {
       const response = await fetchOwnerOrdersFromApi(tenantId, orderLimit);
       if (cancelled) return;
       const records = (response.orders ?? []) as ApiOrderRecord[];
-      callback(mapApiRecordsToOwnerOrders(records, tenantId, useSdkMapping), response.hasMore === true);
+      const orders = mapApiRecordsToOwnerOrders(records, tenantId, useSdkMapping);
+      const hasMore = response.hasMore === true;
+      seedOwnerOrdersCache(tenantId, orders, { limit: orderLimit, hasMore });
+      callback(orders, hasMore);
     } catch (error) {
       onError?.(error);
     }

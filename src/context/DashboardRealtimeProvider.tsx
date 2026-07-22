@@ -10,7 +10,8 @@ import React, {
 import { useOwnerTenantId } from '../hooks/useOwnerTenantId';
 import { fetchOwnerOrdersList } from '../lib/ownerOrdersReads';
 import type { OwnerOrder } from '../lib/ownerOrdersReads';
-import { fetchOwnerMenuItemsCached } from '../lib/ownerMenuCache';
+import { fetchOwnerMenuItemsCached, peekOwnerMenuCache, seedOwnerMenuCache } from '../lib/ownerMenuCache';
+import { peekOwnerOrdersCache, seedOwnerOrdersCache } from '../lib/ownerOrdersCache';
 import { fetchOwnerStoreOperations } from '../lib/tenantStoreStatusApi';
 import {
   resolveStoreSettings,
@@ -100,12 +101,18 @@ const EMPTY_STORE: DashboardStoreStatusSlice = {
 
 export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const tenantId = useOwnerTenantId();
-  const [orders, setOrders] = useState<OwnerOrder[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [orders, setOrders] = useState<OwnerOrder[]>(() => {
+    if (!tenantId) return [];
+    return peekOwnerOrdersCache(tenantId, DASHBOARD_ORDERS_LIMIT)?.orders ?? [];
+  });
+  const [ordersLoading, setOrdersLoading] = useState(() => orders.length === 0);
   const [ordersError, setOrdersError] = useState<unknown | null>(null);
 
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [menuLoading, setMenuLoading] = useState(true);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
+    if (!tenantId) return [];
+    return peekOwnerMenuCache(tenantId)?.items ?? [];
+  });
+  const [menuLoading, setMenuLoading] = useState(() => menuItems.length === 0);
   const [menuError, setMenuError] = useState<unknown | null>(null);
 
   const [storeSettings, setStoreSettings] = useState<ResolvedStoreSettings | null>(null);
@@ -135,6 +142,10 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
       if (ordersResult.status === 'fulfilled') {
         setOrders(ordersResult.value);
         setOrdersError(null);
+        seedOwnerOrdersCache(tenantId, ordersResult.value, {
+          limit: DASHBOARD_ORDERS_LIMIT,
+          hasMore: ordersResult.value.length >= DASHBOARD_ORDERS_LIMIT,
+        });
       } else {
         setOrdersError(ordersResult.reason);
         if ((ordersResult.reason as { status?: number })?.status === 429) {
@@ -147,6 +158,7 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
       if (menuResult.status === 'fulfilled') {
         setMenuItems(menuResult.value.items);
         setMenuError(null);
+        seedOwnerMenuCache(tenantId, menuResult.value.items);
       } else {
         setMenuError(menuResult.reason);
         if ((menuResult.reason as { status?: number })?.status === 429) {
@@ -199,8 +211,20 @@ export const DashboardRealtimeProvider: React.FC<{ children: React.ReactNode }> 
       return;
     }
 
-    setOrdersLoading(true);
-    setMenuLoading(true);
+    const cachedOrders = peekOwnerOrdersCache(tenantId, DASHBOARD_ORDERS_LIMIT);
+    const cachedMenu = peekOwnerMenuCache(tenantId);
+    if (cachedOrders?.orders?.length) {
+      setOrders(cachedOrders.orders);
+      setOrdersLoading(false);
+    } else {
+      setOrdersLoading(true);
+    }
+    if (cachedMenu?.items?.length) {
+      setMenuItems(cachedMenu.items);
+      setMenuLoading(false);
+    } else {
+      setMenuLoading(true);
+    }
     setStoreLoading(true);
     pollBackoffUntilRef.current = 0;
 

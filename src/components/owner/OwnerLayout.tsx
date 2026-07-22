@@ -20,6 +20,8 @@ import { needsStoreSetup } from '../../lib/storeSetupProgress';
 import { useOwnerMenuCount } from '../../hooks/useOwnerMenuCount';
 import { syncOwnerTenantsViaApi } from '../../lib/ownerProvisioning';
 import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
+import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
+import { fetchOwnerOrdersListCached } from '../../lib/ownerOrdersCache';
 import { FOUNDER_TENANT_ID, hasFounderTenantEntitlements, isFounderOwnerEmail } from '../../config/founder';
 import {
   resolvePreferredOwnerTenantId,
@@ -132,6 +134,28 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         console.warn('Owner tenant sync on layout mount failed:', error);
       });
   }, [currentUser?.uid]);
+
+  // Prefetch orders + menu into session cache so tab switches feel instant.
+  useEffect(() => {
+    if (!tenantId) return;
+    const idle =
+      typeof window !== 'undefined' && 'requestIdleCallback' in window
+        ? window.requestIdleCallback
+        : (cb: () => void) => window.setTimeout(cb, 400);
+    const cancel =
+      typeof window !== 'undefined' && 'cancelIdleCallback' in window
+        ? window.cancelIdleCallback
+        : window.clearTimeout;
+
+    const handle = idle(() => {
+      void fetchOwnerMenuItemsCached(tenantId).catch(() => undefined);
+      void fetchOwnerOrdersListCached(tenantId, 50).catch(() => undefined);
+    });
+
+    return () => {
+      cancel(handle as number);
+    };
+  }, [tenantId]);
 
   const copyStoreLink = () => {
     if (!storeUrl) return;

@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { m, AnimatePresence } from 'framer-motion';
 import { subscribeOwnerOrders, type OwnerOrder } from '../../lib/ownerOrdersReads';
+import { peekOwnerOrdersCache } from '../../lib/ownerOrdersCache';
 import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
-import { fetchOwnerMenuItems } from '../../lib/ownerMenuApi';
-import { useAuth } from '../../context/AuthContext';
+import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
 import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
+import { useDashboardOrders } from '../../context/DashboardRealtimeProvider';
 import { coerceOwnerOrderDate } from '../../lib/ownerOrderReadModelMapper';
 import { CheckCircle, XCircle, Clock, Truck, ChefHat, Bell, Phone, MessageCircle, PackageX, ExternalLink, AlertTriangle, CalendarClock, IndianRupee } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,13 +31,20 @@ interface Order extends OwnerOrder {}
 
 const OwnerOrders: React.FC = () => {
   const navigate = useNavigate();
-  const { userProfile, profileLoading } = useAuth();
-  const { tenantInfo, loading: tenantLoading } = useTenant();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const { tenantInfo } = useTenant();
+  const tenantId = useOwnerTenantId();
+  const dashboardOrders = useDashboardOrders();
   const [orderLimit, setOrderLimit] = useState(50);
-  const [hasMore, setHasMore] = useState(true);
+  const initialCache = tenantId ? peekOwnerOrdersCache(tenantId, 50) : null;
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (initialCache?.orders?.length) return initialCache.orders as Order[];
+    if (dashboardOrders.orders.length) return dashboardOrders.orders as Order[];
+    return [];
+  });
+  const [loading, setLoading] = useState(() => orders.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(() => initialCache?.hasMore ?? true);
 
   // Dispatch Modal State
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
@@ -57,16 +65,32 @@ const OwnerOrders: React.FC = () => {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [fetchingMenu, setFetchingMenu] = useState(false);
 
-  const tenantId = useOwnerTenantId();
-
   const formatOrderTime = (createdAt: unknown) => formatOwnerOrderTime(createdAt);
 
   const parseTrialDate = (value: unknown): Date | null => coerceOwnerOrderDate(value);
 
+  // Hydrate from dashboard poll / session without waiting on auth profile.
   useEffect(() => {
-    if (!tenantId || tenantLoading || profileLoading) return;
+    if (!tenantId || orders.length > 0) return;
+    const cached = peekOwnerOrdersCache(tenantId, orderLimit);
+    if (cached?.orders?.length) {
+      setOrders(cached.orders as Order[]);
+      setHasMore(cached.hasMore);
+      setLoading(false);
+      return;
+    }
+    if (dashboardOrders.orders.length) {
+      setOrders(dashboardOrders.orders as Order[]);
+      setLoading(false);
+    }
+  }, [tenantId, orderLimit, dashboardOrders.orders, orders.length]);
+
+  useEffect(() => {
+    if (!tenantId) return;
 
     ordersErrorToastRef.current = false;
+    if (orders.length > 0) setRefreshing(true);
+    else setLoading(true);
 
     const unsubscribe = subscribeOwnerOrders(
       tenantId,
@@ -75,22 +99,25 @@ const OwnerOrders: React.FC = () => {
         setOrders(fetchedOrders as Order[]);
         setHasMore(hasMoreOrders);
         setLoading(false);
+        setRefreshing(false);
       },
       (error: unknown) => {
         console.error("Error fetching orders:", error);
         const code = typeof error === 'object' && error !== null && 'code' in error
           ? String((error as { code?: string }).code)
           : '';
-        if (!ordersErrorToastRef.current && code !== 'permission-denied') {
+        if (!ordersErrorToastRef.current && code !== 'permission-denied' && orders.length === 0) {
           ordersErrorToastRef.current = true;
           toast.error("Failed to load live orders");
         }
         setLoading(false);
+        setRefreshing(false);
       }
     );
 
     return () => unsubscribe();
-  }, [tenantId, tenantLoading, profileLoading, orderLimit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once per tenant/limit; avoid reset loops
+  }, [tenantId, orderLimit]);
 
   useEffect(() => {
     orders.forEach((order, orderIndex) => {
@@ -201,7 +228,7 @@ const OwnerOrders: React.FC = () => {
     setStockModalOpen(true);
     setFetchingMenu(true);
     try {
-      const response = await fetchOwnerMenuItems(tenantId);
+      const response = await fetchOwnerMenuItemsCached(tenantId);
       setMenuItems(response.items ?? []);
     } catch (e) {
       console.error(e);
@@ -611,7 +638,10 @@ const OwnerOrders: React.FC = () => {
             <img src={logo} alt="BhojanOS" className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-white/10 shrink-0" />
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Orders Dashboard</h1>
-              <p className="text-xs sm:text-sm text-white/50 mt-1">Manage incoming orders for your kitchen</p>
+              <p className="text-xs sm:text-sm text-white/50 mt-1">
+                Manage incoming orders for your kitchen
+                {refreshing ? <span className="ml-2 text-orange-400/80">· updating…</span> : null}
+              </p>
             </div>
           </div>
           
@@ -668,9 +698,14 @@ const OwnerOrders: React.FC = () => {
           </div>
         )}
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        {loading && orders.length === 0 ? (
+          <div className="space-y-4">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-36 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse"
+              />
+            ))}
           </div>
         ) : (
           <div className="space-y-8 sm:space-y-10">

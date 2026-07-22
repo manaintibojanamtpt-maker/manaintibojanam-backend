@@ -1,6 +1,7 @@
 import { ownerApiRequest } from './ownerProvisioning';
 
-export const OWNER_ORDERS_POLL_MS = 15_000;
+/** Live queue refresh — cache covers instant navigation between polls. */
+export const OWNER_ORDERS_POLL_MS = 20_000;
 
 export async function fetchOwnerOrdersFromApi(tenantId: string, limit = 50) {
   return ownerApiRequest<{
