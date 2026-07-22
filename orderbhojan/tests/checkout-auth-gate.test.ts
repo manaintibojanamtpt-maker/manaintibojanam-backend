@@ -148,6 +148,15 @@ describe('checkout auth wiring', () => {
     assert.match(requireAuth, /state=\{\{ from: returnTo \}\}/);
   });
 
+  it('RequireBrowseAuth waits for Google redirect resume before gating home', () => {
+    const requireBrowseAuth = readFileSync(
+      join(root, 'src/features/auth/ui/RequireBrowseAuth.tsx'),
+      'utf8',
+    );
+    assert.match(requireBrowseAuth, /auth_redirecting/);
+    assert.match(requireBrowseAuth, /redirectResumePending/);
+  });
+
   it('prepare checkout in parallel with cart validation', () => {
     const flow = readFileSync(join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'), 'utf8');
     assert.match(flow, /enabled: canCheckout && Boolean\(prepareSignature\)/);

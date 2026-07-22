@@ -34,6 +34,10 @@ export function OrderBhojanAuthShellPage() {
   const authLoading = status === 'loading' || redirectResumePending;
 
   useEffect(() => {
+    persistAuthReturnTo(redirectTo);
+  }, [redirectTo]);
+
+  useEffect(() => {
     if (authLoading || !isAuthenticated || showPhoneVerification) {
       return;
     }

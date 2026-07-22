@@ -22,6 +22,7 @@
     "test:screenshots:restaurant": "node scripts/capture-restaurant-px5.mjs",
     "test:screenshots:food": "node scripts/capture-food-px6.mjs",
     "test:responsive": "node scripts/responsive-smoke.mjs",
+    "test:auth:smoke": "node scripts/puppeteer-customer-auth-smoke.mjs",
     "test:lighthouse": "node scripts/lighthouse-smoke.mjs",
     "certify:bds": "node scripts/bds-certification.mjs",
     "analyze": "vite build --mode analyze",

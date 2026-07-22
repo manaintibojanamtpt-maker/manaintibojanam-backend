@@ -200,17 +200,35 @@ export function clearGoogleRedirectAttempt(): void {
   sessionStorage.removeItem(AUTH_REDIRECT_ATTEMPT_KEY);
 }
 
+/** Recover redirect sign-in when getRedirectResult races persistence or a stale SW drops callback params. */
+function resolveGoogleRedirectSessionUser(auth: ReturnType<typeof requireAuth>): AuthSessionUser | null {
+  const current = auth.currentUser;
+  if (!current || current.isAnonymous) {
+    return null;
+  }
+  const mapped = mapFirebaseUser(current);
+  return mapped.provider === 'google' ? mapped : null;
+}
+
 export async function completeGoogleRedirectSignIn(): Promise<AuthSessionUser | null> {
   if (!googleRedirectResultPromise) {
     googleRedirectResultPromise = (async () => {
       const auth = requireAuth();
       try {
         const result = await getRedirectResult(auth);
-        if (!result?.user) {
-          return null;
+        if (result?.user) {
+          clearGoogleRedirectAttempt();
+          return mapFirebaseUser(result.user);
         }
-        clearGoogleRedirectAttempt();
-        return mapFirebaseUser(result.user);
+        if (readGoogleRedirectAttempt()) {
+          const recovered = resolveGoogleRedirectSessionUser(auth);
+          if (recovered) {
+            obDebugLog('auth', 'Recovered Google redirect session from currentUser');
+            clearGoogleRedirectAttempt();
+            return recovered;
+          }
+        }
+        return null;
       } catch (error) {
         clearGoogleRedirectAttempt();
         obDebugLog('auth', 'Google redirect result failed', error);

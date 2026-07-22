@@ -18,6 +18,7 @@ describe('OrderBhojan connectivity probe', () => {
     assert.match(viteConfig, /navigateFallback: '\/index\.html'/);
     assert.doesNotMatch(viteConfig, /navigateFallback: '\/offline\.html'/);
     assert.match(viteConfig, /navigateFallbackDenylist:.*offline\\.html/s);
+    assert.match(viteConfig, /navigateFallbackDenylist:.*__\\\/auth/s);
     assert.match(viteConfig, /globIgnores:.*offline\.html/s);
   });
 
@@ -32,6 +33,19 @@ describe('OrderBhojan connectivity probe', () => {
     assert.match(probe, /Never hard-block the app on a flaky offline signal/);
     assert.match(probe, /return true;/);
     assert.doesNotMatch(probe, /navigator\.onLine/);
+  });
+
+  it('index.html purges stale orderbhojan workbox caches before SW update', () => {
+    const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
+    assert.match(indexHtml, /orderbhojan-pwa-v4/);
+    assert.match(indexHtml, /caches\.keys\(\)/);
+    assert.match(indexHtml, /caches\.delete/);
+  });
+
+  it('firebase hosting disables CDN cache on /auth OAuth return shell', () => {
+    const firebaseJson = readFileSync(join(root, '../firebase.json'), 'utf8');
+    assert.match(firebaseJson, /"source": "\/auth"/);
+    assert.match(firebaseJson, /"value": "no-cache, must-revalidate"/);
   });
 
   it('offline.html auto-recovers and resets stale service workers', () => {
