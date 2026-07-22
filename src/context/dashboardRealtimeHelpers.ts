@@ -1,9 +1,11 @@
 import type { MenuItem } from '../types';
 import type { OwnerOrder } from '../lib/ownerOrdersReads';
 
-export const DASHBOARD_REALTIME_POLL_MS = 15_000;
+/** Poll less aggressively — dashboard only needs a recent window, not a full ops feed. */
+export const DASHBOARD_REALTIME_POLL_MS = 30_000;
 export const DASHBOARD_REALTIME_POLL_BACKOFF_MS = 60_000;
-export const DASHBOARD_ORDERS_LIMIT = 200;
+/** Enough for today's metrics + recent activity; full history lives on /owner/orders. */
+export const DASHBOARD_ORDERS_LIMIT = 40;
 
 export const NEW_ORDER_STATUSES = new Set([
   'PENDING',

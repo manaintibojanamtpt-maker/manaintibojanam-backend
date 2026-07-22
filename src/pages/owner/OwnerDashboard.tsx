@@ -14,8 +14,10 @@ import { Order, Subscription, ReleaseNote } from '../../types';
 import { safeParseDate } from '../../lib/utils';
 import { ReleaseNotesModal } from '../../components/releases/ReleaseNotesModal';
 import { deriveOwnerCustomerMemories } from '../../utils/customerMemory';
-import { CustomerSegmentSummary, getCustomerSegmentsSummary } from '../../services/CustomerIntelligenceService';
-import { KitchenHealthResult, calculateKitchenHealth } from '../../services/KitchenHealthService';
+import {
+  CustomerSegmentSummary,
+  summarizeCustomerSegmentsFromOrders,
+} from '../../services/CustomerIntelligenceService';
 import { TenantAnalytics, getTenantAnalytics, backfillAnalytics } from '../../services/AnalyticsService';
 import { useTenant } from '../../context/TenantContext';
 import { generateDailyGrowthSnapshot, AIGrowthSnapshot } from '../../services/AIGrowthManager';
@@ -36,12 +38,10 @@ import {
   countUrgentAttentionItems,
   getDashboardPriorityActions,
 } from '../../lib/dashboardPriorityActions';
-import { useNotifications } from '../../modules/notifications/hooks/useNotifications';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
 import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
 import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
-import { fetchOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
 import { fetchLatestReleaseNote, updateOwnerTenantPreferences } from '../../lib/ownerPortalApi';
 import { DashboardProductionMetrics } from '../../components/owner/DashboardProductionMetrics';
@@ -57,7 +57,7 @@ const SparklineChart = React.lazy(() => import('../../components/owner/widgets/S
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
-  const { userProfile, profileLoading } = useAuth();
+  const { userProfile } = useAuth();
   const { flags } = useFeatureFlags();
   const { tenantInfo: contextTenant, tenantSlug, loading: tenantContextLoading } = useTenant();
   const resolvedTenantId = useOwnerTenantId();
@@ -79,11 +79,8 @@ const OwnerDashboard = () => {
   const loading = ordersLoading;
 
   const storeSlug = tenantInfo?.slug || contextTenant?.slug || tenantSlug || tenantId;
-  const { unreadCount: notificationUnreadCount } = useNotifications(
-    tenantInfo?.id || contextTenant?.id,
-    5,
-    storeSlug
-  );
+  // NotificationBell in OwnerLayout owns unread polling — avoid a second Firestore poller here.
+  const notificationUnreadCount = 0;
   const storeUrl = getStoreUrl(storeSlug);
 
   const requireStoreUrl = (action: string) => {
@@ -123,29 +120,6 @@ const OwnerDashboard = () => {
   }, [contextTenant]);
 
   React.useEffect(() => {
-    if (!tenantId || profileLoading || tenantContextLoading) return;
-
-    let cancelled = false;
-    fetchOwnerStorefront(tenantId)
-      .then((storefront) => {
-        if (cancelled) return;
-        setTenantInfo((prev: any) => ({
-          ...(prev ?? contextTenant ?? {}),
-          deliveryConfig: storefront.deliveryConfig ?? prev?.deliveryConfig,
-          paymentConfig: storefront.paymentConfig ?? prev?.paymentConfig,
-          location: storefront.location ?? prev?.location,
-        }));
-      })
-      .catch((error) => {
-        console.warn('Owner dashboard storefront settings refresh failed:', error);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, profileLoading, tenantContextLoading, contextTenant]);
-
-  React.useEffect(() => {
     const migrateTenant = async () => {
       if (!tenantInfo || !tenantInfo.id || !flags.onboardingWizardV2) return;
       if (tenantInfo.onboardingStatus !== undefined) return;
@@ -180,43 +154,70 @@ const OwnerDashboard = () => {
         console.error('Failed to initialize tenant onboarding status:', e);
       }
     };
-    migrateTenant();
+
+    // Defer migration off the critical first-paint path.
+    const timer = window.setTimeout(() => {
+      void migrateTenant();
+    }, 1_500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [tenantInfo, flags.onboardingWizardV2]);
 
   React.useEffect(() => {
-    if (profileLoading || tenantContextLoading) return;
+    if (!tenantId || tenantContextLoading) return;
 
-    if (!tenantId) return;
+    let cancelled = false;
+    const runSecondary = () => {
+      if (cancelled) return;
 
-    getTenantAnalytics(tenantId).then((data) => {
-      if (!data) backfillAnalytics(tenantId).then((newData) => setAnalytics(newData as any));
-      else setAnalytics(data);
-    }).catch((error) => {
-      console.error('Owner dashboard analytics failed:', error);
-    });
+      void getTenantAnalytics(tenantId)
+        .then((data) => {
+          if (cancelled) return;
+          if (!data) {
+            return backfillAnalytics(tenantId).then((newData) => {
+              if (!cancelled) setAnalytics(newData as any);
+            });
+          }
+          setAnalytics(data);
+        })
+        .catch((error) => {
+          console.error('Owner dashboard analytics failed:', error);
+        });
 
-    getCustomerSegmentsSummary(tenantId).then(setSegments).catch((error) => {
-      console.error('Owner dashboard segments failed:', error);
-    });
-
-    const fetchLatestRelease = async () => {
-      try {
-        const response = await fetchLatestReleaseNote();
-        if (response.release) {
-          setLatestRelease(response.release as ReleaseNote);
-        }
-      } catch (e) {
-        console.error('Failed to fetch release note', e);
-      }
+      void fetchLatestReleaseNote()
+        .then((response) => {
+          if (!cancelled && response.release) {
+            setLatestRelease(response.release as ReleaseNote);
+          }
+        })
+        .catch((e) => {
+          console.error('Failed to fetch release note', e);
+        });
     };
-    void fetchLatestRelease();
-  }, [tenantId, profileLoading, tenantContextLoading]);
+
+    // Paint shell + orders first; analytics/release notes can wait a tick.
+    const timer = window.setTimeout(runSecondary, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [tenantId, tenantContextLoading]);
+
+  React.useEffect(() => {
+    if (!allOrders.length) {
+      setSegments(null);
+      return;
+    }
+    setSegments(summarizeCustomerSegmentsFromOrders(allOrders as Order[]));
+  }, [allOrders]);
 
   React.useEffect(() => {
     if (tenantInfo) {
       setHealthScore(calculateMerchantHealth(tenantInfo, analytics || undefined, 10)); // Mocking 10 menu items for now
     }
-  }, [tenantInfo, analytics, orders]);
+  }, [tenantInfo, analytics]);
 
   React.useEffect(() => {
     if (tenantInfo) {
@@ -251,7 +252,8 @@ const OwnerDashboard = () => {
     }));
   }, [orderMetrics.recentOrders]);
 
-  if (profileLoading || tenantContextLoading) {
+  // Prefer cached tenant id over blocking on profile hydrate.
+  if (tenantContextLoading && !tenantId) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
         <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />

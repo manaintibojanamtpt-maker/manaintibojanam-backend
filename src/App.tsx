@@ -35,7 +35,7 @@ import { dismissSplash, scheduleSplashSafetyTimeout, isMarketingPath } from './l
 import { activateCustomerPreviewFromUrl, isCustomerPreviewMode, exitCustomerPreviewMode } from './lib/storefrontPreview';
 import { isDiscoveryMarketplaceEnabled } from './lib/discovery/discoveryFeatureFlags';
 import CustomerPreviewBanner from './components/CustomerPreviewBanner';
-import OwnerLayout from './components/owner/OwnerLayout';
+const OwnerLayout = lazy(() => import('./components/owner/OwnerLayout'));
 const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'));
 const DataImporter = lazy(() => import('./pages/DataImporter'));
 const ForecastDashboard = lazy(() => import('./pages/owner/ForecastDashboard'));
@@ -225,7 +225,7 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setRepairing(true);
     void waitForOwnerTenantIds(currentUser.uid, refreshProfile, {
       email: currentUser.email,
-      maxAttempts: 8,
+      maxAttempts: 3,
       knownIds: readCachedOwnerTenantIds(),
     })
       .then((ids) => {
@@ -234,7 +234,12 @@ const OwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       .finally(() => setRepairing(false));
   }, [currentUser, loading, ownedTenants.length, repairAttempted, refreshProfile]);
 
-  const waitingOnGate = (loading || profileLoading || repairing) && !gateTimedOut;
+  // Cache-first: don't block the shell when we already know which kitchen(s) they own.
+  const waitingOnGate =
+    (loading ||
+      (profileLoading && effectiveOwnedTenants.length === 0) ||
+      (repairing && effectiveOwnedTenants.length === 0)) &&
+    !gateTimedOut;
 
   if (waitingOnGate) {
     return (
@@ -504,11 +509,21 @@ const AppContent: React.FC = () => {
     </div>
   );
 
+  const OwnerPageFallback = () => (
+    <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-3">
+      <div className="h-10 w-10 rounded-full border-2 border-orange-500/30 border-t-orange-500 animate-spin" />
+      <p className="text-sm text-white/50 font-medium">Loading owner dashboard…</p>
+    </div>
+  );
+
   const routeFallback = (() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path.startsWith('/super-admin') || path.startsWith('/admin')) {
         return <AdminPageFallback />;
+      }
+      if (path.startsWith('/owner')) {
+        return <OwnerPageFallback />;
       }
     }
     return isMarketingPath() ? <MarketingPageFallback /> : <GlobalLoading />;

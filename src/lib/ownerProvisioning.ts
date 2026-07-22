@@ -180,10 +180,30 @@ export async function provisionOwnerStore(params: ProvisionOwnerParams): Promise
   return payload.tenantSlug;
 }
 
+let inflightTenantSync: Promise<string[]> | null = null;
+let tenantSyncCache: { ids: string[]; at: number } | null = null;
+const TENANT_SYNC_TTL_MS = 30_000;
+
 /** Repair ownedTenantIds on the user doc when client Firestore writes are blocked. */
 export async function syncOwnerTenantsViaApi(): Promise<string[]> {
-  const payload = await ownerApiPost<{ ownedTenantIds: string[] }>('/api/owner/sync-tenants');
-  return Array.isArray(payload.ownedTenantIds) ? payload.ownedTenantIds.filter(Boolean) : [];
+  if (tenantSyncCache && Date.now() - tenantSyncCache.at < TENANT_SYNC_TTL_MS) {
+    return tenantSyncCache.ids;
+  }
+  if (inflightTenantSync) {
+    return inflightTenantSync;
+  }
+
+  inflightTenantSync = ownerApiPost<{ ownedTenantIds: string[] }>('/api/owner/sync-tenants')
+    .then((payload) => {
+      const ids = Array.isArray(payload.ownedTenantIds) ? payload.ownedTenantIds.filter(Boolean) : [];
+      tenantSyncCache = { ids, at: Date.now() };
+      return ids;
+    })
+    .finally(() => {
+      inflightTenantSync = null;
+    });
+
+  return inflightTenantSync;
 }
 
 /** Publish kitchen to OrderBhojan after server-side validation. */

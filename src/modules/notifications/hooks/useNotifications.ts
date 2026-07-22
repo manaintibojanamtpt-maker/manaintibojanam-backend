@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { notificationService } from '../NotificationService';
 import { NotificationFilter, NotificationStatus, TenantNotification } from '../NotificationTypes';
 
-const NOTIFICATION_POLL_MS = 12_000;
+const NOTIFICATION_POLL_MS = 45_000;
 
 export function useNotifications(
   tenantId: string | undefined,

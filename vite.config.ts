@@ -104,6 +104,16 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('/src/pages/AdminPanel.tsx')) {
               return 'admin-panel';
             }
+            // Shared owner shell only — keep individual owner pages as separate lazy chunks.
+            if (
+              normalizedId.includes('/src/components/owner/OwnerLayout') ||
+              normalizedId.includes('/src/components/owner/EntitlementGate') ||
+              normalizedId.includes('/src/context/DashboardRealtimeProvider') ||
+              normalizedId.includes('/src/context/dashboardRealtimeHelpers') ||
+              normalizedId.includes('/src/context/OrderAlertContext')
+            ) {
+              return 'owner-shell';
+            }
             if (normalizedId.includes('/src/pages/Checkout.tsx')) {
               return 'checkout';
             }
