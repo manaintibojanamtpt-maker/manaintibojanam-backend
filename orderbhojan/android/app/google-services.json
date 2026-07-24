@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "170989397954-vqqaldmk1l3mrlv7vgokai2ol7llmaiq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhojanos.orderbhojan",
+            "certificate_hash": "23134ef15d255f1fd159659bce634d78e0a6c234"
+          }
+        },
+        {
           "client_id": "170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com",
           "client_type": 3
         }

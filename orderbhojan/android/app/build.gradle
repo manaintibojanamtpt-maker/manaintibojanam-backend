@@ -1,5 +1,30 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+def hasReleaseKeystore = false
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+    def storeFilePath = keystoreProperties['storeFile']
+    hasReleaseKeystore = storeFilePath != null &&
+        keystoreProperties['storePassword'] != null &&
+        keystoreProperties['keyAlias'] != null &&
+        keystoreProperties['keyPassword'] != null &&
+        rootProject.file(storeFilePath).exists()
+    if (!hasReleaseKeystore) {
+        logger.warn('keystore.properties found but incomplete or keystore file missing; release builds will not be signed with a release key.')
+    }
+}
+
+// Android release version — bump here for Play uploads (see docs/PLAY-INTERNAL-TESTING.md).
+def versionPropertiesFile = rootProject.file('version.properties')
+def versionProperties = new Properties()
+if (versionPropertiesFile.exists()) {
+    versionPropertiesFile.withInputStream { versionProperties.load(it) }
+}
+def androidVersionCode = (versionProperties['versionCode'] ?: '2').toInteger()
+def androidVersionName = versionProperties['versionName'] ?: '0.9.0'
+
 android {
     namespace = "com.bhojanos.orderbhojan"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +32,8 @@ android {
         applicationId "com.bhojanos.orderbhojan"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode androidVersionCode
+        versionName androidVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +41,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseKeystore) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

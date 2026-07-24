@@ -79,14 +79,16 @@ function findAvailableMenuItemByName(
   const target = normalizeMenuName(name);
   if (!target) return null;
 
+  const matches: Array<{ id: string; data: Record<string, unknown> }> = [];
   for (const [id, data] of menuById) {
     if (data.isAvailable === false || data.isActive === false) continue;
     if (normalizeMenuName(String(data.name ?? '')) === target) {
-      return { id, data };
+      matches.push({ id, data });
     }
   }
 
-  return null;
+  // Clarification-first: never silently pick the first of several exact name matches.
+  return matches.length === 1 ? matches[0]! : null;
 }
 
 function isBlockingIssue(code: CartValidationIssueCode): boolean {

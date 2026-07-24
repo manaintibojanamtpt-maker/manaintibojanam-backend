@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MarketingAssistantRoot } from './features/assistant/ui/MarketingAssistantRoot';
 import './marketing.css';
 
 const OnboardKitchen = lazy(() => import('./pages/OnboardKitchen'));
@@ -49,6 +50,8 @@ export default function MarketingApp() {
 
   return (
     <BrowserRouter>
+      {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
+      <MarketingAssistantRoot />
       <Suspense fallback={<MarketingShell />}>
         <Routes>
           <Route path="/" element={<OnboardKitchen />} />

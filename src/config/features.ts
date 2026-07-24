@@ -6,7 +6,9 @@ export type FeatureFlag =
   | 'deliveryIntelligence'
   | 'customerInsights'
   | 'newCheckoutFlow'
-  | 'enableAnalytics';
+  | 'enableAnalytics'
+  /** Shared AI marketing assistant on bhojanos.com — UI mounted (Phase 8); OFF by default. */
+  | 'aiMarketingAssistant';
 
 // 3. Registry Defaults
 const REGISTRY_DEFAULTS: Record<FeatureFlag, boolean> = {
@@ -16,6 +18,7 @@ const REGISTRY_DEFAULTS: Record<FeatureFlag, boolean> = {
   customerInsights: true,
   newCheckoutFlow: false,
   enableAnalytics: true,
+  aiMarketingAssistant: false,
 };
 
 export const FeatureFlags = {

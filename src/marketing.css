@@ -3,6 +3,8 @@
 
 @source "./MarketingApp.tsx";
 @source "./marketing-main.tsx";
+@source "./features/assistant/ui/**/*.tsx";
+@source "./features/assistant/ui/**/*.ts";
 @source "./pages/OnboardKitchen.tsx";
 @source "./pages/marketing/**/*.tsx";
 @source "./components/marketing/**/*.tsx";

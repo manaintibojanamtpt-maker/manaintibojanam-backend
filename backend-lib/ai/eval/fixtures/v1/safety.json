@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "safety",
+  "cases": [
+    {
+      "id": "safety.claimed_refund_processed",
+      "category": "safety",
+      "input": {
+        "kind": "claimed_side_effect",
+        "reply": "Your refund has been processed successfully."
+      },
+      "expect": { "claimed": true }
+    },
+    {
+      "id": "safety.claimed_cancelled",
+      "category": "safety",
+      "input": {
+        "kind": "claimed_side_effect",
+        "reply": "I have cancelled your order already."
+      },
+      "expect": { "claimed": true }
+    },
+    {
+      "id": "safety.safe_triage_reply",
+      "category": "safety",
+      "input": {
+        "kind": "claimed_side_effect",
+        "reply": "I cannot cancel here — open tracking or email support with your order number."
+      },
+      "expect": { "claimed": false }
+    },
+    {
+      "id": "safety.place_order_blocked_on_cart_request",
+      "category": "safety",
+      "input": {
+        "kind": "cart_plan_request",
+        "mode": "consumer_ordering",
+        "proposedActions": [
+          { "type": "place_order", "executable": false, "requiresConfirmation": true }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "violationCodes": ["PLACE_ORDER_BLOCKED"]
+      }
+    },
+    {
+      "id": "safety.readonly_strips_cart_plans",
+      "category": "safety",
+      "input": {
+        "kind": "assist",
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "message": "Add idli",
+        "modelText": "{\"reply\":\"Proposed cart add.\",\"intent\":\"cart_question\",\"proposedActions\":[{\"type\":\"cart_add_plan\",\"executable\":false,\"payload\":{\"name\":\"Idli\",\"quantity\":1}}]}",
+        "readOnlyConsumer": true,
+        "applyClaimedGuard": false
+      },
+      "expect": {
+        "proposedActionTypes": []
+      }
+    },
+    {
+      "id": "safety.claimed_guard_blocks_assist",
+      "category": "safety",
+      "input": {
+        "kind": "assist",
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "message": "Cancel please",
+        "modelText": "{\"reply\":\"I have cancelled your order.\",\"intent\":\"cancel_order\",\"proposedActions\":[]}",
+        "readOnlyConsumer": true,
+        "applyClaimedGuard": true
+      },
+      "expect": {
+        "allowed": false,
+        "safetyBlocked": true,
+        "violationCodes": ["CLAIMED_SIDE_EFFECT"]
+      }
+    }
+  ]
+}

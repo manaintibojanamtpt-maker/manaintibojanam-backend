@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "personalization",
+  "cases": [
+    {
+      "id": "personalization.reorder_intent",
+      "category": "personalization",
+      "input": { "kind": "classify", "message": "Reorder my last order" },
+      "expect": { "intent": "reorder_last", "isPersonalization": true }
+    },
+    {
+      "id": "personalization.favorites_intent",
+      "category": "personalization",
+      "input": { "kind": "classify", "message": "Show my favorite kitchens" },
+      "expect": { "intent": "favorite_restaurants", "isPersonalization": true }
+    },
+    {
+      "id": "personalization.non_personalization",
+      "category": "personalization",
+      "input": { "kind": "classify", "message": "What vegetarian options look good?" },
+      "expect": { "intent": "none", "isPersonalization": false }
+    },
+    {
+      "id": "personalization.favorites_empty_no_invent",
+      "category": "personalization",
+      "input": {
+        "kind": "guidance",
+        "message": "Show my favorites",
+        "bootstrap": { "favoriteRestaurants": [] }
+      },
+      "expect": {
+        "intent": "favorite_restaurants",
+        "hasGuidance": true,
+        "hintTargets": ["/favorites", "/"],
+        "inventsDishes": false
+      }
+    },
+    {
+      "id": "personalization.reorder_plans_non_executable",
+      "category": "personalization",
+      "input": {
+        "kind": "reorder_plans",
+        "source": {
+          "restaurantId": "tenant_1",
+          "restaurantSlug": "demo-kitchen",
+          "orderNumber": "OB-9",
+          "items": [
+            { "itemId": "item_1", "name": "Idli", "quantity": 2, "unitPrice": 40 },
+            { "itemId": "item_2", "name": "Dosa", "quantity": 1, "unitPrice": 80 }
+          ]
+        }
+      },
+      "expect": {
+        "planCount": 2,
+        "allNonExecutable": true,
+        "allRequireConfirmation": true,
+        "foodIds": ["item_1", "item_2"]
+      }
+    }
+  ]
+}

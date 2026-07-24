@@ -7,8 +7,8 @@ import { useCustomerProfile } from '@/features/auth/hooks/useCustomerProfile';
 import { useCustomerSettingsActions } from '@/presentation/settings';
 
 import { openExternalUrl } from '@/lib/nativePlatform';
-
-const SUPPORT_MAILTO = 'mailto:support@orderbhojan.com?subject=OrderBhojan%20Support';
+import { ABOUT_URL, PRIVACY_POLICY_URL } from '@/config/legalUrls';
+import { OB_SUPPORT_MAILTO } from '@/config/support';
 
 export function OrderBhojanProfilePage() {
   const navigate = useNavigate();
@@ -81,10 +81,13 @@ export function OrderBhojanProfilePage() {
       onQuickTile={handleQuickTile}
       onPreferenceClick={handlePreferenceRow}
       onSupport={() => {
-        void openExternalUrl(SUPPORT_MAILTO);
+        void openExternalUrl(OB_SUPPORT_MAILTO);
       }}
       onAbout={() => {
-        void openExternalUrl('https://www.bhojanos.com/about');
+        void openExternalUrl(ABOUT_URL);
+      }}
+      onPrivacy={() => {
+        void openExternalUrl(PRIVACY_POLICY_URL);
       }}
       onSignOut={() => signOut()}
       onRetryProfile={() => void profileQuery.refetch()}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "structured-output",
+  "cases": [
+    {
+      "id": "structured.valid_json",
+      "category": "structured-output",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "message": "Find dosa",
+        "modelText": "{\"reply\":\"Here are dosa options.\",\"intent\":\"search_menu\",\"proposedActions\":[]}"
+      },
+      "expect": {
+        "ok": true,
+        "source": "model_json",
+        "intent": "search_menu",
+        "reply": { "$includes": "dosa" },
+        "executableFlags": []
+      }
+    },
+    {
+      "id": "structured.heuristic_wrap",
+      "category": "structured-output",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "message": "Hello",
+        "modelText": "Hi! How can I help you order today?"
+      },
+      "expect": {
+        "ok": true,
+        "source": "heuristic_wrap",
+        "intent": "greet"
+      }
+    },
+    {
+      "id": "structured.non_executable_actions",
+      "category": "structured-output",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "message": "Add idli",
+        "modelText": "{\"reply\":\"I can propose adding idli.\",\"intent\":\"cart_question\",\"proposedActions\":[{\"type\":\"cart_add_plan\",\"executable\":true,\"payload\":{\"name\":\"Idli\",\"quantity\":1}}]}"
+      },
+      "expect": {
+        "ok": true,
+        "proposedActionTypes": ["cart_add_plan"],
+        "executableFlags": [false]
+      }
+    }
+  ]
+}

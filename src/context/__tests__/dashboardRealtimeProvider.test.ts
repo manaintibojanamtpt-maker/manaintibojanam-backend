@@ -65,7 +65,7 @@ describe('dashboardRealtimeHelpers', () => {
 
 describe('DashboardRealtimeProvider consolidation', () => {
   it('uses a single dashboard poll interval constant', () => {
-    assert.equal(DASHBOARD_REALTIME_POLL_MS, 15_000);
+    assert.equal(DASHBOARD_REALTIME_POLL_MS, 30_000);
   });
 
   it('centralizes owner dashboard polling in DashboardRealtimeProvider', () => {

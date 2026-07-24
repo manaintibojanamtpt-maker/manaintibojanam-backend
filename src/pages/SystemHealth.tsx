@@ -4,8 +4,12 @@ import { m, AnimatePresence } from 'framer-motion';
 import {
   loadOpsDashboardSnapshot,
   OPS_UNAVAILABLE,
+  type AiOpsSummary,
   type OpsIncidentRecord,
 } from '../lib/opsHealthApi';
+import { AiOpsPanel } from '../components/ops/AiOpsPanel';
+import { AiAuditReviewPanel } from '../components/ops/AiAuditReviewPanel';
+import { AiShadowTrafficPanel } from '../components/ops/AiShadowTrafficPanel';
 import { 
   Activity, 
   AlertTriangle, 
@@ -142,6 +146,7 @@ export default function SystemHealth() {
   const [latestDeploy, setLatestDeploy] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const [aiSummary, setAiSummary] = useState<AiOpsSummary | null>(null);
   
   // KPI Filtering State
   const [activeKpi, setActiveKpi] = useState<string | null>(null);
@@ -152,6 +157,7 @@ export default function SystemHealth() {
     try {
       const snapshot = await loadOpsDashboardSnapshot();
       setLastUpdated(snapshot.fetchedAt);
+      setAiSummary(snapshot.aiSummary);
 
       if (snapshot.incidents) {
         setIncidents(snapshot.incidents.map(mapOpsIncident));
@@ -408,6 +414,15 @@ export default function SystemHealth() {
         </section>
 
         {/* 3. MAIN CONTENT GRID */}
+
+        {/* AI GATEWAY (Phase 12 — read-only) */}
+        <AiOpsPanel summary={aiSummary} loading={isRefreshing} />
+
+        {/* AI AUDIT REVIEW (Phase 22 — read-only) */}
+        <AiAuditReviewPanel summary={aiSummary} />
+
+        {/* AI SHADOW TRAFFIC (Phase 24 — read-only) */}
+        <AiShadowTrafficPanel summary={aiSummary} />
         
         {/* A. INCIDENTS */}
         <section id="section-incidents" className={`bg-white dark:bg-[#111111] rounded-xl border shadow-sm overflow-hidden transition-colors duration-300 ${activeKpi === 'OPEN_INCIDENTS' && !isMobile ? 'border-indigo-300 dark:border-indigo-500 ring-2 ring-indigo-100 dark:ring-indigo-900/50' : 'border-gray-200 dark:border-white/5'}`}>

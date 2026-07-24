@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "clarification",
+  "cases": [
+    {
+      "id": "clarification.missing_restaurant",
+      "category": "clarification",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "restaurantId": "",
+        "proposedActions": [
+          {
+            "type": "cart_add_plan",
+            "executable": false,
+            "payload": { "name": "Dosa", "quantity": 1 }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "issueCodes": ["MISSING_RESTAURANT"],
+        "hasClarification": true,
+        "clarificationQuestions": [
+          "Which restaurant should this cart change apply to?"
+        ]
+      }
+    },
+    {
+      "id": "clarification.empty_asks_item",
+      "category": "clarification",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "restaurantId": "tenant_demo",
+        "proposedActions": []
+      },
+      "expect": {
+        "ok": false,
+        "hasClarification": true,
+        "clarificationQuestions": [
+          "What item would you like to add, update, or remove from your cart?"
+        ]
+      }
+    }
+  ]
+}

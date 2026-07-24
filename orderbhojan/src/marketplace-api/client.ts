@@ -126,6 +126,28 @@ export class MarketplaceHttpClient {
         if (payload && 'ok' in payload && payload.ok === false) {
           throw mapApiFailureToError(payload, response.status, responseCorrelationId);
         }
+        const gatewayLike = payload as {
+          success?: boolean;
+          code?: string;
+          error?: string;
+          message?: string;
+        } | null;
+        if (gatewayLike && typeof gatewayLike.code === 'string' && gatewayLike.code.trim()) {
+          throw new MarketplaceApiError({
+            code: gatewayLike.code,
+            message:
+              (typeof gatewayLike.error === 'string' && gatewayLike.error) ||
+              (typeof gatewayLike.message === 'string' && gatewayLike.message) ||
+              response.statusText ||
+              'Request failed',
+            status: response.status,
+            correlationId: responseCorrelationId,
+            retryable:
+              response.status >= 500 ||
+              response.status === 429 ||
+              gatewayLike.code === 'AI_CANARY_HEALTH_GATE',
+          });
+        }
         throw new MarketplaceApiError({
           code: `HTTP_${response.status}`,
           message: response.statusText || 'Request failed',

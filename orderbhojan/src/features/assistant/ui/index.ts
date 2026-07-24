@@ -1,0 +1,1 @@
+export { ConsumerAssistantEntry } from './ConsumerAssistantEntry';

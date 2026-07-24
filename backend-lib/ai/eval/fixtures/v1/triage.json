@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "triage",
+  "cases": [
+    {
+      "id": "triage.cancel_needs_order",
+      "category": "triage",
+      "input": {
+        "kind": "classify",
+        "message": "Please cancel my order"
+      },
+      "expect": {
+        "highRisk": true,
+        "riskKind": "cancel_order",
+        "gatewayIntent": "cancel_order",
+        "hasGuidance": true,
+        "clarificationCount": 2,
+        "escalationTargets": ["/orders"]
+      }
+    },
+    {
+      "id": "triage.refund_with_order_context",
+      "category": "triage",
+      "input": {
+        "kind": "classify",
+        "message": "I want a refund",
+        "orderContext": {
+          "orderId": "ord_123",
+          "snapshot": { "orderNumber": "OB-9", "status": "delivered", "paymentStatus": "paid" }
+        }
+      },
+      "expect": {
+        "highRisk": true,
+        "riskKind": "refund",
+        "hasGuidance": true,
+        "clarificationCount": 0,
+        "escalationTargets": ["/orders/ord_123/track"]
+      }
+    },
+    {
+      "id": "triage.payment_issue",
+      "category": "triage",
+      "input": {
+        "kind": "classify",
+        "message": "UPI pending and amount deducted"
+      },
+      "expect": {
+        "highRisk": true,
+        "riskKind": "payment_issue",
+        "gatewayIntent": "payment_issue",
+        "hasGuidance": true
+      }
+    },
+    {
+      "id": "triage.no_outcome_promise",
+      "category": "triage",
+      "input": {
+        "kind": "claimed_outcome",
+        "reply": "Your refund has been issued to your bank."
+      },
+      "expect": { "claimed": true }
+    },
+    {
+      "id": "triage.browse_not_high_risk",
+      "category": "triage",
+      "input": {
+        "kind": "classify",
+        "message": "Show vegetarian restaurants near me"
+      },
+      "expect": {
+        "highRisk": false,
+        "riskKind": null,
+        "hasGuidance": false
+      }
+    }
+  ]
+}

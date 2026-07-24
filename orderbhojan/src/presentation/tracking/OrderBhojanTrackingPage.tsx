@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
 import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
@@ -7,6 +7,13 @@ import {
   TrackingGuestPhoneView,
   TrackingLoadingView,
 } from '@bhojan/storefront-design-system/orders/tracking';
+import { buildPostOrderContextFromTracking } from '@/features/assistant/domain/mapTrackingToPostOrderContext';
+import { buildPersonalizationBootstrapFromTracking } from '@/features/assistant/domain/mapTrackingToPersonalizationBootstrap';
+import { PostOrderBootstrapProvider } from '@/features/assistant/ui/PostOrderBootstrapContext';
+import {
+  clearPersonalizationReorder,
+  publishPersonalizationBootstrap,
+} from '@/features/assistant/ui/personalizationBootstrapStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useOrderTracking } from '@/features/tracking/hooks/useOrderTracking';
 import { useReorderFromTracking } from '@/features/tracking/hooks/useReorderFromTracking';
@@ -88,39 +95,69 @@ export function OrderBhojanTrackingPage() {
   const showDeliveryPanel = tracking.status === 'OUT_FOR_DELIVERY' && Boolean(tracking.delivery);
   const timeline = mapTrackingTimelineSteps(tracking);
 
+  // Caller-owned snapshot for Phase 17 assistant — no extra fetch inside assistant module.
+  const postOrderBootstrap = useMemo(
+    () =>
+      buildPostOrderContextFromTracking({
+        orderId,
+        guestPhone: needsGuestPhone ? submittedPhone : undefined,
+        tracking,
+      }),
+    [needsGuestPhone, orderId, submittedPhone, tracking],
+  );
+
+  // Phase 19: publish reorder line items for reviewable cart-plan proposals.
+  useEffect(() => {
+    const personalization = buildPersonalizationBootstrapFromTracking({
+      orderId: tracking.orderId,
+      orderNumber: tracking.orderNumber,
+      reorder: tracking.reorder,
+    });
+    if (personalization) {
+      publishPersonalizationBootstrap(personalization);
+    } else {
+      clearPersonalizationReorder();
+    }
+    return () => {
+      clearPersonalizationReorder();
+    };
+  }, [tracking]);
+
   return (
-    <TrackingActivePageView
-      hero={mapTrackingHero(tracking, { etaLabel, liveActive: isRefreshing })}
-      timelineSteps={timeline.steps}
-      timelineCancelled={timeline.cancelled}
-      delivery={showDeliveryPanel && tracking.delivery ? mapTrackingDelivery(tracking.delivery) : undefined}
-      onOpenDeliveryTracking={
-        tracking.delivery?.trackingUrl
-          ? () => window.open(tracking.delivery!.trackingUrl, '_blank', 'noopener,noreferrer')
-          : undefined
-      }
-      showInvoiceButton={trackingPhase === 'DELIVERED' && Boolean(tracking.invoice)}
-      invoiceOpen={invoiceOpen}
-      invoice={tracking.invoice ? mapTrackingInvoice(tracking.invoice) : undefined}
-      onOpenInvoice={() => setInvoiceOpen(true)}
-      onCloseInvoice={() => setInvoiceOpen(false)}
-      onPrintInvoice={() => window.print()}
-      feedbackSlot={
-        tracking.feedback ? (
-          <OrderBhojanOrderFeedbackPanel
-            orderId={tracking.orderId}
-            feedback={tracking.feedback}
-            onSubmitted={() => void trackingQuery.refetch()}
-          />
-        ) : null
-      }
-      showReorder={Boolean(tracking.reorder)}
-      reorderLabel={reorderBusy ? 'Adding to cart…' : 'Reorder same items'}
-      reorderBusy={reorderBusy}
-      onReorder={tracking.reorder ? () => void reorder(tracking.reorder!) : undefined}
-      showAllOrders={isAuthenticated}
-      onAllOrders={() => navigate('/orders')}
-      onBrowse={() => navigate('/')}
-    />
+    <PostOrderBootstrapProvider value={postOrderBootstrap}>
+      <TrackingActivePageView
+        hero={mapTrackingHero(tracking, { etaLabel, liveActive: isRefreshing })}
+        timelineSteps={timeline.steps}
+        timelineCancelled={timeline.cancelled}
+        delivery={showDeliveryPanel && tracking.delivery ? mapTrackingDelivery(tracking.delivery) : undefined}
+        onOpenDeliveryTracking={
+          tracking.delivery?.trackingUrl
+            ? () => window.open(tracking.delivery!.trackingUrl, '_blank', 'noopener,noreferrer')
+            : undefined
+        }
+        showInvoiceButton={trackingPhase === 'DELIVERED' && Boolean(tracking.invoice)}
+        invoiceOpen={invoiceOpen}
+        invoice={tracking.invoice ? mapTrackingInvoice(tracking.invoice) : undefined}
+        onOpenInvoice={() => setInvoiceOpen(true)}
+        onCloseInvoice={() => setInvoiceOpen(false)}
+        onPrintInvoice={() => window.print()}
+        feedbackSlot={
+          tracking.feedback ? (
+            <OrderBhojanOrderFeedbackPanel
+              orderId={tracking.orderId}
+              feedback={tracking.feedback}
+              onSubmitted={() => void trackingQuery.refetch()}
+            />
+          ) : null
+        }
+        showReorder={Boolean(tracking.reorder)}
+        reorderLabel={reorderBusy ? 'Adding to cart…' : 'Reorder same items'}
+        reorderBusy={reorderBusy}
+        onReorder={tracking.reorder ? () => void reorder(tracking.reorder!) : undefined}
+        showAllOrders={isAuthenticated}
+        onAllOrders={() => navigate('/orders')}
+        onBrowse={() => navigate('/')}
+      />
+    </PostOrderBootstrapProvider>
   );
 }

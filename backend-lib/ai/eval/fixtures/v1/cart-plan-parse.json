@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "cart-plan-parse",
+  "cases": [
+    {
+      "id": "cart.valid_add_plan",
+      "category": "cart-plan-parse",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "restaurantId": "tenant_demo",
+        "proposedActions": [
+          {
+            "type": "cart_add_plan",
+            "executable": false,
+            "requiresConfirmation": true,
+            "payload": { "name": "Idli", "quantity": 2, "foodId": "item_1" }
+          }
+        ]
+      },
+      "expect": { "ok": true, "planCount": 1, "hasClarification": false }
+    },
+    {
+      "id": "cart.place_order_rejected",
+      "category": "cart-plan-parse",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "restaurantId": "tenant_demo",
+        "proposedActions": [
+          { "type": "place_order", "executable": false, "requiresConfirmation": true }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "issueCodes": ["PLACE_ORDER_REJECTED"]
+      }
+    },
+    {
+      "id": "cart.empty_actions",
+      "category": "cart-plan-parse",
+      "input": {
+        "mode": "consumer_ordering",
+        "channel": "orderbhojan_web",
+        "restaurantId": "tenant_demo",
+        "proposedActions": []
+      },
+      "expect": {
+        "ok": false,
+        "issueCodes": ["EMPTY_ACTIONS"],
+        "hasClarification": true
+      }
+    }
+  ]
+}

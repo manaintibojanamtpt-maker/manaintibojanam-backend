@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "23.0",
+  "fixtureSetVersion": "1",
+  "category": "intent",
+  "cases": [
+    {
+      "id": "intent.greet",
+      "description": "Greeting maps to greet",
+      "category": "intent",
+      "input": { "mode": "consumer_ordering", "message": "Hello there" },
+      "expect": { "intent": "greet", "allowedForMode": true }
+    },
+    {
+      "id": "intent.cancel_before_payment_help",
+      "description": "Cancel classified before generic payment_help",
+      "category": "intent",
+      "input": { "mode": "consumer_ordering", "message": "Please cancel my order" },
+      "expect": { "intent": "cancel_order", "allowedForMode": true }
+    },
+    {
+      "id": "intent.refund",
+      "category": "intent",
+      "input": { "mode": "consumer_ordering", "message": "I need a refund for double charge" },
+      "expect": { "intent": "refund" }
+    },
+    {
+      "id": "intent.payment_issue",
+      "category": "intent",
+      "input": { "mode": "consumer_ordering", "message": "Payment failed but amount deducted" },
+      "expect": { "intent": "payment_issue" }
+    },
+    {
+      "id": "intent.marketing_cart_out_of_scope",
+      "category": "intent",
+      "input": { "mode": "merchant_marketing", "message": "How do I add to cart?" },
+      "expect": { "intent": "out_of_scope" }
+    },
+    {
+      "id": "intent.search_menu",
+      "category": "intent",
+      "input": { "mode": "consumer_ordering", "message": "Show me dosa on the menu" },
+      "expect": { "intent": "search_menu" }
+    }
+  ]
+}

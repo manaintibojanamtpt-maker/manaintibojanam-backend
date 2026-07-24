@@ -18,5 +18,10 @@ describe('featureFlags', () => {
     assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_ENABLED'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_GEOCODE_API'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_LOCATION_MAP_ENABLED'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_ASSISTANT'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_VOICE'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_VOICE_TTS'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_POST_ORDER'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_CANARY_HEADERS'), false);
   });
 });

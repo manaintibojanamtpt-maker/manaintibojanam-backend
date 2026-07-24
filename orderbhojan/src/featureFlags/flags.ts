@@ -12,6 +12,21 @@ export const FEATURE_FLAG_KEYS = [
   'FF_LOCATION_ENABLED',
   'FF_LOCATION_GEOCODE_API',
   'FF_LOCATION_MAP_ENABLED',
+  /** Shared AI consumer assistant — OFF by default; not cascaded by FF_OB_FIRESTORE. */
+  'FF_OB_AI_ASSISTANT',
+  /** AI voice capture (speech→transcript) — OFF by default; requires FF_OB_AI_ASSISTANT for assist. */
+  'FF_OB_AI_VOICE',
+  /** Optional TTS confirmation after voice assist — OFF by default. */
+  'FF_OB_AI_VOICE_TTS',
+  /** Post-order / order-status AI assist — OFF by default; requires FF_OB_AI_ASSISTANT. */
+  'FF_OB_AI_POST_ORDER',
+  /** Personalized reorder / favorites guidance — OFF by default; requires FF_OB_AI_ASSISTANT. */
+  'FF_OB_AI_PERSONALIZATION',
+  /**
+   * Attach deterministic canary cohort headers to AI gateway calls — OFF by default.
+   * No UI change; enables segmented canary + observability when server gate is wired.
+   */
+  'FF_OB_AI_CANARY_HEADERS',
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
@@ -32,6 +47,12 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_LOCATION_ENABLED: false,
   FF_LOCATION_GEOCODE_API: false,
   FF_LOCATION_MAP_ENABLED: false,
+  FF_OB_AI_ASSISTANT: false,
+  FF_OB_AI_VOICE: false,
+  FF_OB_AI_VOICE_TTS: false,
+  FF_OB_AI_POST_ORDER: false,
+  FF_OB_AI_PERSONALIZATION: false,
+  FF_OB_AI_CANARY_HEADERS: false,
 };
 
 function readEnvFlag(key: FeatureFlagKey): boolean | undefined {

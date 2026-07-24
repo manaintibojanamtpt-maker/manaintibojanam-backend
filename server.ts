@@ -82,6 +82,7 @@ import {
   type IncidentRepository,
 } from "./backend-lib/observability/IncidentRepository.js";
 import { registerOpsRoutes } from "./backend-lib/observability/registerOpsRoutes.js";
+import { registerAiGatewayRoutes } from "./backend-lib/ai/registerAiGatewayRoutes.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
@@ -1177,7 +1178,8 @@ const shouldBypassTenantValidation = (path: string) =>
   path.startsWith("/api/notifications/") ||
   path.startsWith("/api/owner/") ||
   path.startsWith("/api/platform/") ||
-  path.startsWith("/api/auth/");
+  path.startsWith("/api/auth/") ||
+  path.startsWith("/api/ai/");
 
 const loadTenantRecord = async (tenantId: string) => {
   if (tenantLookupInflight.has(tenantId)) {
@@ -3153,6 +3155,14 @@ registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAc
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerAnalyticsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOpsRoutes(app, getIncidentRepository, requireSuperadmin);
+// Use lazy Firestore proxy (same as marketplace routes) — _db is set in startServer().
+registerAiGatewayRoutes(app, {
+  log: logger,
+  db,
+  isBackedOff: isFirestoreBackedOff,
+  onQuotaError: noteFirestoreQuotaExceeded,
+  isQuotaError: isFirestoreQuotaError,
+});
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {

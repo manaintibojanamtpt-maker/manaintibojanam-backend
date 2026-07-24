@@ -12,6 +12,7 @@ export function ProfileMemberView({
   onPreferenceClick,
   onSupport,
   onAbout,
+  onPrivacy,
   onSignOut,
   onRetryProfile,
 }: {
@@ -20,6 +21,8 @@ export function ProfileMemberView({
   readonly onPreferenceClick?: (id: string) => void;
   readonly onSupport: () => void;
   readonly onAbout: () => void;
+  /** Optional Privacy / Legal link (Play Internal Testing readiness). */
+  readonly onPrivacy?: () => void;
   readonly onSignOut: () => void;
   readonly onRetryProfile: () => void;
 }) {
@@ -59,6 +62,11 @@ export function ProfileMemberView({
         <SoftButton type="button" tone="ghost" fullWidth onClick={onAbout}>
           About OrderBhojan
         </SoftButton>
+        {onPrivacy ? (
+          <SoftButton type="button" tone="ghost" fullWidth onClick={onPrivacy}>
+            Privacy policy
+          </SoftButton>
+        ) : null}
         <SoftButton type="button" tone="danger" fullWidth onClick={onSignOut}>
           Sign out
         </SoftButton>
