@@ -63,7 +63,7 @@ export function buildOrderingAssistContext(params: {
 
   const cached = getCachedMenuItemsForSearch();
   const menuSource = restaurantId
-    ? cached.filter((item) => item.restaurant?.id === restaurantId)
+    ? cached.filter((item) => item.restaurant?.restaurantId === restaurantId)
     : cached;
   const menuItems = menuSource.slice(0, 36).map((item) => {
     const priceRaw = item.meta?.price;
