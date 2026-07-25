@@ -21,6 +21,12 @@ import {
 } from '../domain/isPersonalizationUserMessage';
 import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
 import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
+import {
+  isConfirmCartUserMessage,
+  isDiscardCartUserMessage,
+  isStopVoiceAgentMessage,
+  toSpokenAssistantReply,
+} from '../domain/isConfirmCartUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
 import {
   correctTranscriptAgainstOrderingVocab,
@@ -37,7 +43,10 @@ import { usePostOrderAssist } from '../hooks/usePostOrderAssist';
 import { useValidateCartPlan } from '../hooks/useValidateCartPlan';
 import { getAssistantApiClient } from '../infrastructure/assistantApiClient';
 import { captureVoiceTranscript, isVoiceCaptureAvailable } from '../infrastructure/voiceSpeechCapture';
-import { speakVoiceConfirmation } from '../infrastructure/voiceSpeechSynthesis';
+import {
+  isSpeechSynthesisAvailable,
+  speakVoiceConfirmation,
+} from '../infrastructure/voiceSpeechSynthesis';
 import { AssistantApiError, type ConsumerAssistHint } from '../types';
 
 /** Best-effort audit; never blocks confirm/discard UX. */
@@ -108,9 +117,13 @@ export function useAssistantConversation() {
   const [validating, setValidating] = useState(false);
   const [applying, setApplying] = useState(false);
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceAgentActive, setVoiceAgentActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
   const voiceAbortRef = useRef<AbortController | null>(null);
+  const voiceAgentActiveRef = useRef(false);
+  const pendingValidationRef = useRef<CartPlanValidationResult | null>(null);
   const pendingPlanRestaurantRef = useRef<{
     restaurantId: string;
     restaurantSlug: string;
@@ -118,10 +131,96 @@ export function useAssistantConversation() {
 
   const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
+  pendingValidationRef.current = pendingValidation;
+
   const send = useCallback(
     async (raw: string): Promise<string | undefined> => {
       const message = raw.trim();
       if (!message || loading) return undefined;
+
+      // Voice/text confirm against an already-validated plan (Siri-style “yes / confirm”).
+      const pending = pendingValidationRef.current;
+      if (pending && isConfirmCartUserMessage(message)) {
+        setError(null);
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        if (pending.status === 'validated' && pending.valid) {
+          setApplying(true);
+          try {
+            const planRestaurant = pendingPlanRestaurantRef.current;
+            if (planRestaurant) {
+              const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
+              await ensureRestaurantContextForCartPlan({
+                restaurantId: planRestaurant.restaurantId,
+                restaurantSlug: planRestaurant.restaurantSlug,
+                coords,
+              });
+            }
+            const result = applyConfirmedCartPlan({
+              userConfirmed: true,
+              validation: pending,
+              deps: { addItem, setQuantity },
+            });
+            reportCartPlanDecisionQuietly({
+              decision: 'confirm',
+              conversationId: pending.conversationId,
+              planCount: pending.proposedActions.length,
+            });
+            if (result.appliedCount > 0) {
+              const reply = `Added ${result.appliedCount} item${result.appliedCount === 1 ? '' : 's'} to your cart. Say checkout when ready, or ask for another dish.`;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: nextId(),
+                  role: 'system',
+                  text: `Applied ${result.appliedCount} cart change(s) after your confirmation.`,
+                },
+                { id: nextId(), role: 'assistant', text: reply },
+              ]);
+              setPendingValidation(null);
+              pendingPlanRestaurantRef.current = null;
+              notifyToast(`Applied ${result.appliedCount} item(s) to cart.`, 'success');
+              return reply;
+            }
+            const fail =
+              result.skipped[0]?.reason || 'Could not apply cart plan — try the menu ADD button.';
+            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
+            notifyToast(fail, 'warning');
+            return fail;
+          } catch (err) {
+            const fail =
+              err instanceof Error ? err.message : 'Could not apply cart plan right now.';
+            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
+            return fail;
+          } finally {
+            setApplying(false);
+          }
+        }
+        const clarify =
+          pending.clarificationQuestions[0] ||
+          pending.issues[0]?.message ||
+          'Tell me the exact dish name from the menu, then say confirm.';
+        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: clarify }]);
+        return clarify;
+      }
+
+      if (pending && isDiscardCartUserMessage(message)) {
+        setError(null);
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        reportCartPlanDecisionQuietly({
+          decision: 'discard',
+          conversationId: pending.conversationId,
+          planCount: pending.proposedActions.length,
+        });
+        setPendingValidation(null);
+        pendingPlanRestaurantRef.current = null;
+        const reply = 'Discarded — nothing was added. What would you like instead?';
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), role: 'system', text: 'Cart plan discarded — nothing was added to cart.' },
+          { id: nextId(), role: 'assistant', text: reply },
+        ]);
+        return reply;
+      }
 
       setError(null);
       setPendingValidation(null);
@@ -490,6 +589,8 @@ export function useAssistantConversation() {
     [
       activeLocation,
       ask,
+      activeLocation,
+      addItem,
       askPostOrder,
       conversationId,
       loading,
@@ -499,6 +600,7 @@ export function useAssistantConversation() {
       postOrderAssistEnabled,
       restaurantId,
       restaurantSlug,
+      setQuantity,
       validate,
     ],
   );
@@ -507,77 +609,175 @@ export function useAssistantConversation() {
     voiceAbortRef.current?.abort();
   }, []);
 
-  /**
-   * Click-to-speak: capture one utterance, then reuse send() → validate → confirm.
-   * Never auto-applies cart plans or places orders.
-   */
-  const sendFromVoice = useCallback(async () => {
-    if (!voiceEnabled || loading || listening || validating || applying) return;
+  const stopVoiceAgent = useCallback(() => {
+    voiceAgentActiveRef.current = false;
+    setVoiceAgentActive(false);
+    voiceAbortRef.current?.abort();
+    setListening(false);
+    setSpeaking(false);
+  }, []);
 
+  const speakReply = useCallback(
+    async (reply: string | undefined, signal: AbortSignal, forceSpeak: boolean) => {
+      const spoken = toSpokenAssistantReply(reply ?? '');
+      if (!spoken) return;
+      if (!forceSpeak && !ttsEnabled) return;
+      if (!isSpeechSynthesisAvailable()) return;
+      setSpeaking(true);
+      try {
+        await speakVoiceConfirmation({ text: spoken, signal });
+      } catch (ttsErr) {
+        if (
+          ttsErr instanceof AssistantApiError &&
+          (ttsErr.code === 'AI_TTS_ABORTED' || ttsErr.code === 'AI_VOICE_ABORTED')
+        ) {
+          return;
+        }
+      } finally {
+        setSpeaking(false);
+      }
+    },
+    [ttsEnabled],
+  );
+
+  /**
+   * One listen → assist → speak turn. Used by tap-mic and the live voice-agent loop.
+   * Never auto-applies cart plans (confirm is still required — spoken “confirm” works).
+   */
+  const runVoiceTurn = useCallback(
+    async (options?: { readonly forceSpeak?: boolean }): Promise<'ok' | 'stop' | 'abort' | 'error'> => {
+      if (!voiceEnabled) return 'error';
+      if (!isVoiceCaptureAvailable()) {
+        setError('Speech recognition is not available on this device/browser.');
+        return 'error';
+      }
+
+      const ac = new AbortController();
+      voiceAbortRef.current = ac;
+      setListening(true);
+      setError(null);
+
+      try {
+        const { transcript } = await captureVoiceTranscript({
+          signal: ac.signal,
+          platform: 'web',
+          timeoutMs: 7_000,
+        });
+        setListening(false);
+
+        const coords = activeLocation?.coordinates;
+        const orderingContext = buildOrderingAssistContext({
+          restaurantId,
+          restaurantSlug,
+          areaLabel: activeLocation?.displayLabel,
+          lat: coords?.lat,
+          lng: coords?.lng,
+        });
+        const corrected = correctTranscriptAgainstOrderingVocab(transcript, orderingContext);
+
+        if (isStopVoiceAgentMessage(corrected)) {
+          const bye = 'Voice agent paused. Tap the AI orb anytime to continue.';
+          setMessages((prev) => [
+            ...prev,
+            { id: nextId(), role: 'user', text: corrected },
+            { id: nextId(), role: 'assistant', text: bye },
+          ]);
+          await speakReply(bye, ac.signal, true);
+          return 'stop';
+        }
+
+        const reply = await send(corrected);
+        await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current);
+        return 'ok';
+      } catch (err) {
+        setListening(false);
+        if (err instanceof AssistantApiError) {
+          if (err.code === 'AI_VOICE_ABORTED') return 'abort';
+          setError(err.message);
+          return 'error';
+        }
+        setError(err instanceof Error ? err.message : 'Voice capture failed');
+        return 'error';
+      } finally {
+        if (voiceAbortRef.current === ac) voiceAbortRef.current = null;
+        setListening(false);
+      }
+    },
+    [
+      activeLocation?.coordinates,
+      activeLocation?.displayLabel,
+      restaurantId,
+      restaurantSlug,
+      send,
+      speakReply,
+      voiceEnabled,
+    ],
+  );
+
+  /** Tap mic: single turn with spoken reply when TTS is on. */
+  const sendFromVoice = useCallback(async () => {
+    if (!voiceEnabled || loading || listening || validating || applying || speaking) return;
+    await runVoiceTurn({ forceSpeak: ttsEnabled });
+  }, [applying, listening, loading, runVoiceTurn, speaking, ttsEnabled, validating, voiceEnabled]);
+
+  /**
+   * Live voice agent: listen → reply (spoken) → listen again until stop / error / close.
+   * Cart still requires spoken or tapped Confirm — never blind checkout.
+   */
+  const startVoiceAgent = useCallback(async () => {
+    if (!voiceEnabled) {
+      setError('Enable voice on this build to use the live Voice Agent.');
+      return;
+    }
+    if (voiceAgentActiveRef.current) return;
     if (!isVoiceCaptureAvailable()) {
       setError('Speech recognition is not available on this device/browser.');
       return;
     }
 
-    const ac = new AbortController();
-    voiceAbortRef.current = ac;
-    setListening(true);
+    voiceAgentActiveRef.current = true;
+    setVoiceAgentActive(true);
+    setOpen(true);
     setError(null);
 
+    const greeting =
+      'OrderBhojan Voice Agent ready. Tell me a kitchen or dish — say confirm to add a validated plan.';
+    setMessages((prev) =>
+      prev.length === 0
+        ? [...prev, { id: nextId(), role: 'assistant', text: greeting }]
+        : prev,
+    );
+    const greetAc = new AbortController();
+    voiceAbortRef.current = greetAc;
     try {
-      const { transcript } = await captureVoiceTranscript({
-        signal: ac.signal,
-        platform: 'web',
-      });
-      const coords = activeLocation?.coordinates;
-      const orderingContext = buildOrderingAssistContext({
-        restaurantId,
-        restaurantSlug,
-        areaLabel: activeLocation?.displayLabel,
-        lat: coords?.lat,
-        lng: coords?.lng,
-      });
-      const corrected = correctTranscriptAgainstOrderingVocab(transcript, orderingContext);
-      const reply = await send(corrected);
-
-      // Optional spoken reply only — never speaks confirm/checkout prompts as actions.
-      if (ttsEnabled && reply?.trim()) {
-        try {
-          await speakVoiceConfirmation({ text: reply, signal: ac.signal });
-        } catch (ttsErr) {
-          if (
-            ttsErr instanceof AssistantApiError &&
-            (ttsErr.code === 'AI_TTS_ABORTED' || ttsErr.code === 'AI_VOICE_ABORTED')
-          ) {
-            return;
-          }
-          // Non-fatal: keep the typed reply in the thread.
-        }
-      }
-    } catch (err) {
-      if (err instanceof AssistantApiError) {
-        if (err.code === 'AI_VOICE_ABORTED') return;
-        setError(err.message);
-        return;
-      }
-      setError(err instanceof Error ? err.message : 'Voice capture failed');
-    } finally {
-      setListening(false);
-      voiceAbortRef.current = null;
+      await speakReply(greeting, greetAc.signal, true);
+    } catch {
+      /* non-fatal */
     }
-  }, [
-    activeLocation?.coordinates,
-    activeLocation?.displayLabel,
-    applying,
-    listening,
-    loading,
-    restaurantId,
-    restaurantSlug,
-    send,
-    ttsEnabled,
-    validating,
-    voiceEnabled,
-  ]);
+
+    while (voiceAgentActiveRef.current) {
+      if (loading || validating || applying) {
+        await new Promise((r) => setTimeout(r, 200));
+        continue;
+      }
+      const outcome = await runVoiceTurn({ forceSpeak: true });
+      if (outcome === 'stop' || outcome === 'abort') {
+        break;
+      }
+      if (outcome === 'error') {
+        // Keep session alive for permission/timeout blips — brief pause then listen again.
+        await new Promise((r) => setTimeout(r, 450));
+        if (!voiceAgentActiveRef.current) break;
+        continue;
+      }
+      await new Promise((r) => setTimeout(r, 280));
+    }
+
+    voiceAgentActiveRef.current = false;
+    setVoiceAgentActive(false);
+    setListening(false);
+    setSpeaking(false);
+  }, [applying, loading, runVoiceTurn, speakReply, validating, voiceEnabled]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {
@@ -688,7 +888,11 @@ export function useAssistantConversation() {
       setOpen((prev) => {
         const next = typeof value === 'function' ? value(prev) : value;
         if (!next) {
+          voiceAgentActiveRef.current = false;
+          setVoiceAgentActive(false);
           voiceAbortRef.current?.abort();
+          setListening(false);
+          setSpeaking(false);
         }
         return next;
       });
@@ -704,6 +908,8 @@ export function useAssistantConversation() {
     validating,
     applying,
     listening,
+    speaking,
+    voiceAgentActive,
     error,
     pendingValidation,
     voiceEnabled,
@@ -713,6 +919,8 @@ export function useAssistantConversation() {
     personalizationEnabled,
     send,
     sendFromVoice,
+    startVoiceAgent,
+    stopVoiceAgent,
     cancelVoice,
     followHint,
     confirmApplyPlan,

@@ -1,9 +1,18 @@
+import { useEffect } from 'react';
 import { ConsumerAssistantFab } from './ConsumerAssistantFab';
 import { ConsumerAssistantSheet } from './ConsumerAssistantSheet';
 import { useAssistantConversation } from './useAssistantConversation';
 
 export function ConsumerAssistantShell() {
   const chat = useAssistantConversation();
+
+  useEffect(() => {
+    const onOpenVoiceAgent = () => {
+      void chat.startVoiceAgent();
+    };
+    window.addEventListener('ob-voice-agent-open', onOpenVoiceAgent);
+    return () => window.removeEventListener('ob-voice-agent-open', onOpenVoiceAgent);
+  }, [chat.startVoiceAgent]);
 
   return (
     <>
@@ -14,6 +23,8 @@ export function ConsumerAssistantShell() {
           validating={chat.validating}
           applying={chat.applying}
           listening={chat.listening}
+          speaking={chat.speaking}
+          voiceAgentActive={chat.voiceAgentActive}
           error={chat.error}
           pendingValidation={chat.pendingValidation}
           voiceEnabled={chat.voiceEnabled}
@@ -24,13 +35,30 @@ export function ConsumerAssistantShell() {
           onSend={chat.send}
           onVoiceStart={() => void chat.sendFromVoice()}
           onVoiceCancel={chat.cancelVoice}
+          onStartVoiceAgent={() => void chat.startVoiceAgent()}
+          onStopVoiceAgent={chat.stopVoiceAgent}
           onFollowHint={chat.followHint}
           onConfirmPlan={chat.confirmApplyPlan}
           onDismissPlan={chat.dismissPlan}
           onClearError={chat.clearError}
         />
       ) : null}
-      <ConsumerAssistantFab open={chat.open} onToggle={() => chat.setOpen((v) => !v)} />
+      <ConsumerAssistantFab
+        open={chat.open}
+        listening={chat.listening}
+        voiceAgentActive={chat.voiceAgentActive}
+        onToggle={() => {
+          if (chat.open) {
+            chat.setOpen(false);
+            return;
+          }
+          if (chat.voiceEnabled && chat.voiceAvailable) {
+            void chat.startVoiceAgent();
+            return;
+          }
+          chat.setOpen(true);
+        }}
+      />
     </>
   );
 }

@@ -32,6 +32,8 @@ interface ConsumerAssistantSheetProps {
   readonly validating: boolean;
   readonly applying: boolean;
   readonly listening?: boolean;
+  readonly speaking?: boolean;
+  readonly voiceAgentActive?: boolean;
   readonly error: string | null;
   readonly pendingValidation: CartPlanValidationResult | null;
   readonly voiceEnabled?: boolean;
@@ -42,6 +44,8 @@ interface ConsumerAssistantSheetProps {
   readonly onSend: (text: string) => void;
   readonly onVoiceStart?: () => void;
   readonly onVoiceCancel?: () => void;
+  readonly onStartVoiceAgent?: () => void;
+  readonly onStopVoiceAgent?: () => void;
   readonly onFollowHint: (hint: ConsumerAssistHint) => void;
   readonly onConfirmPlan: () => void;
   readonly onDismissPlan: () => void;
@@ -54,6 +58,8 @@ export function ConsumerAssistantSheet({
   validating,
   applying,
   listening = false,
+  speaking = false,
+  voiceAgentActive = false,
   error,
   pendingValidation,
   voiceEnabled = false,
@@ -64,6 +70,8 @@ export function ConsumerAssistantSheet({
   onSend,
   onVoiceStart,
   onVoiceCancel,
+  onStartVoiceAgent,
+  onStopVoiceAgent,
   onFollowHint,
   onConfirmPlan,
   onDismissPlan,
@@ -114,16 +122,34 @@ export function ConsumerAssistantSheet({
       aria-labelledby="consumer-assistant-title"
       data-testid="consumer-assistant-sheet"
     >
-      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div>
-          <h2 id="consumer-assistant-title" className="text-sm font-semibold text-[#fffaf3]">
-            OrderBhojan Assistant
-          </h2>
-          <p className="text-xs text-[#d0c4b5]">
-            {isPostOrder
-              ? 'Order help · triage only (cancel/refund/payment escalate to support)'
-              : 'Read-only help · cart changes need your confirm'}
-          </p>
+      <header className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={
+              listening || speaking || voiceAgentActive
+                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ffb347] shadow-[0_0_20px_rgba(255,122,0,0.55)]'
+                : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#FF7A00]/40 bg-black/40'
+            }
+            aria-hidden
+          >
+            <span className="flex h-3.5 items-end gap-[2px]">
+              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-2 animate-pulse bg-black/80' : 'h-2 bg-[#FF7A00]'}`} />
+              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-3.5 animate-pulse bg-black/90' : 'h-3.5 bg-[#FF7A00]'}`} />
+              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-2.5 animate-pulse bg-black/80' : 'h-2.5 bg-[#FF7A00]'}`} />
+            </span>
+          </div>
+          <div className="min-w-0">
+            <h2 id="consumer-assistant-title" className="text-sm font-semibold text-[#fffaf3]">
+              OrderBhojan Voice Agent
+            </h2>
+            <p className="text-xs text-[#d0c4b5]">
+              {isPostOrder
+                ? 'Post-order help · speak tracking or support questions'
+                : voiceAgentActive
+                  ? 'Live voice · say a dish, then “confirm” to add'
+                  : 'Voice + chat · cart still needs your confirm'}
+            </p>
+          </div>
         </div>
         <button
           type="button"
@@ -140,8 +166,21 @@ export function ConsumerAssistantSheet({
             <p className="text-sm text-[#d0c4b5]">
               {isPostOrder
                 ? 'Ask about tracking, delivery, reorder shortcuts, or cancel/refund/payment issues. This chat guides and escalates — it never cancels, refunds, or promises outcomes.'
-                : 'Ask about menus, dietary picks, or checkout. Cart plans are never applied until you confirm.'}
+                : 'Tap Live Voice for hands-free ordering. Say a kitchen or dish, then “confirm” after validation — nothing is added until you confirm.'}
             </p>
+            {showMic && onStartVoiceAgent ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (voiceAgentActive) onStopVoiceAgent?.();
+                  else onStartVoiceAgent();
+                }}
+                className="w-full rounded-xl bg-gradient-to-r from-[#ff6b35] to-[#ff9f1c] px-3 py-2.5 text-sm font-semibold text-black"
+                data-testid="consumer-assistant-live-voice"
+              >
+                {voiceAgentActive ? 'Stop live voice' : 'Start live voice agent'}
+              </button>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {starters.map((starter) => (
                 <button
@@ -221,13 +260,17 @@ export function ConsumerAssistantSheet({
           </div>
         ))}
 
-        {(loading || validating || listening) && (
+        {(loading || validating || listening || speaking) && (
           <div className="text-xs text-[#d0c4b5]" aria-live="polite">
             {listening
-              ? 'Listening… speak once, then pause.'
-              : loading
-                ? 'Thinking…'
-                : 'Validating cart plan…'}
+              ? voiceAgentActive
+                ? 'Listening live… speak naturally, then pause.'
+                : 'Listening… speak, then pause.'
+              : speaking
+                ? 'Speaking…'
+                : loading
+                  ? 'Thinking…'
+                  : 'Validating cart plan…'}
           </div>
         )}
 
@@ -336,7 +379,9 @@ export function ConsumerAssistantSheet({
         </div>
         {showMic ? (
           <p className="mt-2 text-[10px] text-[#8a7f72]">
-            Mic captures one phrase — cart changes still need Confirm.
+            {voiceAgentActive
+              ? 'Live mode: listen → reply by voice → listen again. Say “confirm” to apply a validated plan, or “stop listening” to pause.'
+              : 'Tap mic for one turn, or Start live voice agent for continuous talk. Cart still needs Confirm.'}
           </p>
         ) : null}
       </footer>

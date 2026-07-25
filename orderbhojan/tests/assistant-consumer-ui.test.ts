@@ -79,14 +79,18 @@ describe('assistant Phase 14 consumer UI', () => {
     const conversation = readUi('useAssistantConversation.ts');
     assert.match(conversation, /captureVoiceTranscript/);
     assert.match(conversation, /sendFromVoice/);
+    assert.match(conversation, /startVoiceAgent/);
     assert.match(conversation, /correctTranscriptAgainstOrderingVocab/);
     assert.match(conversation, /await send\(corrected\)/);
+    assert.match(conversation, /isConfirmCartUserMessage/);
     assert.doesNotMatch(conversation, /runVoiceOrderingTurn|askWithVoice/);
-    const voiceBlock = conversation.slice(
-      conversation.indexOf('sendFromVoice'),
-      conversation.indexOf('followHint'),
-    );
-    assert.doesNotMatch(voiceBlock, /applyConfirmedCartPlan|confirmApplyPlan/);
+  });
+
+  it('premium AI orb launcher is not a generic chat bubble', () => {
+    const fab = readUi('ConsumerAssistantFab.tsx');
+    assert.match(fab, /Voice Agent|waveform|tracking-\[0\.14em\]/);
+    assert.doesNotMatch(fab, /MessageSquare/);
+    assert.match(fab, /consumer-assistant-fab/);
   });
 
   it('mic button is dual-gated and click-to-speak only', () => {
@@ -95,9 +99,9 @@ describe('assistant Phase 14 consumer UI', () => {
     assert.match(sheet, /consumer-assistant-mic/);
     assert.match(sheet, /voiceEnabled && voiceAvailable/);
     assert.match(sheet, /Speak your question/);
-    assert.match(sheet, /cart changes still need Confirm/);
+    assert.match(sheet, /consumer-assistant-live-voice|Start live voice/);
     assert.match(shell, /onVoiceStart/);
-    assert.match(shell, /sendFromVoice/);
+    assert.match(shell, /sendFromVoice|startVoiceAgent/);
     assert.doesNotMatch(sheet, /continuous:\s*true|webkitSpeechRecognition/);
   });
 

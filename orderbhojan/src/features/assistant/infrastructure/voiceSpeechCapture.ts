@@ -118,7 +118,8 @@ export async function captureVoiceTranscript(params: {
     });
   }
 
-  const timeoutMs = params.timeoutMs ?? 12_000;
+  // Shorter default for voice-agent turns — stop waiting forever for silence.
+  const timeoutMs = params.timeoutMs ?? 7_000;
   const platform = params.platform ?? 'unknown';
 
   return new Promise<VoiceTranscriptResult>((resolve, reject) => {

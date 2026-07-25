@@ -14,6 +14,7 @@ import { useHomeHeroOfferRestaurants } from '@/features/experience/hooks/useHome
 import { useKitchenHeroMotion } from '@/features/experience/hooks/useKitchenHeroMotion';
 import { mergeHomeHeroSlides } from '@/features/experience/utils/buildHomeHeroSlides';
 import type { HomeHeroSlide } from '@/types/marketplace-home-hero';
+import { HomeVoiceAgentButton } from '@/features/assistant/ui/HomeVoiceAgentButton';
 import { OrderBhojanHomeLocationBar } from './OrderBhojanHomeLocationBar';
 
 function resolveHeroSlidePhoto(slide: HomeHeroSlide) {
@@ -136,13 +137,18 @@ export function OrderBhojanHomeHero() {
       onCtaClick={activeSlide?.cta ? handleCta : undefined}
       locationSlot={<OrderBhojanHomeLocationBar />}
       searchSlot={
-        <MarketplaceSearchBar
-          value={searchValue}
-          onChange={setSearchValue}
-          onSubmit={goToSearch}
-          onClear={() => setSearchValue('')}
-          onAutocompleteFocus={goToSearch}
-        />
+        <div className="flex items-stretch gap-2">
+          <div className="min-w-0 flex-1">
+            <MarketplaceSearchBar
+              value={searchValue}
+              onChange={setSearchValue}
+              onSubmit={goToSearch}
+              onClear={() => setSearchValue('')}
+              onAutocompleteFocus={goToSearch}
+            />
+          </div>
+          <HomeVoiceAgentButton />
+        </div>
       }
     />
   );
