@@ -62,4 +62,9 @@ describe('corsPolicy', () => {
     assert.ok(options.allowedHeaders?.includes('Cache-Control'));
     assert.ok(options.allowedHeaders?.includes('Pragma'));
   });
+
+  it('allows x-ai-canary-key for OrderBhojan AI canary cohort headers', () => {
+    const options = createCorsOptions([...DEFAULT_CORS_ALLOWED_ORIGINS]);
+    assert.ok(options.allowedHeaders?.includes('x-ai-canary-key'));
+  });
 });

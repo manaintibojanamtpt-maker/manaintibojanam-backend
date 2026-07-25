@@ -55,5 +55,12 @@ describe('AI audit review UI Phase 22', () => {
     assert.doesNotMatch(health, /\/api\/ai\/v1\/assist/);
     assert.match(api, /fetchAiAuditEvents/);
     assert.match(api, /\/api\/ops\/ai\/audit-events/);
+    // Discriminated-union narrowing: `!result.ok` fails under this repo's tsc;
+    // error paths must use `result.ok === false` before reading `result.error`.
+    assert.match(api, /if \(result\.ok === false\)/);
+    assert.doesNotMatch(
+      api,
+      /if \(!result\.ok\)\s*\{\s*return\s*\{[\s\S]*?error:\s*result\.error/,
+    );
   });
 });

@@ -343,7 +343,7 @@ export async function fetchAiShadowSamples(
   const result = await opsFetch<AiShadowSamplesResponse & { shadowTrafficEnabled?: boolean }>(
     `/api/ops/ai/shadow/samples?limit=${limit}`,
   );
-  if (!result.ok) {
+  if (result.ok === false) {
     return {
       success: false,
       mutatedState: false,
@@ -367,7 +367,7 @@ export async function replayAiShadowTraffic(
   request: AiShadowReplayRequest = {},
 ): Promise<AiShadowReplayResponse | null> {
   const result = await opsPost<AiShadowReplayResponse>('/api/ops/ai/shadow/replay', request);
-  if (!result.ok) {
+  if (result.ok === false) {
     return {
       success: false,
       mutatedState: false,
@@ -393,7 +393,7 @@ export async function fetchAiAuditEvents(
   const result = await opsFetch<AiAuditEventsResponse>(
     `/api/ops/ai/audit-events?${params.toString()}`,
   );
-  if (!result.ok) {
+  if (result.ok === false) {
     return {
       success: false,
       schemaVersion: '22.0',

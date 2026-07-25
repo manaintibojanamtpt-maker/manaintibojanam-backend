@@ -57,6 +57,8 @@ export function createCorsOptions(allowedOrigins = resolveCorsAllowedOrigins()):
       'X-Correlation-Id',
       'X-Marketplace-Api-Version',
       'X-Requested-With',
+      /** Phase 20 — OrderBhojan canary cohort key (FF_OB_AI_CANARY_HEADERS). */
+      'x-ai-canary-key',
     ],
     maxAge: 86_400,
   };

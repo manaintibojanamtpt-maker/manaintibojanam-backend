@@ -34,8 +34,9 @@ export function publishPersonalizationBootstrap(patch: PersonalizationBootstrap)
 
 export function clearPersonalizationReorder(): void {
   if (!current?.reorder) return;
-  const { reorder: _removed, ...rest } = current;
-  current = Object.keys(rest).length ? rest : undefined;
+  const next = { ...current };
+  delete next.reorder;
+  current = Object.keys(next).length ? next : undefined;
   notify();
 }
 

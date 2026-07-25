@@ -127,7 +127,7 @@ describe('assistant Phase 6 voice ordering turn', () => {
         onerror: null,
       }),
       client: {
-        consumerAssist: async (req) => ({
+        consumerAssist: async () => ({
           schemaVersion: '3.0',
           conversationId: 'c2',
           channel: 'orderbhojan_android',
