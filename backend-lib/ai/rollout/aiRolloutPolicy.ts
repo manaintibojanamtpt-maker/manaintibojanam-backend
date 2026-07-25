@@ -41,6 +41,24 @@ export const DEFAULT_AI_ROLLOUT_HEALTH_GATES: AiRolloutHealthGates = {
   minSampleSize: 20,
 };
 
+/** Routing decisions — must not inflate failure rate or the health gate death-spirals. */
+const CANARY_ROUTING_ERROR_CODES = new Set([
+  'AI_CANARY_HEALTH_GATE',
+  'AI_CANARY_EXCLUDED',
+]);
+
+function countCanaryRoutingErrors(
+  byErrorCode: Readonly<Record<string, number>> | undefined,
+): number {
+  if (!byErrorCode) return 0;
+  let total = 0;
+  for (const code of CANARY_ROUTING_ERROR_CODES) {
+    const n = byErrorCode[code];
+    if (typeof n === 'number' && Number.isFinite(n) && n > 0) total += n;
+  }
+  return total;
+}
+
 export interface AiRolloutRoutingDecision {
   readonly route: AiRolloutRoute;
   readonly reason: AiRolloutBlockReason | 'IN_BUCKET';
@@ -74,12 +92,21 @@ export function evaluateAiRolloutHealth(
     return { ok: true }; // not enough data to trip the gate
   }
 
-  const failureRate = (window.failureCount / window.totalEvents) * 100;
+  // Exclude canary routing blocks from failure math (otherwise HEALTH_GATE self-locks forever).
+  const routingErrors = countCanaryRoutingErrors(window.byErrorCode);
+  const effectiveTotal = Math.max(0, window.totalEvents - routingErrors);
+  const effectiveFailures = Math.max(0, window.failureCount - routingErrors);
+
+  if (effectiveTotal < gates.minSampleSize) {
+    return { ok: true }; // not enough non-routing samples
+  }
+
+  const failureRate = (effectiveFailures / effectiveTotal) * 100;
   if (failureRate > gates.maxFailureRatePercent) {
     return { ok: false, reason: `failureRate ${failureRate.toFixed(1)}%` };
   }
 
-  const safetyRate = (window.safetyBlockedCount / window.totalEvents) * 100;
+  const safetyRate = (window.safetyBlockedCount / effectiveTotal) * 100;
   if (safetyRate > gates.maxSafetyBlockedRatePercent) {
     return { ok: false, reason: `safetyBlockedRate ${safetyRate.toFixed(1)}%` };
   }
@@ -195,6 +222,26 @@ export function evaluateAiCanaryAssistGate(params: {
     wiredIntoAssist: true,
     healthOk,
   });
+
+  // Stage 5 (100%): health is advisory only — never hard-block production traffic.
+  // Canary stages 1–4 still hard-block on HEALTH_GATE so soak stays safe.
+  if (
+    decision.reason === 'HEALTH_GATE' &&
+    stageDef.percent >= 100
+  ) {
+    return {
+      allow: true,
+      applied: true,
+      decision: {
+        ...decision,
+        route: 'allowed',
+        reason: 'IN_BUCKET',
+        bucket: decision.bucket ?? 0,
+        healthOk: false,
+      },
+    };
+  }
+
   return {
     allow: decision.route === 'allowed',
     applied: true,

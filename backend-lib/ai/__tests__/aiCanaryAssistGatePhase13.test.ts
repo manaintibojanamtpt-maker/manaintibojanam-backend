@@ -80,7 +80,19 @@ describe('AI canary assist gate Phase 13', () => {
     assert.equal(excluded.decision.reason, 'OUTSIDE_BUCKET');
   });
 
-  it('health gate blocks when applied and unhealthy', () => {
+  it('health gate hard-blocks canary stages when unhealthy', () => {
+    const gate = evaluateAiCanaryAssistGate({
+      canaryFlagEnabled: true,
+      stage: 1,
+      routingKey: 'healthy-key',
+      wiredIntoAssist: true,
+      healthOk: false,
+    });
+    assert.equal(gate.allow, false);
+    assert.equal(gate.decision.reason, 'HEALTH_GATE');
+  });
+
+  it('stage 5 (100%) treats health as advisory — does not hard-block assist', () => {
     const gate = evaluateAiCanaryAssistGate({
       canaryFlagEnabled: true,
       stage: 5,
@@ -88,8 +100,9 @@ describe('AI canary assist gate Phase 13', () => {
       wiredIntoAssist: true,
       healthOk: false,
     });
-    assert.equal(gate.allow, false);
-    assert.equal(gate.decision.reason, 'HEALTH_GATE');
+    assert.equal(gate.allow, true);
+    assert.equal(gate.applied, true);
+    assert.equal(gate.decision.healthOk, false);
   });
 
   it('resolves routing key precedence', () => {

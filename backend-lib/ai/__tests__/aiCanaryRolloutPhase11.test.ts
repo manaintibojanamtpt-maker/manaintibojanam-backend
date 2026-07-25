@@ -151,6 +151,35 @@ describe('AI canary rollout Phase 11', () => {
     assert.equal(health.ok, false);
   });
 
+  it('does not death-spiral when failures are only canary routing blocks', () => {
+    const snap: AiObservabilitySnapshot = {
+      schemaVersion: '20.0',
+      generatedAt: new Date().toISOString(),
+      mutatedState: false,
+      persistence: 'in_process',
+      process: emptyWindow({
+        totalEvents: 40,
+        successCount: 20,
+        failureCount: 20,
+        byErrorCode: { AI_CANARY_HEALTH_GATE: 18, AI_CANARY_EXCLUDED: 2 },
+      }),
+      last1h: emptyWindow({
+        totalEvents: 40,
+        successCount: 20,
+        failureCount: 20,
+        byErrorCode: { AI_CANARY_HEALTH_GATE: 18, AI_CANARY_EXCLUDED: 2 },
+      }),
+      last24h: emptyWindow({
+        totalEvents: 40,
+        successCount: 20,
+        failureCount: 20,
+        byErrorCode: { AI_CANARY_HEALTH_GATE: 18, AI_CANARY_EXCLUDED: 2 },
+      }),
+    };
+    const health = evaluateAiRolloutHealth(snap);
+    assert.equal(health.ok, true);
+  });
+
   it('snapshot is mutatedState false and defaults unwired', () => {
     const snap = buildAiCanaryRolloutSnapshot({
       AI_CANARY_ROLLOUT_ENABLED: undefined,
