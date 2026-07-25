@@ -407,8 +407,10 @@ export function useAssistantConversation() {
                   validation.status === 'validated'
                     ? 'Cart plan validated. Review and confirm to apply.'
                     : validation.status === 'needs_clarification'
-                      ? 'Cart plan needs clarification before it can be applied.'
-                      : 'Cart plan is invalid and cannot be applied.',
+                      ? validation.clarificationQuestions?.[0] ||
+                        'Cart plan needs clarification before it can be applied.'
+                      : validation.issues?.[0]?.message ||
+                        'Cart plan is invalid — open that kitchen’s menu and use the exact dish name, then Confirm.',
                 validation,
               },
             ]);
