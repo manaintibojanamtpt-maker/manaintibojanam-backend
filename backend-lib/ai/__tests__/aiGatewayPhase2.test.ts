@@ -77,7 +77,7 @@ describe('structuredOutput', () => {
 });
 
 describe('safetyGuardrails', () => {
-  it('strips mutation plans for read-only consumer mode', () => {
+  it('retains non-executable cart plans for read-only consumer mode (confirm-to-apply)', () => {
     const structured = parseStructuredAssistOutput({
       mode: 'consumer_ordering',
       channel: 'orderbhojan_web',
@@ -97,10 +97,10 @@ describe('safetyGuardrails', () => {
       allowMutationPlans: false,
       readOnlyConsumer: true,
     });
-    assert.equal(
-      evaluation.sanitized.proposedActions.some((a) => a.type === 'cart_add_plan'),
-      false,
-    );
+    const plan = evaluation.sanitized.proposedActions.find((a) => a.type === 'cart_add_plan');
+    assert.ok(plan);
+    assert.equal(plan.executable, false);
+    assert.equal(plan.requiresConfirmation, true);
     assert.equal(
       evaluation.sanitized.proposedActions.some((a) => a.type === 'navigate'),
       true,

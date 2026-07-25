@@ -278,12 +278,20 @@ export class AssistantApiClient {
     }
 
     try {
+      const orderingContext = request.orderingContext;
       const { body, headers } = withCanaryBody({
         mode: 'consumer_ordering',
         channel,
         message,
         readOnly: true,
         ...(request.conversationId ? { conversationId: request.conversationId } : {}),
+        ...(orderingContext
+          ? {
+              context: {
+                orderingContext,
+              },
+            }
+          : {}),
       });
       const payload = await this.http.request<GatewayAssistSuccess>({
         path: '/api/ai/v1/assist',

@@ -19,6 +19,8 @@ import {
   classifyPersonalizationIntent,
   isPersonalizationCartIntent,
 } from '../domain/isPersonalizationUserMessage';
+import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
+import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
@@ -87,6 +89,7 @@ export function useAssistantConversation() {
   const ttsEnabled = useAiVoiceTtsFeature();
   const navigate = useNavigate();
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
+  const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const addItem = useCartStore((s) => s.addItem);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const activeLocation = useActiveLocation();
@@ -235,6 +238,83 @@ export function useAssistantConversation() {
           }
         }
 
+        const cartAddIntent = parseCartAddUserMessage(message);
+        if (cartAddIntent) {
+          if (!restaurantId) {
+            const searchPath = `/search?q=${encodeURIComponent(cartAddIntent.itemName)}`;
+            const reply = `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or search), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
+            const hints: ConsumerAssistHint[] = [
+              { type: 'navigate', target: searchPath },
+              { type: 'navigate', target: '/' },
+            ];
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'assistant', text: reply, hints },
+            ]);
+            return reply;
+          }
+
+          const cartActions: CartPlanAction[] = [
+            {
+              type: 'cart_add_plan',
+              requiresConfirmation: true,
+              executable: false,
+              payload: {
+                name: cartAddIntent.itemName,
+                quantity: cartAddIntent.quantity,
+                restaurantId,
+              },
+              reason: 'user_cart_add_intent',
+            },
+          ];
+          const reply = `I prepared a reviewable plan to add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}. Availability is checked next — nothing is added until you confirm.`;
+          setMessages((prev) => [
+            ...prev,
+            { id: nextId(), role: 'assistant', text: reply, cartActions },
+          ]);
+          pendingPlanRestaurantRef.current = {
+            restaurantId,
+            restaurantSlug: restaurantSlug ?? restaurantId,
+          };
+          setValidating(true);
+          try {
+            const validation = await validate({
+              restaurantId,
+              proposedActions: cartActions,
+              ...(conversationId ? { conversationId } : {}),
+            });
+            setPendingValidation(validation);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: nextId(),
+                role: 'system',
+                text:
+                  validation.status === 'validated'
+                    ? 'Cart plan validated. Review and confirm to apply.'
+                    : validation.status === 'needs_clarification'
+                      ? 'Cart plan needs clarification (item match or options) before apply.'
+                      : 'Cart plan is invalid — try searching the menu for the exact dish name.',
+                validation,
+              },
+            ]);
+          } catch (err) {
+            const msg =
+              err instanceof AssistantApiError
+                ? err.message
+                : err instanceof Error
+                  ? err.message
+                  : 'Could not validate cart plan';
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'system', text: `Validation skipped: ${msg}` },
+            ]);
+          } finally {
+            setValidating(false);
+          }
+          return reply;
+        }
+
         const usePostOrderPath =
           postOrderAssistEnabled &&
           (orderContext != null || isPostOrderUserMessage(message));
@@ -280,9 +360,18 @@ export function useAssistantConversation() {
           return result.reply;
         }
 
+        const coords = activeLocation?.coordinates;
+        const orderingContext = buildOrderingAssistContext({
+          restaurantId,
+          restaurantSlug,
+          areaLabel: activeLocation?.displayLabel,
+          lat: coords?.lat,
+          lng: coords?.lng,
+        });
         const result = await ask({
           message,
           ...(conversationId ? { conversationId } : {}),
+          ...(orderingContext ? { orderingContext } : {}),
         });
         setConversationId(result.conversationId);
 
@@ -362,6 +451,7 @@ export function useAssistantConversation() {
       }
     },
     [
+      activeLocation,
       ask,
       askPostOrder,
       conversationId,
@@ -371,6 +461,7 @@ export function useAssistantConversation() {
       personalizationEnabled,
       postOrderAssistEnabled,
       restaurantId,
+      restaurantSlug,
       validate,
     ],
   );

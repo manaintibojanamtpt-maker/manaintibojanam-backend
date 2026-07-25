@@ -18,6 +18,10 @@ import {
   buildPostOrderSystemAddon,
   parsePostOrderAssistContext,
 } from './postOrderAssistContracts.js';
+import {
+  buildOrderingSystemAddon,
+  parseOrderingAssistContext,
+} from './orderingAssistContracts.js';
 import { buildAiCanaryRolloutSnapshot } from './rollout/aiRolloutContracts.js';
 import { readAiCanaryRolloutConfig } from './rollout/aiRolloutConfig.js';
 import {
@@ -221,9 +225,10 @@ export function registerAiGatewayRoutes(
       return jsonError(res, 400, 'AI_INVALID_REQUEST', 'message must be a non-empty string (max 4000 chars)');
     }
 
-    // Phase 3: all consumer_ordering traffic is read-only (mutation plans stripped server-side).
+    // Consumer assist: cart_* plans retained as non-executable proposals (confirm-to-apply on client).
     const readOnlyConsumer = body.mode === 'consumer_ordering';
     const postOrder = parsePostOrderAssistContext(body.context);
+    const ordering = parseOrderingAssistContext(body.context);
 
     const conversationId =
       typeof body.conversationId === 'string' && body.conversationId.trim()
@@ -282,7 +287,11 @@ export function registerAiGatewayRoutes(
       channel,
       success: true,
       messagePreview: redactMessagePreview(
-        postOrder.used ? `[post_order_context] ${message}` : message,
+        postOrder.used
+          ? `[post_order_context] ${message}`
+          : ordering.used
+            ? `[ordering_context] ${message}`
+            : message,
       ),
       ...canaryMeta,
     });
@@ -292,7 +301,11 @@ export function registerAiGatewayRoutes(
         body.mode === 'consumer_ordering' && postOrder.used && postOrder.context
           ? ` ${buildPostOrderSystemAddon(postOrder.context)}`
           : '';
-      const systemPrompt = `${buildModeSystemPrompt(body.mode)} ${buildStructuredOutputSystemAddon(body.mode)}${postOrderAddon}`;
+      const orderingAddon =
+        body.mode === 'consumer_ordering' && ordering.used && ordering.context
+          ? ` ${buildOrderingSystemAddon(ordering.context)}`
+          : '';
+      const systemPrompt = `${buildModeSystemPrompt(body.mode)} ${buildStructuredOutputSystemAddon(body.mode)}${postOrderAddon}${orderingAddon}`;
       const completion = await openRouterChatCompletion({
         config: latest,
         messages: [

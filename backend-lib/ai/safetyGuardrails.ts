@@ -109,21 +109,23 @@ export function evaluateAssistSafety(
     }
 
     if (MUTATION_ACTIONS.has(action.type) && !allowMutationPlans) {
+      // Retain cart_* plans as non-executable proposals so clients can validate + confirm.
+      // place_order is already hard-blocked above. Never mark executable.
       violations.push({
         code: 'MUTATION_NOT_ALLOWED',
         message: readOnlyConsumer
-          ? `Mutation plan ${action.type} stripped for read-only consumer assist`
+          ? `Mutation plan ${action.type} retained as non-executable proposal (confirm-to-apply)`
           : `Mutation plan ${action.type} is not executable (plan retained as non-executable)`,
       });
-      if (!readOnlyConsumer) {
-        sanitizedActions.push({
-          type: action.type,
-          requiresConfirmation: true,
-          executable: false,
-          ...(action.payload ? { payload: action.payload } : {}),
-          reason: 'phase2_plan_only_not_executed',
-        });
-      }
+      sanitizedActions.push({
+        type: action.type,
+        requiresConfirmation: true,
+        executable: false,
+        ...(action.payload ? { payload: action.payload } : {}),
+        reason: readOnlyConsumer
+          ? 'consumer_plan_only_confirm_required'
+          : 'phase2_plan_only_not_executed',
+      });
       continue;
     }
 

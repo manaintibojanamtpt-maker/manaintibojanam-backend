@@ -89,11 +89,32 @@ export class AssistantApiError extends Error {
   }
 }
 
+/** Caller-owned kitchen/menu snapshot for grounded assist (mirrors gateway orderingContext). */
+export interface OrderingAssistContext {
+  readonly restaurantId?: string;
+  readonly restaurantName?: string;
+  readonly restaurantSlug?: string;
+  readonly areaLabel?: string;
+  readonly city?: string;
+  readonly menuItems?: readonly {
+    readonly id?: string;
+    readonly name: string;
+    readonly price?: number;
+    readonly isVeg?: boolean;
+  }[];
+  readonly nearbyKitchens?: readonly {
+    readonly id?: string;
+    readonly name: string;
+    readonly cuisine?: string;
+  }[];
+}
+
 export interface ConsumerAssistRequest {
   readonly message: string;
   readonly conversationId?: string;
   readonly authToken?: string | null;
   readonly signal?: AbortSignal;
+  readonly orderingContext?: OrderingAssistContext;
 }
 
 export interface VoiceTranscriptResult {
