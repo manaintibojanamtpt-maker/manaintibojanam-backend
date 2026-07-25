@@ -75,6 +75,7 @@ export function useMarketingAssistantChat() {
     error,
     rateLimited,
     send,
+    setError,
     clearError: () => {
       setError(null);
       setRateLimited(false);

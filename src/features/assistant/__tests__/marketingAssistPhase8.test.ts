@@ -28,8 +28,16 @@ describe('assistant Phase 8 marketing UI', () => {
   it('MarketingApp mounts assistant only via MarketingAssistantRoot', () => {
     const app = readFileSync(join(repoRoot, 'src/MarketingApp.tsx'), 'utf8');
     assert.match(app, /MarketingAssistantRoot/);
+    assert.match(app, /MarketingWhatsAppFloat/);
     assert.doesNotMatch(app, /AIAssistant/);
     assert.doesNotMatch(app, /\/api\/ai\/chat/);
+  });
+
+  it('marketing panel supports click-to-speak without auto account actions', () => {
+    const panel = read('ui/MarketingAssistantPanel.tsx');
+    assert.match(panel, /captureMarketingVoiceTranscript/);
+    assert.match(panel, /marketing-assistant-mic/);
+    assert.doesNotMatch(panel, /cartStore|razorpay|placeOrder/i);
   });
 
   it('does not auto-execute hints on assist response', () => {

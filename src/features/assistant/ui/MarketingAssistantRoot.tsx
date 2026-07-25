@@ -28,6 +28,7 @@ function MarketingAssistantWidget() {
           onClose={() => chat.setOpen(false)}
           onSend={chat.send}
           onClearError={chat.clearError}
+          onVoiceError={chat.setError}
         />
       ) : null}
       <MarketingAssistantLauncher open={chat.open} onToggle={() => chat.setOpen((v) => !v)} />

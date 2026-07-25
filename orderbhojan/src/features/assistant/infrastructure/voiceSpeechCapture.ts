@@ -36,6 +36,59 @@ function getDefaultSpeechRecognitionFactory(): SpeechRecognitionFactory {
   };
 }
 
+function mapSpeechRecognitionError(err: string): {
+  readonly code: 'AI_VOICE_PERMISSION_DENIED' | 'AI_VOICE_ERROR' | 'AI_VOICE_EMPTY' | 'AI_VOICE_TIMEOUT';
+  readonly message: string;
+  readonly retryable: boolean;
+} {
+  switch (err) {
+    case 'not-allowed':
+      return {
+        code: 'AI_VOICE_PERMISSION_DENIED',
+        message:
+          'Microphone is blocked. Allow mic for this site (address-bar lock/info → Microphone → Allow), then try again. On Android, enable Microphone for OrderBhojan in system Settings.',
+        retryable: false,
+      };
+    case 'service-not-allowed':
+      return {
+        code: 'AI_VOICE_PERMISSION_DENIED',
+        message:
+          'Speech recognition is blocked by browser or site policy. Refresh the page after allowing the microphone, or try Chrome.',
+        retryable: false,
+      };
+    case 'audio-capture':
+      return {
+        code: 'AI_VOICE_ERROR',
+        message: 'No microphone was found or it is in use by another app.',
+        retryable: true,
+      };
+    case 'network':
+      return {
+        code: 'AI_VOICE_ERROR',
+        message: 'Speech recognition needs a network connection. Check connectivity and try again.',
+        retryable: true,
+      };
+    case 'no-speech':
+      return {
+        code: 'AI_VOICE_EMPTY',
+        message: 'No speech heard. Tap the mic and speak clearly, then pause.',
+        retryable: true,
+      };
+    case 'aborted':
+      return {
+        code: 'AI_VOICE_ERROR',
+        message: 'Voice capture was interrupted. Tap the mic to try again.',
+        retryable: true,
+      };
+    default:
+      return {
+        code: 'AI_VOICE_ERROR',
+        message: `Speech recognition failed (${err}). Tap the mic to try again.`,
+        retryable: err === 'network' || err === 'no-speech',
+      };
+  }
+}
+
 /**
  * Capture a single utterance via Web Speech API (works in Chrome / many Android WebViews).
  * Injectable factory for tests. Does not call the AI gateway.
@@ -47,12 +100,20 @@ export async function captureVoiceTranscript(params: {
   readonly createRecognition?: SpeechRecognitionFactory;
   readonly signal?: AbortSignal;
 }): Promise<VoiceTranscriptResult> {
+  if (typeof window !== 'undefined' && window.isSecureContext === false) {
+    throw new AssistantApiError({
+      code: 'AI_VOICE_UNSUPPORTED',
+      message: 'Voice requires a secure context (HTTPS). Open the site over HTTPS and try again.',
+      retryable: false,
+    });
+  }
+
   const createRecognition = params.createRecognition ?? getDefaultSpeechRecognitionFactory();
   const recognition = createRecognition();
   if (!recognition) {
     throw new AssistantApiError({
       code: 'AI_VOICE_UNSUPPORTED',
-      message: 'Speech recognition is not available on this device/browser.',
+      message: 'Speech recognition is not available on this device/browser. Use Chrome, or type your question.',
       retryable: false,
     });
   }
@@ -137,12 +198,13 @@ export async function captureVoiceTranscript(params: {
 
     recognition.onerror = (event) => {
       const err = event.error ?? 'unknown';
+      const mapped = mapSpeechRecognitionError(err);
       finish(() =>
         reject(
           new AssistantApiError({
-            code: err === 'not-allowed' ? 'AI_VOICE_PERMISSION_DENIED' : 'AI_VOICE_ERROR',
-            message: `Speech recognition failed (${err}).`,
-            retryable: err === 'network' || err === 'no-speech',
+            code: mapped.code,
+            message: mapped.message,
+            retryable: mapped.retryable,
           }),
         ),
       );

@@ -23,6 +23,25 @@ describe('assistant Phase 5 Android parity + voice hooks', () => {
     assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_VOICE'), false);
   });
 
+  it('allows microphone for self in hosting Permissions-Policy (fixes not-allowed)', () => {
+    const firebase = readFileSync(path.resolve(__dirname, '../../firebase.json'), 'utf8');
+    const preset = readFileSync(
+      path.resolve(__dirname, '../../scripts/firebase/spa-hosting-preset.json'),
+      'utf8',
+    );
+    assert.match(firebase, /microphone=\(self\)/);
+    assert.doesNotMatch(firebase, /microphone=\(\)/);
+    assert.match(preset, /microphone=\(self\)/);
+  });
+
+  it('declares RECORD_AUDIO for Capacitor WebView speech capture', () => {
+    const manifest = readFileSync(
+      path.resolve(__dirname, '../android/app/src/main/AndroidManifest.xml'),
+      'utf8',
+    );
+    assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
+  });
+
   it('resolves Android channel when native platform is true', () => {
     assert.equal(resolveConsumerAssistChannel(() => true), 'orderbhojan_android');
     assert.equal(resolveConsumerAssistChannel(() => false), 'orderbhojan_web');

@@ -3,6 +3,15 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(self), microphone=(self), camera=()"
+        }
+      ]
+    },
+    {
       "source": "/sw.js",
       "headers": [
         {

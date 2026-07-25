@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Mic, Square, X } from 'lucide-react';
+import {
+  captureMarketingVoiceTranscript,
+  isMarketingVoiceCaptureAvailable,
+} from '../infrastructure/marketingVoiceCapture';
 import { MarketingAssistantHints } from './MarketingAssistantHints';
 import type { MarketingChatMessage } from './useMarketingAssistantChat';
 
@@ -17,6 +21,7 @@ interface MarketingAssistantPanelProps {
   readonly onClose: () => void;
   readonly onSend: (text: string) => void;
   readonly onClearError: () => void;
+  readonly onVoiceError?: (message: string) => void;
 }
 
 export function MarketingAssistantPanel({
@@ -27,10 +32,14 @@ export function MarketingAssistantPanel({
   onClose,
   onSend,
   onClearError,
+  onVoiceError,
 }: MarketingAssistantPanelProps) {
   const [draft, setDraft] = useState('');
+  const [listening, setListening] = useState(false);
+  const [voiceAvailable] = useState(() => isMarketingVoiceCaptureAvailable());
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const voiceAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
@@ -42,10 +51,41 @@ export function MarketingAssistantPanel({
 
   const submit = () => {
     const text = draft.trim();
-    if (!text || loading) return;
+    if (!text || loading || listening) return;
     setDraft('');
     void onSend(text);
   };
+
+  const startVoice = async () => {
+    if (!voiceAvailable || loading || listening) return;
+    onClearError();
+    const ac = new AbortController();
+    voiceAbortRef.current = ac;
+    setListening(true);
+    try {
+      const transcript = await captureMarketingVoiceTranscript({ signal: ac.signal });
+      setDraft(transcript);
+      void onSend(transcript);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Voice capture failed';
+      if (!/cancelled/i.test(message)) {
+        onVoiceError?.(message);
+      }
+    } finally {
+      setListening(false);
+      voiceAbortRef.current = null;
+    }
+  };
+
+  const stopVoice = () => {
+    voiceAbortRef.current?.abort();
+  };
+
+  useEffect(() => {
+    return () => {
+      voiceAbortRef.current?.abort();
+    };
+  }, []);
 
   return (
     <div
@@ -161,19 +201,39 @@ export function MarketingAssistantPanel({
                 submit();
               }
             }}
-            placeholder="Ask about BhojanOS…"
-            disabled={loading}
+            placeholder={listening ? 'Listening…' : 'Ask about BhojanOS…'}
+            disabled={loading || listening}
             className="max-h-28 min-h-[42px] flex-1 resize-none rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#FF7A00]/50 focus:outline-none"
           />
+          {voiceAvailable ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (listening) stopVoice();
+                else void startVoice();
+              }}
+              disabled={loading}
+              className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/15 text-[#FF7A00] transition hover:bg-[#FF7A00]/25 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={listening ? 'Stop listening' : 'Ask with voice'}
+              data-testid="marketing-assistant-mic"
+            >
+              {listening ? <Square size={16} fill="currentColor" /> : <Mic size={18} />}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={submit}
-            disabled={loading || !draft.trim()}
+            disabled={loading || listening || !draft.trim()}
             className="marketing-soft-cta shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="marketing-soft-cta-inner px-3 py-2 text-sm">Send</span>
           </button>
         </div>
+        {voiceAvailable ? (
+          <p className="mt-2 text-[11px] text-neutral-500">
+            Mic captures one phrase — product guidance only, no account actions.
+          </p>
+        ) : null}
       </footer>
     </div>
   );
