@@ -26,7 +26,7 @@ Legacy `POST /api/ai/chat` (Ollama / rule router) is **unchanged**.
 | `AI_GATEWAY_ENABLED` | unset/`false` | Must be `true` to accept assist traffic |
 | `OPENROUTER_API_KEY` | unset | Server secret only |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Matches your Render config |
-| `OPENROUTER_MODEL` | `openai/gpt-oss-20b:free` | Matches your Render config |
+| `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | Stable paid default (avoid `:free` empty-completion 502s) |
 | `AI_GATEWAY_TIMEOUT_MS` | `15000` | |
 | `AI_GATEWAY_MAX_TOKENS` | `1024` | |
 | `AI_GATEWAY_RATE_LIMIT_MAX` | `60` | Per IP / 15 min on `/api/ai/v1/assist` |

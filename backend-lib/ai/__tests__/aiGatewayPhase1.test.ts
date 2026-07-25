@@ -14,11 +14,19 @@ describe('aiGatewayConfig', () => {
     const config = readAiGatewayConfig({
       OPENROUTER_API_KEY: 'sk-test',
       OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
-      OPENROUTER_MODEL: 'openai/gpt-oss-20b:free',
+      OPENROUTER_MODEL: 'openai/gpt-4o-mini',
     });
     assert.equal(config.enabled, false);
     assert.equal(isAiGatewayReady(config), false);
-    assert.equal(config.model, 'openai/gpt-oss-20b:free');
+    assert.equal(config.model, 'openai/gpt-4o-mini');
+  });
+
+  it('defaults to a stable paid model when OPENROUTER_MODEL is unset', () => {
+    const config = readAiGatewayConfig({
+      OPENROUTER_API_KEY: 'sk-test',
+    });
+    assert.equal(config.model, 'openai/gpt-4o-mini');
+    assert.doesNotMatch(config.model, /:free$/);
   });
 
   it('is ready only when explicitly enabled and key exists', () => {

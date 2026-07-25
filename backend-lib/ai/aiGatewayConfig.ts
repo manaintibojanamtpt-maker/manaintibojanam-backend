@@ -11,7 +11,8 @@ export interface AiGatewayConfig {
 }
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
-const DEFAULT_MODEL = 'openai/gpt-oss-20b:free';
+/** Paid/stable default — free `:free` models often return empty completions (502 AI_PROVIDER_ERROR). */
+const DEFAULT_MODEL = 'openai/gpt-4o-mini';
 
 function parsePositiveInt(raw: string | undefined, fallback: number): number {
   const n = Number(raw);
