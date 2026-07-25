@@ -137,7 +137,10 @@ export function buildOrderingSystemAddon(context: OrderingAssistContext): string
 
   if (context.nearbyKitchens?.length) {
     const list = context.nearbyKitchens
-      .map((k) => (k.cuisine ? `${k.name} (${k.cuisine})` : k.name))
+      .map((k) => {
+        const idPart = k.id ? ` [id=${k.id}]` : '';
+        return k.cuisine ? `${k.name}${idPart} (${k.cuisine})` : `${k.name}${idPart}`;
+      })
       .join('; ');
     facts.push(`nearbyKitchens=[${list}]`);
   }
@@ -146,6 +149,7 @@ export function buildOrderingSystemAddon(context: OrderingAssistContext): string
     const list = context.menuItems
       .map((item) => {
         const bits = [item.name];
+        if (item.id) bits.push(`[foodId=${item.id}]`);
         if (item.isVeg === true) bits.push('veg');
         if (item.isVeg === false) bits.push('nonveg');
         if (typeof item.price === 'number') bits.push(`₹${item.price}`);
@@ -158,9 +162,10 @@ export function buildOrderingSystemAddon(context: OrderingAssistContext): string
   return [
     'Ordering help mode: ground answers ONLY in the known facts below when present.',
     'Do not invent restaurants, dishes, prices, or cuisines that are not listed.',
+    'If the user mentions only a kitchen name (or fragment) without a dish, list matching nearbyKitchens and suggest navigate to that kitchen or /search?q=... — do NOT invent a cart_add_plan.',
     'If the user asks for available kitchens, list nearbyKitchens from facts (or say none are loaded and suggest Home/Search).',
-    'If the user asks for a dish search, prefer matching menuItems / kitchen names from facts; suggest navigate /search?q=... when helpful.',
-    'For add-to-cart requests, emit cart_add_plan with payload { name, quantity, restaurantId? } — never claim the cart was updated.',
+    'If the user asks for a dish, match menuItems from facts using the EXACT menu spelling and foodId when present.',
+    'For add-to-cart requests, emit cart_add_plan with payload { foodId, name, quantity, restaurantId? } using foodId from menuItems facts whenever available — copy the menu name exactly (e.g. Medu Wada not Medu Vada). Never claim the cart was updated.',
     'Checkout/payment/place_order remain blocked; user must confirm plans in the app UI.',
     facts.length > 0
       ? `Known facts: ${facts.join('; ')}.`

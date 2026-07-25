@@ -14,7 +14,38 @@ import { setActiveMenuRouteSlug } from '../engine/foodMenuRouteContext';
 import { foodKeys } from './foodQueryKeys';
 import { useFoodFeatureEnabled } from './useFoodFeature';
 import { useCartStore } from '@/features/cart/store/cartStore';
+import { mergeMenuItemsIntoSearchCache } from '@/features/search/store/searchMenuCacheStore';
 import type { FoodMenuResponse } from '@/types/marketplace-food';
+import type { SearchResultItem } from '@/types/marketplace-search';
+
+function seedAssistMenuCache(menu: FoodMenuResponse, restaurantId: string | null) {
+  const items: SearchResultItem[] = menu.items
+    .filter((item) => item.availability !== false)
+    .map((item) => ({
+      id: item.foodId,
+      type: 'food' as const,
+      label: item.name,
+      slug: item.slug,
+      ...(menu.restaurantName || restaurantId
+        ? {
+            restaurant: {
+              restaurantId: restaurantId ?? `slug:${menu.slug}`,
+              restaurantSlug: menu.slug,
+              displayName: menu.restaurantName ?? menu.slug,
+              cuisines: [],
+              isOpen: true,
+              badges: [],
+              kitchenFormat: 'cloud_kitchen' as const,
+            },
+          }
+        : {}),
+      meta: {
+        price: item.offerPrice ?? item.price,
+        isVeg: item.dietary === 'veg',
+      },
+    }));
+  if (items.length) mergeMenuItemsIntoSearchCache(items);
+}
 
 function readCachedMenu(
   slug: string,
@@ -119,6 +150,8 @@ export function useFoodMenu(slug: string | undefined) {
   useLayoutEffect(() => {
     if (!slug || !query.data) return;
     syncMenuRestaurantContext(slug, lat, lng, query.data);
+    const restaurantId = useRestaurantContextStore.getState().restaurantId;
+    seedAssistMenuCache(query.data, restaurantId);
   }, [slug, lat, lng, query.data]);
 
   return query;

@@ -79,7 +79,8 @@ describe('assistant Phase 14 consumer UI', () => {
     const conversation = readUi('useAssistantConversation.ts');
     assert.match(conversation, /captureVoiceTranscript/);
     assert.match(conversation, /sendFromVoice/);
-    assert.match(conversation, /await send\(transcript\)/);
+    assert.match(conversation, /correctTranscriptAgainstOrderingVocab/);
+    assert.match(conversation, /await send\(corrected\)/);
     assert.doesNotMatch(conversation, /runVoiceOrderingTurn|askWithVoice/);
     const voiceBlock = conversation.slice(
       conversation.indexOf('sendFromVoice'),

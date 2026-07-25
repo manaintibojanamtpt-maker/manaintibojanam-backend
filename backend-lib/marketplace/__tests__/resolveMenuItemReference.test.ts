@@ -118,4 +118,31 @@ describe('resolveMenuItemFromMenuMap', () => {
     assert.equal(result.item.variantId, 'v-full');
     assert.equal(result.item.unitPrice, 199);
   });
+
+  it('resolves ASR / spelling variants: Medu Vada → Medu Wada, Idly → Idli', () => {
+    const menuMap = menu({
+      wada_1: { name: 'Medu Wada', price: 60, isAvailable: true, isActive: true },
+      idli_1: { name: 'Idli', price: 60, isAvailable: true, isActive: true },
+      dosa_1: { name: 'Malasa Dosa', price: 70, isAvailable: true, isActive: true },
+    });
+
+    const vada = resolveMenuItemFromMenuMap('tenant_1', menuMap, { name: 'Medu Vada' });
+    assert.equal(vada.status, 'resolved');
+    if (vada.status === 'resolved') {
+      assert.equal(vada.item.foodId, 'wada_1');
+      assert.equal(vada.item.name, 'Medu Wada');
+    }
+
+    const idly = resolveMenuItemFromMenuMap('tenant_1', menuMap, { name: 'Idly' });
+    assert.equal(idly.status, 'resolved');
+    if (idly.status === 'resolved') {
+      assert.equal(idly.item.foodId, 'idli_1');
+    }
+
+    const masala = resolveMenuItemFromMenuMap('tenant_1', menuMap, { name: 'Masala Dosa' });
+    assert.equal(masala.status, 'resolved');
+    if (masala.status === 'resolved') {
+      assert.equal(masala.item.foodId, 'dosa_1');
+    }
+  });
 });

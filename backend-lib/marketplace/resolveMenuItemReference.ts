@@ -1,5 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { classifyTextMatch, normalizeForMatch } from '../shared/serverBundleHelpers.js';
+import { canonicalizeFoodName, scoreFoodNameMatch } from './foodNameMatch.js';
 
 /** Minimum signal to auto-resolve a fuzzy name match (prefix or exact). */
 const MIN_RESOLVE_SIGNAL = 0.85;
@@ -303,7 +304,12 @@ export function resolveMenuItemFromMenuMap(
   }
 
   const normalizedHint = normalizeForMatch(nameHint);
-  const exactMatches = rows.filter((row) => normalizeForMatch(row.name) === normalizedHint);
+  const canonicalHint = canonicalizeFoodName(nameHint);
+  const exactMatches = rows.filter((row) => {
+    const rowNorm = normalizeForMatch(row.name);
+    const rowCanon = canonicalizeFoodName(row.name);
+    return rowNorm === normalizedHint || rowCanon === canonicalHint;
+  });
 
   if (exactMatches.length === 1) {
     const row = exactMatches[0]!;
@@ -340,8 +346,9 @@ export function resolveMenuItemFromMenuMap(
 
   const scored = rows
     .map((row) => {
-      const match = classifyTextMatch(nameHint, row.name, 'name');
-      return { row, signal: match.signal, matchType: match.matchType };
+      const signal = scoreFoodNameMatch(nameHint, row.name);
+      const matchType = classifyTextMatch(nameHint, row.name, 'name').matchType;
+      return { row, signal, matchType };
     })
     .filter((entry) => entry.signal >= MIN_CANDIDATE_SIGNAL)
     .sort((a, b) => b.signal - a.signal || a.row.name.localeCompare(b.row.name));

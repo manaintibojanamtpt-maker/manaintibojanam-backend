@@ -22,6 +22,11 @@ import {
 import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
 import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
+import {
+  correctTranscriptAgainstOrderingVocab,
+  enrichCartPlansFromMenuCache,
+  matchKitchenFragmentInMessage,
+} from '../domain/matchOrderingVocabulary';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
 import { useAiVoiceTtsFeature } from '../hooks/useAiVoiceTtsFeature';
@@ -254,20 +259,26 @@ export function useAssistantConversation() {
             return reply;
           }
 
-          const cartActions: CartPlanAction[] = [
-            {
-              type: 'cart_add_plan',
-              requiresConfirmation: true,
-              executable: false,
-              payload: {
-                name: cartAddIntent.itemName,
-                quantity: cartAddIntent.quantity,
-                restaurantId,
+          const cartActions = enrichCartPlansFromMenuCache(
+            [
+              {
+                type: 'cart_add_plan',
+                requiresConfirmation: true,
+                executable: false,
+                payload: {
+                  name: cartAddIntent.itemName,
+                  quantity: cartAddIntent.quantity,
+                  restaurantId,
+                },
+                reason: 'user_cart_add_intent',
               },
-              reason: 'user_cart_add_intent',
-            },
-          ];
-          const reply = `I prepared a reviewable plan to add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}. Availability is checked next — nothing is added until you confirm.`;
+            ],
+            restaurantId,
+          );
+          const resolvedName =
+            (typeof cartActions[0]?.payload?.name === 'string' && cartActions[0].payload.name) ||
+            cartAddIntent.itemName;
+          const reply = `I prepared a reviewable plan to add ${cartAddIntent.quantity}× ${resolvedName}. Availability is checked next — nothing is added until you confirm.`;
           setMessages((prev) => [
             ...prev,
             { id: nextId(), role: 'assistant', text: reply, cartActions },
@@ -293,8 +304,10 @@ export function useAssistantConversation() {
                   validation.status === 'validated'
                     ? 'Cart plan validated. Review and confirm to apply.'
                     : validation.status === 'needs_clarification'
-                      ? 'Cart plan needs clarification (item match or options) before apply.'
-                      : 'Cart plan is invalid — try searching the menu for the exact dish name.',
+                      ? validation.clarificationQuestions?.[0] ||
+                        'Cart plan needs clarification (item match or options) before apply.'
+                      : validation.issues?.[0]?.message ||
+                        'Cart plan is invalid — try searching the menu for the exact dish name.',
                 validation,
               },
             ]);
@@ -368,6 +381,25 @@ export function useAssistantConversation() {
           lat: coords?.lat,
           lng: coords?.lng,
         });
+
+        // Kitchen-name fragment (e.g. "Bojanam") → search/open kitchen, don't invent a cart add.
+        if (!parseCartAddUserMessage(message) && orderingContext?.nearbyKitchens?.length) {
+          const kitchenHit = matchKitchenFragmentInMessage(message, orderingContext.nearbyKitchens);
+          if (kitchenHit) {
+            const searchPath = `/search?q=${encodeURIComponent(kitchenHit.name)}`;
+            const reply = `I found kitchen “${kitchenHit.name}”. Open it to see today’s live menu, then ask me to add a dish (e.g. “add Idli”). Nothing is added until you confirm.`;
+            const hints: ConsumerAssistHint[] = [
+              { type: 'navigate', target: searchPath },
+              { type: 'navigate', target: '/' },
+            ];
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'assistant', text: reply, hints },
+            ]);
+            return reply;
+          }
+        }
+
         const result = await ask({
           message,
           ...(conversationId ? { conversationId } : {}),
@@ -376,7 +408,10 @@ export function useAssistantConversation() {
         setConversationId(result.conversationId);
 
         const hints = result.suggestedHints.filter((h) => h.type !== 'none');
-        const cartActions = result.proposedCartActions;
+        const cartActions = enrichCartPlansFromMenuCache(
+          result.proposedCartActions,
+          restaurantId,
+        );
         setMessages((prev) => [
           ...prev,
           {
@@ -494,7 +529,16 @@ export function useAssistantConversation() {
         signal: ac.signal,
         platform: 'web',
       });
-      const reply = await send(transcript);
+      const coords = activeLocation?.coordinates;
+      const orderingContext = buildOrderingAssistContext({
+        restaurantId,
+        restaurantSlug,
+        areaLabel: activeLocation?.displayLabel,
+        lat: coords?.lat,
+        lng: coords?.lng,
+      });
+      const corrected = correctTranscriptAgainstOrderingVocab(transcript, orderingContext);
+      const reply = await send(corrected);
 
       // Optional spoken reply only — never speaks confirm/checkout prompts as actions.
       if (ttsEnabled && reply?.trim()) {
@@ -521,7 +565,19 @@ export function useAssistantConversation() {
       setListening(false);
       voiceAbortRef.current = null;
     }
-  }, [applying, listening, loading, send, ttsEnabled, validating, voiceEnabled]);
+  }, [
+    activeLocation?.coordinates,
+    activeLocation?.displayLabel,
+    applying,
+    listening,
+    loading,
+    restaurantId,
+    restaurantSlug,
+    send,
+    ttsEnabled,
+    validating,
+    voiceEnabled,
+  ]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {
