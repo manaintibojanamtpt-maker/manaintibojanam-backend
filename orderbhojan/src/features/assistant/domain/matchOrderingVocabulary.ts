@@ -1,17 +1,11 @@
 import { getCachedMenuItemsForSearch } from '@/features/search/store/searchMenuCacheStore';
 import type { CartPlanAction } from './cartPlanContract';
 import type { OrderingAssistContextPayload } from './buildOrderingAssistContext';
-
-const FOOD_TOKEN_ALIASES: Readonly<Record<string, string>> = {
-  idly: 'idli',
-  idlis: 'idli',
-  vada: 'wada',
-  vadai: 'wada',
-  malasa: 'masala',
-  dosai: 'dosa',
-  biriyani: 'biryani',
-  briyani: 'biryani',
-};
+import {
+  resolveCartPlanRestaurantId,
+  scoreFoodName,
+  type NearbyKitchenHint,
+} from './resolveCartPlanRestaurant';
 
 function normalize(value: string): string {
   return value
@@ -23,59 +17,8 @@ function normalize(value: string): string {
     .trim();
 }
 
-function canonicalize(value: string): string {
-  return normalize(value)
-    .split(' ')
-    .map((t) => FOOD_TOKEN_ALIASES[t] ?? t)
-    .join(' ');
-}
-
-function levenshtein(a: string, b: string): number {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-  const prev = new Array<number>(a.length + 1);
-  const curr = new Array<number>(a.length + 1);
-  for (let i = 0; i <= a.length; i += 1) prev[i] = i;
-  for (let j = 1; j <= b.length; j += 1) {
-    curr[0] = j;
-    for (let i = 1; i <= a.length; i += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[i] = Math.min(curr[i - 1]! + 1, prev[i]! + 1, prev[i - 1]! + cost);
-    }
-    for (let i = 0; i <= a.length; i += 1) prev[i] = curr[i]!;
-  }
-  return prev[a.length]!;
-}
-
 function scoreNames(query: string, candidate: string): number {
-  const q = canonicalize(query);
-  const c = canonicalize(candidate);
-  if (!q || !c) return 0;
-  if (q === c) return 1;
-  if (c.includes(q) || q.includes(c)) return 0.85;
-
-  const qTokens = q.split(' ').filter(Boolean);
-  const cTokens = c.split(' ').filter(Boolean);
-  let tokenHits = 0;
-  for (const qt of qTokens) {
-    const hit = cTokens.some((ct) => {
-      if (ct === qt || ct.includes(qt) || qt.includes(ct)) return true;
-      return levenshtein(qt, ct) <= 1 && Math.max(qt.length, ct.length) >= 5;
-    });
-    if (hit) tokenHits += 1;
-  }
-  if (qTokens.length > 0 && tokenHits === qTokens.length) {
-    return qTokens.length === 1 ? 0.9 : 0.88;
-  }
-
-  const compactQ = q.replace(/\s/g, '');
-  const compactC = c.replace(/\s/g, '');
-  const dist = levenshtein(compactQ, compactC);
-  if (dist <= 2 && Math.max(compactQ.length, compactC.length) <= 28) {
-    return 1 - dist / Math.max(4, Math.max(compactQ.length, compactC.length));
-  }
-  return 0;
+  return scoreFoodName(query, candidate);
 }
 
 export function matchKitchenFragmentInMessage(
@@ -85,53 +28,133 @@ export function matchKitchenFragmentInMessage(
   const text = normalize(message);
   if (!text || text.length < 3 || kitchens.length === 0) return null;
 
-  // Prefer longer kitchen names so "Inti Bhojanam" beats a short fragment hit.
   const ranked = [...kitchens]
-    .map((k) => ({ kitchen: k, score: scoreNames(text, k.name) }))
-    .filter((e) => e.score >= 0.72 || normalize(e.kitchen.name).includes(text) || text.includes(normalize(e.kitchen.name).split(' ').pop() ?? ''))
+    .map((k) => {
+      const name = normalize(k.name);
+      const compactText = text.replace(/\s/g, '');
+      const compactName = name.replace(/\s/g, '');
+      let score = scoreNames(text, k.name);
+      if (compactText.includes(compactName) || compactName.includes(compactText)) {
+        score = Math.max(score, 0.95);
+      }
+      const first = name.split(' ')[0] ?? '';
+      if (first.length >= 4 && (text.includes(first) || compactText.includes(first))) {
+        score = Math.max(score, 0.84);
+      }
+      return { kitchen: k, score };
+    })
+    .filter((e) => e.score >= 0.78)
     .sort((a, b) => b.score - a.score || b.kitchen.name.length - a.kitchen.name.length);
 
-  // Kitchen-only: message is mostly the kitchen name (no clear dish add intent).
   const top = ranked[0];
   if (!top) return null;
-  const kitchenNorm = normalize(top.kitchen.name);
-  const looksLikeKitchenOnly =
-    text.length <= kitchenNorm.length + 4 ||
-    scoreNames(text, top.kitchen.name) >= 0.8 ||
-    kitchenNorm.split(' ').some((part) => part.length >= 5 && text === part);
-  if (!looksLikeKitchenOnly) return null;
   return top.kitchen;
 }
 
+export type EnrichCartPlansOptions = {
+  readonly activeRestaurantId?: string | null;
+  readonly userMessage?: string | null;
+  readonly assistantMessage?: string | null;
+  readonly nearbyKitchens?: readonly NearbyKitchenHint[];
+};
+
+/**
+ * Bind cart_add_plan foodId/name to the correct kitchen menu before validate.
+ * Never trusts a foodId from a different restaurant than the plan target.
+ */
 export function enrichCartPlansFromMenuCache(
   plans: readonly CartPlanAction[],
-  restaurantId?: string | null,
+  restaurantIdOrOptions?: string | null | EnrichCartPlansOptions,
 ): readonly CartPlanAction[] {
+  const options: EnrichCartPlansOptions =
+    typeof restaurantIdOrOptions === 'string' || restaurantIdOrOptions == null
+      ? { activeRestaurantId: restaurantIdOrOptions }
+      : restaurantIdOrOptions;
+
   const cached = getCachedMenuItemsForSearch();
-  const menu = restaurantId
-    ? cached.filter((item) => item.restaurant?.restaurantId === restaurantId)
-    : cached;
 
   return plans.map((plan) => {
-    if (plan.type !== 'cart_add_plan') return plan;
+    if (plan.type !== 'cart_add_plan' && plan.type !== 'cart_update_plan') return plan;
+
+    const targetRestaurantId = resolveCartPlanRestaurantId({
+      plan,
+      userMessage: options.userMessage,
+      assistantMessage: options.assistantMessage,
+      nearbyKitchens: options.nearbyKitchens,
+      activeRestaurantId: options.activeRestaurantId,
+    });
+
+    const menu = targetRestaurantId
+      ? cached.filter(
+          (item) => item.type === 'food' && item.restaurant?.restaurantId === targetRestaurantId,
+        )
+      : cached.filter((item) => item.type === 'food');
+
     const payload = { ...(plan.payload ?? {}) };
     const existingId =
       (typeof payload.foodId === 'string' && payload.foodId.trim()) ||
       (typeof payload.itemId === 'string' && payload.itemId.trim()) ||
       '';
-    if (existingId) return plan;
+
+    const idBelongsToTarget =
+      !!existingId &&
+      menu.some((item) => item.id === existingId);
+
+    if (existingId && idBelongsToTarget) {
+      // Keep valid id; still stamp restaurantId so validate uses the right kitchen.
+      if (targetRestaurantId && payload.restaurantId !== targetRestaurantId) {
+        return {
+          ...plan,
+          payload: { ...payload, restaurantId: targetRestaurantId },
+        };
+      }
+      return plan;
+    }
+
+    // Drop stale foodId from another kitchen — rematch by name on target menu.
+    if (existingId && !idBelongsToTarget) {
+      delete payload.foodId;
+      delete payload.itemId;
+      delete payload.menuItemId;
+    }
+
     const name = typeof payload.name === 'string' ? payload.name.trim() : '';
-    if (!name || menu.length === 0) return plan;
+    if (!name || menu.length === 0) {
+      if (targetRestaurantId) {
+        return {
+          ...plan,
+          payload: { ...payload, restaurantId: targetRestaurantId },
+        };
+      }
+      return plan;
+    }
 
     const scored = menu
       .map((item) => ({ item, score: scoreNames(name, item.label) }))
-      .filter((e) => e.score >= 0.8)
+      .filter((e) => e.score >= 0.78)
       .sort((a, b) => b.score - a.score);
 
     const top = scored[0];
     const second = scored[1];
-    if (!top) return plan;
-    if (second && top.score - second.score < 0.08) return plan;
+    if (!top) {
+      if (targetRestaurantId) {
+        return {
+          ...plan,
+          payload: { ...payload, restaurantId: targetRestaurantId },
+        };
+      }
+      return plan;
+    }
+    if (second && top.score - second.score < 0.06 && top.score < 0.95) {
+      // Ambiguous — keep name + restaurant so validate can clarify, without wrong foodId.
+      return {
+        ...plan,
+        payload: {
+          ...payload,
+          ...(targetRestaurantId ? { restaurantId: targetRestaurantId } : {}),
+        },
+      };
+    }
 
     return {
       ...plan,
@@ -141,7 +164,7 @@ export function enrichCartPlansFromMenuCache(
         itemId: top.item.id,
         name: top.item.label,
         ...(typeof top.item.meta?.price === 'number' ? { unitPrice: top.item.meta.price } : {}),
-        ...(restaurantId ? { restaurantId } : {}),
+        ...(targetRestaurantId ? { restaurantId: targetRestaurantId } : {}),
       },
     };
   });
@@ -149,7 +172,6 @@ export function enrichCartPlansFromMenuCache(
 
 /**
  * Correct a voice/ASR transcript using live kitchen + menu vocabulary.
- * Helps with Idly→Idli, Vada→Wada, and near-miss dish names.
  */
 export function correctTranscriptAgainstOrderingVocab(
   transcript: string,
@@ -184,24 +206,26 @@ export function correctTranscriptAgainstOrderingVocab(
       }
     }
     if (!best) return word;
-    // Preserve surrounding punctuation on the original word.
     return word.replace(scrubbed, best.name);
   });
 
-  // Also try replacing multi-word phrases (e.g. "medu vada") with menu names.
   let joined = corrected.join(' ');
   const rankedMenu = [...(context?.menuItems ?? [])]
     .map((item) => ({ name: item.name, score: scoreNames(joined, item.name) }))
     .filter((e) => e.score >= 0.88)
     .sort((a, b) => b.score - a.score);
   if (rankedMenu[0] && rankedMenu[0].score >= 0.92) {
-    // If transcript is basically just the dish (plus fillers), prefer exact menu spelling.
     const fillers = /^(please\s+|add\s+|i\s+want\s+|get\s+me\s+)?/i;
     const core = joined.replace(fillers, '').replace(/\s+to\s+cart$/i, '').trim();
     if (scoreNames(core, rankedMenu[0].name) >= 0.9) {
-      joined = joined.replace(new RegExp(core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), rankedMenu[0].name);
+      joined = joined.replace(
+        new RegExp(core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+        rankedMenu[0].name,
+      );
     }
   }
 
   return joined;
 }
+
+export { normalize, scoreNames };

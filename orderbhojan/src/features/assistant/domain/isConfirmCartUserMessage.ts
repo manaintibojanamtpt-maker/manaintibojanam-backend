@@ -4,10 +4,10 @@ const CONFIRM_RE =
   /^(?:yes|yeah|yep|yup|ok|okay|sure|please|confirm|confirmed|go\s*ahead|do\s*it|add\s*it|add\s*them|proceed|apply|sounds?\s*good|that'?s?\s*fine|haan|ha|sahi)\b[\s!.]*$/i;
 
 const DISCARD_RE =
-  /^(?:no|nope|nah|cancel|discard|never\s*mind|dont|don'?t|stop|forget\s*it)\b[\s!.]*$/i;
+  /^(?:no|nope|nah|cancel|discard|never\s*mind|dont|don'?t|forget\s*it|not\s*now)\b[\s!.]*$/i;
 
 const STOP_AGENT_RE =
-  /^(?:stop\s*listening|stop\s*voice|end\s*voice|goodbye|bye|exit\s*voice|hang\s*up)\b[\s!.]*$/i;
+  /^(?:stop|stop\s*listening|stop\s*voice|end\s*voice|goodbye|bye|exit\s*voice|hang\s*up)\b[\s!.]*$/i;
 
 export function isConfirmCartUserMessage(message: string): boolean {
   const text = message.trim();

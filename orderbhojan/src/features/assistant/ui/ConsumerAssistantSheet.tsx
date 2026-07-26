@@ -291,18 +291,30 @@ export function ConsumerAssistantSheet({
         >
           <p className="text-xs text-[#d0c4b5] mb-2">
             Status: <span className="text-[#fffaf3]">{pendingValidation.status}</span>
-            {pendingValidation.issues[0] ? ` · ${pendingValidation.issues[0].message}` : ''}
           </p>
-          {pendingValidation.clarificationQuestions.length > 0 ? (
-            <ul
-              className="mb-2 list-disc space-y-1 pl-4 text-[11px] text-[#ffe0c2]"
-              data-testid="consumer-assistant-clarifications"
-            >
-              {pendingValidation.clarificationQuestions.map((question) => (
-                <li key={question}>{question}</li>
-              ))}
-            </ul>
-          ) : null}
+          {pendingValidation.status !== 'validated'
+            ? (() => {
+                const uniqueDetail = [
+                  ...new Set(
+                    [
+                      ...pendingValidation.clarificationQuestions,
+                      pendingValidation.issues[0]?.message,
+                    ]
+                      .map((q) => q?.trim())
+                      .filter((q): q is string => Boolean(q)),
+                  ),
+                ];
+                if (uniqueDetail.length === 0) return null;
+                return (
+                  <ul
+                    className="mb-2 list-disc space-y-1 pl-4 text-[11px] text-[#ffe0c2]"
+                    data-testid="consumer-assistant-clarifications"
+                  >
+                    <li>{uniqueDetail[0]}</li>
+                  </ul>
+                );
+              })()
+            : null}
           <div className="flex gap-2">
             <button
               type="button"

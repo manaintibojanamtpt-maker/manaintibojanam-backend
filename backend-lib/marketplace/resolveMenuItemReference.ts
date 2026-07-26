@@ -262,35 +262,49 @@ export function resolveMenuItemFromMenuMap(
 
   if (idHint) {
     const data = menuById.get(idHint);
-    if (!data || !isAvailable(data)) {
+    if (data && isAvailable(data)) {
+      const row: MenuRow = {
+        id: idHint,
+        data,
+        name: String(data.name ?? input.name ?? 'Item').trim() || 'Item',
+        price: Number(data.price ?? 0),
+        variants: parseVariants(idHint, data),
+      };
+      const variantResult = resolveVariant(row, input.variantId, input.variantLabel);
+      if (variantResult.status === 'needs_clarification') {
+        return {
+          status: 'needs_clarification',
+          code: variantResult.code,
+          questions: variantResult.questions,
+          candidates: variantResult.candidates,
+        };
+      }
+      return {
+        status: 'resolved',
+        item: buildResolved(restaurantId, row, 'id', 1, variantResult.variant),
+      };
+    }
+
+    // Stale/wrong-kitchen foodId: fall through to name match when a name is provided.
+    if (!input.name?.trim()) {
+      if (data && !isAvailable(data)) {
+        return {
+          status: 'not_found',
+          code: 'UNAVAILABLE',
+          questions: [
+            'That menu item is currently unavailable. Which other item would you like?',
+          ],
+        };
+      }
       return {
         status: 'not_found',
         code: 'NOT_FOUND',
         questions: [
-          'That menu item is unavailable or no longer on this restaurant’s menu. Which item did you mean?',
+          'I could not find that menu item on this restaurant’s menu. Which item did you mean?',
         ],
       };
     }
-    const row: MenuRow = {
-      id: idHint,
-      data,
-      name: String(data.name ?? input.name ?? 'Item').trim() || 'Item',
-      price: Number(data.price ?? 0),
-      variants: parseVariants(idHint, data),
-    };
-    const variantResult = resolveVariant(row, input.variantId, input.variantLabel);
-    if (variantResult.status === 'needs_clarification') {
-      return {
-        status: 'needs_clarification',
-        code: variantResult.code,
-        questions: variantResult.questions,
-        candidates: variantResult.candidates,
-      };
-    }
-    return {
-      status: 'resolved',
-      item: buildResolved(restaurantId, row, 'id', 1, variantResult.variant),
-    };
+    // else: continue to name resolution below
   }
 
   const nameHint = input.name?.trim();

@@ -49,14 +49,17 @@ export function buildOrderingAssistContext(params: {
   readonly city?: string | null;
   readonly lat?: number | null;
   readonly lng?: number | null;
+  /** When set, prefer this kitchen’s menu for grounding (named in utterance). */
+  readonly preferRestaurantId?: string | null;
   readonly nearbyKitchens?: readonly {
     readonly id?: string;
     readonly name: string;
     readonly cuisine?: string;
   }[];
 }): OrderingAssistContextPayload | null {
-  const restaurantId = params.restaurantId?.trim() || undefined;
-  const restaurantSlug = params.restaurantSlug?.trim() || undefined;
+  const preferredId = params.preferRestaurantId?.trim() || undefined;
+  const restaurantId = preferredId || params.restaurantId?.trim() || undefined;
+  const restaurantSlug = preferredId ? undefined : params.restaurantSlug?.trim() || undefined;
   const restaurantName = params.restaurantName?.trim() || undefined;
   const areaLabel = params.areaLabel?.trim() || undefined;
   const city = params.city?.trim() || undefined;

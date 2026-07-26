@@ -119,6 +119,35 @@ describe('resolveMenuItemFromMenuMap', () => {
     assert.equal(result.item.unitPrice, 199);
   });
 
+  it('falls through stale foodId to name match on the same restaurant menu', () => {
+    const result = resolveMenuItemFromMenuMap(
+      'tenant_1',
+      menu({
+        dosa_live: { name: 'Masala Dosa', price: 120, isAvailable: true, isActive: true },
+      }),
+      { foodId: 'dosa_from_other_kitchen', name: 'Masala Dosa' },
+    );
+
+    assert.equal(result.status, 'resolved');
+    if (result.status !== 'resolved') return;
+    assert.equal(result.item.foodId, 'dosa_live');
+    assert.equal(result.item.matchType, 'exact_name');
+  });
+
+  it('reports UNAVAILABLE when foodId exists but item is not available', () => {
+    const result = resolveMenuItemFromMenuMap(
+      'tenant_1',
+      menu({
+        dosa_1: { name: 'Masala Dosa', price: 120, isAvailable: false, isActive: true },
+      }),
+      { foodId: 'dosa_1' },
+    );
+
+    assert.equal(result.status, 'not_found');
+    if (result.status !== 'not_found') return;
+    assert.equal(result.code, 'UNAVAILABLE');
+  });
+
   it('resolves ASR / spelling variants: Medu Vada → Medu Wada, Idly → Idli', () => {
     const menuMap = menu({
       wada_1: { name: 'Medu Wada', price: 60, isAvailable: true, isActive: true },

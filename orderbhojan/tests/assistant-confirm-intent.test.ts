@@ -17,10 +17,12 @@ describe('assistant confirm / voice-agent intents', () => {
     assert.equal(isConfirmCartUserMessage('masala dosa is available'), false);
   });
 
-  it('recognizes stop-agent phrases', () => {
+  it('recognizes stop-agent phrases without discarding cart on bare stop', () => {
     assert.equal(isStopVoiceAgentMessage('stop listening'), true);
+    assert.equal(isStopVoiceAgentMessage('stop'), true);
     assert.equal(isStopVoiceAgentMessage('goodbye'), true);
     assert.equal(isStopVoiceAgentMessage('add idli'), false);
+    assert.equal(isDiscardCartUserMessage('stop'), false);
   });
 
   it('shortens spoken replies', () => {

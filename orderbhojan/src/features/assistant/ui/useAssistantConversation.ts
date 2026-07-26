@@ -33,6 +33,7 @@ import {
   enrichCartPlansFromMenuCache,
   matchKitchenFragmentInMessage,
 } from '../domain/matchOrderingVocabulary';
+import { resolveCartPlanRestaurantId } from '../domain/resolveCartPlanRestaurant';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
 import { useAiVoiceTtsFeature } from '../hooks/useAiVoiceTtsFeature';
@@ -89,6 +90,26 @@ export interface AssistantThreadMessage {
 
 function nextId(): string {
   return `ob_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function validationSpeakText(validation: CartPlanValidationResult): string {
+  if (validation.status === 'validated' && validation.valid) {
+    return 'Plan looks good. Say confirm to add it to your cart, or discard to cancel.';
+  }
+  return (
+    validation.clarificationQuestions[0] ||
+    validation.issues[0]?.message ||
+    'I could not validate that dish on this kitchen’s menu. Try the exact menu name.'
+  );
+}
+
+function toNearbyKitchenHints(
+  kitchens: readonly { readonly id?: string; readonly name: string }[] | undefined,
+): { id: string; name: string }[] {
+  if (!kitchens?.length) return [];
+  return kitchens
+    .filter((k): k is { id: string; name: string } => Boolean(k.id?.trim() && k.name.trim()))
+    .map((k) => ({ id: k.id.trim(), name: k.name.trim() }));
 }
 
 export function useAssistantConversation() {
@@ -344,9 +365,42 @@ export function useAssistantConversation() {
 
         const cartAddIntent = parseCartAddUserMessage(message);
         if (cartAddIntent) {
-          if (!restaurantId) {
+          const coordsForAdd = activeLocation?.coordinates;
+          const nearbyForAdd = toNearbyKitchenHints(
+            buildOrderingAssistContext({
+              restaurantId,
+              restaurantSlug,
+              areaLabel: activeLocation?.displayLabel,
+              lat: coordsForAdd?.lat,
+              lng: coordsForAdd?.lng,
+            })?.nearbyKitchens,
+          );
+          const draftPlan: CartPlanAction = {
+            type: 'cart_add_plan',
+            requiresConfirmation: true,
+            executable: false,
+            payload: {
+              name: cartAddIntent.itemName,
+              quantity: cartAddIntent.quantity,
+              ...(restaurantId ? { restaurantId } : {}),
+            },
+            reason: 'user_cart_add_intent',
+          };
+          const cartActions = enrichCartPlansFromMenuCache([draftPlan], {
+            activeRestaurantId: restaurantId,
+            userMessage: message,
+            nearbyKitchens: nearbyForAdd,
+          });
+          const planRestaurantId = resolveCartPlanRestaurantId({
+            plan: cartActions[0],
+            userMessage: message,
+            nearbyKitchens: nearbyForAdd,
+            activeRestaurantId: restaurantId,
+          });
+
+          if (!planRestaurantId) {
             const searchPath = `/search?q=${encodeURIComponent(cartAddIntent.itemName)}`;
-            const reply = `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or search), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
+            const reply = `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or name the kitchen), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
             const hints: ConsumerAssistHint[] = [
               { type: 'navigate', target: searchPath },
               { type: 'navigate', target: '/' },
@@ -358,42 +412,32 @@ export function useAssistantConversation() {
             return reply;
           }
 
-          const cartActions = enrichCartPlansFromMenuCache(
-            [
-              {
-                type: 'cart_add_plan',
-                requiresConfirmation: true,
-                executable: false,
-                payload: {
-                  name: cartAddIntent.itemName,
-                  quantity: cartAddIntent.quantity,
-                  restaurantId,
-                },
-                reason: 'user_cart_add_intent',
-              },
-            ],
-            restaurantId,
-          );
           const resolvedName =
             (typeof cartActions[0]?.payload?.name === 'string' && cartActions[0].payload.name) ||
             cartAddIntent.itemName;
-          const reply = `I prepared a reviewable plan to add ${cartAddIntent.quantity}× ${resolvedName}. Availability is checked next — nothing is added until you confirm.`;
           setMessages((prev) => [
             ...prev,
-            { id: nextId(), role: 'assistant', text: reply, cartActions },
+            {
+              id: nextId(),
+              role: 'assistant',
+              text: `Checking ${cartAddIntent.quantity}× ${resolvedName} on the menu…`,
+              cartActions,
+            },
           ]);
           pendingPlanRestaurantRef.current = {
-            restaurantId,
-            restaurantSlug: restaurantSlug ?? restaurantId,
+            restaurantId: planRestaurantId,
+            restaurantSlug:
+              planRestaurantId === restaurantId ? (restaurantSlug ?? planRestaurantId) : planRestaurantId,
           };
           setValidating(true);
           try {
             const validation = await validate({
-              restaurantId,
+              restaurantId: planRestaurantId,
               proposedActions: cartActions,
               ...(conversationId ? { conversationId } : {}),
             });
             setPendingValidation(validation);
+            const reply = validationSpeakText(validation);
             setMessages((prev) => [
               ...prev,
               {
@@ -402,14 +446,11 @@ export function useAssistantConversation() {
                 text:
                   validation.status === 'validated'
                     ? 'Cart plan validated. Review and confirm to apply.'
-                    : validation.status === 'needs_clarification'
-                      ? validation.clarificationQuestions?.[0] ||
-                        'Cart plan needs clarification (item match or options) before apply.'
-                      : validation.issues?.[0]?.message ||
-                        'Cart plan is invalid — try searching the menu for the exact dish name.',
+                    : reply,
                 validation,
               },
             ]);
+            return reply;
           } catch (err) {
             const msg =
               err instanceof AssistantApiError
@@ -421,10 +462,10 @@ export function useAssistantConversation() {
               ...prev,
               { id: nextId(), role: 'system', text: `Validation skipped: ${msg}` },
             ]);
+            return msg;
           } finally {
             setValidating(false);
           }
-          return reply;
         }
 
         const usePostOrderPath =
@@ -473,31 +514,73 @@ export function useAssistantConversation() {
         }
 
         const coords = activeLocation?.coordinates;
-        const orderingContext = buildOrderingAssistContext({
+        const baseOrderingContext = buildOrderingAssistContext({
           restaurantId,
           restaurantSlug,
           areaLabel: activeLocation?.displayLabel,
           lat: coords?.lat,
           lng: coords?.lng,
         });
+        const nearbyHints = toNearbyKitchenHints(baseOrderingContext?.nearbyKitchens);
 
-        // Kitchen-name fragment (e.g. "Bojanam") → search/open kitchen, don't invent a cart add.
-        if (!parseCartAddUserMessage(message) && orderingContext?.nearbyKitchens?.length) {
-          const kitchenHit = matchKitchenFragmentInMessage(message, orderingContext.nearbyKitchens);
-          if (kitchenHit) {
-            const searchPath = `/search?q=${encodeURIComponent(kitchenHit.name)}`;
-            const reply = `I found kitchen “${kitchenHit.name}”. Open it to see today’s live menu, then ask me to add a dish (e.g. “add Idli”). Nothing is added until you confirm.`;
-            const hints: ConsumerAssistHint[] = [
-              { type: 'navigate', target: searchPath },
-              { type: 'navigate', target: '/' },
-            ];
-            setMessages((prev) => [
-              ...prev,
-              { id: nextId(), role: 'assistant', text: reply, hints },
-            ]);
-            return reply;
-          }
+        // Kitchen-name only (e.g. "Inti Bhojanam") → open kitchen; dish+kitchen goes to LLM+validate.
+        const kitchenOnlyHit =
+          nearbyHints.length > 0 ? matchKitchenFragmentInMessage(message, nearbyHints) : null;
+        const looksLikeDishRequest =
+          /\b(add|order|get|want|cart|dosa|idli|wada|vada|thali|biryani|meal|curry|rice)\b/i.test(
+            message,
+          );
+        if (kitchenOnlyHit && !looksLikeDishRequest) {
+          const searchPath = `/search?q=${encodeURIComponent(kitchenOnlyHit.name)}`;
+          const reply = `I found kitchen “${kitchenOnlyHit.name}”. Open it to see today’s live menu, then ask me to add a dish (e.g. “add Idli”). Nothing is added until you confirm.`;
+          const hints: ConsumerAssistHint[] = [
+            { type: 'navigate', target: searchPath },
+            { type: 'navigate', target: '/' },
+          ];
+          setMessages((prev) => [
+            ...prev,
+            { id: nextId(), role: 'assistant', text: reply, hints },
+          ]);
+          return reply;
         }
+
+        // Ground LLM on the kitchen named in the utterance when we can resolve it.
+        const namedKitchen =
+          kitchenOnlyHit ??
+          (nearbyHints.length
+            ? (() => {
+                const ranked = nearbyHints
+                  .map((k) => ({
+                    k,
+                    hit: message.toLowerCase().replace(/\s/g, '').includes(
+                      k.name.toLowerCase().replace(/\s/g, '').slice(0, 8),
+                    ),
+                  }))
+                  .find((e) => e.hit);
+                return ranked?.k ?? null;
+              })()
+            : null);
+        const preferRestaurantId =
+          namedKitchen && 'id' in namedKitchen && namedKitchen.id
+            ? namedKitchen.id
+            : resolveCartPlanRestaurantId({
+                plan: null,
+                userMessage: message,
+                nearbyKitchens: nearbyHints,
+                activeRestaurantId: restaurantId,
+              });
+
+        const orderingContext =
+          buildOrderingAssistContext({
+            restaurantId,
+            restaurantSlug,
+            restaurantName: namedKitchen?.name,
+            areaLabel: activeLocation?.displayLabel,
+            lat: coords?.lat,
+            lng: coords?.lng,
+            preferRestaurantId,
+            nearbyKitchens: baseOrderingContext?.nearbyKitchens,
+          }) ?? baseOrderingContext;
 
         const result = await ask({
           message,
@@ -507,47 +590,81 @@ export function useAssistantConversation() {
         setConversationId(result.conversationId);
 
         const hints = result.suggestedHints.filter((h) => h.type !== 'none');
-        const cartActions = enrichCartPlansFromMenuCache(
-          result.proposedCartActions,
-          restaurantId,
-        );
+        const cartActions = enrichCartPlansFromMenuCache(result.proposedCartActions, {
+          activeRestaurantId: restaurantId,
+          userMessage: message,
+          assistantMessage: result.reply,
+          nearbyKitchens: nearbyHints,
+        });
+        const planRestaurantId = resolveCartPlanRestaurantId({
+          plan: cartActions[0],
+          userMessage: message,
+          assistantMessage: result.reply,
+          nearbyKitchens: nearbyHints,
+          activeRestaurantId: preferRestaurantId ?? restaurantId,
+        });
+
+        // Prefer validation-aware copy over optimistic “I found…” when validate fails.
+        let displayReply = result.reply;
         setMessages((prev) => [
           ...prev,
           {
             id: nextId(),
             role: 'assistant',
-            text: result.reply,
+            text: displayReply,
             ...(hints.length ? { hints } : {}),
             ...(cartActions.length ? { cartActions } : {}),
           },
         ]);
 
-        // Auto-validate plans when restaurant context is available — still no cart mutation.
-        if (cartActions.length > 0 && restaurantId) {
+        if (cartActions.length > 0 && planRestaurantId) {
+          pendingPlanRestaurantRef.current = {
+            restaurantId: planRestaurantId,
+            restaurantSlug:
+              planRestaurantId === restaurantId
+                ? (restaurantSlug ?? planRestaurantId)
+                : planRestaurantId,
+          };
           setValidating(true);
           try {
             const validation = await validate({
-              restaurantId,
+              restaurantId: planRestaurantId,
               proposedActions: cartActions,
               conversationId: result.conversationId,
             });
             setPendingValidation(validation);
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: nextId(),
-                role: 'system',
-                text:
-                  validation.status === 'validated'
-                    ? 'Cart plan validated. Review and confirm to apply.'
-                    : validation.status === 'needs_clarification'
-                      ? validation.clarificationQuestions?.[0] ||
-                        'Cart plan needs clarification before it can be applied.'
-                      : validation.issues?.[0]?.message ||
-                        'Cart plan is invalid — open that kitchen’s menu and use the exact dish name, then Confirm.',
-                validation,
-              },
-            ]);
+            const outcome = validationSpeakText(validation);
+            if (validation.status !== 'validated') {
+              displayReply = outcome;
+              // Replace optimistic assistant bubble so UI does not contradict validate.
+              // Keep details on the assistant line only — confirm panel shows status, not a 3× repeat.
+              setMessages((prev) => {
+                const next = [...prev];
+                for (let i = next.length - 1; i >= 0; i -= 1) {
+                  if (next[i]?.role === 'assistant') {
+                    next[i] = {
+                      ...next[i]!,
+                      text: outcome,
+                      cartActions,
+                      validation,
+                    };
+                    break;
+                  }
+                }
+                return next;
+              });
+            } else {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: nextId(),
+                  role: 'system',
+                  text: 'Cart plan validated. Review and confirm to apply.',
+                  validation,
+                },
+              ]);
+            }
+            return displayReply;
           } catch (err) {
             const msg =
               err instanceof AssistantApiError
@@ -559,22 +676,25 @@ export function useAssistantConversation() {
               ...prev,
               { id: nextId(), role: 'system', text: `Validation skipped: ${msg}` },
             ]);
+            return result.reply;
           } finally {
             setValidating(false);
           }
-        } else if (cartActions.length > 0 && !restaurantId) {
+        }
+
+        if (cartActions.length > 0 && !planRestaurantId) {
           setMessages((prev) => [
             ...prev,
             {
               id: nextId(),
               role: 'system',
-              text: 'Open a restaurant menu to validate this cart plan.',
+              text: 'Name the kitchen or open its menu so I can validate this cart plan.',
               cartActions,
             },
           ]);
         }
 
-        return result.reply;
+        return displayReply;
       } catch (err) {
         if (err instanceof AssistantApiError) {
           setError(err.message);
@@ -645,7 +765,11 @@ export function useAssistantConversation() {
    * Never auto-applies cart plans (confirm is still required — spoken “confirm” works).
    */
   const runVoiceTurn = useCallback(
-    async (options?: { readonly forceSpeak?: boolean }): Promise<'ok' | 'stop' | 'abort' | 'error'> => {
+    async (options?: {
+      readonly forceSpeak?: boolean;
+      /** Live agent uses a longer listen window and quieter timeout handling. */
+      readonly agentMode?: boolean;
+    }): Promise<'ok' | 'stop' | 'abort' | 'error' | 'timeout'> => {
       if (!voiceEnabled) return 'error';
       if (!isVoiceCaptureAvailable()) {
         setError('Speech recognition is not available on this device/browser.');
@@ -656,12 +780,14 @@ export function useAssistantConversation() {
       voiceAbortRef.current = ac;
       setListening(true);
       setError(null);
+      const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
 
       try {
         const { transcript } = await captureVoiceTranscript({
           signal: ac.signal,
           platform: 'web',
-          timeoutMs: 7_000,
+          // Agent mode: longer window so users can speak naturally after TTS.
+          timeoutMs: agentMode ? 14_000 : 10_000,
         });
         setListening(false);
 
@@ -693,6 +819,12 @@ export function useAssistantConversation() {
         setListening(false);
         if (err instanceof AssistantApiError) {
           if (err.code === 'AI_VOICE_ABORTED') return 'abort';
+          // Soft-fail timeouts in live agent — re-listen without a scary red banner.
+          if (err.code === 'AI_VOICE_TIMEOUT' || err.code === 'AI_VOICE_EMPTY') {
+            if (agentMode) return 'timeout';
+            setError(err.message);
+            return 'timeout';
+          }
           setError(err.message);
           return 'error';
         }
@@ -756,28 +888,33 @@ export function useAssistantConversation() {
     }
 
     while (voiceAgentActiveRef.current) {
-      if (loading || validating || applying) {
+      if (loading || validating || applying || speaking) {
         await new Promise((r) => setTimeout(r, 200));
         continue;
       }
-      const outcome = await runVoiceTurn({ forceSpeak: true });
+      const outcome = await runVoiceTurn({ forceSpeak: true, agentMode: true });
       if (outcome === 'stop' || outcome === 'abort') {
         break;
       }
-      if (outcome === 'error') {
-        // Keep session alive for permission/timeout blips — brief pause then listen again.
-        await new Promise((r) => setTimeout(r, 450));
+      if (outcome === 'timeout') {
+        // Quiet re-listen — no red “Voice capture timed out” spam.
+        await new Promise((r) => setTimeout(r, 350));
         if (!voiceAgentActiveRef.current) break;
         continue;
       }
-      await new Promise((r) => setTimeout(r, 280));
+      if (outcome === 'error') {
+        await new Promise((r) => setTimeout(r, 600));
+        if (!voiceAgentActiveRef.current) break;
+        continue;
+      }
+      await new Promise((r) => setTimeout(r, 320));
     }
 
     voiceAgentActiveRef.current = false;
     setVoiceAgentActive(false);
     setListening(false);
     setSpeaking(false);
-  }, [applying, loading, runVoiceTurn, speakReply, validating, voiceEnabled]);
+  }, [applying, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {
