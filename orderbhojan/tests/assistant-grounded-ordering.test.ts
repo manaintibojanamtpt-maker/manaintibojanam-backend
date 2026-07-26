@@ -18,6 +18,14 @@ describe('assistant grounded ordering + cart-add intent', () => {
       quantity: 1,
       itemName: 'paneer tikka',
     });
+    assert.deepEqual(
+      parseCartAddUserMessage('Add two quantity Masala Dosa from Inti bhojanam'),
+      {
+        quantity: 2,
+        itemName: 'Masala Dosa',
+        kitchenHint: 'Inti bhojanam',
+      },
+    );
     assert.equal(parseCartAddUserMessage('what is popular?'), null);
   });
 

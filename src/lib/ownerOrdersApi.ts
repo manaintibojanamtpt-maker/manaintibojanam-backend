@@ -44,3 +44,26 @@ export async function verifyOwnerOrderPayment(
     },
   );
 }
+
+export interface UpdateOwnerOrderStatusResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  code?: string;
+}
+
+/** Owner dispatch / status — honors notifyCustomer for OUT_FOR_DELIVERY fanout. */
+export async function updateOwnerOrderStatus(
+  orderId: string,
+  status: string,
+  deliveryData?: Record<string, unknown>,
+): Promise<UpdateOwnerOrderStatusResult> {
+  return ownerApiRequest<UpdateOwnerOrderStatusResult>(
+    'PUT',
+    `/api/owner/orders/${encodeURIComponent(orderId)}/status`,
+    {
+      status,
+      ...(deliveryData ? { deliveryData } : {}),
+    },
+  );
+}

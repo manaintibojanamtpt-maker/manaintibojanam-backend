@@ -20,11 +20,14 @@ import {
   isPersonalizationCartIntent,
 } from '../domain/isPersonalizationUserMessage';
 import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
-import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
 import {
-  isConfirmCartUserMessage,
+  parseCartAddUserMessage,
+  parseDishClarificationMessage,
+} from '../domain/isCartAddUserMessage';
+import {
   isDiscardCartUserMessage,
   isStopVoiceAgentMessage,
+  isValidatedCartConfirmMessage,
   toSpokenAssistantReply,
 } from '../domain/isConfirmCartUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
@@ -149,6 +152,12 @@ export function useAssistantConversation() {
     restaurantId: string;
     restaurantSlug: string;
   } | null>(null);
+  /** When assistant offers to open a kitchen, “yes” navigates instead of resetting chat. */
+  const pendingExploreKitchenRef = useRef<{
+    name: string;
+    id?: string;
+    searchPath: string;
+  } | null>(null);
 
   const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
@@ -159,69 +168,63 @@ export function useAssistantConversation() {
       const message = raw.trim();
       if (!message || loading) return undefined;
 
-      // Voice/text confirm against an already-validated plan (Siri-style “yes / confirm”).
       const pending = pendingValidationRef.current;
-      if (pending && isConfirmCartUserMessage(message)) {
+
+      // Voice/text confirm — only when plan is already validated (not bare “yes” on clarify).
+      if (pending && isValidatedCartConfirmMessage(message, pending)) {
         setError(null);
         setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        if (pending.status === 'validated' && pending.valid) {
-          setApplying(true);
-          try {
-            const planRestaurant = pendingPlanRestaurantRef.current;
-            if (planRestaurant) {
-              const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
-              await ensureRestaurantContextForCartPlan({
-                restaurantId: planRestaurant.restaurantId,
-                restaurantSlug: planRestaurant.restaurantSlug,
-                coords,
-              });
-            }
-            const result = applyConfirmedCartPlan({
-              userConfirmed: true,
-              validation: pending,
-              deps: { addItem, setQuantity },
+        setApplying(true);
+        try {
+          const planRestaurant = pendingPlanRestaurantRef.current;
+          if (planRestaurant) {
+            const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
+            await ensureRestaurantContextForCartPlan({
+              restaurantId: planRestaurant.restaurantId,
+              restaurantSlug: planRestaurant.restaurantSlug,
+              coords,
             });
-            reportCartPlanDecisionQuietly({
-              decision: 'confirm',
-              conversationId: pending.conversationId,
-              planCount: pending.proposedActions.length,
-            });
-            if (result.appliedCount > 0) {
-              const reply = `Added ${result.appliedCount} item${result.appliedCount === 1 ? '' : 's'} to your cart. Say checkout when ready, or ask for another dish.`;
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: nextId(),
-                  role: 'system',
-                  text: `Applied ${result.appliedCount} cart change(s) after your confirmation.`,
-                },
-                { id: nextId(), role: 'assistant', text: reply },
-              ]);
-              setPendingValidation(null);
-              pendingPlanRestaurantRef.current = null;
-              notifyToast(`Applied ${result.appliedCount} item(s) to cart.`, 'success');
-              return reply;
-            }
-            const fail =
-              result.skipped[0]?.reason || 'Could not apply cart plan — try the menu ADD button.';
-            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
-            notifyToast(fail, 'warning');
-            return fail;
-          } catch (err) {
-            const fail =
-              err instanceof Error ? err.message : 'Could not apply cart plan right now.';
-            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
-            return fail;
-          } finally {
-            setApplying(false);
           }
+          const result = applyConfirmedCartPlan({
+            userConfirmed: true,
+            validation: pending,
+            deps: { addItem, setQuantity },
+          });
+          reportCartPlanDecisionQuietly({
+            decision: 'confirm',
+            conversationId: pending.conversationId,
+            planCount: pending.proposedActions.length,
+          });
+          if (result.appliedCount > 0) {
+            const reply = `Added ${result.appliedCount} item${result.appliedCount === 1 ? '' : 's'} to your cart. Say checkout when ready, or ask for another dish.`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: nextId(),
+                role: 'system',
+                text: `Applied ${result.appliedCount} cart change(s) after your confirmation.`,
+              },
+              { id: nextId(), role: 'assistant', text: reply },
+            ]);
+            setPendingValidation(null);
+            pendingPlanRestaurantRef.current = null;
+            pendingExploreKitchenRef.current = null;
+            notifyToast(`Applied ${result.appliedCount} item(s) to cart.`, 'success');
+            return reply;
+          }
+          const fail =
+            result.skipped[0]?.reason || 'Could not apply cart plan — try the menu ADD button.';
+          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
+          notifyToast(fail, 'warning');
+          return fail;
+        } catch (err) {
+          const fail =
+            err instanceof Error ? err.message : 'Could not apply cart plan right now.';
+          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
+          return fail;
+        } finally {
+          setApplying(false);
         }
-        const clarify =
-          pending.clarificationQuestions[0] ||
-          pending.issues[0]?.message ||
-          'Tell me the exact dish name from the menu, then say confirm.';
-        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: clarify }]);
-        return clarify;
       }
 
       if (pending && isDiscardCartUserMessage(message)) {
@@ -234,6 +237,7 @@ export function useAssistantConversation() {
         });
         setPendingValidation(null);
         pendingPlanRestaurantRef.current = null;
+        pendingExploreKitchenRef.current = null;
         const reply = 'Discarded — nothing was added. What would you like instead?';
         setMessages((prev) => [
           ...prev,
@@ -243,9 +247,120 @@ export function useAssistantConversation() {
         return reply;
       }
 
+      // Clarification reply: user names the dish after “which menu item…”
+      if (
+        pending &&
+        (pending.status === 'needs_clarification' || pending.status === 'invalid') &&
+        parseDishClarificationMessage(message)
+      ) {
+        const dishName = parseDishClarificationMessage(message)!;
+        setError(null);
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        setLoading(true);
+        try {
+          const planRestaurant = pendingPlanRestaurantRef.current;
+          const nearbyForClarify = toNearbyKitchenHints(
+            buildOrderingAssistContext({
+              restaurantId: planRestaurant?.restaurantId ?? restaurantId,
+              restaurantSlug: planRestaurant?.restaurantSlug ?? restaurantSlug,
+              areaLabel: activeLocation?.displayLabel,
+              lat: activeLocation?.coordinates?.lat,
+              lng: activeLocation?.coordinates?.lng,
+            })?.nearbyKitchens,
+          );
+          const draft: CartPlanAction = {
+            type: 'cart_add_plan',
+            requiresConfirmation: true,
+            executable: false,
+            payload: {
+              name: dishName,
+              quantity: 1,
+              ...(planRestaurant?.restaurantId
+                ? { restaurantId: planRestaurant.restaurantId }
+                : restaurantId
+                  ? { restaurantId }
+                  : {}),
+            },
+            reason: 'user_clarification_item',
+          };
+          const cartActions = enrichCartPlansFromMenuCache([draft], {
+            activeRestaurantId: planRestaurant?.restaurantId ?? restaurantId,
+            userMessage: message,
+            nearbyKitchens: nearbyForClarify,
+          });
+          const planRestaurantId = resolveCartPlanRestaurantId({
+            plan: cartActions[0],
+            userMessage: `${dishName}`,
+            nearbyKitchens: nearbyForClarify,
+            activeRestaurantId: planRestaurant?.restaurantId ?? restaurantId,
+          });
+          if (!planRestaurantId) {
+            const reply = `I heard “${dishName}”. Open that kitchen’s menu or name the kitchen, then I’ll validate the cart plan.`;
+            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
+            return reply;
+          }
+          pendingPlanRestaurantRef.current = {
+            restaurantId: planRestaurantId,
+            restaurantSlug:
+              planRestaurantId === restaurantId
+                ? (restaurantSlug ?? planRestaurantId)
+                : planRestaurantId,
+          };
+          setValidating(true);
+          const validation = await validate({
+            restaurantId: planRestaurantId,
+            proposedActions: cartActions,
+            ...(conversationId ? { conversationId } : {}),
+          });
+          setPendingValidation(validation);
+          const reply = validationSpeakText(validation);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: nextId(),
+              role: 'assistant',
+              text: reply,
+              cartActions,
+              validation,
+            },
+          ]);
+          return reply;
+        } catch (err) {
+          const msg =
+            err instanceof AssistantApiError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : 'Could not validate that item';
+          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: msg }]);
+          return msg;
+        } finally {
+          setValidating(false);
+          setLoading(false);
+        }
+      }
+
+      // “Yes” after “explore kitchen X?” → open search/menu, don’t reset to Hello.
+      const explore = pendingExploreKitchenRef.current;
+      if (
+        explore &&
+        /^(yes|yeah|yep|yup|ok|okay|sure|haan|ha|open\s*it|show\s*(me\s*)?(it|them|menu)?)\b/i.test(
+          message,
+        )
+      ) {
+        setError(null);
+        pendingExploreKitchenRef.current = null;
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        navigate(explore.searchPath);
+        const reply = `Opening ${explore.name}. Browse the live menu, then say “add” plus a dish name — Confirm is still required before cart changes.`;
+        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
+        return reply;
+      }
+
       setError(null);
       setPendingValidation(null);
       pendingPlanRestaurantRef.current = null;
+      pendingExploreKitchenRef.current = null;
       setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
       setLoading(true);
 
@@ -375,6 +490,12 @@ export function useAssistantConversation() {
               lng: coordsForAdd?.lng,
             })?.nearbyKitchens,
           );
+          const kitchenHintMsg = cartAddIntent.kitchenHint
+            ? `${cartAddIntent.itemName} from ${cartAddIntent.kitchenHint}`
+            : message;
+          const kitchenFromHint = cartAddIntent.kitchenHint
+            ? matchKitchenFragmentInMessage(cartAddIntent.kitchenHint, nearbyForAdd)
+            : null;
           const draftPlan: CartPlanAction = {
             type: 'cart_add_plan',
             requiresConfirmation: true,
@@ -382,25 +503,36 @@ export function useAssistantConversation() {
             payload: {
               name: cartAddIntent.itemName,
               quantity: cartAddIntent.quantity,
-              ...(restaurantId ? { restaurantId } : {}),
+              ...(kitchenFromHint?.id
+                ? { restaurantId: kitchenFromHint.id }
+                : restaurantId
+                  ? { restaurantId }
+                  : {}),
             },
             reason: 'user_cart_add_intent',
           };
           const cartActions = enrichCartPlansFromMenuCache([draftPlan], {
-            activeRestaurantId: restaurantId,
-            userMessage: message,
+            activeRestaurantId: kitchenFromHint?.id ?? restaurantId,
+            userMessage: kitchenHintMsg,
             nearbyKitchens: nearbyForAdd,
           });
           const planRestaurantId = resolveCartPlanRestaurantId({
             plan: cartActions[0],
-            userMessage: message,
+            userMessage: kitchenHintMsg,
             nearbyKitchens: nearbyForAdd,
-            activeRestaurantId: restaurantId,
+            activeRestaurantId: kitchenFromHint?.id ?? restaurantId,
           });
 
           if (!planRestaurantId) {
-            const searchPath = `/search?q=${encodeURIComponent(cartAddIntent.itemName)}`;
-            const reply = `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or name the kitchen), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
+            const q = cartAddIntent.kitchenHint || cartAddIntent.itemName;
+            const searchPath = `/search?q=${encodeURIComponent(q)}`;
+            pendingExploreKitchenRef.current = {
+              name: cartAddIntent.kitchenHint || cartAddIntent.itemName,
+              searchPath,
+            };
+            const reply = cartAddIntent.kitchenHint
+              ? `I couldn’t load ${cartAddIntent.kitchenHint}’s menu yet. Say yes to open search for it, or open the kitchen and ask again.`
+              : `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or name the kitchen), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
             const hints: ConsumerAssistHint[] = [
               { type: 'navigate', target: searchPath },
               { type: 'navigate', target: '/' },
@@ -590,8 +722,48 @@ export function useAssistantConversation() {
         setConversationId(result.conversationId);
 
         const hints = result.suggestedHints.filter((h) => h.type !== 'none');
-        const cartActions = enrichCartPlansFromMenuCache(result.proposedCartActions, {
-          activeRestaurantId: restaurantId,
+
+        // Hydrate empty/broken LLM cart plans from the utterance (fixes MISSING_ITEM_REFERENCE).
+        const parsedAdd = parseCartAddUserMessage(message);
+        const hydratedPlans: CartPlanAction[] =
+          result.proposedCartActions.length > 0
+            ? result.proposedCartActions.map((plan) => {
+                if (plan.type !== 'cart_add_plan' && plan.type !== 'cart_update_plan') return plan;
+                const name =
+                  (typeof plan.payload?.name === 'string' && plan.payload.name.trim()) ||
+                  parsedAdd?.itemName ||
+                  '';
+                const qty =
+                  typeof plan.payload?.quantity === 'number'
+                    ? plan.payload.quantity
+                    : (parsedAdd?.quantity ?? 1);
+                return {
+                  ...plan,
+                  payload: {
+                    ...(plan.payload ?? {}),
+                    ...(name ? { name } : {}),
+                    quantity: qty,
+                  },
+                };
+              })
+            : parsedAdd
+              ? [
+                  {
+                    type: 'cart_add_plan' as const,
+                    requiresConfirmation: true,
+                    executable: false,
+                    payload: {
+                      name: parsedAdd.itemName,
+                      quantity: parsedAdd.quantity,
+                      ...(preferRestaurantId ? { restaurantId: preferRestaurantId } : {}),
+                    },
+                    reason: 'client_hydrated_from_utterance',
+                  },
+                ]
+              : [];
+
+        const cartActions = enrichCartPlansFromMenuCache(hydratedPlans, {
+          activeRestaurantId: preferRestaurantId ?? restaurantId,
           userMessage: message,
           assistantMessage: result.reply,
           nearbyKitchens: nearbyHints,
@@ -603,6 +775,31 @@ export function useAssistantConversation() {
           nearbyKitchens: nearbyHints,
           activeRestaurantId: preferRestaurantId ?? restaurantId,
         });
+
+        // Offer “yes → open kitchen” when model suggests exploring without a cart plan.
+        if (cartActions.length === 0) {
+          const exploreHint = hints.find(
+            (h) => h.type === 'navigate' && typeof h.target === 'string' && h.target.includes('/'),
+          );
+          const kitchenOffer =
+            namedKitchen ||
+            matchKitchenFragmentInMessage(result.reply, nearbyHints) ||
+            matchKitchenFragmentInMessage(message, nearbyHints);
+          if (
+            kitchenOffer &&
+            /explore|open|menu|would you like|shall i|nearby kitchen/i.test(result.reply)
+          ) {
+            const searchPath =
+              exploreHint?.target?.startsWith('/')
+                ? exploreHint.target
+                : `/search?q=${encodeURIComponent(kitchenOffer.name)}`;
+            pendingExploreKitchenRef.current = {
+              name: kitchenOffer.name,
+              ...(kitchenOffer.id ? { id: kitchenOffer.id } : {}),
+              searchPath,
+            };
+          }
+        }
 
         // Prefer validation-aware copy over optimistic “I found…” when validate fails.
         let displayReply = result.reply;
@@ -709,11 +906,11 @@ export function useAssistantConversation() {
     [
       activeLocation,
       ask,
-      activeLocation,
       addItem,
       askPostOrder,
       conversationId,
       loading,
+      navigate,
       orderContext,
       personalizationBootstrap,
       personalizationEnabled,

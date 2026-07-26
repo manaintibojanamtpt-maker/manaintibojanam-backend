@@ -2376,13 +2376,26 @@ async function notifyCustomer(order: any, status: string) {
     );
   }
   
-  if (order.phone) {
+  const customerPhone =
+    String(
+      order.phone ||
+        order.customerPhone ||
+        order.customerDetails?.phone ||
+        order.deliveryAddress?.phone ||
+        '',
+    ).trim() || null;
+
+  if (customerPhone) {
     let whatsappMsg = `${message}\n\n`;
     if (order.deliveryTimeSlot && order.deliveryTimeSlot !== 'ASAP') {
       whatsappMsg += `*Scheduled For:* ${order.deliveryTimeSlot}\n\n`;
     }
     whatsappMsg += `*Track your order here:* ${trackingLink}\n\nThank you for ordering from ${brandName}!`;
-    await sendWhatsAppNotification(order.phone, whatsappMsg);
+    await sendWhatsAppNotification(customerPhone, whatsappMsg);
+  } else {
+    console.warn(
+      `[notifyCustomer] No phone on order ${order.id || order.orderId || '?'} — WhatsApp skipped`,
+    );
   }
 
   if (order.userId) {

@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
 import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../../services/api';
+import { updateOwnerOrderStatus, verifyOwnerOrderPayment } from '../../lib/ownerOrdersApi';
 import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
@@ -24,7 +25,6 @@ import {
   resolveOwnerDeliveryType,
   splitOwnerOrdersBySchedule,
 } from '../../lib/ownerOrderQueue';
-import { verifyOwnerOrderPayment } from '../../lib/ownerOrdersApi';
 import { isAwaitingOwnerUpiVerification, isOwnerActionablePlacedOrder } from '../../lib/ownerUpiPayment';
 
 interface Order extends OwnerOrder {}
@@ -206,8 +206,8 @@ const OwnerOrders: React.FC = () => {
   const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dispatchOrder) return;
-    
-    const updated = await updateOrderStatus(dispatchOrder, 'OUT_FOR_DELIVERY', {
+
+    const deliveryData = {
       deliveryPartner: dispatchData.deliveryPartner,
       trackingUrl: dispatchData.trackingUrl.trim() || null,
       trackingLink: dispatchData.trackingUrl.trim() || null,
@@ -215,12 +215,33 @@ const OwnerOrders: React.FC = () => {
       riderPhone: dispatchData.riderPhone.trim() || null,
       notifyCustomer: dispatchData.notifyCustomer,
       deliveryAssignedAt: new Date().toISOString(),
-    });
+    };
 
-    if (!updated) return;
-    
-    setDispatchModalOpen(false);
-    setDispatchOrder(null);
+    try {
+      setUpdatingOrderId(dispatchOrder);
+      // Owner API path honors notifyCustomer and fans out WhatsApp/push server-side.
+      await updateOwnerOrderStatus(dispatchOrder, 'OUT_FOR_DELIVERY', deliveryData);
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === dispatchOrder
+            ? { ...order, status: 'OUT_FOR_DELIVERY' as OrderStatus, ...deliveryData }
+            : order,
+        ),
+      );
+      toast.success(
+        dispatchData.notifyCustomer
+          ? 'Dispatched — customer notify (WhatsApp/Push) sent'
+          : 'Dispatched — customer notify skipped',
+      );
+      setDispatchModalOpen(false);
+      setDispatchOrder(null);
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'Dispatch failed';
+      toast.error(message);
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   const handleOpenStockModal = async () => {

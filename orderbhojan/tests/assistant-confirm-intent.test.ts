@@ -4,6 +4,7 @@ import {
   isConfirmCartUserMessage,
   isDiscardCartUserMessage,
   isStopVoiceAgentMessage,
+  isValidatedCartConfirmMessage,
   toSpokenAssistantReply,
 } from '../src/features/assistant/domain/isConfirmCartUserMessage';
 
@@ -15,6 +16,17 @@ describe('assistant confirm / voice-agent intents', () => {
     assert.equal(isDiscardCartUserMessage('discard'), true);
     assert.equal(isDiscardCartUserMessage('no'), true);
     assert.equal(isConfirmCartUserMessage('masala dosa is available'), false);
+  });
+
+  it('only treats yes as cart confirm when plan is validated', () => {
+    assert.equal(
+      isValidatedCartConfirmMessage('yes', { status: 'needs_clarification', valid: false }),
+      false,
+    );
+    assert.equal(
+      isValidatedCartConfirmMessage('yes', { status: 'validated', valid: true }),
+      true,
+    );
   });
 
   it('recognizes stop-agent phrases without discarding cart on bare stop', () => {

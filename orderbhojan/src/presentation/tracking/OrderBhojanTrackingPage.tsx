@@ -47,6 +47,38 @@ export function OrderBhojanTrackingPage() {
     return `${eta.min}–${eta.max} min`;
   }, [trackingQuery.data?.etaMinutes]);
 
+  const tracking = trackingQuery.data;
+
+  // Hooks must run unconditionally — guards live inside the callbacks (React #310).
+  const postOrderBootstrap = useMemo(() => {
+    if (!tracking || !orderId) return undefined;
+    return buildPostOrderContextFromTracking({
+      orderId,
+      guestPhone: needsGuestPhone ? submittedPhone : undefined,
+      tracking,
+    });
+  }, [needsGuestPhone, orderId, submittedPhone, tracking]);
+
+  useEffect(() => {
+    if (!tracking) {
+      clearPersonalizationReorder();
+      return;
+    }
+    const personalization = buildPersonalizationBootstrapFromTracking({
+      orderId: tracking.orderId,
+      orderNumber: tracking.orderNumber,
+      reorder: tracking.reorder,
+    });
+    if (personalization) {
+      publishPersonalizationBootstrap(personalization);
+    } else {
+      clearPersonalizationReorder();
+    }
+    return () => {
+      clearPersonalizationReorder();
+    };
+  }, [tracking]);
+
   if (!orderId) {
     return (
       <TransactionalPageShell title="Track order" subtitle="" embedded>
@@ -75,7 +107,7 @@ export function OrderBhojanTrackingPage() {
     return <TrackingLoadingView />;
   }
 
-  if (trackingQuery.isError || !trackingQuery.data) {
+  if (trackingQuery.isError || !tracking) {
     return (
       <TransactionalPageShell title="Track order" subtitle="" embedded>
         <MarketplaceUxStateView
@@ -90,38 +122,9 @@ export function OrderBhojanTrackingPage() {
   }
 
   const isRefreshing = trackingQuery.isFetching && !trackingQuery.isLoading;
-  const tracking = trackingQuery.data;
   const trackingPhase = normalizeTrackingStatus(tracking.status);
   const showDeliveryPanel = tracking.status === 'OUT_FOR_DELIVERY' && Boolean(tracking.delivery);
   const timeline = mapTrackingTimelineSteps(tracking);
-
-  // Caller-owned snapshot for Phase 17 assistant — no extra fetch inside assistant module.
-  const postOrderBootstrap = useMemo(
-    () =>
-      buildPostOrderContextFromTracking({
-        orderId,
-        guestPhone: needsGuestPhone ? submittedPhone : undefined,
-        tracking,
-      }),
-    [needsGuestPhone, orderId, submittedPhone, tracking],
-  );
-
-  // Phase 19: publish reorder line items for reviewable cart-plan proposals.
-  useEffect(() => {
-    const personalization = buildPersonalizationBootstrapFromTracking({
-      orderId: tracking.orderId,
-      orderNumber: tracking.orderNumber,
-      reorder: tracking.reorder,
-    });
-    if (personalization) {
-      publishPersonalizationBootstrap(personalization);
-    } else {
-      clearPersonalizationReorder();
-    }
-    return () => {
-      clearPersonalizationReorder();
-    };
-  }, [tracking]);
 
   return (
     <PostOrderBootstrapProvider value={postOrderBootstrap}>

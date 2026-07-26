@@ -15,6 +15,18 @@ export function isConfirmCartUserMessage(message: string): boolean {
   return CONFIRM_RE.test(text);
 }
 
+/**
+ * Bare “yes/ok” is only a cart confirm when the plan is already validated.
+ * Otherwise it often means “yes, open that kitchen” and must not short-circuit assist.
+ */
+export function isValidatedCartConfirmMessage(
+  message: string,
+  pending: { readonly status: string; readonly valid?: boolean } | null | undefined,
+): boolean {
+  if (!pending || pending.status !== 'validated' || pending.valid !== true) return false;
+  return isConfirmCartUserMessage(message);
+}
+
 export function isDiscardCartUserMessage(message: string): boolean {
   const text = message.trim();
   if (!text || text.length > 48) return false;

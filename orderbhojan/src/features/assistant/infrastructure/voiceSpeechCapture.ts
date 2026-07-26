@@ -118,12 +118,15 @@ export async function captureVoiceTranscript(params: {
     });
   }
 
-  // Shorter default for voice-agent turns — stop waiting forever for silence.
-  const timeoutMs = params.timeoutMs ?? 7_000;
+  // Allow a natural pause after TTS before declaring timeout.
+  const timeoutMs = params.timeoutMs ?? 12_000;
   const platform = params.platform ?? 'unknown';
 
   return new Promise<VoiceTranscriptResult>((resolve, reject) => {
     let settled = false;
+    let finalTranscript = '';
+    let sawResult = false;
+
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
@@ -155,6 +158,17 @@ export async function captureVoiceTranscript(params: {
       } catch {
         // ignore
       }
+      // Prefer any transcript collected over a hard timeout error.
+      if (finalTranscript.trim()) {
+        finish(() =>
+          resolve({
+            transcript: finalTranscript.trim(),
+            source: 'web_speech',
+            platform,
+          }),
+        );
+        return;
+      }
       finish(() =>
         reject(
           new AssistantApiError({
@@ -169,36 +183,57 @@ export async function captureVoiceTranscript(params: {
     params.signal?.addEventListener('abort', onAbort, { once: true });
 
     recognition.lang = params.lang ?? 'en-IN';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
     recognition.continuous = false;
 
     recognition.onresult = (event) => {
-      const first = event.results?.[0]?.[0];
-      const transcript = typeof first?.transcript === 'string' ? first.transcript.trim() : '';
-      if (!transcript) {
-        finish(() =>
-          reject(
-            new AssistantApiError({
-              code: 'AI_VOICE_EMPTY',
-              message: 'No speech was recognized. Please try again.',
-              retryable: true,
-            }),
-          ),
-        );
-        return;
+      sawResult = true;
+      const results = event.results;
+      let best = '';
+      for (let i = 0; i < (results?.length ?? 0); i += 1) {
+        const row = results[i];
+        const alt = row?.[0];
+        const piece = typeof alt?.transcript === 'string' ? alt.transcript.trim() : '';
+        if (!piece) continue;
+        // Prefer final results; keep interim as fallback.
+        const isFinal = Boolean((row as { isFinal?: boolean }).isFinal);
+        if (isFinal || !best) best = piece;
+        if (isFinal) finalTranscript = [finalTranscript, piece].filter(Boolean).join(' ').trim();
       }
-      finish(() =>
-        resolve({
-          transcript,
-          source: 'web_speech',
-          platform,
-        }),
-      );
+      if (!finalTranscript && best) finalTranscript = best;
+
+      // Resolve once we have a final segment — stop recognition promptly.
+      const last = results?.[(results.length ?? 1) - 1] as { isFinal?: boolean } | undefined;
+      if (last?.isFinal && finalTranscript.trim()) {
+        try {
+          recognition.stop();
+        } catch {
+          // ignore
+        }
+        finish(() =>
+          resolve({
+            transcript: finalTranscript.trim(),
+            source: 'web_speech',
+            platform,
+          }),
+        );
+      }
     };
 
     recognition.onerror = (event) => {
       const err = event.error ?? 'unknown';
+      // no-speech after partial interim — still try to use what we heard.
+      if ((err === 'no-speech' || err === 'aborted') && finalTranscript.trim()) {
+        finish(() =>
+          resolve({
+            transcript: finalTranscript.trim(),
+            source: 'web_speech',
+            platform,
+          }),
+        );
+        return;
+      }
       const mapped = mapSpeechRecognitionError(err);
       finish(() =>
         reject(
@@ -212,12 +247,23 @@ export async function captureVoiceTranscript(params: {
     };
 
     recognition.onend = () => {
-      // If ended without result/error, treat as empty.
+      if (finalTranscript.trim()) {
+        finish(() =>
+          resolve({
+            transcript: finalTranscript.trim(),
+            source: 'web_speech',
+            platform,
+          }),
+        );
+        return;
+      }
       finish(() =>
         reject(
           new AssistantApiError({
             code: 'AI_VOICE_EMPTY',
-            message: 'No speech was recognized. Please try again.',
+            message: sawResult
+              ? 'Speech was unclear. Please say the dish and kitchen again.'
+              : 'No speech was recognized. Please try again.',
             retryable: true,
           }),
         ),

@@ -82,7 +82,7 @@ describe('assistant Phase 14 consumer UI', () => {
     assert.match(conversation, /startVoiceAgent/);
     assert.match(conversation, /correctTranscriptAgainstOrderingVocab/);
     assert.match(conversation, /await send\(corrected\)/);
-    assert.match(conversation, /isConfirmCartUserMessage/);
+    assert.match(conversation, /isValidatedCartConfirmMessage/);
     assert.doesNotMatch(conversation, /runVoiceOrderingTurn|askWithVoice/);
   });
 

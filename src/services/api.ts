@@ -494,16 +494,25 @@ const normalizeOrderStatus = (value: string | OrderStatus | undefined | null): O
   return valid ? (normalized as OrderStatus) : null;
 };
 
-const notifyOrderStatusChange = async (orderId: string, status: OrderStatus) => {
+const notifyOrderStatusChange = async (
+  orderId: string,
+  status: OrderStatus,
+  options?: { readonly notifyCustomer?: boolean },
+) => {
+  if (options?.notifyCustomer === false) return;
   try {
     const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/notify-status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
-    if (!response.ok && response.status !== 401 && response.status !== 403) {
+    if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      console.warn('[api] Status notification request failed:', payload?.error || response.status);
+      console.warn(
+        '[api] Status notification request failed:',
+        payload?.error || response.status,
+        response.status,
+      );
     }
   } catch (error) {
     console.warn('[api] Status notification request skipped or failed:', error);
@@ -635,7 +644,14 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, tr
       buildOrderStatusUpdatePayload(orderId, targetStatus, currentStatus, trackingData),
     );
 
-    notifyOrderStatusChange(orderId, targetStatus).catch(() => {});
+    const shouldNotify = trackingData?.notifyCustomer !== false;
+    if (shouldNotify) {
+      await notifyOrderStatusChange(orderId, targetStatus, {
+        notifyCustomer: trackingData?.notifyCustomer,
+      }).catch((err) => {
+        console.warn('[api] notify-status failed after status update:', err);
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
