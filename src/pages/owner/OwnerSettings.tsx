@@ -5,11 +5,12 @@ import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Truck, Navigation, Settings, Clock, Bell, Palette } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Truck, Navigation, Settings, Clock, Bell, Palette, Link2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
 import { OwnerGalleryThemePanel } from '../../components/owner/OwnerGalleryThemePanel';
+import { OwnerDeliveryPartnersPanel } from '../../components/owner/OwnerDeliveryPartnersPanel';
 import { NotificationSettingsPanel } from '../../modules/notifications/NotificationSettingsPanel';
 import OwnerPromotionsPanel from './OwnerPromotionsPanel';
 import OwnerFestivalOffersPanel from '../../components/owner/OwnerFestivalOffersPanel';
@@ -23,7 +24,7 @@ const OwnerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'promotions' | 'notifications' | 'brand'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'delivery_partners' | 'promotions' | 'notifications' | 'brand'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
   const [searchParams] = useSearchParams();
 
@@ -37,6 +38,8 @@ const OwnerSettings: React.FC = () => {
       setActiveTab('notifications');
     } else if (tab === 'brand') {
       setActiveTab('brand');
+    } else if (tab === 'delivery_partners' || tab === 'delivery-partners') {
+      setActiveTab('delivery_partners');
     }
   }, [searchParams]);
   
@@ -337,6 +340,10 @@ const OwnerSettings: React.FC = () => {
             <Truck size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Payments</span>
           </button>
+          <button onClick={() => setActiveTab('delivery_partners')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'delivery_partners' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <Link2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase"><span className="sm:hidden">Partners</span><span className="hidden sm:inline">Delivery Partners</span></span>
+          </button>
           <button onClick={() => setActiveTab('promotions')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'promotions' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
             <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Promos</span>
@@ -356,6 +363,8 @@ const OwnerSettings: React.FC = () => {
             <div className="p-6 md:p-8">
               <StoreLiveControl variant="full" />
             </div>
+          ) : activeTab === 'delivery_partners' && tenantId ? (
+            <OwnerDeliveryPartnersPanel tenantId={tenantId} />
           ) : activeTab === 'notifications' && tenantId ? (
             <NotificationSettingsPanel tenantId={tenantId} />
           ) : activeTab === 'promotions' ? (

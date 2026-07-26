@@ -21,16 +21,25 @@ const NUMBER_WORDS: Readonly<Record<string, number>> = {
   ten: 10,
 };
 
+/** ASR-tolerant “from” separator (from / feom / fom / form). */
+const FROM_SEP = String.raw`(?:from|feom|fom|form|fro)\s+`;
+
 const ADD_PATTERNS: readonly RegExp[] = [
   // add 2 quantity Masala Dosa from Inti bhojanam
-  /^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+from\s+(.+))?$/i,
+  new RegExp(
+    String.raw`^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    'i',
+  ),
   // add two quantity Masala Dosa from Inti…
-  /^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+from\s+(.+))?$/i,
+  new RegExp(
+    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    'i',
+  ),
   /^(?:please\s+)?add\s+(\d+)\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
   /^(?:please\s+)?add\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
   /^(?:please\s+)?(?:put|include)\s+(\d+)\s+(.+?)\s+in\s+(?:my\s+)?cart\s*[.!]?$/i,
   // add Masala Dosa from Inti bhojanam
-  /^(?:please\s+)?add\s+(.+?)(?:\s+from\s+(.+))$/i,
+  new RegExp(String.raw`^(?:please\s+)?add\s+(.+?)(?:\s+${FROM_SEP}(.+))$`, 'i'),
   // add Masala Dosa
   /^(?:please\s+)?add\s+(.+)$/i,
   /^(\d+)\s*[x×]\s*(.+)$/i,
@@ -52,8 +61,18 @@ function parseQuantityToken(token: string | undefined): number | null {
   return word != null ? word : null;
 }
 
+/** Normalize common ASR typos before regex parse. */
+function normalizeAddUtterance(raw: string): string {
+  return raw
+    .replace(/\b(feom|fom|frm|fro|form)\b/gi, 'from')
+    .replace(/\b(masla|masaala)\b/gi, 'masala')
+    .replace(/\b(inti\s*bojanam|intibojanam|inti\s*bhojan)\b/gi, 'inti bhojanam')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function parseCartAddUserMessage(message: string): ParsedCartAddIntent | null {
-  const text = message.trim();
+  const text = normalizeAddUtterance(message);
   if (!text || text.length > 200) return null;
 
   for (const pattern of ADD_PATTERNS) {

@@ -247,6 +247,21 @@ export function useAssistantConversation() {
         return reply;
       }
 
+      // “confirm” while still clarifying — keep plan, re-prompt (do not wipe pending).
+      if (
+        pending &&
+        (pending.status === 'needs_clarification' || pending.status === 'invalid') &&
+        /^(confirm|confirmed|yes|yeah|yep|ok|okay)\b/i.test(message)
+      ) {
+        setError(null);
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        const reply =
+          pending.clarificationQuestions[0] ||
+          'Tell me the exact dish name from the menu (for example, Masala Dosa), then say confirm after it validates.';
+        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
+        return reply;
+      }
+
       // Clarification reply: user names the dish after “which menu item…”
       if (
         pending &&

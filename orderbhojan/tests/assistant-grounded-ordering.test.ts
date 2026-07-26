@@ -26,6 +26,14 @@ describe('assistant grounded ordering + cart-add intent', () => {
         kitchenHint: 'Inti bhojanam',
       },
     );
+    assert.deepEqual(
+      parseCartAddUserMessage('add 2 quantity masla dosa feom inti bojanam'),
+      {
+        quantity: 2,
+        itemName: 'masala dosa',
+        kitchenHint: 'inti bhojanam',
+      },
+    );
     assert.equal(parseCartAddUserMessage('what is popular?'), null);
   });
 

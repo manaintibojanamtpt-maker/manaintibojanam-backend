@@ -16,6 +16,7 @@ import logo from '../../assets/bhojan-os-logo.png';
 import { recordOrderCompletion } from '../../services/AnalyticsService';
 import { updateMenuItem, updateOrderStatus as apiUpdateOrderStatus } from '../../services/api';
 import { updateOwnerOrderStatus, verifyOwnerOrderPayment } from '../../lib/ownerOrdersApi';
+import { orchestrateOwnerDispatch } from '../../lib/ownerDeliveryIntegrationsApi';
 import { OrderStatus } from '../../types';
 import { DELIVERY_PARTNER_OPTIONS, deliveryPartnerLabel, getTrackingUrl, isThirdPartyDeliveryPartner } from '../../lib/deliveryPartners';
 import { phoneDigits, safeNumber, safeText } from '../../lib/safeRenderValue';
@@ -205,33 +206,72 @@ const OwnerOrders: React.FC = () => {
 
   const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dispatchOrder) return;
+    if (!dispatchOrder || !tenantId) return;
 
-    const deliveryData = {
-      deliveryPartner: dispatchData.deliveryPartner,
-      trackingUrl: dispatchData.trackingUrl.trim() || null,
-      trackingLink: dispatchData.trackingUrl.trim() || null,
-      riderName: dispatchData.riderName.trim() || null,
-      riderPhone: dispatchData.riderPhone.trim() || null,
-      notifyCustomer: dispatchData.notifyCustomer,
-      deliveryAssignedAt: new Date().toISOString(),
-    };
+    const order = orders.find((o) => o.id === dispatchOrder);
 
     try {
       setUpdatingOrderId(dispatchOrder);
-      // Owner API path honors notifyCustomer and fans out WhatsApp/push server-side.
+
+      // Resolve merchant-linked provider booking when connected; else manual tracking fallback.
+      let deliveryData: Record<string, unknown> = {
+        deliveryPartner: dispatchData.deliveryPartner,
+        trackingUrl: dispatchData.trackingUrl.trim() || null,
+        trackingLink: dispatchData.trackingUrl.trim() || null,
+        riderName: dispatchData.riderName.trim() || null,
+        riderPhone: dispatchData.riderPhone.trim() || null,
+        notifyCustomer: dispatchData.notifyCustomer,
+        deliveryAssignedAt: new Date().toISOString(),
+      };
+      let orchestrateNote = '';
+
+      try {
+        const orderAny = order as Record<string, unknown> | undefined;
+        const orchestrated = await orchestrateOwnerDispatch(tenantId, {
+          orderId: dispatchOrder,
+          deliveryPartner: dispatchData.deliveryPartner,
+          customerName: safeText(orderAny?.customerName ?? orderAny?.userName) || 'Customer',
+          customerPhone: phoneDigits(orderAny?.phone ?? orderAny?.customerPhone) || '',
+          pickupAddress: safeText(orderAny?.restaurantName ?? orderAny?.kitchenName) || 'Kitchen',
+          dropoffAddress: safeText(orderAny?.deliveryAddress ?? orderAny?.address) || '',
+          orderTotal: safeNumber(orderAny?.totalAmount ?? orderAny?.total),
+          trackingUrl: dispatchData.trackingUrl.trim() || undefined,
+          riderName: dispatchData.riderName.trim() || undefined,
+          riderPhone: dispatchData.riderPhone.trim() || undefined,
+          allowManualFallback: true,
+        });
+        if (orchestrated.mode === 'blocked') {
+          toast.error(orchestrated.message || 'Dispatch blocked — link a delivery partner or paste tracking.');
+          return;
+        }
+        deliveryData = {
+          ...orchestrated.deliveryData,
+          notifyCustomer: dispatchData.notifyCustomer,
+        };
+        orchestrateNote =
+          orchestrated.mode === 'provider_api'
+            ? 'Booked via linked partner account. '
+            : 'Manual tracking fallback. ';
+      } catch (orchErr) {
+        // Keep proven manual path if orchestration endpoint is unavailable.
+        console.warn('[dispatch] orchestration skipped:', orchErr);
+        orchestrateNote = 'Manual dispatch. ';
+      }
+
       await updateOwnerOrderStatus(dispatchOrder, 'OUT_FOR_DELIVERY', deliveryData);
       setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          order.id === dispatchOrder
-            ? { ...order, status: 'OUT_FOR_DELIVERY' as OrderStatus, ...deliveryData }
-            : order,
+        currentOrders.map((o) =>
+          o.id === dispatchOrder
+            ? { ...o, status: 'OUT_FOR_DELIVERY' as OrderStatus, ...deliveryData }
+            : o,
         ),
       );
       toast.success(
-        dispatchData.notifyCustomer
-          ? 'Dispatched — customer notify (WhatsApp/Push) sent'
-          : 'Dispatched — customer notify skipped',
+        `${orchestrateNote}${
+          dispatchData.notifyCustomer
+            ? 'Customer notify (WhatsApp/Push) sent.'
+            : 'Customer notify skipped.'
+        }`,
       );
       setDispatchModalOpen(false);
       setDispatchOrder(null);

@@ -326,6 +326,14 @@ service cloud.firestore {
         allow write: if isAdmin() || isTenantOwner(tenantId);
       }
 
+      // Delivery provider secrets + connection docs — Admin SDK / server routes only.
+      match /deliveryProviderSecrets/{providerId} {
+        allow read, write: if false;
+      }
+      match /deliveryProviderConnections/{providerId} {
+        allow read, write: if false;
+      }
+
       match /ingredients/{ingredientId} {
         allow read: if isAdmin() || isTenantOwner(tenantId);
         allow create, update, delete: if isAdmin() || isTenantOwner(tenantId);

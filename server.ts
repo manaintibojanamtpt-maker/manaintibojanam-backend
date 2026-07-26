@@ -76,6 +76,7 @@ import { registerOwnerIngredientsRoutes } from "./backend-lib/marketplace/ownerI
 import { registerOwnerMenuRoutes } from "./backend-lib/marketplace/ownerMenuRoutes.js";
 import { queryMenuForTenant } from "./backend-lib/marketplace/menuTenantQuery.js";
 import { registerOwnerAnalyticsRoutes } from "./backend-lib/marketplace/ownerAnalyticsRoutes.js";
+import { registerOwnerDeliveryIntegrationRoutes } from "./backend-lib/marketplace/ownerDeliveryIntegrationRoutes.js";
 import {
   createIncidentRepository,
   getAutopilotIncidentTypes,
@@ -3167,6 +3168,7 @@ registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerAnalyticsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerDeliveryIntegrationRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOpsRoutes(app, getIncidentRepository, requireSuperadmin);
 // Use lazy Firestore proxy (same as marketplace routes) — _db is set in startServer().
 registerAiGatewayRoutes(app, {
