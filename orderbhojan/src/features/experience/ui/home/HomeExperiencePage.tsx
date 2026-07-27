@@ -127,6 +127,15 @@ export function HomeExperiencePage() {
         </div>
       ) : null}
 
+      <div className="px-4 pt-3 sm:px-6">
+        <p
+          className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] leading-relaxed text-emerald-50/90"
+          data-testid="home-pricing-trust-banner"
+        >
+          ₹0 platform fee · Kitchen prices · No hidden charges — delivery & taxes shown before you pay.
+        </p>
+      </div>
+
       <div className="px-4 pt-4 sm:px-6">
         {discoveryEnabled ? (
           <DiscoveryHomeFeed />
@@ -139,7 +148,9 @@ export function HomeExperiencePage() {
         <div className="mb-4 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35">Trust</p>
           <h2 className="text-base font-bold text-white/90">Why OrderBhojan</h2>
-          <p className="text-xs text-white/45">Verified home kitchens with the warmth you expect</p>
+          <p className="text-xs text-white/45">
+            Home-style kitchens. True kitchen prices. ₹0 platform fee — no hidden charges.
+          </p>
         </div>
         <Suspense fallback={<TrustStripFallback />}>
           <OrderBhojanHomeTrustStrip />

@@ -54,13 +54,23 @@ async function bootstrap() {
   bootstrapObDebugFromUrl();
   suppressFirestorePermissionRejections();
 
+  // Native chrome only — keep short; do not queue discovery IDB behind this.
   await bootstrapCapacitorNative();
 
-  const bootstrapCoords = resolveBootstrapDiscoveryCoords();
-  if (bootstrapCoords) {
-    await hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng);
-  }
+  // Sync seed from localStorage so React Query can paint cached kitchens immediately.
   seedDiscoveryQueryCacheFromSession();
+
+  const bootstrapCoords = resolveBootstrapDiscoveryCoords();
+  // IDB hydrate is non-critical enrichment — must not block first React paint.
+  if (bootstrapCoords) {
+    void hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng)
+      .then(() => {
+        seedDiscoveryQueryCacheFromSession();
+      })
+      .catch(() => {
+        /* ignore — localStorage seed already applied */
+      });
+  }
 
   const config = await ensureAppConfig();
   renderApp();

@@ -31,7 +31,8 @@ export function OrderBhojanFloatingCart() {
   return (
     <MarketplaceFloatingCartView
       itemCount={count}
-      totalLabel={formatInr(total)}
+      // Subtotal only — delivery/taxes appear on cart/checkout (never imply grand total here).
+      totalLabel={`Items ${formatInr(total)}`}
       lines={viewLines}
       hidden={pathname.startsWith('/checkout') || pathname.startsWith('/cart')}
       onUpdateQuantity={(lineId, quantity) => setQuantity(lineId, quantity)}

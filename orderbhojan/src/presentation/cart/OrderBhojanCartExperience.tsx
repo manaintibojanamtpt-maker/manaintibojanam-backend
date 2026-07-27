@@ -116,13 +116,13 @@ export function OrderBhojanCartExperience() {
   return (
     <CartPageView
       title="Your cart"
-      subtitle={`${itemCount} item${itemCount === 1 ? '' : 's'} · Subtotal ₹${subtotal}`}
+      subtitle={`${itemCount} item${itemCount === 1 ? '' : 's'} · Subtotal ₹${subtotal} · Delivery & taxes at checkout`}
       lines={lines.map(mapLineToViewModel)}
       restaurant={
         restaurantLabel && slug
           ? {
               name: restaurantLabel,
-              meta: 'Ordering from this kitchen',
+              meta: 'Kitchen prices · ₹0 platform fee',
               menuActionLabel: 'Menu',
             }
           : undefined

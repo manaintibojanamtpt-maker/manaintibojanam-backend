@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 
 import { buildOrderTrustCopyText } from '@/features/checkout/domain/checkoutDeliveryDisplay';
+import { PRICING_TRUST } from '@/features/experience/domain/pricingTrustCopy';
 
 export type OrderTrustPanelVariant = 'success' | 'confirming' | 'pending_payment';
 
@@ -138,6 +139,12 @@ export function OrderBhojanOrderTrustPanel({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Order ID</p>
             <p className="mt-1 break-all font-mono text-xs text-white/55">{orderId}</p>
           </div>
+        ) : null}
+
+        {!confirming ? (
+          <p className="text-xs leading-relaxed text-emerald-100/80" data-testid="order-pricing-trust">
+            {PRICING_TRUST.successNote}
+          </p>
         ) : null}
       </div>
 

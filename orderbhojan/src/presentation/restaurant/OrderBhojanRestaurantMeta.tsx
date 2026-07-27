@@ -34,11 +34,9 @@ export function OrderBhojanRestaurantMeta({ data }: { data: RestaurantExperience
         {experience.distance != null ? (
           <span className={pillClass}>{formatDistanceLabel(experience.distance)}</span>
         ) : null}
-        {experience.deliveryFeeKnown !== false ? (
-          <span className={pillClass}>
-            {formatDeliveryFeeLabel(experience.deliveryFee, { known: experience.deliveryFeeKnown })}
-          </span>
-        ) : null}
+        <span className={pillClass}>
+          {formatDeliveryFeeLabel(experience.deliveryFee, { known: experience.deliveryFeeKnown })}
+        </span>
       </div>
     </div>
   );

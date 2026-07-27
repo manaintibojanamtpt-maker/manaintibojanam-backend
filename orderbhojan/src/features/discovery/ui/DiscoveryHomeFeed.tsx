@@ -256,6 +256,15 @@ export function DiscoveryHomeFeed() {
     >
       <div className="space-y-5">
         <DiscoveryFeedControls />
+        {query.isFetching && feedData ? (
+          <p
+            className="text-[11px] text-white/45"
+            data-testid="discovery-stale-refresh"
+            aria-live="polite"
+          >
+            Updating kitchens near you…
+          </p>
+        ) : null}
 
         {!online ? (
           <OrderBhojanDiscoveryOfflineNotice onRetry={() => void query.refetch()} />

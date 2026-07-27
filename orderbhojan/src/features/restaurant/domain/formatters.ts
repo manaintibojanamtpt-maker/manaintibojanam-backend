@@ -15,8 +15,7 @@ export function formatDeliveryFeeLabel(
   fee?: number | null,
   options?: { readonly known?: boolean },
 ): string {
-  if (options?.known === false) return '—';
-  if (fee == null) return '—';
+  if (options?.known === false || fee == null) return 'Fee at checkout';
   if (fee === 0) return 'Free delivery';
   return `₹${fee} delivery`;
 }

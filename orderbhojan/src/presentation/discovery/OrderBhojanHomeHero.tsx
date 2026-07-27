@@ -30,7 +30,8 @@ export function OrderBhojanHomeHero() {
   const carouselAutoAdvance = !prefersReducedMotion;
   const heroQuery = useHomeHeroConfig();
   const heroConfig = heroQuery.data ?? DEFAULT_HOME_HERO_CONFIG;
-  const heroReady = heroQuery.isFetched;
+  // Defaults seed initialData — never block kitchens behind a tall hero skeleton.
+  const heroReady = Boolean(heroConfig);
   const includeDiscoveryOffers = heroConfig.includeDiscoveryOffers !== false;
   const offerRestaurantsQuery = useHomeHeroOfferRestaurants(includeDiscoveryOffers);
   const [searchValue, setSearchValue] = useState('');
@@ -108,16 +109,13 @@ export function OrderBhojanHomeHero() {
   if (!heroReady) {
     return (
       <section
-        className="relative min-h-[min(78vh,720px)] overflow-hidden border-b border-white/[0.04] bg-[#050403]"
+        className="relative min-h-[12rem] overflow-hidden border-b border-white/[0.04] bg-[#050403]"
         aria-busy="true"
-        aria-label="Loading home kitchens"
+        aria-label="Loading home"
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-[#120c0a] via-[#070504] to-[#050403]" />
-        <div className="relative z-10 mx-auto flex min-h-[min(78vh,720px)] max-w-5xl flex-col justify-end px-4 pb-8 pt-14 sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
-          <Skeleton className="mb-3 h-3 w-32 rounded-lg ob-shimmer" />
-          <Skeleton className="mb-2 h-10 w-[min(100%,20rem)] rounded-xl ob-shimmer" />
-          <Skeleton className="mb-6 h-5 w-[min(100%,16rem)] rounded-lg ob-shimmer" />
-          <Skeleton className="h-12 w-full max-w-xl rounded-2xl ob-shimmer" />
+        <div className="relative z-10 mx-auto flex min-h-[12rem] max-w-5xl flex-col justify-end px-4 pb-6 pt-10 sm:px-6">
+          <Skeleton className="mb-2 h-8 w-[min(100%,18rem)] rounded-xl ob-shimmer" />
+          <Skeleton className="h-11 w-full max-w-xl rounded-2xl ob-shimmer" />
         </div>
       </section>
     );

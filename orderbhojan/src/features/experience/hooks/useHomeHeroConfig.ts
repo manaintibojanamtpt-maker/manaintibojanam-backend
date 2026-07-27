@@ -19,6 +19,9 @@ export function useHomeHeroConfig() {
         return DEFAULT_HOME_HERO_CONFIG;
       }
     },
+    // Paint hero immediately from known defaults; refresh in background.
+    initialData: DEFAULT_HOME_HERO_CONFIG,
+    placeholderData: DEFAULT_HOME_HERO_CONFIG,
     staleTime: HOME_HERO_STALE_MS,
     gcTime: HOME_HERO_STALE_MS * 2,
     refetchOnWindowFocus: false,

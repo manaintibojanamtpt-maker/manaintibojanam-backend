@@ -1,12 +1,13 @@
-import { Clock, ShieldCheck, Truck, Sparkles, BadgeCheck } from 'lucide-react';
+import { IndianRupee, ShieldCheck, BadgeCheck, Sparkles, Receipt } from 'lucide-react';
 import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
+import { PRICING_TRUST } from '@/features/experience/domain/pricingTrustCopy';
 
 const TRUST_ITEMS = [
-  { id: 'fresh', label: 'Fresh daily', icon: Clock },
-  { id: 'hygiene', label: 'Hygienic', icon: ShieldCheck },
-  { id: 'verified', label: 'Verified', icon: BadgeCheck },
-  { id: 'live', label: 'Live cooking', icon: Sparkles },
-  { id: 'delivery', label: 'Fast delivery', icon: Truck },
+  { id: 'prices', label: PRICING_TRUST.stripKitchenPrices, icon: IndianRupee },
+  { id: 'zero-fee', label: PRICING_TRUST.stripZeroFee, icon: Receipt },
+  { id: 'no-hidden', label: PRICING_TRUST.stripNoHidden, icon: ShieldCheck },
+  { id: 'verified', label: 'Verified kitchens', icon: BadgeCheck },
+  { id: 'home-style', label: 'Home-style food', icon: Sparkles },
 ] as const;
 
 export function OrderBhojanHomeTrustStrip() {

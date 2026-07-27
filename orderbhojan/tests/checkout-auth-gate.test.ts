@@ -150,13 +150,16 @@ describe('checkout auth wiring', () => {
     assert.match(requireAuth, /state=\{\{ from: returnTo \}\}/);
   });
 
-  it('RequireBrowseAuth waits for Google redirect resume before gating home', () => {
+  it('RequireBrowseAuth waits for Google redirect resume then allows guest browse', () => {
     const requireBrowseAuth = readFileSync(
       join(root, 'src/features/auth/ui/RequireBrowseAuth.tsx'),
       'utf8',
     );
     assert.match(requireBrowseAuth, /auth_redirecting/);
     assert.match(requireBrowseAuth, /redirectResumePending/);
+    // Home discovery must not force Navigate to /auth after session resolves.
+    assert.doesNotMatch(requireBrowseAuth, /Navigate/);
+    assert.doesNotMatch(requireBrowseAuth, /isAuthenticated/);
   });
 
   it('prepare checkout in parallel with cart validation', () => {

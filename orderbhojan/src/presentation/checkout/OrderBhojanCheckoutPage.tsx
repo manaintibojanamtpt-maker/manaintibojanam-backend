@@ -32,6 +32,7 @@ import {
   formatDeliverySlotLabel,
   isAsapSlot,
 } from '@/features/checkout/domain/deliveryTimeSlots';
+import { PRICING_TRUST } from '@/features/experience/domain/pricingTrustCopy';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set your delivery area';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,16 +149,17 @@ export function OrderBhojanCheckoutPage() {
   }, [showBothPaymentOptions, showRazorpayButton, showUpiButton]);
 
   const paymentHint = useMemo(() => {
+    const trust = PRICING_TRUST.checkoutHint;
     if (supportsCod && !showBothPaymentOptions) {
-      return 'Pay with cash when your order arrives.';
+      return `${trust} Pay with cash when your order arrives.`;
     }
     if (showUpiButton) {
-      return 'Opens GPay, PhonePe, or Paytm with the kitchen UPI ID pre-filled.';
+      return `${trust} Opens GPay, PhonePe, or Paytm with the kitchen UPI ID pre-filled.`;
     }
     if (showRazorpayButton && showBothPaymentOptions) {
-      return 'Pay online with UPI, cards, or net banking. COD remains available if you prefer cash on delivery.';
+      return `${trust} Pay online with UPI, cards, or net banking. COD remains available if you prefer cash on delivery.`;
     }
-    return undefined;
+    return trust;
   }, [showBothPaymentOptions, showRazorpayButton, showUpiButton, supportsCod]);
 
   useEffect(() => {

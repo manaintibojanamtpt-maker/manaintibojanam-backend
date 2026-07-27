@@ -41,7 +41,8 @@ export function formatDistance(restaurant: RestaurantPublic): string {
 }
 
 export function formatDeliveryFee(restaurant: RestaurantPublic): string | undefined {
-  if (restaurant.deliveryFee == null) return undefined;
+  // Never hide fee ambiguity — show checkout reassurance instead of omitting the badge.
+  if (restaurant.deliveryFee == null) return 'Fee at checkout';
   if (restaurant.deliveryFee === 0) return 'Free';
   return `₹${restaurant.deliveryFee}`;
 }
