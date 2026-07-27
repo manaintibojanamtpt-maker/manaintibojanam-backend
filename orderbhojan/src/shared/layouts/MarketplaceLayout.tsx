@@ -41,7 +41,7 @@ export function MarketplaceLayout() {
     showChrome || (onTrack && (postOrderEnabled || personalizationEnabled));
 
   return (
-    <div className="ob-app-shell ob-px2-marketplace flex h-[100dvh] flex-col bg-[#070504] text-[#fffaf3]">
+    <div className="ob-app-shell ob-px2-marketplace flex h-[100dvh] flex-col bg-[#050403] text-[#fff8f0]">
       {showCompactHeader ? (
         <OrderBhojanScreenHeader />
       ) : null}

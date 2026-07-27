@@ -9,7 +9,7 @@ const OPTIONS: readonly { id: MenuDietaryFilter; label: string }[] = [
 function segmentClass(active: boolean): string {
   return `flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wide transition touch-manipulation ${
     active
-      ? 'bg-[#FF7A00] text-[#120e0c] shadow-[0_0_20px_rgba(255,122,0,0.35)]'
+      ? 'bg-[#e85d04] text-[#120e0c] shadow-[0_0_20px_rgba(232,93,4,0.35)]'
       : 'text-white/70 hover:text-white'
   }`;
 }

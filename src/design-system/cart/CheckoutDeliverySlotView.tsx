@@ -14,7 +14,7 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
     <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4" aria-labelledby="checkout-delivery-time">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-orange-400" aria-hidden />
+          <Clock className="h-4 w-4 text-[#f4a261]" aria-hidden />
           <h2 id="checkout-delivery-time" className="text-sm font-semibold text-white">
             Delivery time
           </h2>
@@ -46,7 +46,7 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
                     onClick={() => onSelectSlot(entry)}
                     className={`flex-shrink-0 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-colors touch-manipulation ${
                       selected
-                        ? 'border-orange-400 bg-orange-500/15 text-orange-200'
+                        ? 'border-[#f4a261] bg-[#e85d04]/15 text-[#fff8f0]'
                         : 'border-white/10 text-white/65 hover:border-white/25'
                     }`}
                     aria-pressed={selected}
@@ -72,7 +72,7 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
                     onClick={() => onSelectSlot(entry)}
                     className={`flex-shrink-0 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-colors touch-manipulation ${
                       selected
-                        ? 'border-orange-400 bg-orange-500/15 text-orange-200'
+                        ? 'border-[#f4a261] bg-[#e85d04]/15 text-[#fff8f0]'
                         : 'border-white/10 text-white/65 hover:border-white/25'
                     }`}
                     aria-pressed={selected}

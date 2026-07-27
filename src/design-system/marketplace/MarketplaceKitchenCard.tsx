@@ -24,8 +24,8 @@ const badgeStyles: Record<string, string> = {
   closest: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   fast_delivery: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   highly_rated: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  within_delivery_radius: 'bg-[#FF7A00]/15 text-[#FF7A00] border-[#FF7A00]/30',
-  offer: 'bg-[#FF7A00]/15 text-[#FF7A00] border-[#FF7A00]/30',
+  within_delivery_radius: 'bg-[#e85d04]/15 text-[#e85d04] border-[#e85d04]/30',
+  offer: 'bg-[#e85d04]/15 text-[#e85d04] border-[#e85d04]/30',
   closed: 'bg-red-500/15 text-red-300 border-red-500/30',
   kitchen_format: 'bg-white/10 text-white/80 border-white/15',
 };
@@ -66,7 +66,7 @@ function KitchenMetadata({ kitchen }: { kitchen: MarketplaceKitchenCard }) {
   const showDistance = isDisplayableDistanceKm(distanceKm);
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/60">
+    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[#c4b5a5]">
       {showDistance ? (
         <span className="inline-flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5" />
@@ -126,7 +126,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
     return (
       <Link
         to={kitchen.storePath}
-        className={`group block overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] transition hover:border-[#FF7A00]/40 hover:bg-white/[0.05] hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)] ${className}`}
+        className={`group block overflow-hidden rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_24px_56px_rgba(0,0,0,0.45)] ${className}`}
       >
         <div className="relative h-48 overflow-hidden bg-white/5">
           <KitchenThumbnail
@@ -136,15 +136,15 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           {favoriteSlot ? <div className="absolute right-3 top-3 z-10">{favoriteSlot}</div> : null}
-          <span className="absolute left-3 top-3 rounded-full border border-[#FF7A00]/30 bg-[#FF7A00]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#FF7A00]">
+          <span className="absolute left-3 top-3 rounded-full border border-[#e85d04]/30 bg-[#e85d04]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#e85d04]">
             {spotlightEyebrow}
           </span>
         </div>
         <div className="p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#FF7A00]/80">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#e85d04]/80">
             {kitchen.eligibilityLabel}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-xl font-bold text-white group-hover:text-[#FF7A00]">{kitchen.name}</h3>
+          <h3 className="mt-1 line-clamp-2 text-xl font-bold text-[#fff8f0] group-hover:text-[#e85d04]">{kitchen.name}</h3>
           {kitchen.cuisineTags?.length ? (
             <p className="mt-1 text-sm text-white/60">{kitchen.cuisineTags.join(' · ')}</p>
           ) : null}
@@ -158,10 +158,10 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   return (
     <Link
       to={kitchen.storePath}
-      className={`group block h-full min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-[#FF7A00]/40 hover:bg-white/[0.05] hover:shadow-[0_12px_40px_rgba(0,0,0,0.25)] ${className}`}
+      className={`group block h-full min-w-0 rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] p-4 transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.38)] ${className}`}
     >
       <div className="flex gap-4">
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white/5">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-white/5">
           <KitchenThumbnail
             kitchen={kitchen}
             imageLoading={imageLoading}
@@ -173,14 +173,14 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-base font-semibold text-white group-hover:text-[#FF7A00]">
+              <h3 className="truncate text-base font-bold text-[#fff8f0] group-hover:text-[#e85d04]">
                 {kitchen.name}
               </h3>
-              <p className="mt-0.5 text-xs text-white/50">
+              <p className="mt-0.5 text-xs text-[#c4b5a5]">
                 {kitchen.cuisineTags?.join(' · ') || kitchen.eligibilityLabel}
               </p>
             </div>
-            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/30 group-hover:text-[#FF7A00]" />
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/30 group-hover:text-[#e85d04]" />
           </div>
 
           <KitchenMetadata kitchen={kitchen} />

@@ -121,7 +121,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           aria-hidden
         >
           <div className="ds-discovery-hero__offer-card max-w-[min(19rem,calc(100vw-2rem))] rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#FFB366]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#f4a261]">
               Deal live now
             </p>
             <p className="mt-1 text-lg font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-xl">
@@ -158,7 +158,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
             <button
               type="button"
               onClick={onCtaClick}
-              className="ds-discovery-hero__cta mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-6 text-sm font-bold tracking-wide text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7A00] active:scale-[0.98]"
+              className="ds-discovery-hero__cta mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-6 text-sm font-bold tracking-wide text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e85d04] active:scale-[0.98]"
             >
               {displayCta}
               <span aria-hidden className="text-base leading-none">
@@ -192,10 +192,10 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
                   className={`h-1.5 min-w-1.5 rounded-full transition-all duration-300 touch-manipulation ${
                     isActive
                       ? offerSlide
-                        ? 'w-8 bg-[#FF7A00] shadow-[0_0_12px_rgba(255,122,0,0.55)]'
+                        ? 'w-8 bg-[#e85d04] shadow-[0_0_12px_rgba(232,93,4,0.55)]'
                         : 'w-8 bg-white shadow-[0_0_10px_rgba(255,255,255,0.35)]'
                       : offerSlide
-                        ? 'w-1.5 bg-[#FF7A00]/40'
+                        ? 'w-1.5 bg-[#e85d04]/40'
                         : 'w-1.5 bg-white/30'
                   }`}
                 />

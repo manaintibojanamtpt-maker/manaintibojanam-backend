@@ -13,7 +13,7 @@ export function CheckoutDeliveryAddressView({
   return (
     <GlassCard hoverEffect={false} className="!rounded-2xl !p-4" aria-hidden>
       <div className="flex items-start gap-3">
-        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#FF7A00]" aria-hidden />
+        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#e85d04]" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-white/50">
             {address.label}

@@ -46,7 +46,7 @@ describe('home hero carousel', () => {
     assert.doesNotMatch(view, /ds-discovery-hero__vignette/);
     assert.doesNotMatch(view, /ds-discovery-hero__edge-fade/);
     assert.match(theme, /\.ds-discovery-hero__headline[\s\S]*text-shadow/);
-    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.78\)/);
+    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.92\)/);
     assert.doesNotMatch(theme, /\.ds-discovery-hero__readability/);
   });
 

@@ -101,7 +101,7 @@ export function CartEmptyView({ onBrowse }: CartEmptyViewProps) {
       <MarketplaceUxStateView
         title="Your cart is empty"
         description="Add dishes from a restaurant menu to start an order."
-        icon={<ShoppingCart className="h-7 w-7 text-[#FF7A00]" aria-hidden />}
+        icon={<ShoppingCart className="h-7 w-7 text-[#e85d04]" aria-hidden />}
         primaryLabel="Continue browsing"
         onPrimary={onBrowse}
       />

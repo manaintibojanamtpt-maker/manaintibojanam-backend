@@ -13,7 +13,7 @@ export function CartRestaurantBannerView({ restaurant, onMenu }: CartRestaurantB
     <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
       <div className="flex items-center gap-3" aria-label="Restaurant">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FF7A00]/15 text-[#FF7A00]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e85d04]/15 text-[#e85d04]"
           aria-hidden
         >
           <Store className="h-5 w-5" />

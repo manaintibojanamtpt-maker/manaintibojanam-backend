@@ -13,7 +13,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   return (
     <div 
       className={cn(
-        "shimmer bg-white/[0.06]",
+        "shimmer bg-[#120d0c]/80",
         variant === 'circular' && "rounded-full",
         variant === 'rounded' && "rounded-2xl",
         className
@@ -23,7 +23,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 export const MenuItemSkeleton = () => (
-  <div className="relative flex justify-between gap-4 py-5 px-4 border-b border-gray-100 dark:border-white/5 last:border-b-0">
+  <div className="relative flex justify-between gap-4 py-5 px-4 border-b border-white/[0.06] bg-[#120d0c] last:border-b-0">
     <div className="flex-1 min-w-0 pr-2 flex flex-col justify-start">
       <div className="flex items-center gap-1.5 mb-1.5">
         <Skeleton className="h-4 w-4 rounded-[4px]" />
@@ -55,7 +55,7 @@ export const CategorySkeleton = () => (
 );
 
 export const RecommendedSkeleton = () => (
-  <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+  <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#120d0c]/60 p-2.5">
     <Skeleton className="h-16 w-16 flex-shrink-0 rounded-xl" />
     <div className="flex-1 space-y-1.5">
       <Skeleton className="h-3.5 w-1/2 rounded" />
@@ -66,7 +66,7 @@ export const RecommendedSkeleton = () => (
 );
 
 export const TrendingSkeleton = () => (
-  <div className="flex-shrink-0 w-72 bg-white/[0.03] rounded-2xl p-4 border border-white/10 flex gap-4 items-center">
+  <div className="flex-shrink-0 w-72 bg-[#120d0c]/60 rounded-2xl p-4 border border-white/[0.08] flex gap-4 items-center">
     <Skeleton className="w-24 h-24 rounded-2xl flex-shrink-0" />
     <div className="flex-1 space-y-2">
       <Skeleton className="h-4 w-3/4 rounded" />
@@ -78,7 +78,7 @@ export const TrendingSkeleton = () => (
 export const HomeBentoSkeleton = () => (
   <div className="grid grid-cols-2 gap-3 mb-6">
     {[1, 2, 3, 4].map((i) => (
-      <div key={i} className="bg-white/[0.03] border border-white/10 rounded-2xl p-2 flex flex-col">
+      <div key={i} className="bg-[#120d0c]/60 border border-white/[0.08] rounded-2xl p-2 flex flex-col">
         <Skeleton className="h-24 w-full rounded-xl mb-2" />
         <Skeleton className="h-4 w-3/4 rounded mb-2" />
         <div className="flex items-center justify-between mt-auto">
@@ -107,7 +107,7 @@ export const RestaurantMenuPageSkeleton = () => (
     <div className="px-4">
       <CategorySkeleton />
     </div>
-    <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-white/10">
+    <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#120d0c]">
       <MenuItemSkeleton />
       <MenuItemSkeleton />
       <MenuItemSkeleton />

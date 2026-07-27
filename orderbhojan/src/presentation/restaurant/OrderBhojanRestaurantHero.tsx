@@ -67,11 +67,11 @@ export function OrderBhojanRestaurantHero({
           </picture>
         ) : (
           <div
-            className="h-full w-full bg-gradient-to-br from-[#141414] via-[#0a0a0a] to-[#050505]"
+            className="h-full w-full bg-gradient-to-br from-[#120d0c] via-[#0a0706] to-[#050403]"
             aria-hidden
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/35 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050403] via-[#050403]/40 to-transparent" />
 
         <div className="absolute left-4 right-4 top-[max(1rem,env(safe-area-inset-top))] flex justify-end">
           <OrderBhojanRestaurantActions
@@ -83,7 +83,7 @@ export function OrderBhojanRestaurantHero({
 
         <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
           {primaryOfferLabel ? (
-            <span className={`${pillClass} border-[#FF7A00]/40 text-[#FF7A00]`}>
+            <span className={`${pillClass} border-[#e85d04]/40 text-[#e85d04]`}>
               {primaryOfferLabel}
             </span>
           ) : null}
@@ -108,7 +108,7 @@ export function OrderBhojanRestaurantHero({
             />
             <div className="min-w-0 flex-1">
               <div className="mb-2 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border border-[#FF7A00]/20 bg-[#FF7A00]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-100">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#e85d04]/25 bg-[#e85d04]/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#fff8f0]">
                   <Sparkles className="h-3 w-3" aria-hidden />
                   {kitchenFormatLabel(experience.kitchenFormat)}
                 </span>
@@ -119,17 +119,17 @@ export function OrderBhojanRestaurantHero({
                   </span>
                 ) : null}
               </div>
-              <h1 className="text-xl font-black leading-tight tracking-tight text-white sm:text-2xl">
+              <h1 className="text-xl font-black leading-tight tracking-tight text-[#fff8f0] sm:text-2xl">
                 {experience.displayName}
               </h1>
               {experience.description ? (
-                <p className="mt-1 line-clamp-2 text-xs font-medium text-white/55 sm:text-sm">
+                <p className="mt-1 line-clamp-2 text-xs font-medium text-[#c4b5a5] sm:text-sm">
                   {experience.description}
                 </p>
               ) : null}
             </div>
             {experience.rating != null ? (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-2.5 py-2 text-amber-200">
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-2xl border border-[#f4a261]/25 bg-[#f4a261]/12 px-2.5 py-2 text-[#f4a261]">
                 <span className="text-sm font-black">★ {experience.rating.toFixed(1)}</span>
               </div>
             ) : null}

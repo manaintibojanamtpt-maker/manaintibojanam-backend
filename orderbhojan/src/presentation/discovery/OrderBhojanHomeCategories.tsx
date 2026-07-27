@@ -32,12 +32,12 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
   const cuisines = useDiscoveryFilterStore((s) => s.filters.cuisines);
   const setFilters = useDiscoveryFilterStore((s) => s.setFilters);
 
-  const circleSize = compact ? 'size-[3.75rem]' : 'size-[4.25rem] sm:size-[4.5rem]';
+  const circleSize = compact ? 'size-[3.75rem]' : 'size-[4.75rem] sm:size-[5rem]';
   const photoWidth = compact ? 120 : 144;
 
   return (
     <div className="space-y-2.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/45">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#c4b5a5]">
         {compact ? 'Browse cuisines' : 'Categories'}
       </p>
       <div
@@ -71,7 +71,10 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
               type="button"
               role="listitem"
               onClick={handleSelect}
-              className="group flex w-[4.25rem] shrink-0 snap-start flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#030303]"
+              className={clsx(
+                'group flex shrink-0 snap-start flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d04]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050403]',
+                compact ? 'w-[4.25rem]' : 'w-[4.75rem] sm:w-[5rem]',
+              )}
               aria-pressed={selected}
               aria-label={`${selected ? 'Clear' : 'Filter by'} ${cat.label}`}
             >
@@ -80,14 +83,14 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
                   'relative rounded-full p-[2px] transition-all duration-300 ease-out',
                   circleSize,
                   selected
-                    ? 'bg-gradient-to-br from-[#FF7A00] via-[#FF9A3D] to-[#FF7A00]/70 shadow-[0_8px_24px_rgba(255,122,0,0.28)]'
+                    ? 'bg-gradient-to-br from-[#e85d04] via-[#f4a261] to-[#e85d04]/70 shadow-[0_8px_24px_rgba(232,93,4,0.28)]'
                     : 'bg-white/10 group-hover:bg-white/16 group-active:scale-95',
                 )}
               >
                 <picture
                   className={clsx(
                     'block size-full overflow-hidden rounded-full bg-[#1a1410]',
-                    selected && 'ring-2 ring-[#030303]/80',
+                    selected && 'ring-2 ring-[#050403]/80',
                   )}
                 >
                   {pictureSources(photo, compact ? '3.75rem' : '4.5rem').map((source) => (
@@ -108,8 +111,8 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
               </span>
               <span
                 className={clsx(
-                  'max-w-full truncate px-0.5 text-center text-[10px] font-semibold leading-tight transition-colors duration-300',
-                  selected ? 'text-[#FF7A00]' : 'text-white/60 group-hover:text-white/80',
+                  'max-w-full truncate px-0.5 text-center text-[11px] font-semibold leading-tight transition-colors duration-300',
+                  selected ? 'text-[#e85d04]' : 'text-[#c4b5a5] group-hover:text-[#fff8f0]',
                 )}
               >
                 {cat.label}

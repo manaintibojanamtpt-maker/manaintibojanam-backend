@@ -103,7 +103,7 @@ export function CheckoutPageView({
           <div aria-busy="true" className="space-y-2">
             <Skeleton className="h-10 w-full rounded-xl ob-shimmer" />
             <Skeleton className="h-10 w-full rounded-xl ob-shimmer" />
-            <p className="text-sm text-white/55">Calculating your bill…</p>
+            <p className="text-sm text-[#c4b5a5]">Calculating your bill…</p>
           </div>
         ) : null}
 
@@ -111,7 +111,7 @@ export function CheckoutPageView({
           <div className={billRefreshing ? 'opacity-80 transition-opacity' : undefined}>
             <CheckoutBillSummaryView bill={bill} />
             {billRefreshing ? (
-              <p className="mt-2 text-xs text-white/50" aria-live="polite">
+              <p className="mt-2 text-xs text-[#c4b5a5]" aria-live="polite">
                 Updating final bill…
               </p>
             ) : null}
@@ -136,7 +136,7 @@ export function CheckoutPageView({
           </p>
         ) : null}
 
-        {hint ? <p className="text-sm text-white/60">{hint}</p> : null}
+        {hint ? <p className="text-sm text-[#c4b5a5]">{hint}</p> : null}
 
         <SoftButton type="button" tone="ghost" size="compact" disabled={actionsDisabled} onClick={onBack}>
           {backLabel}

@@ -82,7 +82,7 @@ const FloatingMiniCart: React.FC = () => {
                   <div key={item.id} className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{item.name}</p>
-                      <p className="text-[10px] font-bold text-orange-600">{formatPrice(item.price)}</p>
+                      <p className="text-[10px] font-bold text-[#c24e03]">{formatPrice(item.price)}</p>
                     </div>
                     <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full p-1">
                       <button 
@@ -94,7 +94,7 @@ const FloatingMiniCart: React.FC = () => {
                       <span className="text-xs font-black w-4 text-center dark:text-white">{item.quantity}</span>
                       <button 
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-6 h-6 flex items-center justify-center text-orange-600"
+                        className="w-6 h-6 flex items-center justify-center text-[#c24e03]"
                       >
                         <Plus size={12} strokeWidth={3} />
                       </button>
@@ -125,8 +125,8 @@ const FloatingMiniCart: React.FC = () => {
             <div className="flex items-center w-full px-4">
               {/* Icon & Count Badge */}
               <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
-                <ShoppingBag size={20} strokeWidth={2.5} className="text-orange-500 group-hover:scale-110 transition-transform" />
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 text-white text-[9px] font-black shadow-sm">
+                <ShoppingBag size={20} strokeWidth={2.5} className="text-[#e85d04] group-hover:scale-110 transition-transform" />
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c24e03] text-white text-[9px] font-black shadow-sm">
                   {itemCount}
                 </span>
               </div>
@@ -141,7 +141,7 @@ const FloatingMiniCart: React.FC = () => {
                     className="flex-1 flex items-center justify-between ml-3 overflow-hidden"
                   >
                     <div className="min-w-0 mr-4">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-orange-200/60 leading-none mb-0.5">Subtotal</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[#fff8f0]/60 leading-none mb-0.5">Subtotal</p>
                       <p className="text-sm font-black tracking-tight">{formatPrice(total)}</p>
                     </div>
 

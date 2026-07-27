@@ -45,12 +45,12 @@ function DiscoveryNearbyHeader({
     <header className="space-y-1">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white">{sectionTitle}</h2>
-          <p className={`text-xs ${deliveryLocation ? 'text-white/60' : 'text-[#FFB366]/90'}`}>
+          <h2 className="text-xl font-bold text-[#fff8f0]">{sectionTitle}</h2>
+          <p className={`text-xs ${deliveryLocation ? 'text-[#c4b5a5]' : 'text-[#f4a261]/90'}`}>
             {contextLine}
           </p>
         </div>
-        <span className="shrink-0 text-xs font-semibold text-[#FF7A00]">
+        <span className="shrink-0 text-xs font-bold text-[#e85d04]">
           {kitchenCount} {kitchenCount === 1 ? 'kitchen' : 'kitchens'}
         </span>
       </div>

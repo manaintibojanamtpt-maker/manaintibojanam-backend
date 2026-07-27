@@ -36,12 +36,12 @@ export function MarketplaceUxStateView({
   if (loading) {
     return (
       <div
-        className={`flex flex-col items-center justify-center gap-3 text-white/70 ${compact ? 'py-8' : 'py-16'}`}
+        className={`flex flex-col items-center justify-center gap-3 text-[#c4b5a5] ${compact ? 'py-8' : 'py-16'}`}
         aria-busy="true"
         aria-live="polite"
         aria-label={loadingMessage}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-[#FF7A00] motion-reduce:animate-none" aria-hidden />
+        <Loader2 className="h-8 w-8 animate-spin text-[#e85d04] motion-reduce:animate-none" aria-hidden />
         <p className="text-sm">{loadingMessage}</p>
       </div>
     );
@@ -49,9 +49,9 @@ export function MarketplaceUxStateView({
 
   return (
     <div role={role} aria-live="polite" className={`mx-auto max-w-lg ${compact ? 'py-4' : 'py-8'}`}>
-      <GlassCard hoverEffect={false} className="!rounded-[2rem] !p-8 text-center">
+      <GlassCard hoverEffect={false} className="!rounded-[2rem] !border-white/[0.08] !bg-[#120d0c] !p-8 text-center">
         {icon ? (
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#e85d04]/15 bg-[#e85d04]/10">
             {icon}
           </div>
         ) : null}

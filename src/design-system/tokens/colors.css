@@ -1,45 +1,47 @@
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", var(--font-sans);
-  --font-serif: "Plus Jakarta Sans", serif;
-  
-  --color-primary: #FF7A00;
-  --color-primary-light: #FF9F43;
-  --color-accent: #FFB366;
-  --color-brand-bg: #070504; /* Deeper luxury black */
-  --color-card-bg: #120D0A; /* Richer dark cards */
-  --color-surface: #0E0A08; 
-  --color-text-main: #FFFAF3;
-  --color-text-secondary: #B9ADA1;
-  --color-divider: rgba(255, 255, 255, 0.06);
-  --color-accent-red: #FF6B35; 
-  --color-accent-red-light: #FF8A65;
-  
-  --color-dark-bg: #070504;
-  --color-dark-card: #120D0A;
-  --color-dark-surface: #0E0A08;
-  --color-dark-text: #FFFAF3;
-  --color-dark-text-secondary: #D0C4B5; /* Better contrast */
+  --font-sans: "Figtree", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", "Outfit", var(--font-sans);
+  --font-serif: "Fraunces", "Plus Jakarta Sans", serif;
 
-  /* HSL Tokens for dynamic layering */
-  --mib-orange: 25, 100%, 50%;
-  --mib-gold: 45, 100%, 51%;
-  --mib-dark: 20, 10%, 4%;
-  --mib-card: 20, 10%, 6%;
+  /* Unified saffron / amber brand — food-first premium */
+  --color-primary: #e85d04;
+  --color-primary-light: #f4a261;
+  --color-accent: #ffb347;
+  --color-brand-bg: #050403;
+  --color-card-bg: #120d0c;
+  --color-surface: #0c0908;
+  --color-text-main: #fff8f0;
+  --color-text-secondary: #c4b5a5;
+  --color-divider: rgba(255, 220, 180, 0.08);
+  --color-accent-red: #e85d04;
+  --color-accent-red-light: #f4a261;
+
+  --color-dark-bg: #050403;
+  --color-dark-card: #120d0c;
+  --color-dark-surface: #0c0908;
+  --color-dark-text: #fff8f0;
+  --color-dark-text-secondary: #c4b5a5;
+
+  --mib-orange: 24, 96%, 46%;
+  --mib-gold: 32, 97%, 56%;
+  --mib-dark: 20, 14%, 3%;
+  --mib-card: 18, 12%, 6%;
 }
 
 :root {
-  --mib-bg: #070504;
-  --mib-surface: #120d0a;
-  --mib-surface-strong: #1a1410;
-  --mib-border: rgba(255, 255, 255, 0.05);
-  --mib-border-strong: rgba(255, 170, 95, 0.12);
-  --mib-text: #fffaf3;
-  --mib-muted: #d0c4b5;
-  --mib-primary: #ff6b35;
-  --mib-primary-2: #ff9f1c;
-  --mib-success: #10b981;
-  --mib-radius-card: 1.75rem;
-  --mib-shadow-card: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
-  --mib-shadow-glow: 0 0 30px -10px rgba(255, 107, 53, 0.25);
+  --mib-bg: #050403;
+  --mib-surface: #120d0c;
+  --mib-surface-strong: #1a1412;
+  --mib-border: rgba(255, 220, 180, 0.07);
+  --mib-border-strong: rgba(232, 93, 4, 0.28);
+  --mib-text: #fff8f0;
+  --mib-muted: #c4b5a5;
+  --mib-primary: #e85d04;
+  --mib-primary-2: #f4a261;
+  --mib-success: #34d399;
+  --mib-radius-card: 1.25rem;
+  --mib-shadow-card:
+    0 16px 48px -12px rgba(0, 0, 0, 0.65),
+    0 1px 0 rgba(255, 220, 180, 0.05) inset;
+  --mib-shadow-glow: 0 0 40px -8px rgba(232, 93, 4, 0.35);
 }

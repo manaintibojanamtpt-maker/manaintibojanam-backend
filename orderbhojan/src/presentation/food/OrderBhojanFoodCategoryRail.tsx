@@ -3,8 +3,8 @@ import type { FoodCategoryPublic } from '@/types/marketplace-food';
 const chipClass = (active: boolean) =>
   `shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
     active
-      ? 'border-[#FF7A00]/50 bg-[#FF7A00]/15 text-white'
-      : 'border-white/10 bg-white/5 text-white/70 hover:border-[#FF7A00]/30 hover:text-white'
+      ? 'border-[#e85d04]/55 bg-[#e85d04]/18 text-[#fff8f0] shadow-[0_0_0_1px_rgba(232,93,4,0.12)]'
+      : 'border-white/10 bg-[#120d0c]/60 text-[#c4b5a5] hover:border-[#e85d04]/30 hover:text-[#fff8f0]'
   }`;
 
 export interface OrderBhojanFoodCategoryRailProps {
@@ -22,7 +22,7 @@ export function OrderBhojanFoodCategoryRail({
 }: OrderBhojanFoodCategoryRailProps) {
   return (
     <nav
-      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md'} min-w-0 max-w-full py-3 ob-menu-container`}
+      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/[0.08] bg-[#050403]/95 backdrop-blur-md'} min-w-0 max-w-full py-3 ob-menu-container`}
       aria-label="Menu categories"
     >
       <div className="ob-menu-rail-bleed">

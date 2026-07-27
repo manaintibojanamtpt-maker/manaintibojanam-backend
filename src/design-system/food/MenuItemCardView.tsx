@@ -13,9 +13,9 @@ export interface MenuItemCardViewProps {
 }
 
 const badgeToneClass: Record<string, string> = {
-  trending: 'bg-[#D4A574]/20 text-[#F4C27A]',
-  offer: 'bg-amber-500/20 text-amber-400',
-  default: 'bg-white/10 text-white/70',
+  trending: 'bg-[#f4a261]/18 text-[#f4a261]',
+  offer: 'bg-[#e85d04]/18 text-[#e85d04]',
+  default: 'bg-white/8 text-[#c4b5a5]',
 };
 
 export function MenuItemCardView({
@@ -36,7 +36,7 @@ export function MenuItemCardView({
     <article
       id={`menu-item-${item.id}`}
       className={cn(
-        'ob-menu-card-item relative box-border grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_5.5rem] items-start gap-3 border-b border-white/5 bg-[#151515] px-3 py-4 transition-colors last:border-b-0 active:bg-white/[0.02] sm:grid-cols-[minmax(0,1fr)_7.5rem] sm:gap-4 sm:px-4',
+        'ob-menu-card-item relative box-border grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_5.5rem] items-start gap-3 border-b border-white/[0.06] bg-[#120d0c] px-3 py-4 transition-colors last:border-b-0 active:bg-[#e85d04]/[0.04] sm:grid-cols-[minmax(0,1fr)_7.5rem] sm:gap-4 sm:px-4',
         item.unavailable && 'opacity-60',
         className,
       )}
@@ -72,12 +72,12 @@ export function MenuItemCardView({
           ))}
         </div>
 
-        <h3 className="mb-0.5 line-clamp-2 break-words text-base font-bold leading-snug tracking-tight text-white sm:text-lg">
+        <h3 className="mb-0.5 line-clamp-2 break-words text-base font-bold leading-snug tracking-tight text-[#fff8f0] sm:text-lg">
           {item.name}
         </h3>
 
         <div className="mb-2 mt-1 flex flex-wrap items-center gap-2">
-          <span className="text-base font-extrabold text-white">{item.priceLabel}</span>
+          <span className="text-base font-extrabold text-[#fff8f0]">{item.priceLabel}</span>
           {item.ratingLabel ? (
             <span className="flex items-center gap-0.5 rounded border border-white/10 bg-white/10 px-1.5 py-0.5">
               <span className="text-[10px] font-bold text-white/80">{item.ratingLabel}</span>
@@ -87,13 +87,13 @@ export function MenuItemCardView({
         </div>
 
         {item.description ? (
-          <p className="line-clamp-2 text-xs font-medium leading-relaxed tracking-wide text-white/50 sm:text-sm">
+          <p className="line-clamp-2 text-xs font-medium leading-relaxed tracking-wide text-[#c4b5a5] sm:text-sm">
             {item.description}
           </p>
         ) : null}
 
         {item.metaLabels.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-white/45">
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#c4b5a5]/80">
             {item.metaLabels.map((label) => (
               <span key={label}>{label}</span>
             ))}

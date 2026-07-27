@@ -68,12 +68,12 @@ export function DiscoveryCollectionRail({
       {showHeader ? (
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-white">{collection.title}</h2>
+            <h2 className="text-lg font-bold tracking-tight text-[#fff8f0]">{collection.title}</h2>
             {collection.subtitle ? (
-              <p className="mt-0.5 text-xs text-white/50">{collection.subtitle}</p>
+              <p className="mt-0.5 text-xs text-[#c4b5a5]">{collection.subtitle}</p>
             ) : null}
           </div>
-          <span className="text-xs font-medium text-white/45">{restaurants.length} kitchens</span>
+          <span className="text-xs font-semibold text-[#c4b5a5]/70">{restaurants.length} kitchens</span>
         </div>
       ) : null}
 

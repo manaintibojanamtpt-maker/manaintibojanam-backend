@@ -22,10 +22,10 @@ export function OrderBhojanHomeTrustStrip() {
             className="min-w-[9.5rem] shrink-0 !rounded-2xl !p-4 md:min-w-0"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF7A00]/15">
-                <Icon className="h-5 w-5 text-[#FF7A00]" aria-hidden />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e85d04]/15">
+                <Icon className="h-5 w-5 text-[#e85d04]" aria-hidden />
               </div>
-              <span className="text-sm font-bold text-white">{item.label}</span>
+              <span className="text-sm font-semibold text-[#fff8f0]">{item.label}</span>
             </div>
           </GlassCard>
         );

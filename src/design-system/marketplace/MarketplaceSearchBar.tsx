@@ -58,7 +58,7 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
             onKeyDown={onAutocompleteKeyDown}
             placeholder="Search restaurants, cuisines, or areas"
             disabled={disabled}
-            className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-10 pr-10 text-sm text-white placeholder:text-white/40 focus:border-[#FF7A00]/50 focus:outline-none disabled:opacity-60"
+            className="w-full rounded-2xl border border-white/10 bg-black/50 py-3 pl-10 pr-10 text-sm text-[#fff8f0] placeholder:text-white/40 focus:border-[#e85d04] focus:outline-none disabled:opacity-60"
             aria-label="Search restaurants"
             aria-expanded={showAutocomplete}
             aria-controls={showAutocomplete ? 'marketplace-search-autocomplete-listbox' : undefined}
@@ -81,7 +81,7 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
         <button
           type="submit"
           disabled={disabled || !value.trim()}
-          className="shrink-0 rounded-xl bg-[#FF7A00] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#ff8f2b] disabled:opacity-50"
+          className="shrink-0 rounded-2xl bg-[#e85d04] px-5 py-3 text-sm font-semibold text-[#fff8f0] transition hover:bg-[#f07020] disabled:opacity-50"
         >
           Search
         </button>

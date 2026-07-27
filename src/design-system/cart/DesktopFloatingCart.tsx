@@ -27,9 +27,9 @@ const DesktopFloatingCart = () => {
           >
             <div className="p-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-white/[0.02]">
               <div className="flex items-center gap-3">
-                <ShoppingCart className="text-orange-500" size={20} />
+                <ShoppingCart className="text-[#e85d04]" size={20} />
                 <h3 className="font-bold text-gray-900 dark:text-white">Your Cart</h3>
-                <span className="bg-orange-500 text-white text-[10px] font-black rounded-full px-2 py-0.5">{itemCount} items</span>
+                <span className="bg-[#e85d04] text-white text-[10px] font-black rounded-full px-2 py-0.5">{itemCount} items</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
                 <X size={20} />
@@ -42,14 +42,14 @@ const DesktopFloatingCart = () => {
                   <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover border border-gray-100 dark:border-white/5" />
                   <div className="flex-1">
                     <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">{item.name}</h4>
-                    <p className="text-xs font-bold text-orange-500">{formatPrice(item.price)}</p>
+                    <p className="text-xs font-bold text-[#e85d04]">{formatPrice(item.price)}</p>
                   </div>
                   <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-1.5">
                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="text-gray-500 hover:text-red-500">
                       <Minus size={14} />
                     </button>
                     <span className="text-xs font-black w-4 text-center dark:text-white">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="text-orange-500">
+                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="text-[#e85d04]">
                       <Plus size={14} />
                     </button>
                   </div>
@@ -64,7 +64,7 @@ const DesktopFloatingCart = () => {
               </div>
               <button
                 onClick={() => navigate(`${basePath}/checkout`)}
-                className="w-full bg-orange-500 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/30"
+                className="w-full bg-[#e85d04] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-[#c24e03] transition-colors shadow-lg shadow-[0_12px_24px_-8px_rgba(232,93,4,0.35)]"
               >
                 Proceed to Checkout <ArrowRight size={18} />
               </button>
@@ -79,7 +79,7 @@ const DesktopFloatingCart = () => {
           >
             <div className="relative">
               <ShoppingCart size={24} />
-              <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-black dark:border-white">
+              <span className="absolute -top-2 -right-2 bg-[#e85d04] text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-black dark:border-white">
                 {itemCount}
               </span>
             </div>

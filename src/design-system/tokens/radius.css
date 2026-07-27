@@ -1,11 +1,11 @@
-/** Border radius tokens from founder MIB cards and buttons */
+/** Border radius — premium but not bubbly (16–20px cards) */
 :root {
-  --ds-radius-sm: 0.75rem;
-  --ds-radius-md: 1rem;
-  --ds-radius-lg: 1.25rem;
-  --ds-radius-xl: 1.5rem;
-  --ds-radius-2xl: 1.75rem;
-  --ds-radius-3xl: 2rem;
+  --ds-radius-sm: 0.5rem;
+  --ds-radius-md: 0.75rem;
+  --ds-radius-lg: 1rem;
+  --ds-radius-xl: 1.25rem;
+  --ds-radius-2xl: 1.25rem;
+  --ds-radius-3xl: 1.5rem;
   --ds-radius-pill: 9999px;
-  --mib-radius-card: 1.75rem;
+  --mib-radius-card: 1.25rem;
 }
