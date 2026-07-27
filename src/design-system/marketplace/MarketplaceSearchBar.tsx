@@ -71,10 +71,10 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
             <button
               type="button"
               onClick={onClear}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/50 hover:bg-white/10 hover:text-white"
+              className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-white/50 hover:bg-white/10 hover:text-white touch-manipulation"
               aria-label="Clear search"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden />
             </button>
           )}
         </div>

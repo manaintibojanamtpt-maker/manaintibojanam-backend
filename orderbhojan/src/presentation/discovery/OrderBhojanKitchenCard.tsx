@@ -123,7 +123,7 @@ export function OrderBhojanKitchenCard({
   const favoriteSlot = (
     <button
       type="button"
-      className={`flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--mib-border,white/10)] bg-black/50 backdrop-blur-md transition hover:border-[#e85d04]/40 ${
+      className={`flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--mib-border,white/10)] bg-black/50 backdrop-blur-md transition hover:border-[#e85d04]/40 touch-manipulation ${
         favorite ? 'text-[#e85d04]' : 'text-white/70'
       }`}
       aria-label={

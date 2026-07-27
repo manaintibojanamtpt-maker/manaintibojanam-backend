@@ -116,13 +116,16 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
                 {isActive && !reducedMotion && (
                   <m.div
                     layoutId="obActiveBar"
-                    className="absolute -bottom-1 w-1 h-1 bg-[#e85d04] rounded-full"
+                    className="absolute -bottom-0.5 h-1 w-5 rounded-full bg-[#e85d04] shadow-[0_0_10px_rgba(232,93,4,0.65)]"
                     transition={{ type: 'spring', bounce: 0.3, duration: 0.6 }}
                   />
                 )}
 
                 {isActive && reducedMotion ? (
-                  <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-[#e85d04]" aria-hidden />
+                  <span
+                    className="absolute -bottom-0.5 h-1 w-5 rounded-full bg-[#e85d04]"
+                    aria-hidden
+                  />
                 ) : null}
 
                 <div className="relative z-10 flex flex-col items-center gap-1.5">
@@ -136,8 +139,10 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
                           }
                     }
                     className={cn(
-                      'transition-colors duration-300',
-                      isActive ? 'text-[#e85d04]' : 'text-[#c4b5a5] group-active:text-[#fff8f0]/80',
+                      'rounded-xl px-2 py-1 transition-colors duration-300',
+                      isActive
+                        ? 'bg-[#e85d04]/15 text-[#e85d04]'
+                        : 'text-[#c4b5a5] group-active:text-[#fff8f0]/80',
                     )}
                   >
                     <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
@@ -155,7 +160,7 @@ export const MarketplaceBottomNavView: React.FC<MarketplaceBottomNavViewProps> =
                 {isActive && !reducedMotion ? (
                   <m.div
                     layoutId="obNavGlow"
-                    className="absolute inset-0 bg-[#e85d04]/8 blur-xl rounded-full"
+                    className="absolute inset-0 rounded-full bg-[#e85d04]/12 blur-xl"
                     transition={{ duration: 1 }}
                   />
                 ) : null}

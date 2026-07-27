@@ -124,11 +124,11 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#f4a261]">
               Deal live now
             </p>
-            <p className="mt-1 text-lg font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-xl">
+            <p className="mt-1 text-lg font-extrabold leading-tight tracking-[-0.02em] text-[#fff8f0] sm:text-xl">
               {activeSlide.offerBadge}
             </p>
             {activeSlide.restaurantName ? (
-              <p className="mt-1 text-xs font-medium text-white/76">{activeSlide.restaurantName}</p>
+              <p className="mt-1 text-xs font-medium text-[#fff8f0]/90">{activeSlide.restaurantName}</p>
             ) : null}
           </div>
         </div>

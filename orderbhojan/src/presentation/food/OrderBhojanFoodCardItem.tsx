@@ -37,10 +37,10 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
   const setQuantity = useCartStore((s) => s.setQuantity);
 
   return (
-    <div className="flex h-10 w-full items-center justify-between rounded-full border border-[#e85d04]/35 bg-[#120d0c] px-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+    <div className="flex h-11 w-full items-center justify-between rounded-full border border-[#e85d04]/35 bg-[#120d0c] px-1 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10 touch-manipulation"
+        className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 touch-manipulation"
         aria-label={`Decrease quantity of ${foodName}`}
         onClick={(e) => {
           e.stopPropagation();
@@ -52,7 +52,7 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
       <span className="min-w-[1.5rem] text-center text-sm font-black tabular-nums text-[#fff8f0]">{quantity}</span>
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10 touch-manipulation"
+        className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 touch-manipulation"
         aria-label={`Increase quantity of ${foodName}`}
         onClick={(e) => {
           e.stopPropagation();
@@ -118,7 +118,7 @@ export const OrderBhojanFoodCardItem = memo(function OrderBhojanFoodCardItem({
       <SoftButton
         type="button"
         size="compact"
-        className={`w-full !rounded-full !border !border-[#e85d04]/50 !bg-[#e85d04] !py-2 !text-xs !font-black !uppercase !tracking-widest !text-[#fff8f0] !shadow-[0_6px_16px_-4px_rgba(232,93,4,0.55)] hover:!bg-[#f0701a] active:!scale-95${fly ? ' scale-95' : ''}`}
+        className={`w-full !min-h-11 !rounded-full !border !border-[#e85d04]/50 !bg-[#e85d04] !py-2.5 !text-xs !font-black !uppercase !tracking-widest !text-[#fff8f0] !shadow-[0_6px_16px_-4px_rgba(232,93,4,0.55)] hover:!bg-[#f0701a] active:!scale-95 touch-manipulation${fly ? ' scale-95' : ''}`}
         disabled={!food.availability}
         onClick={(e: MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();

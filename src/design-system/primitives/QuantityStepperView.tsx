@@ -28,7 +28,7 @@ export function QuantityStepperView({
     >
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-full text-[#f4a261] transition hover:bg-white/10 disabled:opacity-40"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-[#f4a261] transition hover:bg-white/10 disabled:opacity-40 touch-manipulation"
         onClick={decrease}
         disabled={value <= min}
         aria-label="Decrease quantity"
@@ -40,7 +40,7 @@ export function QuantityStepperView({
       </span>
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-full text-[#f4a261] transition hover:bg-white/10 disabled:opacity-40"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-[#f4a261] transition hover:bg-white/10 disabled:opacity-40 touch-manipulation"
         onClick={increase}
         disabled={value >= max}
         aria-label="Increase quantity"

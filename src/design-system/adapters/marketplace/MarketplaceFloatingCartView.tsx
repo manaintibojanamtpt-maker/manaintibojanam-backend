@@ -97,23 +97,23 @@ export const MarketplaceFloatingCartView: React.FC<MarketplaceFloatingCartViewPr
                       <p className="truncate text-xs font-bold text-[#fff8f0]">{item.name}</p>
                       <p className="text-[10px] font-bold text-[#e85d04]">{item.priceLabel}</p>
                     </div>
-                    <div className="flex items-center gap-2 rounded-full border border-[#e85d04]/20 bg-[#050403]/80 p-1">
+                    <div className="flex items-center gap-1 rounded-full border border-[#e85d04]/20 bg-[#050403]/80 p-0.5">
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                        className="flex h-8 w-8 items-center justify-center text-white/60 hover:text-red-400 touch-manipulation"
+                        className="flex h-10 w-10 items-center justify-center text-white/60 hover:text-red-400 touch-manipulation"
                         aria-label="Decrease quantity"
                       >
-                        <Minus size={12} strokeWidth={3} />
+                        <Minus size={12} strokeWidth={3} aria-hidden />
                       </button>
                       <span className="w-4 text-center text-xs font-black text-[#fff8f0]">{item.quantity}</span>
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                        className="flex h-8 w-8 items-center justify-center text-[#e85d04] touch-manipulation"
+                        className="flex h-10 w-10 items-center justify-center text-[#e85d04] touch-manipulation"
                         aria-label="Increase quantity"
                       >
-                        <Plus size={12} strokeWidth={3} />
+                        <Plus size={12} strokeWidth={3} aria-hidden />
                       </button>
                     </div>
                   </div>

@@ -190,7 +190,7 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
           ))
         : null}
 
-      <div className="h-28" aria-hidden />
+      <div className="ob-menu-cart-spacer" aria-hidden />
 
       <OrderBhojanFoodFloatingCart />
 

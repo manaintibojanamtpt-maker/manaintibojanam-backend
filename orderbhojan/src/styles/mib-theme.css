@@ -6,9 +6,17 @@
   --ob-safe-left: env(safe-area-inset-left, 0px);
   --ob-safe-right: env(safe-area-inset-right, 0px);
   --bottom-bar-height: 72px;
+  /* Floating cart sits at bottom: 96px + safe, height ~56px (h-14). */
+  --ob-floating-cart-offset: 96px;
+  --ob-floating-cart-height: 56px;
   --ob-fixed-cta-height: 132px;
-  --ob-chrome-bottom: calc(var(--bottom-bar-height) + var(--ob-safe-bottom) + 16px);
+  /* Clear nav + floating cart stack so last kitchen cards stay tappable. */
+  --ob-chrome-bottom: calc(
+    var(--ob-floating-cart-offset) + var(--ob-floating-cart-height) + 12px + var(--ob-safe-bottom)
+  );
   --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 16px);
+  /* Menu sticky View cart bar (padding + card + safe). */
+  --ob-menu-cart-spacer: calc(8.5rem + var(--ob-safe-bottom));
   --mib-bg: #050403;
   --mib-surface: #120d0c;
   --mib-surface-strong: #1a1412;
@@ -359,6 +367,12 @@ html.ob-native .ob-transactional-shell {
   opacity: 0.92;
 }
 
+.ob-menu-cart-spacer {
+  height: var(--ob-menu-cart-spacer);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 .ob-fixed-cta-bar {
   position: fixed;
   bottom: 0;
@@ -576,10 +590,19 @@ html.ob-native .ob-auth-shell {
 
 .ds-discovery-hero__offer-card {
   background:
-    linear-gradient(145deg, rgba(18, 13, 12, 0.92), rgba(8, 6, 5, 0.88));
-  border: 1px solid var(--mib-border-strong);
-  box-shadow: var(--mib-shadow-card), var(--mib-shadow-glow);
-  backdrop-filter: blur(12px);
+    linear-gradient(145deg, rgba(8, 6, 5, 0.96), rgba(18, 13, 12, 0.94));
+  border: 1px solid rgba(232, 93, 4, 0.45);
+  box-shadow:
+    var(--mib-shadow-card),
+    var(--mib-shadow-glow),
+    0 0 0 1px rgba(0, 0, 0, 0.45) inset;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
+}
+
+.ds-discovery-hero__offer-card p {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
 }
 
 @media (prefers-reduced-motion: reduce) {
