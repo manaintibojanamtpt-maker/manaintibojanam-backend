@@ -114,5 +114,12 @@ export function mergeHomeHeroSlides(
     return foodSlides.slice(0, MAX_HERO_SLIDES);
   }
 
+  // Superadmin-configured food slides (esp. custom imageUrl uploads) must stay
+  // contiguous in saved order — do not interleave discovery offers into them.
+  const hasCustomConfiguredImages = foodSlides.some((slide) => Boolean(slide.imageUrl?.trim()));
+  if (hasCustomConfiguredImages) {
+    return [...foodSlides, ...offerSlides].slice(0, MAX_HERO_SLIDES);
+  }
+
   return interleaveHeroSlides(foodSlides, offerSlides, MAX_HERO_SLIDES);
 }

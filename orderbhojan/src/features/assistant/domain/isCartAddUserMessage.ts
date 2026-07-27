@@ -38,6 +38,16 @@ const ADD_PATTERNS: readonly RegExp[] = [
   /^(?:please\s+)?add\s+(\d+)\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
   /^(?:please\s+)?add\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
   /^(?:please\s+)?(?:put|include)\s+(\d+)\s+(.+?)\s+in\s+(?:my\s+)?cart\s*[.!]?$/i,
+  // I want 2 Andhra Veg Thali from …
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(\d+)\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    'i',
+  ),
+  // I want Andhra Veg Thali / order masala dosa from …
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    'i',
+  ),
   // add Masala Dosa from Inti bhojanam
   new RegExp(String.raw`^(?:please\s+)?add\s+(.+?)(?:\s+${FROM_SEP}(.+))$`, 'i'),
   // add Masala Dosa
@@ -49,6 +59,8 @@ function cleanItemName(raw: string): string {
   return raw
     .replace(/\bto\s+(?:my\s+)?cart\b/gi, '')
     .replace(/\b(?:please|quantity|qty)\b/gi, '')
+    // ASR often prefixes dishes with articles: “An Andhra Veg Thali”.
+    .replace(/^(?:a|an|the)\s+/i, '')
     .replace(/[.!?]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();

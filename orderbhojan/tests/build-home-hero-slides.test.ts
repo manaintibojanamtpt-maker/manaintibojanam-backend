@@ -31,6 +31,27 @@ describe('buildHomeHeroSlides', () => {
     assert.equal(merged[1]?.ctaPath, '/restaurant/test-kitchen');
   });
 
+  it('keeps superadmin custom imageUrl food slides contiguous before offers', () => {
+    const config = {
+      ...DEFAULT_HOME_HERO_CONFIG,
+      slides: DEFAULT_HOME_HERO_CONFIG.slides.map((slide, index) =>
+        index === 0
+          ? { ...slide, imageUrl: 'https://cdn.example.com/owner-hero-1.jpg', assetId: undefined }
+          : slide,
+      ),
+    };
+    const merged = mergeHomeHeroSlides(config, [sampleOfferRestaurant]);
+    const foodIds = merged.filter((s) => s.kind === 'food').map((s) => s.id);
+    assert.deepEqual(
+      foodIds,
+      config.slides.filter((s) => s.kind !== 'offer').map((s) => s.id),
+    );
+    assert.equal(merged[0]?.imageUrl, 'https://cdn.example.com/owner-hero-1.jpg');
+    const firstOfferIdx = merged.findIndex((s) => s.kind === 'offer');
+    assert.ok(firstOfferIdx > 0);
+    assert.ok(merged.slice(0, firstOfferIdx).every((s) => s.kind === 'food'));
+  });
+
   it('respects includeDiscoveryOffers=false', () => {
     const merged = mergeHomeHeroSlides(
       { ...DEFAULT_HOME_HERO_CONFIG, includeDiscoveryOffers: false },

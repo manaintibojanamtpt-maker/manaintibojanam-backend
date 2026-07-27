@@ -202,6 +202,39 @@ describe('voice task hardening — screenshot regressions', () => {
     );
   });
 
+  it('send() router: Confirm Confirm applies validated plan (no generic chat)', () => {
+    assert.equal(
+      decideVoiceCartTurn({
+        message: 'Confirm Confirm',
+        pending: mockValidation('validated'),
+      }).kind,
+      'apply_validated_confirm',
+    );
+  });
+
+  it('send() router: An Andhra Veg Thali clarifies pending dish', () => {
+    const d = decideVoiceCartTurn({
+      message: 'An Andhra Veg Thali',
+      pending: mockValidation('needs_clarification'),
+    });
+    assert.equal(d.kind, 'clarify_dish');
+    if (d.kind === 'clarify_dish') {
+      assert.equal(d.dishName, 'Andhra Veg Thali');
+    }
+  });
+
+  it('send() router: bare dish name starts cart_add_intent when idle', () => {
+    const d = decideVoiceCartTurn({
+      message: 'Andhra Veg Thali',
+      pending: null,
+    });
+    assert.equal(d.kind, 'cart_add_intent');
+    if (d.kind === 'cart_add_intent') {
+      assert.equal(d.itemName, 'Andhra Veg Thali');
+      assert.equal(d.quantity, 1);
+    }
+  });
+
   it('wires decideVoiceCartTurn + prefetch + obr_ slug into conversation send()', () => {
     const src = readFileSync(
       path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),

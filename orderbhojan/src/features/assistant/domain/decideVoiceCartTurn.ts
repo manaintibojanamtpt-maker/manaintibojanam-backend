@@ -111,6 +111,19 @@ export function decideVoiceCartTurn(input: {
     };
   }
 
+  // Bare dish name (search / availability path) → start validate+confirm cart plan.
+  if (!pending) {
+    const dishOnly = parseDishClarificationMessage(message);
+    if (dishOnly && dishOnly.split(/\s+/).length >= 2) {
+      return {
+        kind: 'cart_add_intent',
+        quantity: 1,
+        itemName: dishOnly,
+        retainPending: false,
+      };
+    }
+  }
+
   if (
     shouldRetainPendingCartPlan({
       pendingStatus: pending?.status,

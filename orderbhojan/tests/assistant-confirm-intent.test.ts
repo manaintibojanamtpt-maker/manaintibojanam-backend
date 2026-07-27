@@ -18,6 +18,20 @@ describe('assistant confirm / voice-agent intents', () => {
     assert.equal(isConfirmCartUserMessage('masala dosa is available'), false);
   });
 
+  it('accepts ASR-repeated confirm tokens without falling through to chat', () => {
+    assert.equal(isConfirmCartUserMessage('Confirm Confirm'), true);
+    assert.equal(isConfirmCartUserMessage('confirm confirm confirm'), true);
+    assert.equal(isConfirmCartUserMessage('yes confirm'), true);
+    assert.equal(isConfirmCartUserMessage('ok ok'), true);
+    assert.equal(
+      isValidatedCartConfirmMessage('Confirm Confirm', {
+        status: 'validated',
+        valid: true,
+      }),
+      true,
+    );
+  });
+
   it('only treats yes as cart confirm when plan is validated', () => {
     assert.equal(
       isValidatedCartConfirmMessage('yes', { status: 'needs_clarification', valid: false }),

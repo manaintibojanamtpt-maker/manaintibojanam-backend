@@ -26,7 +26,9 @@ function normalize(value: string): string {
 
 function canonicalize(value: string): string {
   return normalize(value)
+    .replace(/^(?:a|an|the)\s+/i, '')
     .split(' ')
+    .filter((t) => t !== 'a' && t !== 'an' && t !== 'the')
     .map((t) => FOOD_TOKEN_ALIASES[t] ?? t)
     .join(' ');
 }

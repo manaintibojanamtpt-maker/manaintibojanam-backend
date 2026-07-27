@@ -29,6 +29,8 @@ describe('maturity P0 — first paint + pricing trust', () => {
   it('seeds home hero with DEFAULT_HOME_HERO_CONFIG for instant paint', () => {
     const hero = readSrc('src/features/experience/hooks/useHomeHeroConfig.ts');
     assert.match(hero, /initialData:\s*DEFAULT_HOME_HERO_CONFIG/);
+    assert.match(hero, /initialDataUpdatedAt:\s*0/);
+    assert.match(hero, /refetchOnWindowFocus:\s*true/);
   });
 
   it('allows guest browse on home (no auth redirect after session ready)', () => {

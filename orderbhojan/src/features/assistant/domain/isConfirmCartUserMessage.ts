@@ -1,5 +1,8 @@
 /** Spoken/typed intents that mean “apply the pending cart plan”. */
 
+const CONFIRM_TOKEN_RE =
+  /^(?:yes|yeah|yep|yup|ok|okay|sure|please|confirm|confirmed|go\s*ahead|do\s*it|add\s*it|add\s*them|proceed|apply|sounds?\s*good|that'?s?\s*fine|haan|ha|sahi)$/i;
+
 const CONFIRM_RE =
   /^(?:yes|yeah|yep|yup|ok|okay|sure|please|confirm|confirmed|go\s*ahead|do\s*it|add\s*it|add\s*them|proceed|apply|sounds?\s*good|that'?s?\s*fine|haan|ha|sahi)\b[\s!.]*$/i;
 
@@ -9,10 +12,27 @@ const DISCARD_RE =
 const STOP_AGENT_RE =
   /^(?:stop|stop\s*listening|stop\s*voice|end\s*voice|goodbye|bye|exit\s*voice|hang\s*up)\b[\s!.]*$/i;
 
+/** Normalize ASR noise: trailing punctuation, extra spaces. */
+function normalizeConfirmText(message: string): string {
+  return message
+    .trim()
+    .replace(/[.!,]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * True when the utterance is only confirm-family tokens.
+ * Accepts ASR repeats like “Confirm Confirm” or “yes confirm”.
+ */
 export function isConfirmCartUserMessage(message: string): boolean {
-  const text = message.trim();
-  if (!text || text.length > 48) return false;
-  return CONFIRM_RE.test(text);
+  const text = normalizeConfirmText(message);
+  if (!text || text.length > 64) return false;
+  if (CONFIRM_RE.test(text)) return true;
+
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length === 0 || parts.length > 6) return false;
+  return parts.every((part) => CONFIRM_TOKEN_RE.test(part));
 }
 
 /**

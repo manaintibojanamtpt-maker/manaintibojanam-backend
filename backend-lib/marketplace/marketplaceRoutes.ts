@@ -303,7 +303,8 @@ export function registerMarketplaceRoutes(
   app.get(`${prefix}/platform/home-hero`, async (_req: Request, res: Response) => {
     try {
       const config = await readPlatformHomeHeroConfig(db);
-      sendMarketplaceJson(res, success(config), { cacheMaxAgeSec: 300 });
+      // Short TTL so superadmin OrderBhojan home-hero edits reach customers quickly.
+      sendMarketplaceJson(res, success(config), { cacheMaxAgeSec: 60 });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load home hero config';
       res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });

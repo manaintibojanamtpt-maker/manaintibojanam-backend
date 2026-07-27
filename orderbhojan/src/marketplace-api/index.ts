@@ -59,7 +59,8 @@ export class MarketplaceApiClient {
   homeHero(): Promise<HomeHeroConfig> {
     return this.http.request<HomeHeroConfig>({
       path: `${MARKETPLACE_PREFIX}/platform/home-hero`,
-      bypassHttpCache: false,
+      // Superadmin edits must not sit behind HTTP cache for 5 minutes.
+      bypassHttpCache: true,
     });
   }
 
