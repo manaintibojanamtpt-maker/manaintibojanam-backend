@@ -6,7 +6,7 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-512.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#070504" />
+    <meta name="theme-color" content="#050403" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,7 +18,7 @@
       if (window.location.protocol === 'capacitor:') {
         window.__SKIP_SPLASH__ = true;
       }
-      var EXPECTED_PWA_CACHE_PREFIX = 'orderbhojan-pwa-v4';
+      var EXPECTED_PWA_CACHE_PREFIX = 'orderbhojan-pwa-v5';
       if ('caches' in window) {
         caches.keys().then(function (keys) {
           keys.forEach(function (key) {
@@ -52,7 +52,7 @@
     <div id="root">
       <div
         id="ob-boot-shell"
-        style="min-height:100dvh;background:#070504;color:#fffaf3;font-family:Figtree,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(1rem,env(safe-area-inset-top)) 1rem max(1rem,env(safe-area-inset-bottom))"
+        style="min-height:100dvh;background:#050403;color:#fff8f0;font-family:Figtree,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(1rem,env(safe-area-inset-top)) 1rem max(1rem,env(safe-area-inset-bottom))"
         aria-hidden="true"
       >
         <img
@@ -60,7 +60,7 @@
           alt=""
           width="88"
           height="88"
-          style="width:5.5rem;height:5.5rem;border-radius:1.25rem;box-shadow:0 0 40px -8px rgba(255,107,53,0.55)"
+          style="width:5.5rem;height:5.5rem;border-radius:1.25rem;box-shadow:0 0 40px -8px rgba(232,93,4,0.55)"
         />
         <p style="margin:1rem 0 0;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.55)">
           Home Food · Faster · Healthier

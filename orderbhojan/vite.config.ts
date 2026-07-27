@@ -80,7 +80,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        cacheId: 'orderbhojan-pwa-v4',
+        cacheId: 'orderbhojan-pwa-v5',
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
         globIgnores: ['**/hero/**', '**/categories/**', 'offline.html'],
         // Serve the SPA shell on navigation failures — not the dead-end offline page.
