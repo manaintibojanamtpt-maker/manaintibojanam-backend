@@ -53,6 +53,10 @@ export interface DeliveryProviderCapabilityRow {
   readonly credentialFieldHelp: readonly CredentialFieldHelp[];
   readonly onboardingSteps: readonly OnboardingStep[];
   readonly statusBadgeHint: string;
+  /** When true, UI must show partner-approval messaging even if credentials are saved. */
+  readonly partnerApprovalRequired?: boolean;
+  /** Honest note about live-gate / missing docs — shown to merchants. */
+  readonly liveReadinessNote?: string;
 }
 
 export const DELIVERY_PROVIDER_CAPABILITY_MATRIX: readonly DeliveryProviderCapabilityRow[] = [
@@ -113,7 +117,10 @@ export const DELIVERY_PROVIDER_CAPABILITY_MATRIX: readonly DeliveryProviderCapab
         body: 'Paste the three values below, tap Connect, then Test connection. Raw secrets stay on the server only.',
       },
     ],
-    statusBadgeHint: 'After connect: quote, auto-dispatch, tracking, cancel.',
+    statusBadgeHint: 'After connect: quote, auto-dispatch, tracking, cancel (live flag gated).',
+    partnerApprovalRequired: false,
+    liveReadinessNote:
+      'Live Uber booking stays off until the platform sets UBER_DIRECT_LIVE=1. Connecting now prepares your kitchen safely.',
   },
   {
     id: 'porter',
@@ -126,6 +133,9 @@ export const DELIVERY_PROVIDER_CAPABILITY_MATRIX: readonly DeliveryProviderCapab
     merchantSummary:
       'Porter auto-booking needs partner API approval. Until then, keep using manual tracking links on Dispatch.',
     requiredCredentialFields: ['apiKey', 'merchantAccountId'],
+    partnerApprovalRequired: true,
+    liveReadinessNote:
+      'Connection UI may save credentials, but live dispatch cannot proceed until Porter approves API access and official docs are confirmed.',
     credentialFieldHelp: [
       {
         key: 'apiKey',

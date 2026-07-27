@@ -40,7 +40,15 @@ import {
   formatCartPlanSummarySpeech,
   summarizePendingCartPlan,
 } from '../domain/summarizePendingCartPlan';
-import { captureNativeAndroidStt } from '../infrastructure/nativeAndroidSttBridge';
+import {
+  captureNativeAndroidStt,
+  isNativeAndroidSttAvailable,
+  nativeSttCancelListening,
+} from '../infrastructure/nativeAndroidSttBridge';
+import {
+  nextVoiceRuntimeState,
+  type VoiceRuntimeState,
+} from '../domain/voiceRuntimeState';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
 import { useAiNativeSttFeature } from '../hooks/useAiNativeSttFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
@@ -161,6 +169,7 @@ export function useAssistantConversation() {
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
   const voiceAbortRef = useRef<AbortController | null>(null);
   const voiceAgentActiveRef = useRef(false);
+  const voiceRuntimeStateRef = useRef<VoiceRuntimeState>('idle');
   const pendingValidationRef = useRef<CartPlanValidationResult | null>(null);
   const pendingPlanRestaurantRef = useRef<{
     restaurantId: string;
@@ -986,13 +995,20 @@ export function useAssistantConversation() {
   );
 
   const cancelVoice = useCallback(() => {
+    voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+      voiceRuntimeStateRef.current,
+      'BARGE_IN',
+    );
     voiceAbortRef.current?.abort();
+    void nativeSttCancelListening();
   }, []);
 
   const stopVoiceAgent = useCallback(() => {
     voiceAgentActiveRef.current = false;
     setVoiceAgentActive(false);
+    voiceRuntimeStateRef.current = nextVoiceRuntimeState(voiceRuntimeStateRef.current, 'STOP');
     voiceAbortRef.current?.abort();
+    void nativeSttCancelListening();
     setListening(false);
     setSpeaking(false);
   }, []);
@@ -1031,35 +1047,86 @@ export function useAssistantConversation() {
       readonly agentMode?: boolean;
     }): Promise<'ok' | 'stop' | 'abort' | 'error' | 'timeout'> => {
       if (!voiceEnabled) return 'error';
-      if (!isVoiceCaptureAvailable()) {
-        setError('Speech recognition is not available on this device/browser.');
+      const canUseNative =
+        nativeSttEnabled && isNativeAndroidSttAvailable();
+      if (!canUseNative && !isVoiceCaptureAvailable()) {
+        setError(
+          'Speech recognition is not available on this device. Type your request, or install the latest OrderBhojan Android app for native voice.',
+        );
         return 'error';
       }
 
       // Barge-in: stop any in-flight TTS before opening the mic.
+      voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+        voiceRuntimeStateRef.current,
+        'BARGE_IN',
+      );
       voiceAbortRef.current?.abort();
+      void nativeSttCancelListening();
       const ac = new AbortController();
       voiceAbortRef.current = ac;
       setSpeaking(false);
       setListening(true);
       setError(null);
+      voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+        voiceRuntimeStateRef.current,
+        'START_LISTEN',
+      );
       const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
 
       try {
-        const native = await captureNativeAndroidStt({
-          enabled: nativeSttEnabled,
-          signal: ac.signal,
-          lang: 'en-IN',
-        });
-        const { transcript } = native
-          ? { transcript: native.transcript }
-          : await captureVoiceTranscript({
-              signal: ac.signal,
-              platform: 'web',
-              // Agent mode: longer window so users can speak naturally after TTS.
-              timeoutMs: agentMode ? 14_000 : 10_000,
+        let transcript: string | undefined;
+        try {
+          const native = await captureNativeAndroidStt({
+            enabled: canUseNative,
+            signal: ac.signal,
+            lang: 'en-IN',
+          });
+          if (native?.transcript) {
+            transcript = native.transcript;
+          }
+        } catch (nativeErr) {
+          // Permission denied → stop; other native failures fall through to Web Speech.
+          if (
+            nativeErr instanceof AssistantApiError &&
+            nativeErr.code === 'AI_VOICE_PERMISSION_DENIED'
+          ) {
+            throw nativeErr;
+          }
+          if (
+            nativeErr instanceof AssistantApiError &&
+            (nativeErr.code === 'AI_VOICE_ABORTED' ||
+              (nativeErr.code === 'AI_VOICE_EMPTY' && !isVoiceCaptureAvailable()))
+          ) {
+            throw nativeErr;
+          }
+        }
+        if (!transcript) {
+          if (!isVoiceCaptureAvailable()) {
+            throw new AssistantApiError({
+              code: 'AI_VOICE_UNSUPPORTED',
+              message:
+                'Native voice failed and Web Speech is unavailable. Type your request instead.',
+              retryable: false,
             });
+          }
+          const web = await captureVoiceTranscript({
+            signal: ac.signal,
+            platform: 'web',
+            // Agent mode: longer window so users can speak naturally after TTS.
+            timeoutMs: agentMode ? 14_000 : 10_000,
+          });
+          transcript = web.transcript;
+        }
         setListening(false);
+        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+          voiceRuntimeStateRef.current,
+          'FINAL',
+        );
+        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+          voiceRuntimeStateRef.current,
+          'THINK',
+        );
 
         const coords = activeLocation?.coordinates;
         const orderingContext = buildOrderingAssistContext({
@@ -1083,10 +1150,22 @@ export function useAssistantConversation() {
         }
 
         const reply = await send(corrected);
+        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+          voiceRuntimeStateRef.current,
+          'SPEAK',
+        );
         await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current);
+        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+          voiceRuntimeStateRef.current,
+          'IDLE',
+        );
         return 'ok';
       } catch (err) {
         setListening(false);
+        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+          voiceRuntimeStateRef.current,
+          'ERROR',
+        );
         if (err instanceof AssistantApiError) {
           if (err.code === 'AI_VOICE_ABORTED') return 'abort';
           // Soft-fail timeouts in live agent — re-listen without a scary red banner.
@@ -1094,6 +1173,12 @@ export function useAssistantConversation() {
             if (agentMode) return 'timeout';
             setError(err.message);
             return 'timeout';
+          }
+          if (err.code === 'AI_VOICE_PERMISSION_DENIED') {
+            setError(
+              `${err.message} You can still type your order in chat.`,
+            );
+            return 'error';
           }
           setError(err.message);
           return 'error';

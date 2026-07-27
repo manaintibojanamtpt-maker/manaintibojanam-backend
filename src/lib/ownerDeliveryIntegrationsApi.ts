@@ -31,7 +31,21 @@ export interface DeliveryProviderCapabilityRow {
   credentialFieldHelp?: CredentialFieldHelp[];
   onboardingSteps?: OnboardingStep[];
   statusBadgeHint?: string;
+  partnerApprovalRequired?: boolean;
+  liveReadinessNote?: string;
 }
+
+export type DeliveryProviderReadiness = {
+  provider: DeliveryProviderId;
+  merchantMessage?: string;
+  canLiveDispatch?: boolean;
+  level?: string;
+  approvalState?: string;
+  liveFlagEnabled?: boolean;
+  blockedReasons?: string[];
+  warnings?: string[];
+  missing?: string[];
+};
 
 export interface DeliveryProviderConnectionPublic {
   tenantId: string;
@@ -90,9 +104,32 @@ export async function completeDeliveryConnection(
 }
 
 export async function validateDeliveryConnection(tenantId: string, provider: DeliveryProviderId) {
-  return ownerApiRequest<{ success: boolean; connection: DeliveryProviderConnectionPublic }>(
+  return ownerApiRequest<{
+    success: boolean;
+    connection: DeliveryProviderConnectionPublic;
+    readiness?: DeliveryProviderReadiness;
+  }>(
     'POST',
     `/api/owner/delivery-integrations/${encodeURIComponent(tenantId)}/${provider}/validate`,
+  );
+}
+
+export async function fetchDeliveryProviderReadiness(
+  tenantId: string,
+  provider: DeliveryProviderId,
+) {
+  return ownerApiRequest<{
+    success: boolean;
+    readiness: DeliveryProviderReadiness;
+    connectionSummary: {
+      status: string;
+      hasSecretRef: boolean;
+      errorMessage?: string;
+      lastValidatedAt?: string;
+    } | null;
+  }>(
+    'GET',
+    `/api/owner/delivery-integrations/${encodeURIComponent(tenantId)}/${provider}/readiness`,
   );
 }
 

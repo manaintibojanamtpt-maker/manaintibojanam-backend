@@ -208,6 +208,10 @@ export async function completeConnection(
       } else {
         merchantAccountId = validated.merchantAccountId || merchantAccountId;
         lastValidatedAt = now;
+        // Partner-gated providers: credentials may be stored, but stay pending until live approval.
+        if (row.partnerApprovalRequired || row.maturity === 'partner_access_required') {
+          status = 'pending';
+        }
       }
     }
 
@@ -226,6 +230,20 @@ export async function completeConnection(
     }
   }
 
+  const metadata: Record<string, unknown> = {
+    ...(input.metadata ?? {}),
+    completedAt: now,
+  };
+  if (row.partnerApprovalRequired || row.maturity === 'partner_access_required') {
+    metadata.partnerApprovalRequired = true;
+    metadata.liveDispatchBlockedReason =
+      'Partner API approval / official docs still required before live auto-booking.';
+    metadata.manualFallbackAvailable = true;
+  }
+  if (row.id === 'uber_direct') {
+    metadata.liveDispatchGatedBy = 'UBER_DIRECT_LIVE';
+  }
+
   const record: DeliveryProviderConnectionRecord = {
     tenantId: input.tenantId,
     provider: input.provider,
@@ -236,7 +254,7 @@ export async function completeConnection(
     ...(lastValidatedAt ? { lastValidatedAt } : {}),
     scopes: row.id === 'uber_direct' ? ['eats.deliveries'] : [],
     capabilities: [...row.capabilities],
-    metadata: { ...(input.metadata ?? {}), completedAt: now },
+    metadata,
     ...(errorMessage ? { errorMessage } : {}),
     updatedAt: now,
     updatedBy: input.actorUid,

@@ -1,6 +1,6 @@
 # BhojanOS Delivery Provider — External Dependencies Report
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 ## Architecture summary
 
@@ -39,8 +39,9 @@ Manual OwnerOrders tracking-link dispatch remains the default proven path.
 | Create | `POST https://api.uber.com/v1/customers/{customer_id}/deliveries` |
 | Merchant credentials | Customer ID, Client ID, Client Secret (per merchant Direct account) |
 | Platform env | `UBER_DIRECT_LIVE=1` to enable live network calls; `DELIVERY_INTEGRATION_SECRET_KEY` (64-hex or passphrase) for AES-GCM |
-| Status in BhojanOS | Adapter scaffold implemented; live booking gated |
-| Remaining | Merchant Direct accounts, billing, webhook receiver URL registration, India availability confirmation per city |
+| Status in BhojanOS | Live-readiness checks + owner messaging; createDispatch returns `blocked` when `UBER_DIRECT_LIVE` is off (no fake booked trips) |
+| Readiness API | `GET /api/owner/delivery-integrations/:tenantId/:provider/readiness` |
+| Remaining | Merchant Direct accounts, billing, webhook receiver URL registration, India availability confirmation per city, set `UBER_DIRECT_LIVE=1` only after canary approval |
 
 ---
 
@@ -52,8 +53,8 @@ Manual OwnerOrders tracking-link dispatch remains the default proven path.
 | Placeholder base | `PORTER_API_BASE_URL` (default `https://api.porter.in/v2`) |
 | Credentials scaffold | `apiKey`, `merchantAccountId` |
 | Platform env | `PORTER_LIVE=1` + partner-provisioned key |
-| Status in BhojanOS | Connection + secret storage + blocked live booking until partner access |
-| Remaining | Official OpenAPI/docs, sandbox, webhook auth scheme, SLA for trip status |
+| Status in BhojanOS | Partner-approval lifecycle (`pending` connection + readiness report); live dispatch blocked until approval + `PORTER_LIVE` |
+| Remaining | Official OpenAPI/docs, sandbox, webhook auth scheme, SLA for trip status, partner-provisioned credentials |
 
 ---
 

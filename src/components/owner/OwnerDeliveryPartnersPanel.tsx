@@ -25,7 +25,22 @@ function merchantBadge(
   conn?: DeliveryProviderConnectionPublic,
 ): { label: string; className: string } {
   const status = conn?.status || 'disconnected';
-  if (provider.maturity === 'partner_access_required' && status !== 'connected') {
+  if (
+    provider.partnerApprovalRequired ||
+    provider.maturity === 'partner_access_required'
+  ) {
+    if (status === 'error') {
+      return {
+        label: 'Needs action — reconnect',
+        className: 'bg-red-500/15 text-red-200 border-red-500/30',
+      };
+    }
+    if (status === 'pending' || status === 'connected') {
+      return {
+        label: 'Pending partner approval',
+        className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+      };
+    }
     return {
       label: 'Partner approval required',
       className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
@@ -160,6 +175,17 @@ export function OwnerDeliveryPartnersPanel({ tenantId }: { tenantId: string }) {
                   </p>
                   {provider.statusBadgeHint ? (
                     <p className="text-xs text-white/40 mt-1">{provider.statusBadgeHint}</p>
+                  ) : null}
+                  {provider.liveReadinessNote ? (
+                    <p className="text-xs text-amber-100/70 mt-1 leading-relaxed">
+                      {provider.liveReadinessNote}
+                    </p>
+                  ) : null}
+                  {provider.partnerApprovalRequired ? (
+                    <p className="text-xs text-white/50 mt-1">
+                      Manual tracking fallback stays available on Orders → Dispatch even while
+                      approval is pending.
+                    </p>
                   ) : null}
                   {provider.merchantSetupUrl ? (
                     <a
@@ -304,11 +330,18 @@ export function OwnerDeliveryPartnersPanel({ tenantId }: { tenantId: string }) {
                     onClick={() =>
                       void run(provider.id, async () => {
                         const result = await validateDeliveryConnection(tenantId, provider.id);
+                        const readinessMsg = result.readiness?.merchantMessage;
                         if (result.connection.status === 'connected') {
-                          toast.success('Connection looks good');
+                          toast.success(readinessMsg || 'Connection looks good');
+                        } else if (result.connection.status === 'pending') {
+                          toast.success(
+                            readinessMsg ||
+                              'Saved — live booking still needs partner/platform approval. Manual tracking stays available.',
+                          );
                         } else {
                           toast.error(
                             result.connection.errorMessage ||
+                              readinessMsg ||
                               'Test failed — re-check credentials or partner approval.',
                           );
                         }

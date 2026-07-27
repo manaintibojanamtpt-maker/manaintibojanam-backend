@@ -15,6 +15,10 @@ import type {
   DeliveryQuoteRequest,
   DeliveryQuoteResult,
 } from './types.js';
+import {
+  isUberDirectLiveEnabled,
+  mapUberDirectErrorMessage,
+} from '../uberDirectReadiness.js';
 
 const AUTH_URL = 'https://auth.uber.com/oauth/v2/token';
 const API_BASE = 'https://api.uber.com/v1';
@@ -32,15 +36,17 @@ async function fetchAccessToken(clientId: string, clientSecret: string): Promise
     body,
   });
   if (!res.ok) {
-    throw new Error(`Uber OAuth failed (${res.status})`);
+    throw new Error(mapUberDirectErrorMessage(new Error(`Uber OAuth failed (${res.status})`)));
   }
   const data = (await res.json()) as { access_token?: string };
-  if (!data.access_token) throw new Error('Uber OAuth missing access_token');
+  if (!data.access_token) {
+    throw new Error(mapUberDirectErrorMessage(new Error('Uber OAuth missing access_token')));
+  }
   return data.access_token;
 }
 
 function liveEnabled(): boolean {
-  return process.env.UBER_DIRECT_LIVE === '1' || process.env.UBER_DIRECT_LIVE === 'true';
+  return isUberDirectLiveEnabled();
 }
 
 export const uberDirectAdapter: DeliveryProviderAdapter = {
@@ -60,12 +66,20 @@ export const uberDirectAdapter: DeliveryProviderAdapter = {
       return {
         ok: true,
         message:
-          'Credentials shape OK. Set UBER_DIRECT_LIVE=1 on the server to validate against Uber OAuth.',
+          'Credentials saved shape looks OK. Live Uber OAuth check stays off until UBER_DIRECT_LIVE=1. Manual tracking remains available.',
         merchantAccountId: customerId,
       };
     }
-    await fetchAccessToken(clientId, clientSecret);
-    return { ok: true, message: 'Uber Direct OAuth validated.', merchantAccountId: customerId };
+    try {
+      await fetchAccessToken(clientId, clientSecret);
+      return {
+        ok: true,
+        message: 'Uber Direct OAuth validated — live booking path is ready for this account.',
+        merchantAccountId: customerId,
+      };
+    } catch (err) {
+      return { ok: false, message: mapUberDirectErrorMessage(err) };
+    }
   },
 
   async quote(credentials, request: DeliveryQuoteRequest): Promise<DeliveryQuoteResult> {
@@ -114,48 +128,59 @@ export const uberDirectAdapter: DeliveryProviderAdapter = {
     if (!liveEnabled()) {
       return {
         provider: 'uber_direct',
-        tripId: `uber_scaffold_${request.orderId}`,
-        status: 'booked',
+        tripId: '',
+        status: 'blocked',
         message:
-          'Uber Direct scaffold booking (UBER_DIRECT_LIVE not enabled). Use manual tracking until live mode is on.',
+          'Uber Direct live booking is off (UBER_DIRECT_LIVE). Paste a tracking link on Dispatch — do not treat scaffold IDs as real trips.',
         trackingUrl: undefined,
       };
     }
-    const token = await fetchAccessToken(credentials.clientId!, credentials.clientSecret!);
-    const quoteId =
-      request.quoteId ||
-      (await uberDirectAdapter.quote!(credentials, request)).quoteId;
-    const res = await fetch(`${API_BASE}/customers/${encodeURIComponent(customerId)}/deliveries`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        quote_id: quoteId,
-        pickup_name: 'Kitchen',
-        pickup_address: request.pickupAddress,
-        pickup_phone_number: credentials.pickupPhone || undefined,
-        dropoff_name: request.customerName,
-        dropoff_address: request.dropoffAddress,
-        dropoff_phone_number: request.customerPhone,
-        external_order_id: request.externalOrderId || request.orderId,
-      }),
-    });
-    if (!res.ok) throw new Error(`Uber create delivery failed (${res.status})`);
-    const data = (await res.json()) as {
-      id?: string;
-      tracking_url?: string;
-      courier?: { name?: string; phone_number?: string };
-    };
-    return {
-      provider: 'uber_direct',
-      tripId: String(data.id || ''),
-      trackingUrl: data.tracking_url,
-      riderName: data.courier?.name,
-      riderPhone: data.courier?.phone_number,
-      status: 'booked',
-      raw: data,
-    };
+    try {
+      const token = await fetchAccessToken(credentials.clientId!, credentials.clientSecret!);
+      const quoteId =
+        request.quoteId ||
+        (await uberDirectAdapter.quote!(credentials, request)).quoteId;
+      const res = await fetch(`${API_BASE}/customers/${encodeURIComponent(customerId)}/deliveries`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quote_id: quoteId,
+          pickup_name: 'Kitchen',
+          pickup_address: request.pickupAddress,
+          pickup_phone_number: credentials.pickupPhone || undefined,
+          dropoff_name: request.customerName,
+          dropoff_address: request.dropoffAddress,
+          dropoff_phone_number: request.customerPhone,
+          external_order_id: request.externalOrderId || request.orderId,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Uber create delivery failed (${res.status})`);
+      }
+      const data = (await res.json()) as {
+        id?: string;
+        tracking_url?: string;
+        courier?: { name?: string; phone_number?: string };
+      };
+      return {
+        provider: 'uber_direct',
+        tripId: String(data.id || ''),
+        trackingUrl: data.tracking_url,
+        riderName: data.courier?.name,
+        riderPhone: data.courier?.phone_number,
+        status: 'booked',
+        raw: data,
+      };
+    } catch (err) {
+      return {
+        provider: 'uber_direct',
+        tripId: '',
+        status: 'blocked',
+        message: mapUberDirectErrorMessage(err),
+      };
+    }
   },
 };

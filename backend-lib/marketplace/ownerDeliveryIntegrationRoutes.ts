@@ -16,6 +16,7 @@ import {
   DELIVERY_PROVIDER_CAPABILITY_MATRIX,
   type DeliveryProviderId,
 } from '../delivery/providerCapabilityMatrix.js';
+import { evaluateProviderReadiness } from '../delivery/deliveryProviderReadiness.js';
 
 type OwnerAccessFn = (
   userId: string,
@@ -69,11 +70,18 @@ export function registerOwnerDeliveryIntegrationRoutes(
           req.user.email,
         );
         const connections = await listTenantProviderConnections(deps, tenantId);
+        const readiness = DELIVERY_PROVIDER_CAPABILITY_MATRIX.map((row) =>
+          evaluateProviderReadiness(
+            row.id,
+            connections.find((c) => c.provider === row.id) ?? null,
+          ),
+        );
         res.json({
           success: true,
           tenantId,
           connections,
           providers: DELIVERY_PROVIDER_CAPABILITY_MATRIX,
+          readiness,
           securityNote:
             'Raw credentials are never returned. Client only sees connection status and non-secret metadata.',
         });
@@ -172,12 +180,50 @@ export function registerOwnerDeliveryIntegrationRoutes(
           provider,
           actorUid: req.user.uid,
         });
-        res.json({ success: true, connection });
+        const readiness = evaluateProviderReadiness(provider, connection);
+        res.json({ success: true, connection, readiness });
       } catch (error: unknown) {
         const status = (error as { statusCode?: number }).statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to validate connection',
+        });
+      }
+    },
+  );
+
+  app.get(
+    '/api/owner/delivery-integrations/:tenantId/:provider/readiness',
+    verifyFirebaseToken,
+    async (req: any, res: Response) => {
+      try {
+        const provider = asProvider(String(req.params.provider));
+        if (!provider) return res.status(400).json({ success: false, error: 'Invalid provider' });
+        const tenantId = await assertOwnerTenantAccess(
+          req.user.uid,
+          String(req.params.tenantId),
+          req.user.email,
+        );
+        const connection = await getTenantProviderConnection(deps, tenantId, provider);
+        const readiness = evaluateProviderReadiness(provider, connection);
+        res.json({
+          success: true,
+          readiness,
+          // Never include credentials/ciphertext in readiness responses.
+          connectionSummary: connection
+            ? {
+                status: connection.status,
+                hasSecretRef: connection.hasSecretRef,
+                errorMessage: connection.errorMessage,
+                lastValidatedAt: connection.lastValidatedAt,
+              }
+            : null,
+        });
+      } catch (error: unknown) {
+        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        res.status(status).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load readiness',
         });
       }
     },

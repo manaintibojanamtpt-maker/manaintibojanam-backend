@@ -12,13 +12,14 @@ import type {
   DeliveryQuoteRequest,
   DeliveryQuoteResult,
 } from './types.js';
+import { isPorterLiveEnabled } from '../porterApprovalReadiness.js';
 
 /** @external-access-required Porter partner API base URL (placeholder). */
 const PORTER_API_BASE =
   process.env.PORTER_API_BASE_URL || 'https://api.porter.in/v2'; /* EXTERNAL_ACCESS_REQUIRED */
 
 function liveEnabled(): boolean {
-  return process.env.PORTER_LIVE === '1' || process.env.PORTER_LIVE === 'true';
+  return isPorterLiveEnabled();
 }
 
 export const porterAdapter: DeliveryProviderAdapter = {
@@ -34,7 +35,7 @@ export const porterAdapter: DeliveryProviderAdapter = {
       return {
         ok: true,
         message:
-          'Porter credentials accepted for storage. Live validate/booking blocked until PORTER_LIVE=1 and partner API access.',
+          'Porter credentials accepted for storage only. Partner API approval + PORTER_LIVE are still required before auto-booking. Manual tracking stays available.',
         merchantAccountId: merchantAccountId || undefined,
       };
     }
