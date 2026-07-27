@@ -70,9 +70,11 @@ export function OrderBhojanHomeHero() {
   const isOfferSlide = activeSlide?.kind === 'offer' || Boolean(activeSlide?.offerBadge);
   const displayEyebrow = isOfferSlide ? 'Limited-time deal' : heroConfig.eyebrow;
 
+  // Reset only when the primary slide identity changes — not when offer slides append.
+  const primarySlideId = slides[0]?.id;
   useEffect(() => {
     setActiveIndex(0);
-  }, [heroConfig.updatedAt, slides.length]);
+  }, [heroConfig.updatedAt, primarySlideId]);
 
   useEffect(() => {
     if (!carouselAutoAdvance || slides.length <= 1) return undefined;

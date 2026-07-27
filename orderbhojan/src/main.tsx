@@ -5,6 +5,10 @@ import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
 import { seedDiscoveryQueryCacheFromSession, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
 import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
+import { seedHomeHeroQueryCacheFromSession } from '@/features/experience/data/homeHeroSessionCache';
+import { warmHomeHeroBeforePaint } from '@/features/experience/data/warmHomeHeroBeforePaint';
+import { homeHeroQueryKey } from '@/features/experience/hooks/useHomeHeroConfig';
+import { queryClient } from '@/shared/queryClient';
 import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { bootstrapCapacitorNative } from '@/lib/capacitorBootstrap';
 import { bootstrapObDebugFromUrl } from '@/lib/obDebug';
@@ -57,8 +61,14 @@ async function bootstrap() {
   // Native chrome only — keep short; do not queue discovery IDB behind this.
   await bootstrapCapacitorNative();
 
-  // Sync seed from localStorage so React Query can paint cached kitchens immediately.
+  // Sync seed from localStorage so React Query can paint cached kitchens + hero immediately.
   seedDiscoveryQueryCacheFromSession();
+  seedHomeHeroQueryCacheFromSession(
+    (key, data, options) => {
+      queryClient.setQueryData(key, data, options);
+    },
+    homeHeroQueryKey(),
+  );
 
   const bootstrapCoords = resolveBootstrapDiscoveryCoords();
   // IDB hydrate is non-critical enrichment — must not block first React paint.
@@ -73,6 +83,10 @@ async function bootstrap() {
   }
 
   const config = await ensureAppConfig();
+
+  // Brief race: if home-hero returns fast, first paint uses live superadmin slides (no DEFAULT flash).
+  await warmHomeHeroBeforePaint(400);
+
   renderApp();
 
   if (config.features.mswEnabled) {

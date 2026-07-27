@@ -1,33 +1,46 @@
 import { useQuery } from '@tanstack/react-query';
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { DEFAULT_HOME_HERO_CONFIG } from '@/features/experience/data/kitchenHeroScenes';
+import {
+  readHomeHeroSessionCache,
+  writeHomeHeroSessionCache,
+} from '@/features/experience/data/homeHeroSessionCache';
 import type { HomeHeroConfig } from '@/types/marketplace-home-hero';
 
-/** Short enough that superadmin hero edits show up without a hard refresh. */
-const HOME_HERO_STALE_MS = 60 * 1000;
+/** Background refresh window — UI keeps last-known hero until the new payload arrives. */
+const HOME_HERO_STALE_MS = 5 * 60 * 1000;
 
 export function homeHeroQueryKey() {
   return ['marketplace', 'platform', 'home-hero'] as const;
 }
 
+function resolveSeed(): { config: HomeHeroConfig; updatedAt: number; fromCache: boolean } {
+  const cached = readHomeHeroSessionCache();
+  if (cached) {
+    return { config: cached.config, updatedAt: cached.fetchedAt, fromCache: true };
+  }
+  return { config: DEFAULT_HOME_HERO_CONFIG, updatedAt: 0, fromCache: false };
+}
+
 export function useHomeHeroConfig() {
+  const seed = resolveSeed();
+
   return useQuery({
     queryKey: homeHeroQueryKey(),
     queryFn: async (): Promise<HomeHeroConfig> => {
       try {
-        return await getMarketplaceApiClient().homeHero();
+        const config = await getMarketplaceApiClient().homeHero();
+        writeHomeHeroSessionCache(config);
+        return config;
       } catch {
-        return DEFAULT_HOME_HERO_CONFIG;
+        return seed.config;
       }
     },
-    // Paint hero immediately from known defaults; refresh in background.
-    initialData: DEFAULT_HOME_HERO_CONFIG,
-    // Treat seeded defaults as already stale so the first mount always fetches
-    // live platformSettings/orderbhojanHomeHero from superadmin.
-    initialDataUpdatedAt: 0,
-    placeholderData: DEFAULT_HOME_HERO_CONFIG,
+    // Prefer last live superadmin hero from localStorage so reopen never flashes DEFAULT assets.
+    initialData: seed.config,
+    initialDataUpdatedAt: seed.updatedAt,
     staleTime: HOME_HERO_STALE_MS,
-    gcTime: HOME_HERO_STALE_MS * 10,
+    gcTime: HOME_HERO_STALE_MS * 4,
     refetchOnWindowFocus: true,
   });
 }

@@ -26,11 +26,15 @@ describe('maturity P0 — first paint + pricing trust', () => {
     );
   });
 
-  it('seeds home hero with DEFAULT_HOME_HERO_CONFIG for instant paint', () => {
+  it('seeds home hero from session cache (fallback DEFAULT) to avoid flash', () => {
     const hero = readSrc('src/features/experience/hooks/useHomeHeroConfig.ts');
-    assert.match(hero, /initialData:\s*DEFAULT_HOME_HERO_CONFIG/);
-    assert.match(hero, /initialDataUpdatedAt:\s*0/);
+    const main = readSrc('src/main.tsx');
+    assert.match(hero, /readHomeHeroSessionCache/);
+    assert.match(hero, /writeHomeHeroSessionCache/);
+    assert.match(hero, /initialData:\s*seed\.config/);
     assert.match(hero, /refetchOnWindowFocus:\s*true/);
+    assert.match(main, /seedHomeHeroQueryCacheFromSession/);
+    assert.match(main, /warmHomeHeroBeforePaint/);
   });
 
   it('allows guest browse on home (no auth redirect after session ready)', () => {
