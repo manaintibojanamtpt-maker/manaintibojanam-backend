@@ -17,6 +17,15 @@ describe('delivery provider capability matrix', () => {
     assert.equal(getProviderCapabilityRow('porter')?.maturity, 'partner_access_required');
     assert.equal(getProviderCapabilityRow('rapido')?.maturity, 'manual_fallback_only');
   });
+
+  it('exposes merchant onboarding steps and field help (not raw-dev only)', () => {
+    const uber = getProviderCapabilityRow('uber_direct');
+    assert.ok(uber?.onboardingSteps?.length);
+    assert.ok(uber?.credentialFieldHelp?.some((f) => f.key === 'clientSecret' && f.findItUrl));
+    assert.match(uber?.merchantSummary ?? '', /Uber Direct/i);
+    const porter = getProviderCapabilityRow('porter');
+    assert.match(porter?.statusBadgeHint ?? '', /Partner approval/i);
+  });
 });
 
 describe('delivery secret crypto', () => {

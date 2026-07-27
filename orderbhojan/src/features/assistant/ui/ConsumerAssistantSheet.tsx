@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Square } from 'lucide-react';
 import type { CartPlanValidationResult } from '../domain/cartPlanContract';
+import { summarizePendingCartPlan } from '../domain/summarizePendingCartPlan';
 import type { AssistantThreadMessage } from './useAssistantConversation';
 import type { ConsumerAssistHint } from '../types';
 
@@ -292,6 +293,30 @@ export function ConsumerAssistantSheet({
           <p className="text-xs text-[#d0c4b5] mb-2">
             Status: <span className="text-[#fffaf3]">{pendingValidation.status}</span>
           </p>
+          {(() => {
+            const lines = summarizePendingCartPlan(pendingValidation);
+            if (lines.length === 0) return null;
+            return (
+              <div
+                className="mb-2 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[12px] text-[#fffaf3]"
+                data-testid="consumer-assistant-plan-summary"
+              >
+                {lines.map((line, idx) => (
+                  <p key={`${line.dish}-${idx}`}>
+                    <span className="font-semibold">
+                      {line.quantity}× {line.dish}
+                    </span>
+                    {line.kitchen ? (
+                      <span className="text-[#d0c4b5]"> · {line.kitchen}</span>
+                    ) : null}
+                    {line.modifiers ? (
+                      <span className="text-[#d0c4b5]"> · {line.modifiers}</span>
+                    ) : null}
+                  </p>
+                ))}
+              </div>
+            );
+          })()}
           {pendingValidation.status !== 'validated'
             ? (() => {
                 const uniqueDetail = [

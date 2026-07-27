@@ -20,14 +20,10 @@ import {
   isPersonalizationCartIntent,
 } from '../domain/isPersonalizationUserMessage';
 import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
+import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
+import { decideVoiceCartTurn } from '../domain/decideVoiceCartTurn';
 import {
-  parseCartAddUserMessage,
-  parseDishClarificationMessage,
-} from '../domain/isCartAddUserMessage';
-import {
-  isDiscardCartUserMessage,
   isStopVoiceAgentMessage,
-  isValidatedCartConfirmMessage,
   toSpokenAssistantReply,
 } from '../domain/isConfirmCartUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
@@ -37,7 +33,16 @@ import {
   matchKitchenFragmentInMessage,
 } from '../domain/matchOrderingVocabulary';
 import { resolveCartPlanRestaurantId } from '../domain/resolveCartPlanRestaurant';
+import { toPendingPlanRestaurantRef } from '../domain/restaurantIdSlug';
+import { recordVoiceTelemetry } from '../domain/voiceOrderingTelemetry';
+import { prefetchKitchenMenuForAssist } from '../application/prefetchKitchenMenuForAssist';
+import {
+  formatCartPlanSummarySpeech,
+  summarizePendingCartPlan,
+} from '../domain/summarizePendingCartPlan';
+import { captureNativeAndroidStt } from '../infrastructure/nativeAndroidSttBridge';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
+import { useAiNativeSttFeature } from '../hooks/useAiNativeSttFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
 import { useAiVoiceTtsFeature } from '../hooks/useAiVoiceTtsFeature';
 import { useAssistantPersonalizationContext } from '../hooks/useAssistantPersonalizationContext';
@@ -95,15 +100,23 @@ function nextId(): string {
   return `ob_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function validationSpeakText(validation: CartPlanValidationResult): string {
+function validationSpeakText(
+  validation: CartPlanValidationResult,
+  kitchenName?: string | null,
+): string {
+  const summary = formatCartPlanSummarySpeech(
+    summarizePendingCartPlan(validation, { kitchenName }),
+  );
   if (validation.status === 'validated' && validation.valid) {
-    return 'Plan looks good. Say confirm to add it to your cart, or discard to cancel.';
+    return summary
+      ? `Ready: ${summary}. Say confirm to add to cart, or discard to cancel.`
+      : 'Plan looks good. Say confirm to add it to your cart, or discard to cancel.';
   }
-  return (
+  const clarify =
     validation.clarificationQuestions[0] ||
     validation.issues[0]?.message ||
-    'I could not validate that dish on this kitchen’s menu. Try the exact menu name.'
-  );
+    'I could not validate that dish on this kitchen’s menu. Try the exact menu name.';
+  return summary ? `${clarify} (Working on: ${summary})` : clarify;
 }
 
 function toNearbyKitchenHints(
@@ -125,6 +138,7 @@ export function useAssistantConversation() {
   const { validate } = useValidateCartPlan();
   const voiceEnabled = useAiVoiceFeature();
   const ttsEnabled = useAiVoiceTtsFeature();
+  const nativeSttEnabled = useAiNativeSttFeature();
   const navigate = useNavigate();
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
@@ -169,9 +183,27 @@ export function useAssistantConversation() {
       if (!message || loading) return undefined;
 
       const pending = pendingValidationRef.current;
+      const earlyRoute = decideVoiceCartTurn({
+        message,
+        pending,
+        kitchenNameHint: pendingPlanRestaurantRef.current?.restaurantSlug,
+      });
+
+      // “Confirm” while clarifying — keep task; do not wipe or fall into generic chat.
+      if (earlyRoute.kind === 'confirm_while_clarifying') {
+        setError(null);
+        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
+        recordVoiceTelemetry('invalidConfirmAttempts');
+        recordVoiceTelemetry('clarificationLoopCount');
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), role: 'assistant', text: earlyRoute.reply },
+        ]);
+        return earlyRoute.reply;
+      }
 
       // Voice/text confirm — only when plan is already validated (not bare “yes” on clarify).
-      if (pending && isValidatedCartConfirmMessage(message, pending)) {
+      if (earlyRoute.kind === 'apply_validated_confirm' && pending) {
         setError(null);
         setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
         setApplying(true);
@@ -209,15 +241,19 @@ export function useAssistantConversation() {
             setPendingValidation(null);
             pendingPlanRestaurantRef.current = null;
             pendingExploreKitchenRef.current = null;
+            recordVoiceTelemetry('confirmApplySuccess');
             notifyToast(`Applied ${result.appliedCount} item(s) to cart.`, 'success');
             return reply;
           }
           const fail =
             result.skipped[0]?.reason || 'Could not apply cart plan — try the menu ADD button.';
+          recordVoiceTelemetry('confirmApplyFail');
           setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
           notifyToast(fail, 'warning');
           return fail;
         } catch (err) {
+          recordVoiceTelemetry('confirmApplyFail');
+          recordVoiceTelemetry('restaurantResolutionFailures');
           const fail =
             err instanceof Error ? err.message : 'Could not apply cart plan right now.';
           setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
@@ -227,7 +263,7 @@ export function useAssistantConversation() {
         }
       }
 
-      if (pending && isDiscardCartUserMessage(message)) {
+      if (earlyRoute.kind === 'discard' && pending) {
         setError(null);
         setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
         reportCartPlanDecisionQuietly({
@@ -247,28 +283,10 @@ export function useAssistantConversation() {
         return reply;
       }
 
-      // “confirm” while still clarifying — keep plan, re-prompt (do not wipe pending).
-      if (
-        pending &&
-        (pending.status === 'needs_clarification' || pending.status === 'invalid') &&
-        /^(confirm|confirmed|yes|yeah|yep|ok|okay)\b/i.test(message)
-      ) {
-        setError(null);
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        const reply =
-          pending.clarificationQuestions[0] ||
-          'Tell me the exact dish name from the menu (for example, Masala Dosa), then say confirm after it validates.';
-        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
-        return reply;
-      }
-
       // Clarification reply: user names the dish after “which menu item…”
-      if (
-        pending &&
-        (pending.status === 'needs_clarification' || pending.status === 'invalid') &&
-        parseDishClarificationMessage(message)
-      ) {
-        const dishName = parseDishClarificationMessage(message)!;
+      if (earlyRoute.kind === 'clarify_dish' && pending) {
+        const dishName = earlyRoute.dishName;
+        const clarifyQty = earlyRoute.quantity;
         setError(null);
         setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
         setLoading(true);
@@ -289,7 +307,7 @@ export function useAssistantConversation() {
             executable: false,
             payload: {
               name: dishName,
-              quantity: 1,
+              quantity: clarifyQty,
               ...(planRestaurant?.restaurantId
                 ? { restaurantId: planRestaurant.restaurantId }
                 : restaurantId
@@ -314,13 +332,17 @@ export function useAssistantConversation() {
             setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
             return reply;
           }
-          pendingPlanRestaurantRef.current = {
+          pendingPlanRestaurantRef.current = toPendingPlanRestaurantRef({
+            planRestaurantId,
+            activeRestaurantId: restaurantId,
+            activeRestaurantSlug: restaurantSlug,
+          });
+          await prefetchKitchenMenuForAssist({
             restaurantId: planRestaurantId,
-            restaurantSlug:
-              planRestaurantId === restaurantId
-                ? (restaurantSlug ?? planRestaurantId)
-                : planRestaurantId,
-          };
+            restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
+            lat: activeLocation?.coordinates?.lat,
+            lng: activeLocation?.coordinates?.lng,
+          });
           setValidating(true);
           const validation = await validate({
             restaurantId: planRestaurantId,
@@ -328,6 +350,8 @@ export function useAssistantConversation() {
             ...(conversationId ? { conversationId } : {}),
           });
           setPendingValidation(validation);
+          if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
+          else recordVoiceTelemetry('planValidateFail');
           const reply = validationSpeakText(validation);
           setMessages((prev) => [
             ...prev,
@@ -373,9 +397,16 @@ export function useAssistantConversation() {
       }
 
       setError(null);
-      setPendingValidation(null);
-      pendingPlanRestaurantRef.current = null;
-      pendingExploreKitchenRef.current = null;
+      // Retain active ordering task unless user cancels or starts a new “add …” intent.
+      if (earlyRoute.retainPending) {
+        recordVoiceTelemetry('pendingRetained');
+        // Keep pendingValidation / restaurant refs; continue into cart-add / assist paths.
+      } else {
+        recordVoiceTelemetry('pendingWiped');
+        setPendingValidation(null);
+        pendingPlanRestaurantRef.current = null;
+        pendingExploreKitchenRef.current = null;
+      }
       setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
       setLoading(true);
 
@@ -571,11 +602,17 @@ export function useAssistantConversation() {
               cartActions,
             },
           ]);
-          pendingPlanRestaurantRef.current = {
+          pendingPlanRestaurantRef.current = toPendingPlanRestaurantRef({
+            planRestaurantId,
+            activeRestaurantId: restaurantId,
+            activeRestaurantSlug: restaurantSlug,
+          });
+          await prefetchKitchenMenuForAssist({
             restaurantId: planRestaurantId,
-            restaurantSlug:
-              planRestaurantId === restaurantId ? (restaurantSlug ?? planRestaurantId) : planRestaurantId,
-          };
+            restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
+            lat: activeLocation?.coordinates?.lat,
+            lng: activeLocation?.coordinates?.lng,
+          });
           setValidating(true);
           try {
             const validation = await validate({
@@ -584,6 +621,8 @@ export function useAssistantConversation() {
               ...(conversationId ? { conversationId } : {}),
             });
             setPendingValidation(validation);
+            if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
+            else recordVoiceTelemetry('planValidateFail');
             const reply = validationSpeakText(validation);
             setMessages((prev) => [
               ...prev,
@@ -830,13 +869,17 @@ export function useAssistantConversation() {
         ]);
 
         if (cartActions.length > 0 && planRestaurantId) {
-          pendingPlanRestaurantRef.current = {
+          pendingPlanRestaurantRef.current = toPendingPlanRestaurantRef({
+            planRestaurantId,
+            activeRestaurantId: restaurantId,
+            activeRestaurantSlug: restaurantSlug,
+          });
+          await prefetchKitchenMenuForAssist({
             restaurantId: planRestaurantId,
-            restaurantSlug:
-              planRestaurantId === restaurantId
-                ? (restaurantSlug ?? planRestaurantId)
-                : planRestaurantId,
-          };
+            restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
+            lat: coords?.lat,
+            lng: coords?.lng,
+          });
           setValidating(true);
           try {
             const validation = await validate({
@@ -845,6 +888,11 @@ export function useAssistantConversation() {
               conversationId: result.conversationId,
             });
             setPendingValidation(validation);
+            if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
+            else {
+              recordVoiceTelemetry('planValidateFail');
+              recordVoiceTelemetry('clarificationLoopCount');
+            }
             const outcome = validationSpeakText(validation);
             if (validation.status !== 'validated') {
               displayReply = outcome;
@@ -988,19 +1036,29 @@ export function useAssistantConversation() {
         return 'error';
       }
 
+      // Barge-in: stop any in-flight TTS before opening the mic.
+      voiceAbortRef.current?.abort();
       const ac = new AbortController();
       voiceAbortRef.current = ac;
+      setSpeaking(false);
       setListening(true);
       setError(null);
       const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
 
       try {
-        const { transcript } = await captureVoiceTranscript({
+        const native = await captureNativeAndroidStt({
+          enabled: nativeSttEnabled,
           signal: ac.signal,
-          platform: 'web',
-          // Agent mode: longer window so users can speak naturally after TTS.
-          timeoutMs: agentMode ? 14_000 : 10_000,
+          lang: 'en-IN',
         });
+        const { transcript } = native
+          ? { transcript: native.transcript }
+          : await captureVoiceTranscript({
+              signal: ac.signal,
+              platform: 'web',
+              // Agent mode: longer window so users can speak naturally after TTS.
+              timeoutMs: agentMode ? 14_000 : 10_000,
+            });
         setListening(false);
 
         const coords = activeLocation?.coordinates;
@@ -1050,6 +1108,7 @@ export function useAssistantConversation() {
     [
       activeLocation?.coordinates,
       activeLocation?.displayLabel,
+      nativeSttEnabled,
       restaurantId,
       restaurantSlug,
       send,
@@ -1091,6 +1150,33 @@ export function useAssistantConversation() {
         ? [...prev, { id: nextId(), role: 'assistant', text: greeting }]
         : prev,
     );
+
+    // Warm menu cache for active kitchen + nearby names before first listen.
+    const coords = activeLocation?.coordinates;
+    void prefetchKitchenMenuForAssist({
+      restaurantId,
+      restaurantSlug,
+      lat: coords?.lat,
+      lng: coords?.lng,
+    });
+    const nearby = toNearbyKitchenHints(
+      buildOrderingAssistContext({
+        restaurantId,
+        restaurantSlug,
+        areaLabel: activeLocation?.displayLabel,
+        lat: coords?.lat,
+        lng: coords?.lng,
+      })?.nearbyKitchens,
+    );
+    for (const kitchen of nearby.slice(0, 4)) {
+      void prefetchKitchenMenuForAssist({
+        restaurantId: kitchen.id,
+        restaurantName: kitchen.name,
+        lat: coords?.lat,
+        lng: coords?.lng,
+      });
+    }
+
     const greetAc = new AbortController();
     voiceAbortRef.current = greetAc;
     try {
@@ -1098,6 +1184,8 @@ export function useAssistantConversation() {
     } catch {
       /* non-fatal */
     }
+    // Let TTS fully release the mic before listening (WebView echo guard).
+    await new Promise((r) => setTimeout(r, 400));
 
     while (voiceAgentActiveRef.current) {
       if (loading || validating || applying || speaking) {

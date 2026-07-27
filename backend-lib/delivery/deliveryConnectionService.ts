@@ -14,6 +14,7 @@ import {
 } from './deliverySecretCrypto.js';
 import {
   getProviderCapabilityRow,
+  merchantLabelForCredentialField,
   type DeliveryProviderId,
 } from './providerCapabilityMatrix.js';
 
@@ -191,9 +192,11 @@ export async function completeConnection(
     const credentials = input.credentials ?? {};
     for (const field of row.requiredCredentialFields) {
       if (!credentials[field]?.trim()) {
-        throw Object.assign(new Error(`Missing credential field: ${field}`), {
-          statusCode: 400,
-        });
+        const label = merchantLabelForCredentialField(input.provider, field);
+        throw Object.assign(
+          new Error(`Please enter ${label} before connecting ${row.displayName}.`),
+          { statusCode: 400, userMessage: `Please enter ${label} before connecting.` },
+        );
       }
     }
 

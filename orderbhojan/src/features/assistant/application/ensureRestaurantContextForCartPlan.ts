@@ -1,5 +1,6 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
+import { resolveRestaurantSlugForApi } from '../domain/restaurantIdSlug';
 
 /**
  * Ensure restaurant context + contextToken before applying a confirmed cart plan.
@@ -11,7 +12,11 @@ export async function ensureRestaurantContextForCartPlan(params: {
   readonly coords?: { readonly lat: number; readonly lng: number };
 }): Promise<void> {
   const restaurantId = params.restaurantId.trim();
-  const restaurantSlug = params.restaurantSlug.trim();
+  // Never call slug APIs with obr_* marketplace IDs.
+  const restaurantSlug = resolveRestaurantSlugForApi({
+    restaurantId,
+    restaurantSlug: params.restaurantSlug,
+  });
   if (!restaurantId || !restaurantSlug) {
     throw new Error('Restaurant context is required to apply a cart plan');
   }

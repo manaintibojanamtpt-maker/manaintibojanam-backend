@@ -18,6 +18,11 @@ export const FEATURE_FLAG_KEYS = [
   'FF_OB_AI_VOICE',
   /** Optional TTS confirmation after voice assist — OFF by default. */
   'FF_OB_AI_VOICE_TTS',
+  /**
+   * Prefer native Android STT bridge when available — OFF by default.
+   * Falls back to Web Speech / WebView recognition when native bridge is missing.
+   */
+  'FF_OB_AI_NATIVE_STT',
   /** Post-order / order-status AI assist — OFF by default; requires FF_OB_AI_ASSISTANT. */
   'FF_OB_AI_POST_ORDER',
   /** Personalized reorder / favorites guidance — OFF by default; requires FF_OB_AI_ASSISTANT. */
@@ -50,6 +55,7 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_AI_ASSISTANT: false,
   FF_OB_AI_VOICE: false,
   FF_OB_AI_VOICE_TTS: false,
+  FF_OB_AI_NATIVE_STT: false,
   FF_OB_AI_POST_ORDER: false,
   FF_OB_AI_PERSONALIZATION: false,
   FF_OB_AI_CANARY_HEADERS: false,
