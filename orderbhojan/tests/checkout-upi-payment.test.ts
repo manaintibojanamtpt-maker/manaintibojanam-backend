@@ -17,7 +17,7 @@ describe('checkout direct UPI payment', () => {
     assert.match(checkout, /paymentMethods\.includes\('upi'\)/);
     assert.match(checkout, /showUpiButton = supportsUpi && !supportsRazorpay/);
     assert.match(checkout, /showRazorpay=\{showRazorpayButton \|\| showUpiButton\}/);
-    assert.match(checkout, /razorpayLabel=\{showUpiButton \? 'Pay via UPI' : 'Pay online'\}/);
+    assert.match(checkout, /showUpiButton\s*\?\s*'Pay via UPI'\s*:\s*'Pay online'/);
     assert.match(checkout, /handlePlaceUpi/);
     assert.match(checkout, /placeUpiOrder/);
     assert.match(checkout, /UpiPaymentPendingView/);
@@ -56,10 +56,19 @@ describe('checkout direct UPI payment', () => {
 
     assert.match(pending, /Choose your UPI app/);
     assert.match(pending, /UPI_APP_CHOICES/);
-    assert.match(pending, /launchUpiApp/);
+    assert.match(pending, /launchUpiAppWithFallback/);
+    assert.match(pending, /watchUpiHandoffReturn/);
     assert.match(pending, /Copy payment details/);
     assert.match(pending, /I've paid — notify kitchen/);
-    assert.match(pending, /kitchen verifies payment/);
+    assert.match(pending, /kitchen confirms UPI/i);
     assert.doesNotMatch(pending, /launchUpiIntent\(upiUrl\)/);
   });
+
+  it('defers cart clear until UPI verified or claimed', () => {
+    const flow = readFileSync(join(root, 'src/features/checkout/hooks/useCheckoutFlow.ts'), 'utf8');
+    assert.match(flow, /Keep cart until UPI is verified/);
+    assert.match(flow, /placeAmountPaise/);
+    assert.match(flow, /finalizeUpiPaymentSuccess/);
+  });
 });
+

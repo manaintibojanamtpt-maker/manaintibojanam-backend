@@ -84,8 +84,8 @@ async function bootstrap() {
 
   const config = await ensureAppConfig();
 
-  // Brief race: if home-hero returns fast, first paint uses live superadmin slides (no DEFAULT flash).
-  await warmHomeHeroBeforePaint(400);
+  // Short race only — kitchens must not wait on hero. Defaults/session cache cover first paint.
+  await warmHomeHeroBeforePaint(180);
 
   renderApp();
 

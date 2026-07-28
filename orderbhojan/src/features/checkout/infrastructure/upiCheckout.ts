@@ -22,6 +22,14 @@ export const UPI_APP_CHOICES: readonly UpiAppChoice[] = [
 
 const UPI_QUERY_PARAM_ORDER = ['pa', 'pn', 'am', 'tr', 'tn', 'cu', 'mc', 'tid', 'url'] as const;
 
+export type UpiLaunchOutcome = 'opened' | 'fallback_required' | 'failed';
+
+export interface UpiLaunchResult {
+  readonly outcome: UpiLaunchOutcome;
+  readonly deepLinkTried?: string;
+  readonly message?: string;
+}
+
 export function formatUpiAmount(amount: number): string {
   const safe = Number.isFinite(amount) ? Math.max(0, amount) : 0;
   return safe.toFixed(2);
@@ -88,9 +96,63 @@ export function buildUpiQueryString(params: Record<string, string>): string {
     .join('&');
 }
 
-export function buildAndroidUpiIntent(params: Record<string, string>): string {
+export function buildAndroidUpiIntent(
+  params: Record<string, string>,
+  options?: { readonly packageName?: string; readonly fallbackUrl?: string },
+): string {
   const query = buildUpiQueryString(params);
-  return `intent://pay?${query}#Intent;scheme=upi;end`;
+  const parts = [`intent://pay?${query}#Intent`, 'scheme=upi', 'action=android.intent.action.VIEW'];
+  if (options?.packageName) {
+    parts.push(`package=${options.packageName}`);
+  }
+  if (options?.fallbackUrl) {
+    parts.push(`S.browser_fallback_url=${encodeURIComponent(options.fallbackUrl)}`);
+  }
+  parts.push('end');
+  return parts.join(';');
+}
+
+/**
+ * Candidate deep links for an app. First entry is preferred; callers may try fallbacks.
+ */
+export function buildUpiAppDeepLinkCandidates(appId: UpiAppId, upiUrl: string): string[] {
+  const params = parseUpiPayUrl(upiUrl);
+  if (!params) return [];
+
+  const query = buildUpiQueryString(params);
+  const canonical = `upi://pay?${query}`;
+
+  switch (appId) {
+    case 'gpay':
+      return [
+        `tez://upi/pay?${query}`,
+        `gpay://upi/pay?${query}`,
+        isAndroidDevice()
+          ? buildAndroidUpiIntent(params, { packageName: 'com.google.android.apps.nbu.paisa.user' })
+          : canonical,
+      ].filter(Boolean);
+    case 'phonepe':
+      return [
+        `phonepe://pay?${query}`,
+        `phonepe://upi/pay?${query}`,
+        isAndroidDevice()
+          ? buildAndroidUpiIntent(params, { packageName: 'com.phonepe.app' })
+          : canonical,
+      ];
+    case 'paytm':
+      return [
+        `paytmmp://pay?${query}`,
+        isAndroidDevice()
+          ? buildAndroidUpiIntent(params, { packageName: 'net.one97.paytm' })
+          : canonical,
+      ];
+    case 'other':
+      return isAndroidDevice()
+        ? [buildAndroidUpiIntent(params, { fallbackUrl: canonical }), canonical]
+        : [canonical];
+    default:
+      return [];
+  }
 }
 
 /**
@@ -98,23 +160,7 @@ export function buildAndroidUpiIntent(params: Record<string, string>): string {
  * iOS Safari cannot enumerate installed UPI apps, so each PSP needs its own scheme.
  */
 export function buildUpiAppDeepLink(appId: UpiAppId, upiUrl: string): string | null {
-  const params = parseUpiPayUrl(upiUrl);
-  if (!params) return null;
-
-  const query = buildUpiQueryString(params);
-
-  switch (appId) {
-    case 'gpay':
-      return `tez://upi/pay?${query}`;
-    case 'phonepe':
-      return `phonepe://pay?${query}`;
-    case 'paytm':
-      return `paytmmp://pay?${query}`;
-    case 'other':
-      return isAndroidDevice() ? buildAndroidUpiIntent(params) : `upi://pay?${query}`;
-    default:
-      return null;
-  }
+  return buildUpiAppDeepLinkCandidates(appId, upiUrl)[0] ?? null;
 }
 
 export function extractUpiPayeeAddress(upiUrl: string): string | undefined {
@@ -154,11 +200,106 @@ export function launchUpiIntent(upiUrl: string): void {
   launchUpiDeepLink(upiUrl);
 }
 
+/**
+ * Attempts to open a UPI app. Returns whether a deep link was attempted.
+ * Callers must treat silent OS failures via visibility timeout → QR/copy fallback.
+ */
 export function launchUpiApp(appId: UpiAppId, upiUrl: string): boolean {
-  const deepLink = buildUpiAppDeepLink(appId, upiUrl);
-  if (!deepLink) return false;
-  launchUpiDeepLink(deepLink);
+  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl);
+  if (candidates.length === 0) return false;
+  launchUpiDeepLink(candidates[0]!);
   return true;
+}
+
+/**
+ * Launch with platform-aware fallback guidance.
+ * - iOS "other": never fire a blind scheme — force QR/copy
+ * - iOS named apps: try scheme once, then recommend QR if user returns quickly
+ * - Android: try primary candidate (intent/package when available)
+ */
+export async function launchUpiAppWithFallback(
+  appId: UpiAppId,
+  upiUrl: string,
+): Promise<UpiLaunchResult> {
+  if (!parseUpiPayUrl(upiUrl)) {
+    return { outcome: 'failed', message: 'Invalid UPI payment link. Use copy details or QR.' };
+  }
+
+  if (isIosDevice() && appId === 'other') {
+    return {
+      outcome: 'fallback_required',
+      message: 'On iPhone, scan the QR below or copy payment details into your UPI app.',
+    };
+  }
+
+  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl);
+  if (candidates.length === 0) {
+    return { outcome: 'failed', message: 'Unable to build a UPI link for that app.' };
+  }
+
+  const primary = candidates[0]!;
+  const opened = await openExternalUrl(primary);
+  if (!opened) {
+    return {
+      outcome: 'fallback_required',
+      deepLinkTried: primary,
+      message: 'Could not open that UPI app. Scan the QR or copy payment details.',
+    };
+  }
+
+  // OS cannot confirm the app actually handled the URL. Prefer QR on iOS after attempt.
+  if (isIosDevice()) {
+    return {
+      outcome: 'opened',
+      deepLinkTried: primary,
+      message:
+        'If the UPI app did not open, scan the QR or copy payment details into GPay / PhonePe / Paytm.',
+    };
+  }
+
+  return { outcome: 'opened', deepLinkTried: primary };
+}
+
+/** Watch for quick return from a failed app handoff (user stayed in foreground / bounced back). */
+export function watchUpiHandoffReturn(params: {
+  readonly onLikelyFailed: () => void;
+  readonly timeoutMs?: number;
+}): () => void {
+  if (typeof document === 'undefined') return () => undefined;
+
+  const timeoutMs = params.timeoutMs ?? 1_600;
+  let settled = false;
+  const startedAt = Date.now();
+
+  const finishFailed = () => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    params.onLikelyFailed();
+  };
+
+  const onVisibility = () => {
+    if (document.visibilityState !== 'visible') return;
+    // Returned within a short window → handoff likely failed or user cancelled immediately.
+    if (Date.now() - startedAt < 8_000) {
+      finishFailed();
+    }
+  };
+
+  const timer = window.setTimeout(() => {
+    // Still visible after timeout → scheme likely did nothing (common on iOS Safari).
+    if (document.visibilityState === 'visible') {
+      finishFailed();
+    }
+  }, timeoutMs);
+
+  const cleanup = () => {
+    window.clearTimeout(timer);
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
+
+  document.addEventListener('visibilitychange', onVisibility);
+  return cleanup;
 }
 
 export interface OrderPaymentSnapshot {

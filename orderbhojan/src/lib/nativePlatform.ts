@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
-const EXTERNAL_SCHEME = /^(https?:|mailto:|tel:|tez:|phonepe:|paytmmp:|upi:|intent:)/i;
+const EXTERNAL_SCHEME =
+  /^(https?:|mailto:|tel:|tez:|gpay:|phonepe:|paytmmp:|upi:|intent:)/i;
 
 export function isNativePlatform(): boolean {
   if (typeof window === 'undefined') return false;

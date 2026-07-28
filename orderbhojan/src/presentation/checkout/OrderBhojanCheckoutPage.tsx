@@ -128,7 +128,10 @@ export function OrderBhojanCheckoutPage() {
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
   const billRefreshing = quoteIsRefreshing && !discountQuoteLoading;
-  const checkoutActionsDisabled = isPlacing || !quote || Boolean(error);
+  const quoteReady = Boolean(quote);
+  // Keep pay tappable once we have an estimated bill; place handlers still require authoritative quote.
+  const checkoutActionsDisabled =
+    isPlacing || Boolean(error) || (!quoteReady && estimatedSubtotal <= 0);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const supportsUpi = paymentMethods.includes('upi');
@@ -197,21 +200,21 @@ export function OrderBhojanCheckoutPage() {
   };
 
   const handlePlaceCod = async () => {
-    if (isPlacing) return;
+    if (isPlacing || !quote) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('cod');
     await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceRazorpay = async () => {
-    if (isPlacing) return;
+    if (isPlacing || !quote) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('razorpay');
     await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceUpi = async () => {
-    if (isPlacing) return;
+    if (isPlacing || !quote) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('upi');
     await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
@@ -374,14 +377,11 @@ export function OrderBhojanCheckoutPage() {
                 ]
               : []),
           ],
-          totalLabel:
-            appliedCouponCode && (isPreparing || discountQuoteLoading)
-              ? 'Calculating…'
-              : `₹${estimatedSubtotal}`,
+          totalLabel: `₹${estimatedSubtotal}`,
           deliveryPendingNote:
             isPreparing || discountQuoteLoading
-              ? 'Calculating taxes and delivery…'
-              : undefined,
+              ? 'Updating taxes and delivery…'
+              : 'Estimated — final total updates when ready',
         }
       : undefined;
 
@@ -506,12 +506,18 @@ export function OrderBhojanCheckoutPage() {
       backLabel="Back to cart"
       onBack={() => navigate('/cart')}
       codLabel="Pay on delivery"
-      razorpayLabel={showUpiButton ? 'Pay via UPI' : 'Pay online'}
+      razorpayLabel={
+        !quoteReady
+          ? 'Updating total…'
+          : showUpiButton
+            ? 'Pay via UPI'
+            : 'Pay online'
+      }
       codBusy={placingMethod === 'cod'}
       razorpayBusy={placingMethod === 'razorpay' || placingMethod === 'upi'}
       showCod={supportsCod}
       showRazorpay={showRazorpayButton || showUpiButton}
-      actionsDisabled={checkoutActionsDisabled}
+      actionsDisabled={checkoutActionsDisabled || !quoteReady}
       hint={paymentHint}
       onPlaceCod={supportsCod ? () => void handlePlaceCod() : undefined}
       onPlaceRazorpay={

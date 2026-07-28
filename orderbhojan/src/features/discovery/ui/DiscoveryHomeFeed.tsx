@@ -123,8 +123,11 @@ export function DiscoveryHomeFeed() {
 
   if (showInitialSkeleton) {
     return (
-      <div className="space-y-4" aria-busy="true">
-        <DiscoveryFeedControls />
+      <div className="space-y-3" aria-busy="true">
+        <div className="opacity-90">
+          <DiscoveryFeedControls />
+        </div>
+        <DiscoveryNearbyHeader />
         <OrderBhojanHomeFeedSkeleton />
       </div>
     );

@@ -132,7 +132,7 @@ export const MarketplaceFloatingCartView: React.FC<MarketplaceFloatingCartViewPr
               borderRadius: snapState === 'collapsed' ? 32 : 24,
             }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="h-14 bg-[#120d0c]/95 backdrop-blur-xl border border-white/[0.08] text-[#fff8f0] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.55)] flex items-center overflow-hidden cursor-pointer group"
+            className="h-12 bg-[#120d0c]/95 backdrop-blur-xl border border-white/[0.08] text-[#fff8f0] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.55)] flex items-center overflow-hidden cursor-pointer group"
             onClick={toggleExpand}
           >
             <div className="flex items-center w-full px-4">

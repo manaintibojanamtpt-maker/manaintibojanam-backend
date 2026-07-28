@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   buildAndroidUpiIntent,
   buildUpiAppDeepLink,
+  buildUpiAppDeepLinkCandidates,
   buildUpiCopyText,
   buildUpiQueryString,
   extractUpiPayeeAddress,
@@ -33,6 +34,12 @@ describe('UPI app deep links', () => {
     assert.match(url, /cu=INR/);
   });
 
+  it('includes gpay:// fallback candidate for Google Pay', () => {
+    const candidates = buildUpiAppDeepLinkCandidates('gpay', SAMPLE_UPI_URL);
+    assert.ok(candidates.some((url) => url.startsWith('tez://upi/pay?')));
+    assert.ok(candidates.some((url) => url.startsWith('gpay://upi/pay?')));
+  });
+
   it('builds PhonePe deep link', () => {
     const url = buildUpiAppDeepLink('phonepe', SAMPLE_UPI_URL);
     assert.ok(url);
@@ -53,12 +60,14 @@ describe('UPI app deep links', () => {
     assert.match(url, /^upi:\/\/pay\?/);
   });
 
-  it('builds Android intent URL for other', () => {
+  it('builds Android intent URL with VIEW action', () => {
     const params = parseUpiPayUrl(SAMPLE_UPI_URL);
     assert.ok(params);
     const intent = buildAndroidUpiIntent(params);
     assert.match(intent, /^intent:\/\/pay\?/);
-    assert.match(intent, /#Intent;scheme=upi;end$/);
+    assert.match(intent, /scheme=upi/);
+    assert.match(intent, /action=android\.intent\.action\.VIEW/);
+    assert.match(intent, /;end$/);
     assert.match(intent, /pa=kitchen%40paytm/);
   });
 

@@ -707,16 +707,32 @@ export function useCheckoutFlow(): CheckoutFlowState {
           throw new Error('Unexpected payment state from server');
         }
 
+        const expectedPaise = Math.round((quote?.grandTotal ?? 0) * 100);
+        const placeAmount = Number(response.amount ?? quote?.grandTotal ?? 0);
+        const placeAmountPaise =
+          typeof response.amountInPaise === 'number'
+            ? response.amountInPaise
+            : Math.round(placeAmount * 100);
+        if (
+          !Number.isFinite(placeAmount) ||
+          placeAmount <= 0 ||
+          (expectedPaise > 0 && placeAmountPaise !== expectedPaise)
+        ) {
+          throw new Error(
+            'Order total changed before UPI payment started. Please refresh checkout and try again.',
+          );
+        }
+
         const session: UpiPaymentSession = {
           orderId: placed.orderId,
           orderNumber: placed.orderNumber,
           upiUrl: response.upiUrl,
-          amount: Number(response.amount ?? quote?.grandTotal ?? 0),
+          amount: placeAmount,
           expiresAt: response.expiresAt,
           phone: phone.trim(),
         };
 
-        useCartStore.getState().clear();
+        // Keep cart until UPI is verified or customer claims payment (avoids empty-cart trap on abandon).
         setOrderId(placed.orderId);
         setOrderNumber(placed.orderNumber);
         setUpiSession(session);
@@ -751,6 +767,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
         phone: upiSession.phone,
         upiReference,
       });
+      useCartStore.getState().clear();
       setUpiPollMessage('Kitchen notified — waiting for them to verify your payment…');
     },
     [upiSession],

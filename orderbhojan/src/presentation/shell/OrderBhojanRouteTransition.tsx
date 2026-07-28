@@ -18,7 +18,13 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-function isFastNativeCheckoutTransition(from: string | null, to: string): boolean {
+function isFastFunnelTransition(from: string | null, to: string): boolean {
+  const funnel = new Set(['/', '/cart', '/checkout', '/menu']);
+  if (!from) return false;
+  // Instant feel on conversion paths (web + native).
+  if (funnel.has(from) && funnel.has(to)) return true;
+  if (to.startsWith('/orders/') && to.endsWith('/track')) return true;
+  if (from.startsWith('/orders/') && from.endsWith('/track') && to === '/') return true;
   return isNativePlatform() && from === '/cart' && to === '/checkout';
 }
 
@@ -26,24 +32,24 @@ export function OrderBhojanRouteTransition() {
   const location = useLocation();
   const reducedMotion = usePrefersReducedMotion();
   const previousPathRef = useRef<string | null>(null);
-  const fastCheckout = isFastNativeCheckoutTransition(previousPathRef.current, location.pathname);
-  const skipMotion = reducedMotion || fastCheckout;
+  const fastFunnel = isFastFunnelTransition(previousPathRef.current, location.pathname);
+  const skipMotion = reducedMotion || fastFunnel;
 
   useEffect(() => {
     previousPathRef.current = location.pathname;
   }, [location.pathname]);
 
   return (
-    <AnimatePresence mode={fastCheckout ? 'sync' : 'wait'} initial={false}>
+    <AnimatePresence mode={fastFunnel ? 'sync' : 'wait'} initial={false}>
       <m.div
         key={location.pathname}
-        initial={skipMotion ? false : { opacity: 0, y: 8 }}
+        initial={skipMotion ? false : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={skipMotion ? undefined : { opacity: 0, y: -6 }}
+        exit={skipMotion ? undefined : { opacity: 0, y: -4 }}
         transition={
           skipMotion
             ? { duration: 0 }
-            : { duration: 0.24, ease: OB_MOTION_EASE }
+            : { duration: 0.16, ease: OB_MOTION_EASE }
         }
         className="min-h-0"
       >

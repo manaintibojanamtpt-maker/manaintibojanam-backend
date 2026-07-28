@@ -42,18 +42,27 @@ export function CartPageView({
 }: CartPageViewProps) {
   return (
     <div className="relative">
-      <TransactionalPageShell title={title} subtitle={subtitle} className="!pb-[var(--ob-focus-bottom)]" embedded>
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!gap-3 !pb-[var(--ob-focus-bottom)]" embedded>
+        <header className="px-0.5">
+          <h1 className="text-xl font-extrabold tracking-tight text-[#fff8f0]">{title}</h1>
+          <p className="mt-0.5 text-xs text-[#c4b5a5]">{subtitle}</p>
+        </header>
+
         {restaurant && onMenu ? (
-          <CartRestaurantBannerView restaurant={restaurant} onMenu={onMenu} />
+          <div className="rounded-2xl border border-white/[0.08] bg-[#120d0c] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+            <CartRestaurantBannerView restaurant={restaurant} onMenu={onMenu} />
+          </div>
         ) : null}
 
-        <ul className="grid list-none gap-3 p-0">
+        <ul className="grid list-none gap-2 rounded-2xl border border-white/[0.08] bg-[#120d0c] p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
           {lines.map((line) => (
             <CartLineView key={line.lineId} line={line} onQuantityChange={onQuantityChange} />
           ))}
         </ul>
 
-        <CartSummaryView summary={summary} />
+        <div className="rounded-2xl border border-white/[0.08] bg-[#120d0c] p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+          <CartSummaryView summary={summary} />
+        </div>
 
         {validationMessages.length > 0 ? (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3" role="alert">
@@ -74,12 +83,16 @@ export function CartPageView({
 
       <div className="ob-fixed-cta-bar">
         <div className="mx-auto flex max-w-lg flex-col gap-2">
+          <div className="flex items-center justify-between px-0.5 text-sm">
+            <span className="font-medium text-white/60">Subtotal</span>
+            <span className="font-extrabold text-[#fff8f0]">{summary.subtotalLabel}</span>
+          </div>
           <SoftButton type="button" fullWidth disabled={checkoutBusy} onClick={onCheckout}>
             {checkoutLabel}
           </SoftButton>
           <div className="flex gap-2">
             <SoftButton type="button" tone="secondary" className="flex-1" onClick={onBrowse}>
-              Continue browsing
+              Browse
             </SoftButton>
             <SoftButton type="button" tone="ghost" size="compact" onClick={onClear}>
               Clear

@@ -8,15 +8,15 @@
   --bottom-bar-height: 72px;
   /* Floating cart sits at bottom: 96px + safe, height ~56px (h-14). */
   --ob-floating-cart-offset: 96px;
-  --ob-floating-cart-height: 56px;
-  --ob-fixed-cta-height: 132px;
+  --ob-floating-cart-height: 48px;
+  --ob-fixed-cta-height: 118px;
   /* Clear nav + floating cart stack so last kitchen cards stay tappable. */
   --ob-chrome-bottom: calc(
     var(--ob-floating-cart-offset) + var(--ob-floating-cart-height) + 12px + var(--ob-safe-bottom)
   );
-  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 16px);
+  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 12px);
   /* Menu sticky View cart bar (padding + card + safe). */
-  --ob-menu-cart-spacer: calc(8.5rem + var(--ob-safe-bottom));
+  --ob-menu-cart-spacer: calc(7.25rem + var(--ob-safe-bottom));
   --mib-bg: #050403;
   --mib-surface: #120d0c;
   --mib-surface-strong: #1a1412;
@@ -381,7 +381,7 @@ html.ob-native .ob-transactional-shell {
   z-index: 40;
   border-top: 1px solid var(--mib-border);
   background: rgba(5, 4, 3, 0.96);
-  padding: 1rem 1rem max(1rem, var(--ob-safe-bottom));
+  padding: 0.75rem 1rem max(0.75rem, var(--ob-safe-bottom));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 -12px 40px -16px rgba(0, 0, 0, 0.55);
