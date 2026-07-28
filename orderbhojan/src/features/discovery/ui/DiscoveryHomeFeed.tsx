@@ -4,11 +4,12 @@ import { readDiscoverySessionCache } from '../engine/discoverySessionCache';
 import { resolveActiveDeliveryLocation } from '@/features/location/domain/activeDeliveryLocation';
 import { obDebugTrustEvent } from '@/lib/obDebug';
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { DiscoveryCollectionRail } from './DiscoveryCollectionRail';
 import { DiscoveryFiltersBar } from './DiscoveryFiltersBar';
 import { TrendingFoodsSection } from '@/features/experience/ui/home/TrendingFoodsSection';
 import { useDiscoveryFeatureEnabled } from '../hooks/useDiscoveryFeature';
-import { KitchenSpotlightCard } from '@/features/experience/ui/home/KitchenSpotlightCard';
+import { OrderBhojanKitchenCard } from '@/presentation/discovery/OrderBhojanKitchenCard';
 import { buildDiscoverySpotlightFeed } from '@/features/experience/utils/homeSpotlightFeed';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { hasDiscoveryFilterOverrides } from '../domain/filterState';
@@ -27,33 +28,13 @@ import {
 } from '@/presentation/states';
 import { PullToRefresh } from '@/presentation/ui/PullToRefresh';
 
-function DiscoveryNearbyHeader({
-  kitchenCount,
-  deliveryLocation,
-}: {
-  readonly kitchenCount: number;
-  readonly deliveryLocation: ReturnType<typeof resolveActiveDeliveryLocation>;
-}) {
-  const sectionTitle = deliveryLocation ? 'Nearby kitchens' : 'Featured kitchens';
-  const contextLine = deliveryLocation
-    ? deliveryLocation.mode === 'current'
-      ? `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of your current location`
-      : `Within ${CONSUMER_MAX_DISCOVERY_DISTANCE_KM} km of ${deliveryLocation.text.shortLabel}`
-    : DEFAULT_LOCATION_DISCOVERY_HINT;
-
+function DiscoveryNearbyHeader() {
   return (
-    <header className="space-y-1">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-[#fff8f0]">{sectionTitle}</h2>
-          <p className={`text-xs ${deliveryLocation ? 'text-[#c4b5a5]' : 'text-[#f4a261]/90'}`}>
-            {contextLine}
-          </p>
-        </div>
-        <span className="shrink-0 text-xs font-bold text-[#e85d04]">
-          {kitchenCount} {kitchenCount === 1 ? 'kitchen' : 'kitchens'}
-        </span>
-      </div>
+    <header className="flex items-center justify-between gap-3">
+      <h2 className="text-base font-bold text-[#fff8f0]">Popular Near You</h2>
+      <Link to="/search" className="shrink-0 text-xs font-semibold text-[#e85d04] touch-manipulation">
+        View all
+      </Link>
     </header>
   );
 }
@@ -184,7 +165,6 @@ export function DiscoveryHomeFeed() {
   const railsToRender = spotlightPlan.kitchenCollections.filter((c) => c.restaurants.length > 0);
   const primaryRail = railsToRender[0] ?? null;
   const secondaryRails = railsToRender.slice(1);
-  const totalKitchenCount = spotlightPlan.uniqueKitchenCount;
 
   if (visibleCollections.length === 0) {
     const locationLabel = feedData?.locationLabel ?? deliveryLocation?.text.shortLabel ?? DEFAULT_MARKETPLACE_CITY_LABEL;
@@ -254,8 +234,10 @@ export function DiscoveryHomeFeed() {
         await query.refetch();
       }}
     >
-      <div className="space-y-5">
-        <DiscoveryFeedControls />
+      <div className="space-y-3">
+        <div className="opacity-90">
+          <DiscoveryFeedControls />
+        </div>
         {query.isFetching && feedData ? (
           <p
             className="text-[11px] text-white/45"
@@ -270,10 +252,7 @@ export function DiscoveryHomeFeed() {
           <OrderBhojanDiscoveryOfflineNotice onRetry={() => void query.refetch()} />
         ) : null}
 
-        <DiscoveryNearbyHeader
-          kitchenCount={totalKitchenCount}
-          deliveryLocation={deliveryLocation}
-        />
+        <DiscoveryNearbyHeader />
 
         {spotlightPlan.sparseCopy ? (
           <p className="text-sm text-white/60">{spotlightPlan.sparseCopy}</p>
@@ -281,7 +260,14 @@ export function DiscoveryHomeFeed() {
 
         {spotlightPlan.mode === 'single' && spotlightPlan.spotlightRestaurant ? (
           <>
-            <KitchenSpotlightCard restaurant={spotlightPlan.spotlightRestaurant} />
+            <div className="divide-y divide-white/[0.06]">
+              <OrderBhojanKitchenCard
+                restaurant={spotlightPlan.spotlightRestaurant}
+                variant="list"
+                className="w-full !border-b-0"
+                imageLoading="eager"
+              />
+            </div>
             {!discoveryEnabled ? <TrendingFoodsSection /> : null}
           </>
         ) : (

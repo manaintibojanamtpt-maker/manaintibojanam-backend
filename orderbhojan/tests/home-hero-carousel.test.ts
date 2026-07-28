@@ -19,35 +19,40 @@ describe('home hero carousel', () => {
     assert.match(hero, /rotationIntervalMs = heroConfig\.rotationIntervalMs/);
   });
 
-  it('shows slide indicators whenever multiple slides exist', () => {
+  it('uses compact discovery home layout with promo card structure', () => {
+    const hero = readFileSync(
+      join(root, 'src/presentation/discovery/OrderBhojanHomeHero.tsx'),
+      'utf8',
+    );
     const view = readFileSync(
       join(root, '../src/design-system/adapters/marketplace/MarketplaceDiscoveryHeroView.tsx'),
       'utf8',
     );
 
-    assert.match(view, /\{slides\.length > 1 \? \(/);
+    assert.match(hero, /layout="compact"/);
+    assert.match(view, /ds-discovery-hero--compact/);
+    assert.match(view, /ds-discovery-hero__promo/);
+    assert.match(view, /ds-discovery-hero__media[\s\S]*\{slides\.length > 1 \? \(/);
+    assert.match(view, /bottom-2\.5 right-2\.5/);
     assert.doesNotMatch(view, /\{animated && slides\.length > 1 \? \(/);
   });
 
-  it('keeps food photos bright with bottom scrim and text-shadow readability', () => {
+  it('keeps cinematic layout available and compact promo readable', () => {
     const view = readFileSync(
       join(root, '../src/design-system/adapters/marketplace/MarketplaceDiscoveryHeroView.tsx'),
       'utf8',
     );
     const theme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
 
+    assert.match(view, /layout \?\? 'compact'/);
     assert.match(view, /ds-discovery-hero__eyebrow/);
     assert.match(view, /ds-discovery-hero__headline/);
     assert.match(view, /ds-discovery-hero__subline/);
-    assert.doesNotMatch(view, /bg-clip-text text-transparent/);
     assert.match(view, /ds-discovery-hero__scrim[\s\S]*h-\[42%\]/);
-    assert.doesNotMatch(view, /ds-discovery-hero__readability/);
-    assert.doesNotMatch(view, /brightness-\[0\.5/);
-    assert.doesNotMatch(view, /ds-discovery-hero__vignette/);
-    assert.doesNotMatch(view, /ds-discovery-hero__edge-fade/);
-    assert.match(theme, /\.ds-discovery-hero__headline[\s\S]*text-shadow/);
-    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.92\)/);
+    assert.doesNotMatch(view, /bg-clip-text text-transparent/);
     assert.doesNotMatch(theme, /\.ds-discovery-hero__readability/);
+    assert.match(theme, /\.ds-discovery-hero--compact[\s\S]*\.ds-discovery-hero__promo/);
+    assert.match(theme, /\.ds-discovery-hero__scrim[\s\S]*rgba\(5, 4, 3, 0\.92\)/);
   });
 
   it('defaults hero rotation interval to 12 seconds', () => {

@@ -494,9 +494,53 @@ html.ob-native .ob-auth-shell {
     linear-gradient(180deg, rgba(12, 9, 8, 0.98), rgba(7, 5, 4, 1));
 }
 
-/* Discovery home hero — premium food-brand cinematic layer */
+/* Discovery home hero — compact promo + optional cinematic layer */
 .ds-discovery-hero {
   isolation: isolate;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__brand {
+  font-family: var(--font-sans, ui-sans-serif), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__promo {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__headline {
+  font-family: var(--font-sans, ui-sans-serif), system-ui, sans-serif;
+  text-shadow: none;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__eyebrow,
+.ds-discovery-hero--compact .ds-discovery-hero__subline {
+  text-shadow: none;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__cta {
+  background: none;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+  min-height: 0;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__copy::before {
+  display: none;
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__scrim {
+  background: linear-gradient(
+    to right,
+    rgba(18, 13, 12, 0.95) 0%,
+    rgba(18, 13, 12, 0.55) 45%,
+    transparent 100%
+  );
+}
+
+.ds-discovery-hero--compact .ds-discovery-hero__glow {
+  background: radial-gradient(ellipse 70% 80% at 70% 50%, rgba(244, 162, 97, 0.18), transparent 70%);
 }
 
 .ds-discovery-hero__media {

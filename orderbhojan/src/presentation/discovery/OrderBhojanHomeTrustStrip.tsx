@@ -1,35 +1,20 @@
-import { IndianRupee, ShieldCheck, BadgeCheck, Sparkles, Receipt } from 'lucide-react';
-import { GlassCard } from '@bhojan/storefront-design-system/primitives/GlassCard';
-import { PRICING_TRUST } from '@/features/experience/domain/pricingTrustCopy';
-
-const TRUST_ITEMS = [
-  { id: 'prices', label: PRICING_TRUST.stripKitchenPrices, icon: IndianRupee },
-  { id: 'zero-fee', label: PRICING_TRUST.stripZeroFee, icon: Receipt },
-  { id: 'no-hidden', label: PRICING_TRUST.stripNoHidden, icon: ShieldCheck },
-  { id: 'verified', label: 'Verified kitchens', icon: BadgeCheck },
-  { id: 'home-style', label: 'Home-style food', icon: Sparkles },
-] as const;
+import { Bike, ChevronRight } from 'lucide-react';
 
 export function OrderBhojanHomeTrustStrip() {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar md:grid md:grid-cols-5 md:overflow-visible">
-      {TRUST_ITEMS.map((item) => {
-        const Icon = item.icon;
-        return (
-          <GlassCard
-            key={item.id}
-            hoverEffect={false}
-            className="min-w-[9.5rem] shrink-0 !rounded-2xl !p-4 md:min-w-0"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e85d04]/15">
-                <Icon className="h-5 w-5 text-[#e85d04]" aria-hidden />
-              </div>
-              <span className="text-sm font-semibold text-[#fff8f0]">{item.label}</span>
-            </div>
-          </GlassCard>
-        );
-      })}
+    <div
+      className="flex items-center gap-3 rounded-2xl bg-[#3b2a6b] px-4 py-3.5 shadow-[0_10px_28px_rgba(20,10,40,0.35)]"
+      role="region"
+      aria-label="Order with confidence"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+        <Bike className="h-5 w-5 text-white" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-bold leading-tight text-white">Fast. Safe. Reliable.</p>
+        <p className="mt-0.5 text-[12px] text-white/70">Order with confidence.</p>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-white/55" aria-hidden />
     </div>
   );
 }

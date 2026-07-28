@@ -9,6 +9,9 @@ interface MarketplaceSearchBarProps {
   readonly onSubmit: () => void;
   readonly onClear: () => void;
   readonly disabled?: boolean;
+  /** Pill home-discovery bar (no separate Search button) */
+  readonly appearance?: 'default' | 'pill';
+  readonly placeholder?: string;
   readonly autocompleteView?: MarketplaceAutocompleteViewModel;
   readonly autocompleteEnabled?: boolean;
   readonly onAutocompleteFocus?: () => void;
@@ -23,6 +26,8 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
   onSubmit,
   onClear,
   disabled = false,
+  appearance = 'default',
+  placeholder,
   autocompleteView,
   autocompleteEnabled = false,
   onAutocompleteFocus,
@@ -32,6 +37,10 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
 }) => {
   const showAutocomplete =
     autocompleteEnabled && autocompleteView?.open && onAutocompleteSelect !== undefined;
+  const isPill = appearance === 'pill';
+  const resolvedPlaceholder =
+    placeholder ??
+    (isPill ? 'Search for restaurants or dishes' : 'Search restaurants, cuisines, or areas');
 
   const activeDescendant =
     showAutocomplete && autocompleteView && autocompleteView.activeIndex >= 0
@@ -41,14 +50,14 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
   return (
     <div className="relative">
       <form
-        className="flex gap-2"
+        className={isPill ? 'block' : 'flex gap-2'}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit();
         }}
       >
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
           <input
             type="search"
             value={value}
@@ -56,9 +65,13 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
             onFocus={onAutocompleteFocus}
             onBlur={onAutocompleteBlur}
             onKeyDown={onAutocompleteKeyDown}
-            placeholder="Search restaurants, cuisines, or areas"
+            placeholder={resolvedPlaceholder}
             disabled={disabled}
-            className="w-full rounded-2xl border border-white/10 bg-black/50 py-3 pl-10 pr-10 text-sm text-[#fff8f0] placeholder:text-white/40 focus:border-[#e85d04] focus:outline-none disabled:opacity-60"
+            className={
+              isPill
+                ? 'w-full rounded-full border border-white/10 bg-[#1a1412] py-2.5 pl-10 pr-10 text-sm text-[#fff8f0] placeholder:text-white/40 focus:border-[#e85d04]/60 focus:outline-none disabled:opacity-60'
+                : 'w-full rounded-2xl border border-white/10 bg-black/50 py-3 pl-10 pr-10 text-sm text-[#fff8f0] placeholder:text-white/40 focus:border-[#e85d04] focus:outline-none disabled:opacity-60'
+            }
             aria-label="Search restaurants"
             aria-expanded={showAutocomplete}
             aria-controls={showAutocomplete ? 'marketplace-search-autocomplete-listbox' : undefined}
@@ -78,13 +91,15 @@ export const MarketplaceSearchBar: React.FC<MarketplaceSearchBarProps> = ({
             </button>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={disabled || !value.trim()}
-          className="shrink-0 rounded-2xl bg-[#e85d04] px-5 py-3 text-sm font-semibold text-[#fff8f0] transition hover:bg-[#f07020] disabled:opacity-50"
-        >
-          Search
-        </button>
+        {isPill ? null : (
+          <button
+            type="submit"
+            disabled={disabled || !value.trim()}
+            className="shrink-0 rounded-2xl bg-[#e85d04] px-5 py-3 text-sm font-semibold text-[#fff8f0] transition hover:bg-[#f07020] disabled:opacity-50"
+          >
+            Search
+          </button>
+        )}
       </form>
 
       {showAutocomplete && autocompleteView && (

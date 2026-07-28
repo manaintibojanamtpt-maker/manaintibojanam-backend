@@ -32,18 +32,18 @@ function HomeLocationNudgeBanner({
 }) {
   return (
     <div
-      className="mx-4 mt-4 rounded-2xl border border-[#e85d04]/25 bg-[#e85d04]/10 px-4 py-3 sm:mx-6"
+      className="mx-4 mt-3 rounded-xl border border-[#e85d04]/25 bg-[#e85d04]/10 px-3.5 py-2.5 sm:mx-6"
       role="region"
       aria-label="Set delivery location"
     >
       <div className="flex items-start gap-3">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#e85d04]" aria-hidden />
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <p className="text-sm font-semibold text-white">{DEFAULT_LOCATION_DISCOVERY_CTA}</p>
           <p className="text-xs text-white/60">Choose your area to see kitchens that deliver to you.</p>
           <button
             type="button"
-            className="ob-press inline-flex min-h-10 items-center rounded-full bg-[#e85d04] px-4 text-xs font-bold uppercase tracking-wide text-[#fff8f0] touch-manipulation"
+            className="ob-press inline-flex min-h-9 items-center rounded-full bg-[#e85d04] px-3.5 text-xs font-bold uppercase tracking-wide text-[#fff8f0] touch-manipulation"
             onClick={onSetLocation}
           >
             Set location
@@ -109,7 +109,7 @@ export function HomeExperiencePage() {
   };
 
   return (
-    <div className="bg-[#050403] pb-6 text-[#fff8f0]">
+    <div className="bg-[#050403] pb-5 text-[#fff8f0]">
       <OrderBhojanHomeHero />
 
       {locationEnabled && showLocationNudge ? (
@@ -120,23 +120,19 @@ export function HomeExperiencePage() {
       ) : null}
 
       {discoveryEnabled ? (
-        <div className="px-4 pt-4 sm:px-6">
-          <div className="rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] px-3.5 py-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
-            <OrderBhojanHomeCategories compact />
-          </div>
+        <div className="px-4 pt-3.5 sm:px-6">
+          <OrderBhojanHomeCategories compact />
         </div>
       ) : null}
 
-      <div className="px-4 pt-3 sm:px-6">
-        <p
-          className="rounded-xl border border-emerald-500/10 bg-emerald-500/5 px-3 py-2 text-[11px] leading-relaxed text-emerald-100/70"
-          data-testid="home-pricing-trust-banner"
-        >
-          ₹0 platform fee · Kitchen prices · No hidden charges — delivery & taxes shown before you pay.
-        </p>
-      </div>
+      <p
+        className="px-4 pt-2.5 text-[11px] leading-snug text-white/40 sm:px-6"
+        data-testid="home-pricing-trust-banner"
+      >
+        ₹0 platform fee · Kitchen prices · No hidden charges
+      </p>
 
-      <div className="px-4 pt-4 sm:px-6">
+      <div className="px-4 pt-2.5 sm:px-6">
         {discoveryEnabled ? (
           <DiscoveryHomeFeed />
         ) : (
@@ -144,14 +140,7 @@ export function HomeExperiencePage() {
         )}
       </div>
 
-      <section className="mt-10 border-t border-white/5 px-4 pt-8 sm:px-6" aria-label="Why OrderBhojan">
-        <div className="mb-4 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35">Trust</p>
-          <h2 className="text-base font-bold text-white/90">Why OrderBhojan</h2>
-          <p className="text-xs text-white/45">
-            Home-style kitchens. True kitchen prices. ₹0 platform fee — no hidden charges.
-          </p>
-        </div>
+      <section className="mt-5 px-4 sm:px-6" aria-label="Why OrderBhojan">
         <Suspense fallback={<TrustStripFallback />}>
           <OrderBhojanHomeTrustStrip />
         </Suspense>
@@ -161,11 +150,5 @@ export function HomeExperiencePage() {
 }
 
 function TrustStripFallback() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-3" aria-hidden="true">
-      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
-      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
-      <Skeleton className="h-20 rounded-2xl ob-shimmer" />
-    </div>
-  );
+  return <Skeleton className="h-[3.75rem] rounded-2xl ob-shimmer" aria-hidden="true" />;
 }

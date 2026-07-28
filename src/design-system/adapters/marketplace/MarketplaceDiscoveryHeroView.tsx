@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search, User } from 'lucide-react';
 
 export type MarketplaceDiscoveryHeroSlideKind = 'food' | 'offer';
 
@@ -32,13 +33,180 @@ export interface MarketplaceDiscoveryHeroViewProps {
   readonly onSlideSelect?: (index: number) => void;
   /** Sync Ken Burns + crossfade timing with carousel interval (default 12s) */
   readonly slideDurationMs?: number;
+  /** Compact discovery home (default) vs legacy full-bleed cinematic */
+  readonly layout?: 'compact' | 'cinematic';
+  readonly brandName?: string;
+  readonly brandAccent?: string;
+  readonly onSearchIconClick?: () => void;
+  readonly onProfileIconClick?: () => void;
 }
 
 function slideIsOffer(slide: MarketplaceDiscoveryHeroSlide | undefined): boolean {
   return slide?.kind === 'offer' || Boolean(slide?.offerBadge);
 }
 
-export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroViewProps> = ({
+function CompactDiscoveryHero({
+  eyebrow,
+  headline,
+  subline,
+  slides,
+  activeIndex,
+  searchSlot,
+  locationSlot,
+  ctaLabel,
+  onCtaClick,
+  onSlideSelect,
+  brandName = 'Order',
+  brandAccent = 'Bhojan',
+  onSearchIconClick,
+  onProfileIconClick,
+}: MarketplaceDiscoveryHeroViewProps) {
+  const activeSlide = slides[activeIndex] ?? slides[0];
+  const isOfferSlide = slideIsOffer(activeSlide);
+  const displayHeadline = activeSlide?.headline ?? headline;
+  const displaySubline = activeSlide?.subline ?? subline;
+  const displayCta = activeSlide?.cta ?? ctaLabel;
+  const displayEyebrow = isOfferSlide ? 'Limited-time deal' : eyebrow;
+
+  return (
+    <section className="ds-discovery-hero ds-discovery-hero--compact bg-[#050403]" aria-label="Home">
+      <div className="mx-auto max-w-5xl px-4 pt-3 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="ds-discovery-hero__brand text-[1.35rem] font-extrabold tracking-tight text-white">
+            {brandName}
+            <span className="text-[#f4a261]">{brandAccent}</span>
+          </h1>
+          <div className="flex items-center gap-2">
+            {onSearchIconClick ? (
+              <button
+                type="button"
+                onClick={onSearchIconClick}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/30 hover:text-white touch-manipulation"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
+            {onProfileIconClick ? (
+              <button
+                type="button"
+                onClick={onProfileIconClick}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/30 hover:text-white touch-manipulation"
+                aria-label="Profile"
+              >
+                <User className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {locationSlot ? <div className="mt-2.5">{locationSlot}</div> : null}
+
+        <div className="mt-3">{searchSlot}</div>
+
+        <div className="ds-discovery-hero__promo relative mt-3.5 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#120d0c]">
+          <div className="grid min-h-[8.75rem] grid-cols-[1.1fr_0.9fr]">
+            <div
+              key={activeSlide?.id ?? 'hero-copy'}
+              className="ds-discovery-hero__copy relative z-[1] flex flex-col justify-center px-3.5 py-3.5 sm:px-5 sm:py-4"
+              aria-live="polite"
+            >
+              <p className="ds-discovery-hero__eyebrow text-[9px] font-bold uppercase tracking-[0.22em] text-white/55">
+                {displayEyebrow}
+              </p>
+              <h2 className="ds-discovery-hero__headline mt-1.5 line-clamp-2 text-balance text-[1.1rem] font-extrabold leading-[1.15] tracking-[-0.02em] text-white sm:text-[1.35rem]">
+                {displayHeadline}
+              </h2>
+              {displaySubline ? (
+                <p className="ds-discovery-hero__subline mt-1 line-clamp-2 text-[12px] leading-snug text-white/65">
+                  {displaySubline}
+                </p>
+              ) : null}
+              {displayCta && onCtaClick ? (
+                <button
+                  type="button"
+                  onClick={onCtaClick}
+                  className="ds-discovery-hero__cta mt-2 inline-flex w-fit max-w-full items-center gap-1 truncate text-xs font-bold text-[#f4a261] touch-manipulation"
+                >
+                  <span className="truncate">{displayCta}</span>
+                  <span aria-hidden>→</span>
+                </button>
+              ) : null}
+              {isOfferSlide && activeSlide?.offerBadge ? (
+                <span className="mt-2 inline-flex w-fit rounded-md bg-[#e85d04] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  {activeSlide.offerBadge}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="ds-discovery-hero__media relative min-h-[8.75rem] overflow-hidden">
+              {slides.map((slide, index) => {
+                const isActive = index === activeIndex;
+                return (
+                  <picture
+                    key={slide.id}
+                    className={`ds-hero-slide absolute inset-0 ${isActive ? 'ds-hero-slide--active' : ''}`}
+                    aria-hidden={!isActive}
+                  >
+                    {slide.avifSrcSet ? (
+                      <source type="image/avif" srcSet={slide.avifSrcSet} sizes="45vw" />
+                    ) : null}
+                    {slide.webpSrcSet ? (
+                      <source type="image/webp" srcSet={slide.webpSrcSet} sizes="45vw" />
+                    ) : null}
+                    <img
+                      src={slide.src}
+                      alt=""
+                      className="ds-hero-photo h-full w-full object-cover object-center"
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={index === 0 ? 'high' : 'auto'}
+                      decoding="async"
+                    />
+                  </picture>
+                );
+              })}
+              <div
+                className="ds-discovery-hero__scrim pointer-events-none absolute inset-y-0 left-0 w-1/2"
+                aria-hidden
+              />
+              <div className="ds-discovery-hero__glow pointer-events-none absolute inset-0" aria-hidden />
+              {slides.length > 1 ? (
+                <div
+                  className="absolute bottom-2.5 right-2.5 z-[2] flex items-center gap-1.5 rounded-full bg-black/35 px-2 py-1 backdrop-blur-sm"
+                  role="tablist"
+                  aria-label="Promo scenes"
+                >
+                  {slides.map((slide, index) => {
+                    const isActive = index === activeIndex;
+                    return (
+                      <button
+                        key={slide.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-label={
+                          slideIsOffer(slide)
+                            ? `Offer: ${slide.restaurantName ?? slide.headline ?? `Slide ${index + 1}`}`
+                            : `Food scene ${index + 1}`
+                        }
+                        onClick={() => onSlideSelect?.(index)}
+                        className={`h-1.5 min-w-1.5 rounded-full transition-all duration-300 touch-manipulation ${
+                          isActive ? 'w-5 bg-white' : 'w-1.5 bg-white/45'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CinematicDiscoveryHero({
   eyebrow,
   headline,
   subline,
@@ -51,7 +219,7 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
   onCtaClick,
   onSlideSelect,
   slideDurationMs = 12_000,
-}) => {
+}: MarketplaceDiscoveryHeroViewProps) {
   const activeSlide = slides[activeIndex] ?? slides[0];
   const isOfferSlide = slideIsOffer(activeSlide);
   const displayHeadline = activeSlide?.headline ?? headline;
@@ -204,10 +372,15 @@ export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroView
           </div>
         ) : null}
       </div>
-
-      {activeSlide ? <span className="sr-only">{activeSlide.alt}</span> : null}
     </section>
   );
+}
+
+export const MarketplaceDiscoveryHeroView: React.FC<MarketplaceDiscoveryHeroViewProps> = (props) => {
+  if ((props.layout ?? 'compact') === 'cinematic') {
+    return <CinematicDiscoveryHero {...props} />;
+  }
+  return <CompactDiscoveryHero {...props} />;
 };
 
 export default MarketplaceDiscoveryHeroView;

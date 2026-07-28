@@ -13,7 +13,7 @@ function isDisplayableDistanceKm(km: number | undefined | null): km is number {
 
 export interface MarketplaceKitchenCardViewProps {
   readonly kitchen: MarketplaceKitchenCard;
-  readonly variant?: 'default' | 'spotlight';
+  readonly variant?: 'default' | 'spotlight' | 'list';
   readonly favoriteSlot?: React.ReactNode;
   readonly className?: string;
   readonly imageLoading?: 'lazy' | 'eager';
@@ -122,6 +122,63 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   imageLoading = 'lazy',
   spotlightEyebrow = 'Cooking now',
 }) => {
+  if (variant === 'list') {
+    const offerBadge = kitchen.badges.find((badge) => badge.id === 'offer');
+    const etaLabel =
+      kitchen.etaMins !== undefined
+        ? `${Math.max(20, kitchen.etaMins - 5)}-${kitchen.etaMins + 5} mins`
+        : null;
+
+    return (
+      <Link
+        to={kitchen.storePath}
+        className={`group flex items-center gap-3 py-3 transition active:bg-white/[0.03] ${className}`}
+      >
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5">
+          <KitchenThumbnail
+            kitchen={kitchen}
+            imageLoading={imageLoading}
+            className="h-full w-full object-cover"
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[15px] font-bold text-[#fff8f0] group-hover:text-[#f4a261]">
+            {kitchen.name}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-[#c4b5a5]">
+            {kitchen.rating !== undefined ? (
+              <span className="inline-flex items-center gap-0.5">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden />
+                {kitchen.rating.toFixed(1)}
+              </span>
+            ) : null}
+            {kitchen.rating !== undefined && etaLabel ? <span aria-hidden>·</span> : null}
+            {etaLabel ? <span>{etaLabel}</span> : null}
+          </div>
+          <p className="mt-0.5 line-clamp-1 text-[12px] text-white/45">
+            {kitchen.cuisineTags?.join(' · ') || kitchen.eligibilityLabel}
+          </p>
+        </div>
+
+        <div className="flex max-w-[40%] shrink-0 items-center justify-end gap-1.5 sm:max-w-none sm:gap-2">
+          {offerBadge ? (
+            <span className="max-w-[4.5rem] truncate rounded-md bg-[#e85d04] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              {offerBadge.label}
+            </span>
+          ) : null}
+          {!kitchen.isOpen ? (
+            <span className="rounded-md bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-200">
+              Closed
+            </span>
+          ) : null}
+          {favoriteSlot ? <span className="hidden min-[360px]:inline-flex">{favoriteSlot}</span> : null}
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/30 group-hover:text-[#f4a261]" aria-hidden />
+        </div>
+      </Link>
+    );
+  }
+
   if (variant === 'spotlight') {
     return (
       <Link

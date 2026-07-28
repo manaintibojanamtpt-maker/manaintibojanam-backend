@@ -53,8 +53,8 @@ export default defineConfig({
         name: 'OrderBhojan',
         short_name: 'OrderBhojan',
         description: 'India\'s next-generation food ordering marketplace',
-        theme_color: '#070504',
-        background_color: '#070504',
+        theme_color: '#050403',
+        background_color: '#050403',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -80,7 +80,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        cacheId: 'orderbhojan-pwa-v5',
+        cacheId: 'orderbhojan-pwa-v6',
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
         globIgnores: ['**/hero/**', '**/categories/**', 'offline.html'],
         // Serve the SPA shell on navigation failures — not the dead-end offline page.

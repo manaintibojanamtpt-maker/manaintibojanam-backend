@@ -14,7 +14,6 @@ import { useHomeHeroOfferRestaurants } from '@/features/experience/hooks/useHome
 import { useKitchenHeroMotion } from '@/features/experience/hooks/useKitchenHeroMotion';
 import { mergeHomeHeroSlides } from '@/features/experience/utils/buildHomeHeroSlides';
 import type { HomeHeroSlide } from '@/types/marketplace-home-hero';
-import { HomeVoiceAgentButton } from '@/features/assistant/ui/HomeVoiceAgentButton';
 import { OrderBhojanHomeLocationBar } from './OrderBhojanHomeLocationBar';
 
 function resolveHeroSlidePhoto(slide: HomeHeroSlide) {
@@ -111,23 +110,26 @@ export function OrderBhojanHomeHero() {
   if (!heroReady) {
     return (
       <section
-        className="relative min-h-[12rem] overflow-hidden border-b border-white/[0.04] bg-[#050403]"
+        className="bg-[#050403] px-4 pt-3 sm:px-6"
         aria-busy="true"
         aria-label="Loading home"
       >
-        <div className="relative z-10 mx-auto flex min-h-[12rem] max-w-5xl flex-col justify-end px-4 pb-6 pt-10 sm:px-6">
-          <Skeleton className="mb-2 h-8 w-[min(100%,18rem)] rounded-xl ob-shimmer" />
-          <Skeleton className="h-11 w-full max-w-xl rounded-2xl ob-shimmer" />
-        </div>
+        <Skeleton className="mb-2 h-7 w-40 rounded-lg ob-shimmer" />
+        <Skeleton className="mb-3 h-4 w-48 rounded-md ob-shimmer" />
+        <Skeleton className="mb-3.5 h-11 w-full rounded-full ob-shimmer" />
+        <Skeleton className="h-[8.75rem] w-full rounded-2xl ob-shimmer" />
       </section>
     );
   }
 
   return (
     <MarketplaceDiscoveryHeroView
+      layout="compact"
+      brandName="Order"
+      brandAccent="Bhojan"
       eyebrow={displayEyebrow}
       headline={activeSlide?.headline ?? heroConfig.headline}
-      subline={activeSlide?.subline ?? 'Discover kitchens near you'}
+      subline={activeSlide?.subline ?? 'Homestyle meals from kitchens near you'}
       slides={slides}
       activeIndex={activeIndex}
       animated={richMotion}
@@ -135,20 +137,18 @@ export function OrderBhojanHomeHero() {
       onSlideSelect={setActiveIndex}
       ctaLabel={activeSlide?.cta}
       onCtaClick={activeSlide?.cta ? handleCta : undefined}
+      onSearchIconClick={goToSearch}
+      onProfileIconClick={() => navigate('/profile')}
       locationSlot={<OrderBhojanHomeLocationBar />}
       searchSlot={
-        <div className="flex items-stretch gap-2">
-          <div className="min-w-0 flex-1">
-            <MarketplaceSearchBar
-              value={searchValue}
-              onChange={setSearchValue}
-              onSubmit={goToSearch}
-              onClear={() => setSearchValue('')}
-              onAutocompleteFocus={goToSearch}
-            />
-          </div>
-          <HomeVoiceAgentButton />
-        </div>
+        <MarketplaceSearchBar
+          appearance="pill"
+          value={searchValue}
+          onChange={setSearchValue}
+          onSubmit={goToSearch}
+          onClear={() => setSearchValue('')}
+          onAutocompleteFocus={goToSearch}
+        />
       }
     />
   );

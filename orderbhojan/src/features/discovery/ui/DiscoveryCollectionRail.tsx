@@ -4,6 +4,7 @@ import { loadDiscoveryCollection } from '../engine/discoveryEngine';
 import { useActiveLocation } from '@/features/location';
 import { resolveActiveDeliveryCoords } from '@/features/location/domain/activeDeliveryLocation';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
+import { Link } from 'react-router-dom';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import { OrderBhojanKitchenCard } from '@/presentation/discovery/OrderBhojanKitchenCard';
 import { OrderBhojanDiscoveryUxState } from '@/presentation/states';
@@ -64,26 +65,31 @@ export function DiscoveryCollectionRail({
   }
 
   return (
-    <section className={compact ? 'space-y-3' : 'space-y-4'} aria-label={collection.title}>
+    <section className={compact ? 'space-y-1' : 'space-y-2'} aria-label={collection.title}>
       {showHeader ? (
-        <div className="flex items-end justify-between gap-3">
+        <div className="mb-1 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#fff8f0]">{collection.title}</h2>
+            <h2 className="text-base font-bold tracking-tight text-[#fff8f0]">{collection.title}</h2>
             {collection.subtitle ? (
               <p className="mt-0.5 text-xs text-[#c4b5a5]">{collection.subtitle}</p>
             ) : null}
           </div>
-          <span className="text-xs font-semibold text-[#c4b5a5]/70">{restaurants.length} kitchens</span>
+          <Link
+            to="/search"
+            className="shrink-0 text-xs font-semibold text-[#e85d04] touch-manipulation"
+          >
+            View all
+          </Link>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+      <div className="divide-y divide-white/[0.06]">
         {restaurants.map((restaurant, index) => (
           <OrderBhojanKitchenCard
             key={restaurant.restaurantId}
             restaurant={restaurant}
-            variant="grid"
-            className="w-full"
+            variant="list"
+            className="w-full !border-b-0"
             imageLoading={index < 2 ? 'eager' : 'lazy'}
           />
         ))}

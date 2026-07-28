@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { FoodCategoryId } from '../../domain/experience.types';
 import { useFeaturedRestaurants } from '../../hooks/useMockExperienceQuery';
 import { matchesHomeCategory } from '../../utils/homeCategoryFilter';
@@ -46,25 +47,27 @@ export function FeaturedRestaurantsSection({
   }
 
   return (
-    <section className="space-y-4" aria-label="Nearby kitchens">
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
-          <p className="text-xs text-white/50">Home kitchens cooking for your area</p>
-        </div>
-        <span className="text-xs font-semibold text-[#FF7A00]">
-          {visible.length} {visible.length === 1 ? 'kitchen' : 'kitchens'}
-        </span>
+    <section className="space-y-1" aria-label="Popular Near You">
+      <header className="mb-1 flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-white">Popular Near You</h2>
+        <Link to="/search" className="shrink-0 text-xs font-semibold text-[#e85d04] touch-manipulation">
+          View all
+        </Link>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+      <div className="divide-y divide-white/[0.06]">
         {visible.map((restaurant) => (
-          <OrderBhojanMockKitchenCard key={restaurant.id} restaurant={restaurant} variant="grid" className="w-full" />
+          <OrderBhojanMockKitchenCard
+            key={restaurant.id}
+            restaurant={restaurant}
+            variant="list"
+            className="w-full !border-b-0"
+          />
         ))}
       </div>
 
       {showCategoriesAfter ? (
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
+        <div className="pt-3">
           <OrderBhojanHomeCategories compact />
         </div>
       ) : null}

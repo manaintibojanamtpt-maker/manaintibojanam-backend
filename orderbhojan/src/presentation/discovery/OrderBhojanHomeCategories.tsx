@@ -32,18 +32,15 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
   const cuisines = useDiscoveryFilterStore((s) => s.filters.cuisines);
   const setFilters = useDiscoveryFilterStore((s) => s.setFilters);
 
-  const circleSize = compact ? 'size-[3.75rem]' : 'size-[4.75rem] sm:size-[5rem]';
-  const photoWidth = compact ? 120 : 144;
+  const circleSize = compact ? 'size-[3.85rem]' : 'size-[4.25rem]';
+  const photoWidth = compact ? 120 : 136;
 
   return (
-    <div className="space-y-2.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#c4b5a5]">
-        {compact ? 'Browse cuisines' : 'Categories'}
-      </p>
+    <div className="space-y-0">
       <div
         className={clsx(
-          'flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory',
-          compact && '-mx-3 px-3',
+          'flex gap-3.5 overflow-x-auto pb-0.5 no-scrollbar snap-x snap-mandatory',
+          compact && '-mx-1 px-1',
         )}
         role="list"
         aria-label="Browse cuisines"
@@ -72,8 +69,8 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
               role="listitem"
               onClick={handleSelect}
               className={clsx(
-                'group flex shrink-0 snap-start flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d04]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050403]',
-                compact ? 'w-[4.25rem]' : 'w-[4.75rem] sm:w-[5rem]',
+                'group flex shrink-0 snap-start flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d04]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050403]',
+                'w-[4.35rem]',
               )}
               aria-pressed={selected}
               aria-label={`${selected ? 'Clear' : 'Filter by'} ${cat.label}`}
@@ -83,17 +80,17 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
                   'relative rounded-full p-[2px] transition-all duration-300 ease-out',
                   circleSize,
                   selected
-                    ? 'bg-gradient-to-br from-[#e85d04] via-[#f4a261] to-[#e85d04]/70 shadow-[0_8px_24px_rgba(232,93,4,0.28)]'
-                    : 'bg-white/10 group-hover:bg-white/16 group-active:scale-95',
+                    ? 'bg-gradient-to-br from-[#e85d04] via-[#f4a261] to-[#e85d04]/70 shadow-[0_0_18px_rgba(232,93,4,0.35)]'
+                    : 'bg-[#1a1412] shadow-[0_0_16px_rgba(244,162,97,0.12)] group-active:scale-95',
                 )}
               >
                 <picture
                   className={clsx(
-                    'block size-full overflow-hidden rounded-full bg-[#1a1410]',
+                    'block size-full overflow-hidden rounded-full bg-[#120d0c]',
                     selected && 'ring-2 ring-[#050403]/80',
                   )}
                 >
-                  {pictureSources(photo, compact ? '3.75rem' : '4.5rem').map((source) => (
+                  {pictureSources(photo, compact ? '3.85rem' : '4.25rem').map((source) => (
                     <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
                   ))}
                   <img
@@ -101,7 +98,7 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
                     alt=""
                     className={clsx(
                       'size-full scale-[1.12] object-cover transition-transform duration-500 ease-out',
-                      'group-hover:scale-[1.2] group-active:scale-[1.08]',
+                      'group-hover:scale-[1.18] group-active:scale-[1.08]',
                     )}
                     style={{ objectPosition: CATEGORY_IMAGE_OBJECT_POSITION[cat.id] }}
                     loading="lazy"
@@ -112,7 +109,7 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
               <span
                 className={clsx(
                   'max-w-full truncate px-0.5 text-center text-[11px] font-semibold leading-tight transition-colors duration-300',
-                  selected ? 'text-[#e85d04]' : 'text-[#c4b5a5] group-hover:text-[#fff8f0]',
+                  selected ? 'text-[#e85d04]' : 'text-white/80',
                 )}
               >
                 {cat.label}

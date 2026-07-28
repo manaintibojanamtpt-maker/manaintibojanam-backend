@@ -17,7 +17,7 @@ export interface HomeSpotlightMockFeedProps {
 
 function MockCategoriesStrip() {
   return (
-    <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-3">
+    <div className="pt-1">
       <OrderBhojanHomeCategories compact />
     </div>
   );
@@ -59,15 +59,10 @@ export function HomeSpotlightMockFeed({ categoryId }: HomeSpotlightMockFeedProps
 
   if (mode === 'single' && filtered[0]) {
     return (
-      <div className="space-y-5">
-        <header className="space-y-1">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-white">Nearby kitchens</h2>
-              <p className="text-xs text-white/50">Home kitchens cooking for your area</p>
-            </div>
-            <span className="text-xs font-semibold text-[#FF7A00]">1 kitchen</span>
-          </div>
+      <div className="space-y-3">
+        <header className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-white">Popular Near You</h2>
+          <span className="text-xs font-semibold text-[#e85d04]">View all</span>
         </header>
         <HomeKitchenSpotlightMock restaurant={filtered[0]} sparseCopy={HOME_SPOTLIGHT_SPARSE_COPY} />
         <MockCategoriesStrip />
@@ -77,7 +72,7 @@ export function HomeSpotlightMockFeed({ categoryId }: HomeSpotlightMockFeedProps
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <FeaturedRestaurantsSection categoryId={categoryId} showCategoriesAfter />
       <TrendingFoodsSection categoryId={categoryId} />
     </div>

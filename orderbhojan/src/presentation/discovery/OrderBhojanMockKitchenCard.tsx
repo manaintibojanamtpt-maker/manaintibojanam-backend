@@ -10,7 +10,7 @@ import { formatDistanceKmLabel } from '@/features/discovery/utils/distanceDispla
 
 export interface OrderBhojanMockKitchenCardProps {
   readonly restaurant: MockRestaurant;
-  readonly variant?: 'default' | 'spotlight' | 'grid';
+  readonly variant?: 'default' | 'spotlight' | 'grid' | 'list';
   readonly width?: string;
   readonly className?: string;
 }
@@ -79,6 +79,23 @@ export function OrderBhojanMockKitchenCard({
       <Heart className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
     </button>
   );
+
+  if (variant === 'list') {
+    return (
+      <div
+        className={`min-w-0 border-b border-white/[0.06] last:border-b-0 ${
+          restaurantEnabled ? '' : 'pointer-events-none opacity-60'
+        } ${className}`}
+        aria-label={`${restaurant.name}, rated ${restaurant.rating ?? '—'}`}
+      >
+        <MarketplaceKitchenCardView
+          kitchen={kitchen}
+          variant="list"
+          favoriteSlot={favoriteSlot}
+        />
+      </div>
+    );
+  }
 
   if (variant === 'grid') {
     const distanceLabel = formatDistanceKmLabel(kitchen.distanceKm);

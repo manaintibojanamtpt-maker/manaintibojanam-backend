@@ -20,7 +20,7 @@ import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 
 export interface OrderBhojanKitchenCardProps {
   readonly restaurant: RestaurantPublic;
-  readonly variant?: 'default' | 'spotlight' | 'grid';
+  readonly variant?: 'default' | 'spotlight' | 'grid' | 'list';
   readonly width?: string;
   readonly className?: string;
   readonly imageLoading?: 'lazy' | 'eager';
@@ -141,6 +141,50 @@ export function OrderBhojanKitchenCard({
       <Heart className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
     </button>
   );
+
+  if (variant === 'list') {
+    const listFavoriteSlot = (
+      <button
+        type="button"
+        className={`flex h-8 w-8 items-center justify-center rounded-full text-white/50 transition hover:text-[#e85d04] touch-manipulation ${
+          favorite ? 'text-[#e85d04]' : ''
+        }`}
+        aria-label={
+          favorite
+            ? `Remove ${restaurant.displayName} from favorites`
+            : `Add ${restaurant.displayName} to favorites`
+        }
+        aria-pressed={favorite}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggle(restaurant.restaurantId);
+        }}
+      >
+        <Heart className="h-3.5 w-3.5" fill={favorite ? 'currentColor' : 'none'} />
+      </button>
+    );
+
+    return (
+      <div
+        className={`min-w-0 border-b border-white/[0.06] last:border-b-0 ${
+          restaurantEnabled ? '' : 'pointer-events-none opacity-60'
+        } ${className}`}
+        aria-label={`${restaurant.displayName}, rated ${restaurant.rating ?? '—'}`}
+        onMouseEnter={prefetchKitchenNavigation}
+        onFocus={prefetchKitchenNavigation}
+        onPointerDown={prefetchKitchenNavigation}
+        onTouchStart={prefetchKitchenNavigation}
+      >
+        <MarketplaceKitchenCardView
+          kitchen={kitchen}
+          variant="list"
+          favoriteSlot={listFavoriteSlot}
+          imageLoading={imageLoading}
+        />
+      </div>
+    );
+  }
 
   if (variant === 'grid') {
     const distanceKm = kitchen.distanceKm;
