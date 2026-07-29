@@ -38,7 +38,7 @@ export function OrderBhojanProfilePage() {
         openSelector();
         return;
       }
-      navigate('/?openLocation=1');
+      // Never bounce to home without a location sheet — keep users on profile.
       return;
     }
   };

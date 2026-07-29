@@ -28,7 +28,7 @@ export function OrdersListPageView({
   showRetry = false,
 }: OrdersListPageViewProps) {
   return (
-    <TransactionalPageShell title={title} subtitle={subtitle}>
+    <TransactionalPageShell title={title} subtitle={subtitle} embedded>
       {orders.length === 0 ? (
         <>
           <MarketplaceUxStateView
@@ -67,7 +67,7 @@ export function OrdersListPageView({
 
 export function OrdersListLoadingView() {
   return (
-    <TransactionalPageShell title="Orders" subtitle="">
+    <TransactionalPageShell title="Orders" subtitle="" embedded>
       <Skeleton className="h-8 w-40" />
       <Skeleton className="h-24 w-full rounded-2xl" />
     </TransactionalPageShell>

@@ -243,6 +243,7 @@ async function loadMenuItemsForTenants(
   db: Firestore,
   tenantIds: readonly string[],
   slugByTenantId: ReadonlyMap<string, string>,
+  nameBySlug: ReadonlyMap<string, string>,
 ): Promise<SearchMenuItem[]> {
   const items: SearchMenuItem[] = [];
   for (const tenantChunk of chunk(tenantIds, 10)) {
@@ -257,6 +258,7 @@ async function loadMenuItemsForTenants(
         id: parsed.id,
         tenantId: parsed.tenantId,
         restaurantSlug,
+        restaurantName: nameBySlug.get(restaurantSlug) ?? restaurantSlug,
         name: parsed.name,
         category: parsed.category,
         description: parsed.description,
@@ -311,7 +313,14 @@ async function loadSearchContextUncached(
     })
     .filter(Boolean);
 
-  const menuItems = await loadMenuItemsForTenants(db, tenantIds, slugByTenantId);
+  const nameBySlug = new Map<string, string>();
+  for (const restaurant of restaurants) {
+    if (restaurant.restaurantSlug && restaurant.displayName) {
+      nameBySlug.set(restaurant.restaurantSlug, restaurant.displayName);
+    }
+  }
+
+  const menuItems = await loadMenuItemsForTenants(db, tenantIds, slugByTenantId, nameBySlug);
   return { restaurants, menuItems, poolSyncRevision };
 }
 
@@ -381,14 +390,22 @@ export function parseSearchQueryParams(url: URL): SearchQueryParams {
 }
 
 function mapMenuItemToSearchResult(item: SearchMenuItem): SearchResultItem {
+  const restaurantName = item.restaurantName?.trim() || item.restaurantSlug;
   return {
     id: item.id,
     type: 'food',
     label: item.name,
-    subtitle: item.category,
+    // Consumer cards surface kitchen name as the secondary line (not menu category).
+    subtitle: restaurantName,
     imageUrl: item.image,
     slug: item.restaurantSlug,
-    meta: { price: item.price, isVeg: item.isVeg, tenantId: item.tenantId },
+    meta: {
+      price: item.price,
+      isVeg: item.isVeg,
+      tenantId: item.tenantId,
+      category: item.category,
+      restaurantName,
+    },
   };
 }
 

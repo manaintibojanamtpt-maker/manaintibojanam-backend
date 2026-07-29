@@ -6,6 +6,8 @@ export interface SearchMenuItem {
   readonly id: string;
   readonly tenantId: string;
   readonly restaurantSlug: string;
+  /** Kitchen display name for consumer search cards. */
+  readonly restaurantName?: string;
   readonly name: string;
   readonly category: string;
   readonly description?: string;

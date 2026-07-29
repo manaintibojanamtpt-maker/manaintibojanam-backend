@@ -12,6 +12,7 @@ import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationUiState } from '../hooks/useActiveLocation';
 import { useLocationSessionStore } from '../store/locationSessionStore';
 import { persistAuthReturnTo } from '@/features/auth/domain/authReturnTo';
+import { LOCATION_ERROR_CODES } from '../domain/location.errors';
 import { AddressFormSheet } from './AddressFormSheet';
 
 export function LocationSelectorSheet() {
@@ -21,7 +22,6 @@ export function LocationSelectorSheet() {
     requestCurrentLocation,
     selectSavedAddress,
     selectRecentLocation,
-    startAddSavedAddress,
     refreshSavedAddresses,
   } = useLocationActions();
   const { uiStatus, uiError } = useLocationUiState();
@@ -47,6 +47,11 @@ export function LocationSelectorSheet() {
   const signInPath = `/auth?returnTo=${encodeURIComponent(`${routeLocation.pathname}${routeLocation.search}`)}`;
   const returnPath = `${routeLocation.pathname}${routeLocation.search}`;
 
+  const openManualAddressForm = () => {
+    closeSelector();
+    setManualFormOpen(true);
+  };
+
   const handleSignIn = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -59,6 +64,9 @@ export function LocationSelectorSheet() {
     const label = `${a.label} ${a.customLabel ?? ''} ${a.address.formattedAddress ?? ''}`.toLowerCase();
     return label.includes(search.toLowerCase());
   });
+
+  const isTimeoutError = uiError?.code === LOCATION_ERROR_CODES.TIMEOUT;
+  const showFooterAdd = isAuthenticated && filteredSaved.length > 0 && !search.trim();
 
   return (
     <>
@@ -89,13 +97,23 @@ export function LocationSelectorSheet() {
           {uiError ? (
             <div role="alert">
               <GlassCard hoverEffect={false} className="!rounded-2xl !p-4">
-              <p className="text-sm text-white/80">{uiError.message}</p>
-              {uiError.retryable ? (
-                <SoftButton type="button" tone="ghost" size="compact" className="mt-3" onClick={() => void requestCurrentLocation()}>
-                  Retry
-                </SoftButton>
-              ) : null}
-            </GlassCard>
+                <p className="text-sm text-white/80">{uiError.message}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {uiError.retryable ? (
+                    <SoftButton
+                      type="button"
+                      tone="ghost"
+                      size="compact"
+                      onClick={() => void requestCurrentLocation()}
+                    >
+                      Retry
+                    </SoftButton>
+                  ) : null}
+                  <SoftButton type="button" tone="secondary" size="compact" onClick={openManualAddressForm}>
+                    {isTimeoutError ? 'Enter address manually' : 'Enter manually'}
+                  </SoftButton>
+                </div>
+              </GlassCard>
             </div>
           ) : null}
 
@@ -128,10 +146,7 @@ export function LocationSelectorSheet() {
             fullWidth
             disabled={isDetecting}
             className="min-h-11 touch-manipulation"
-            onClick={() => {
-              closeSelector();
-              setManualFormOpen(true);
-            }}
+            onClick={openManualAddressForm}
           >
             Enter address manually
           </SoftButton>
@@ -160,7 +175,7 @@ export function LocationSelectorSheet() {
                       : 'Add home, work, or other addresses for faster checkout.'
                   }
                   actionLabel={search.trim() ? undefined : 'Add address'}
-                  onAction={search.trim() ? undefined : () => void startAddSavedAddress()}
+                  onAction={search.trim() ? undefined : openManualAddressForm}
                 />
               ) : (
                 filteredSaved.map((addr) => (
@@ -180,18 +195,18 @@ export function LocationSelectorSheet() {
                   </SoftButton>
                 ))
               )}
-              <SoftButton
-                type="button"
-                tone="secondary"
-                fullWidth
-                disabled={isDetecting}
-                className="min-h-11 touch-manipulation"
-                onClick={() => {
-                  void startAddSavedAddress();
-                }}
-              >
-                Add new address
-              </SoftButton>
+              {showFooterAdd ? (
+                <SoftButton
+                  type="button"
+                  tone="secondary"
+                  fullWidth
+                  disabled={isDetecting}
+                  className="min-h-11 touch-manipulation"
+                  onClick={openManualAddressForm}
+                >
+                  Add address
+                </SoftButton>
+              ) : null}
             </section>
           ) : (
             <GlassCard hoverEffect={false} className="relative z-10 !rounded-2xl !p-4">

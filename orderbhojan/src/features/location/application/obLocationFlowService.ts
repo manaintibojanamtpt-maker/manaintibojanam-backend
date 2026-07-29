@@ -106,13 +106,17 @@ export async function captureObGpsLocationDraft(geocodeEnabled: boolean): Promis
   const gps = await detectLiveLocation();
   if (!gps.ok) {
     trackGeolocationFailure(gps.code, gps.message, 'marketplace');
-    throw new LocationError(
-      gps.code === 'PERMISSION_DENIED'
-        ? LOCATION_ERROR_CODES.PERMISSION_DENIED
-        : LOCATION_ERROR_CODES.UNAVAILABLE,
-      gps.message,
-      gps.code !== 'PERMISSION_DENIED',
-    );
+    if (gps.code === 'PERMISSION_DENIED') {
+      throw new LocationError(LOCATION_ERROR_CODES.PERMISSION_DENIED, gps.message, true);
+    }
+    if (gps.code === 'TIMEOUT') {
+      throw new LocationError(
+        LOCATION_ERROR_CODES.TIMEOUT,
+        'Location request timed out. Enter your address manually or try again.',
+        true,
+      );
+    }
+    throw new LocationError(LOCATION_ERROR_CODES.UNAVAILABLE, gps.message, true);
   }
 
   try {

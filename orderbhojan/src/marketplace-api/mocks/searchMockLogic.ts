@@ -45,18 +45,29 @@ const MOCK_FOODS: SearchResultItem[] = [
     id: 'food_thali',
     type: 'food',
     label: 'Festival Special Thali',
-    subtitle: 'Limited time festive platter',
+    subtitle: 'Mana Inti Kitchen',
     imageUrl: 'https://placehold.co/120x120/gold/white?text=Thali',
-    meta: { price: 399, isVeg: true },
+    slug: 'mana-inti-kitchen',
+    meta: {
+      price: 399,
+      isVeg: true,
+      restaurantName: 'Mana Inti Kitchen',
+      category: 'Limited time festive platter',
+    },
   },
   {
     id: 'food_andhra_mini_thali',
     type: 'food',
     label: 'Andhra Veg Thali (Mini)',
-    subtitle: 'Veg Thali (South Indian Meals)',
+    subtitle: "Lucky's Kitchen",
     imageUrl: 'https://placehold.co/120x120/green/white?text=Thali',
     slug: 'lucky-s-kitchen',
-    meta: { price: 149, isVeg: true },
+    meta: {
+      price: 149,
+      isVeg: true,
+      restaurantName: "Lucky's Kitchen",
+      category: 'Veg Thali (South Indian Meals)',
+    },
   },
 ];
 

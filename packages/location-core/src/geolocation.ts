@@ -6,7 +6,8 @@ import {
 
 export const DEFAULT_GEOLOCATION_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
-  timeout: 8000,
+  /** Native GPS + reverse-geocode handoff regularly exceeds 8s indoors. */
+  timeout: 15_000,
   maximumAge: 120_000,
 };
 

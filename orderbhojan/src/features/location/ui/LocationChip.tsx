@@ -6,7 +6,8 @@ import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButt
 import { useActiveLocation, useLocationUiState } from '../hooks/useActiveLocation';
 import { useLocationActions } from '../hooks/useLocationActions';
 import { useLocationSessionStore } from '../store/locationSessionStore';
-import { hasActiveDeliveryLocation } from '../domain/locationReadiness';
+import { resolveActiveDeliveryLocation } from '../domain/activeDeliveryLocation';
+import { hasActiveDeliveryLocation, needsFlatConfirmation } from '../domain/locationReadiness';
 
 const PLACEHOLDER = 'Set your delivery area';
 const USE_CURRENT_LABEL = 'Use current location';
@@ -22,25 +23,28 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
   const { uiStatus, uiError } = useLocationUiState();
   const captureInFlight = useLocationSessionStore((s) => s.locationCaptureInFlight);
   const isDetecting = uiStatus === 'loading' || captureInFlight;
-  const { openSelector, requestCurrentLocation } = useLocationActions();
+  const { openSelector } = useLocationActions();
   const selectorOpen = useLocationSessionStore((s) => s.selectorOpen);
 
   useEffect(() => subscribeLocationStore(setV2Address), []);
 
+  const delivery = resolveActiveDeliveryLocation(active);
   const hasCoordsReady = hasActiveDeliveryLocation(active);
-  const label =
-    isDetecting
-      ? 'Detecting location…'
-      : v2Address?.text?.shortLabel?.trim() ||
-        (hasCoordsReady ? active?.displayLabel : undefined) ||
-        PLACEHOLDER;
+  const needsFlat = needsFlatConfirmation(active);
+  const areaLabel =
+    v2Address?.text?.shortLabel?.trim() ||
+    delivery?.text.shortLabel?.trim() ||
+    active?.displayLabel?.trim() ||
+    undefined;
+  const label = isDetecting
+    ? 'Detecting location…'
+    : needsFlat && areaLabel
+      ? `Add flat · ${areaLabel}`
+      : areaLabel || PLACEHOLDER;
 
   const handleClick = () => {
     if (isDetecting) return;
-    if (uiStatus === 'error' && uiError?.retryable) {
-      void requestCurrentLocation();
-      return;
-    }
+    // Errors stay visible in the chip; open the selector so Retry / Enter manually is available.
     openSelector();
   };
 
@@ -51,7 +55,13 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
       fullWidth={variant !== 'compact'}
       disabled={isDetecting}
       className={`!justify-start gap-2 min-h-11 touch-manipulation ${variant === 'compact' ? 'w-full max-w-full !px-2 !py-2' : ''} ${className}`.trim()}
-      aria-label={hasCoordsReady ? `Delivery location: ${label}` : USE_CURRENT_LABEL}
+      aria-label={
+        uiError && uiStatus === 'error'
+          ? `Location error: ${uiError.message}`
+          : hasCoordsReady
+            ? `Delivery location: ${label}`
+            : USE_CURRENT_LABEL
+      }
       aria-expanded={selectorOpen}
       onClick={handleClick}
     >
@@ -63,7 +73,7 @@ export function LocationChip({ className = '', variant = 'hero' }: LocationChipP
           className={`truncate text-sm ${
             uiError && uiStatus === 'error'
               ? 'text-red-300/90'
-              : hasCoordsReady
+              : hasCoordsReady || Boolean(areaLabel)
                 ? 'text-white/90'
                 : 'font-semibold text-[#FFB366]'
           }`}

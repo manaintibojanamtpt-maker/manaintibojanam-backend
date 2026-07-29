@@ -25,17 +25,18 @@ describe('checkout location recovery (batch 2)', () => {
     assert.doesNotMatch(checkout, /openWizard/);
   });
 
-  it('location selector add address uses unified GPS + confirmation flow', () => {
+  it('location selector add address opens manual form without duplicate CTAs', () => {
     const selector = readFileSync(
       join(root, 'src/features/location/ui/LocationSelectorSheet.tsx'),
       'utf8',
     );
 
-    assert.match(selector, /startAddSavedAddress/);
+    assert.match(selector, /openManualAddressForm/);
     assert.match(selector, /requestCurrentLocation/);
     assert.match(selector, /Enter address manually/);
     assert.match(selector, /AddressFormSheet/);
-    assert.match(selector, /Add new address/);
+    assert.match(selector, /Add address/);
+    assert.doesNotMatch(selector, /Add new address/);
     assert.doesNotMatch(selector, /openWizard/);
   });
 

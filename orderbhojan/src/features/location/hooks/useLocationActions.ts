@@ -237,13 +237,16 @@ export function useLocationActions() {
     return runLocationCapture(
       async () => {
         const activeStore = locationStore();
+        // Keep the selector open while GPS runs so the user never drops onto a blank homepage.
         activeStore.setPendingSavedAddress(true);
-        activeStore.setSelectorOpen(false);
+        activeStore.setSelectorOpen(true);
         activeStore.setPermissionState('prompting');
         await captureObGpsLocationDraft(geocodeEnabled);
         activeStore.setPermissionState('granted');
         activeStore.setRecentLocations(loadRecentLocationEntries());
         activeStore.setUiStatus('ready');
+        // Hand off to flat confirmation once draft is ready.
+        activeStore.setSelectorOpen(false);
       },
       (error) => {
         const activeStore = locationStore();
@@ -268,8 +271,12 @@ export function useLocationActions() {
   }, []);
 
   const closeSelector = useCallback(() => {
-    locationStore().setSelectorOpen(false);
-    locationStore().resetUi();
+    const store = locationStore();
+    store.setSelectorOpen(false);
+    // Preserve timeout/permission errors in the header; only clear transient loading.
+    if (store.uiStatus === 'loading' && !store.locationCaptureInFlight) {
+      store.setUiStatus(store.activeLocation ? 'ready' : 'idle');
+    }
   }, []);
 
   const openWizard = useCallback(() => {

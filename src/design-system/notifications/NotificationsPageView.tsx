@@ -38,6 +38,7 @@ export function NotificationsPageView({
   viewOrdersLabel = 'View orders',
   onViewOrders,
   deniedHint,
+  deviceReady = false,
 }: {
   readonly title: string;
   readonly description: string;
@@ -49,6 +50,8 @@ export function NotificationsPageView({
   readonly viewOrdersLabel?: string;
   readonly onViewOrders?: () => void;
   readonly deniedHint?: string;
+  /** True after OS permission + FCM token registration succeeded on this device. */
+  readonly deviceReady?: boolean;
 }) {
   const permissionDenied =
     status != null &&
@@ -70,11 +73,24 @@ export function NotificationsPageView({
         ))}
       </ul>
 
-      <SoftButton type="button" fullWidth disabled={busy} onClick={onEnable}>
+      {deviceReady ? (
+        <div
+          className="rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-sm font-semibold text-emerald-200">Notifications enabled on this device</p>
+          <p className="mt-1 text-xs text-white/65">
+            You will get order updates on this phone. Use re-register only if alerts stop arriving.
+          </p>
+        </div>
+      ) : null}
+
+      <SoftButton type="button" fullWidth disabled={busy} tone={deviceReady ? 'ghost' : 'primary'} onClick={onEnable}>
         {busy ? busyLabel : enableLabel}
       </SoftButton>
 
-      {status ? (
+      {status && !deviceReady ? (
         <p className="text-sm text-white/70" role="status" aria-live="polite">
           {status}
         </p>
