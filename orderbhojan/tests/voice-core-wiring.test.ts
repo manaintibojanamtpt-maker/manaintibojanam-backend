@@ -9,7 +9,11 @@ import {
   reduceConfirmation,
   triageVoiceUtterance,
 } from '@bhojan/voice-core';
-import { shouldHandleWithVoiceCorePreLlm } from '../src/features/voice/application/voiceCoreBridge.ts';
+import {
+  clearVoiceConfirmation,
+  shouldHandleWithVoiceCorePreLlm,
+  syncConfirmationFromPending,
+} from '../src/features/voice/application/voiceCoreBridge.ts';
 
 const root = join(import.meta.dirname, '..');
 
@@ -43,11 +47,30 @@ describe('OrderBhojan voice-core wiring', () => {
     assert.match(src, /decideVoiceCartTurn/);
   });
 
-  it('Phase 1.1 pre-LLM gate only claims cart summary', () => {
+  it('Phase 1.2 pre-LLM gate claims cart summary and stop', () => {
     assert.equal(shouldHandleWithVoiceCorePreLlm('what is in my cart'), true);
     assert.equal(shouldHandleWithVoiceCorePreLlm("what's in my cart"), true);
+    assert.equal(shouldHandleWithVoiceCorePreLlm('stop'), true);
     assert.equal(shouldHandleWithVoiceCorePreLlm('add 1 masala dosa'), false);
     assert.equal(shouldHandleWithVoiceCorePreLlm('confirm'), false);
+  });
+
+  it('syncs confirmation snapshot from pending validation', () => {
+    const awaiting = syncConfirmationFromPending({
+      schemaVersion: '5.0',
+      conversationId: 'c1',
+      channel: 'web',
+      status: 'validated',
+      valid: true,
+      clarificationQuestions: [],
+      issues: [],
+      proposedActions: [],
+      executable: false,
+      sideEffects: [],
+      mutatedState: false,
+    });
+    assert.equal(awaiting.phase, 'awaiting_confirm');
+    assert.equal(clearVoiceConfirmation().phase, 'none');
   });
 
   it('shared confirmation + triage contracts are importable', () => {

@@ -8,6 +8,9 @@ export {
 
 export {
   pendingValidationToConfirmation,
+  syncConfirmationFromPending,
+  clearVoiceConfirmation,
+  foldVoiceConfirmationUtterance,
   idleOrderingTask,
   shouldHandleWithVoiceCorePreLlm,
 } from './application/voiceCoreBridge';

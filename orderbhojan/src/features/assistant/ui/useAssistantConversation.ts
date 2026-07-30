@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import {
+  clearVoiceConfirmation,
   createOrderBhojanVoiceAdapter,
   createVoiceSession,
   idleOrderingTask,
-  pendingValidationToConfirmation,
+  initialConfirmationSnapshot,
   runVoiceCoreTurn,
   shouldHandleWithVoiceCorePreLlm,
+  syncConfirmationFromPending,
 } from '@/features/voice';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
@@ -192,10 +194,18 @@ export function useAssistantConversation() {
   const voiceSessionRef = useRef(
     createVoiceSession({ product: 'orderbhojan', channel: 'web' }),
   );
+  const voiceConfirmationRef = useRef(initialConfirmationSnapshot());
 
   const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
   pendingValidationRef.current = pendingValidation;
+
+  const syncPendingValidation = useCallback((next: CartPlanValidationResult | null) => {
+    setPendingValidation(next);
+    voiceConfirmationRef.current = next
+      ? syncConfirmationFromPending(next)
+      : clearVoiceConfirmation();
+  }, []);
 
   const send = useCallback(
     async (raw: string): Promise<string | undefined> => {
@@ -258,7 +268,7 @@ export function useAssistantConversation() {
               },
               { id: nextId(), role: 'assistant', text: reply },
             ]);
-            setPendingValidation(null);
+            syncPendingValidation(null);
             pendingPlanRestaurantRef.current = null;
             pendingExploreKitchenRef.current = null;
             recordVoiceTelemetry('confirmApplySuccess');
@@ -291,7 +301,7 @@ export function useAssistantConversation() {
           conversationId: pending.conversationId,
           planCount: pending.proposedActions.length,
         });
-        setPendingValidation(null);
+        syncPendingValidation(null);
         pendingPlanRestaurantRef.current = null;
         pendingExploreKitchenRef.current = null;
         const reply = 'Discarded — nothing was added. What would you like instead?';
@@ -369,7 +379,7 @@ export function useAssistantConversation() {
             proposedActions: cartActions,
             ...(conversationId ? { conversationId } : {}),
           });
-          setPendingValidation(validation);
+          syncPendingValidation(validation);
           if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
           else recordVoiceTelemetry('planValidateFail');
           const reply = validationSpeakText(validation);
@@ -423,7 +433,7 @@ export function useAssistantConversation() {
         // Keep pendingValidation / restaurant refs; continue into cart-add / assist paths.
       } else {
         recordVoiceTelemetry('pendingWiped');
-        setPendingValidation(null);
+        syncPendingValidation(null);
         pendingPlanRestaurantRef.current = null;
         pendingExploreKitchenRef.current = null;
       }
@@ -489,7 +499,7 @@ export function useAssistantConversation() {
               proposedActions: cartActions,
               ...(conversationId ? { conversationId } : {}),
             });
-            setPendingValidation(validation);
+            syncPendingValidation(validation);
             setMessages((prev) => [
               ...prev,
               {
@@ -640,7 +650,7 @@ export function useAssistantConversation() {
               proposedActions: cartActions,
               ...(conversationId ? { conversationId } : {}),
             });
-            setPendingValidation(validation);
+            syncPendingValidation(validation);
             if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
             else recordVoiceTelemetry('planValidateFail');
             const reply = validationSpeakText(validation);
@@ -674,12 +684,12 @@ export function useAssistantConversation() {
           }
         }
 
-        // Phase 1.1: voice-core pre-LLM gate (cart summary only).
+        // Phase 1.2: voice-core pre-LLM gate (cart summary + stop).
         // Confirm/add/clarify stay on decideVoiceCartTurn + existing cart-add path.
         if (shouldHandleWithVoiceCorePreLlm(message)) {
           const adapter = createOrderBhojanVoiceAdapter({
             validateCartPlan: async () => {
-              throw new Error('voice-core cart-add propose is not wired in Phase 1.1');
+              throw new Error('voice-core cart-add propose is not wired in Phase 1.2');
             },
             cartMutators: { addItem, setQuantity },
           });
@@ -692,10 +702,30 @@ export function useAssistantConversation() {
           const turn = await runVoiceCoreTurn({
             session,
             message,
-            confirmation: pendingValidationToConfirmation(pendingValidationRef.current),
+            confirmation: voiceConfirmationRef.current,
             task: idleOrderingTask(pendingPlanRestaurantRef.current?.restaurantId),
             adapter,
           });
+          voiceConfirmationRef.current = turn.confirmation;
+          if (turn.kind === 'stop_agent' && turn.spoken) {
+            if (voiceAgentActiveRef.current) {
+              voiceAgentActiveRef.current = false;
+              setVoiceAgentActive(false);
+              voiceRuntimeStateRef.current = nextVoiceRuntimeState(
+                voiceRuntimeStateRef.current,
+                'STOP',
+              );
+              voiceAbortRef.current?.abort();
+              void nativeSttCancelListening();
+              setListening(false);
+              setSpeaking(false);
+            }
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'assistant', text: turn.spoken },
+            ]);
+            return turn.spoken;
+          }
           if (turn.kind === 'cart_summary' && turn.spoken) {
             setMessages((prev) => [
               ...prev,
@@ -938,7 +968,7 @@ export function useAssistantConversation() {
               proposedActions: cartActions,
               conversationId: result.conversationId,
             });
-            setPendingValidation(validation);
+            syncPendingValidation(validation);
             if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
             else {
               recordVoiceTelemetry('planValidateFail');
@@ -1032,6 +1062,7 @@ export function useAssistantConversation() {
       restaurantId,
       restaurantSlug,
       setQuantity,
+      syncPendingValidation,
       validate,
     ],
   );
@@ -1413,7 +1444,7 @@ export function useAssistantConversation() {
             text: `Applied ${result.appliedCount} cart change(s) after your confirmation.`,
           },
         ]);
-        setPendingValidation(null);
+        syncPendingValidation(null);
         pendingPlanRestaurantRef.current = null;
       } else {
         notifyToast(
@@ -1429,12 +1460,12 @@ export function useAssistantConversation() {
     } finally {
       setApplying(false);
     }
-  }, [activeLocation, addItem, applying, pendingValidation, setQuantity]);
+  }, [activeLocation, addItem, applying, pendingValidation, setQuantity, syncPendingValidation]);
 
   const dismissPlan = useCallback(() => {
     const conversationId = pendingValidation?.conversationId;
     const planCount = pendingValidation?.proposedActions.length;
-    setPendingValidation(null);
+    syncPendingValidation(null);
     pendingPlanRestaurantRef.current = null;
     reportCartPlanDecisionQuietly({
       decision: 'discard',
@@ -1445,7 +1476,7 @@ export function useAssistantConversation() {
       ...prev,
       { id: nextId(), role: 'system', text: 'Cart plan discarded — nothing was added to cart.' },
     ]);
-  }, [pendingValidation]);
+  }, [pendingValidation, syncPendingValidation]);
 
   const setOpenSafe = useCallback(
     (value: boolean | ((prev: boolean) => boolean)) => {

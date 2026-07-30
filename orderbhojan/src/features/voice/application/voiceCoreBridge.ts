@@ -1,7 +1,7 @@
 /**
  * Maps OrderBhojan assistant pending state ↔ voice-core confirmation snapshots.
- * Phase 1.1: keep decideVoiceCartTurn as primary confirm/add router;
- * voice-core owns cart_summary (and later fuller confirm/add).
+ * Phase 1.1/1.2: decideVoiceCartTurn remains primary confirm/add router;
+ * voice-core owns cart_summary + stop_agent pre-LLM gates.
  */
 import {
   initialConfirmationSnapshot,
@@ -28,6 +28,23 @@ export function pendingValidationToConfirmation(
   });
 }
 
+export function syncConfirmationFromPending(
+  pending: CartPlanValidationResult | null,
+): ConfirmationSnapshot {
+  return pendingValidationToConfirmation(pending, pending?.conversationId ?? 'pending');
+}
+
+export function clearVoiceConfirmation(): ConfirmationSnapshot {
+  return initialConfirmationSnapshot();
+}
+
+export function foldVoiceConfirmationUtterance(
+  snapshot: ConfirmationSnapshot,
+  message: string,
+): ConfirmationSnapshot {
+  return reduceConfirmation(snapshot, { type: 'USER_UTTERANCE', message });
+}
+
 export function idleOrderingTask(
   kitchenId?: string | null,
 ): OrderingTaskSnapshot {
@@ -38,12 +55,12 @@ export function idleOrderingTask(
   };
 }
 
-/** True when voice-core should short-circuit before LLM (Phase 1.1: cart summary only). */
+/** True when voice-core should short-circuit before LLM (Phase 1.2: cart summary + stop). */
 export function shouldHandleWithVoiceCorePreLlm(message: string): boolean {
   const { decision } = triageVoiceUtterance({
     message: message.trim(),
     confirmation: initialConfirmationSnapshot(),
     task: idleOrderingTask(),
   });
-  return decision.kind === 'cart_summary';
+  return decision.kind === 'cart_summary' || decision.kind === 'stop_agent';
 }
