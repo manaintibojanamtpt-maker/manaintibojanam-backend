@@ -61,5 +61,6 @@ export const getOwnerPageTitle = (pathname: string): string => {
   if (pathname === '/owner/import-data') return 'Import data';
   if (pathname === '/owner/setup') return 'Store setup';
   if (pathname === '/owner/branches') return 'Branches';
+  if (pathname === '/owner/menu/categories') return 'Menu categories';
   return 'Dashboard';
 };

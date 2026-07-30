@@ -21,6 +21,7 @@ import {
 } from '../../lib/menuItemOptions';
 import { MenuItemOptionsEditor } from '../../components/owner/MenuItemOptionsEditor';
 import { addMenuItem, updateMenuItem, deleteMenuItem } from '../../services/api';
+import { fetchOwnerCategories, type OwnerCategory } from '../../lib/ownerCategoryApi';
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, Loader2, ClipboardList, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { needsStoreSetup } from '../../lib/storeSetupProgress';
@@ -105,11 +106,13 @@ const OwnerMenu = () => {
     description: '',
     price: '',
     category: 'Main Course',
+    categoryId: '',
     type: 'veg' as 'veg' | 'non-veg',
     isAvailable: true,
     image: '',
     magicEnhance: true // Default to true for better food photos
   });
+  const [categories, setCategories] = useState<OwnerCategory[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [variants, setVariants] = useState<StorefrontVariantSnapshot[]>([]);
@@ -154,6 +157,9 @@ const OwnerMenu = () => {
     }
 
     void loadMenuItems(tenantId, { soft: true });
+    void fetchOwnerCategories(tenantId)
+      .then((response) => setCategories((response.categories ?? []).filter((c) => c.isActive !== false)))
+      .catch(() => setCategories([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
@@ -165,6 +171,7 @@ const OwnerMenu = () => {
         description: item.description || '',
         price: item.price.toString(),
         category: item.category,
+        categoryId: item.categoryId || '',
         type: item.type || 'veg',
         isAvailable: item.isAvailable,
         image: item.image || '',
@@ -173,12 +180,14 @@ const OwnerMenu = () => {
       setVariants(item.variants ? [...item.variants] : []);
       setAddonGroups(item.addonGroups ? [...item.addonGroups] : []);
     } else {
+      const defaultCategory = categories[0];
       setEditingItem(null);
       setFormData({
         name: '',
         description: '',
         price: '',
-        category: 'Main Course',
+        category: defaultCategory?.name || 'Main Course',
+        categoryId: defaultCategory?.id || '',
         type: 'veg',
         isAvailable: true,
         image: '',
@@ -258,6 +267,7 @@ const OwnerMenu = () => {
         description: formData.description,
         price: basePrice,
         category: formData.category,
+        ...(formData.categoryId ? { categoryId: formData.categoryId } : {}),
         type: formData.type,
         isAvailable: formData.isAvailable,
         image: formData.image || '',
@@ -345,13 +355,21 @@ const OwnerMenu = () => {
               {refreshing ? <span className="ml-2 text-orange-400/80">· updating…</span> : null}
             </p>
           </div>
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors shadow-lg shadow-red-600/20"
-          >
-            <Plus size={18} className="mr-2" />
-            Add Item
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/owner/menu/categories"
+              className="flex items-center px-4 py-2 border border-white/15 hover:bg-white/5 text-white font-semibold rounded-lg transition-colors"
+            >
+              Manage categories
+            </Link>
+            <button
+              onClick={() => handleOpenModal()}
+              className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors shadow-lg shadow-red-600/20"
+            >
+              <Plus size={18} className="mr-2" />
+              Add Item
+            </button>
+          </div>
         </header>
 
         {tenantInfo && needsStoreSetup(tenantInfo, items.length) && (
@@ -511,14 +529,44 @@ const OwnerMenu = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-2">Category</label>
-                  <input 
-                    required
-                    type="text"
-                    value={formData.category}
-                    onChange={e => setFormData({...formData, category: e.target.value})}
-                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-red-500 focus:outline-none placeholder-white/20"
-                    placeholder="e.g. Main Course"
-                  />
+                  {categories.length > 0 ? (
+                    <select
+                      required
+                      value={formData.categoryId || formData.category}
+                      onChange={(e) => {
+                        const selected = categories.find((c) => c.id === e.target.value);
+                        if (selected) {
+                          setFormData({ ...formData, categoryId: selected.id, category: selected.name });
+                          return;
+                        }
+                        setFormData({ ...formData, categoryId: '', category: e.target.value });
+                      }}
+                      className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    >
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id} className="bg-[#0f0f11]">
+                          {category.name}
+                        </option>
+                      ))}
+                      {formData.categoryId === '' && formData.category ? (
+                        <option value={formData.category} className="bg-[#0f0f11]">
+                          {formData.category} (custom)
+                        </option>
+                      ) : null}
+                    </select>
+                  ) : (
+                    <input
+                      required
+                      type="text"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value, categoryId: '' })}
+                      className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-red-500 focus:outline-none placeholder-white/20"
+                      placeholder="e.g. Main Course"
+                    />
+                  )}
+                  <Link to="/owner/menu/categories" className="mt-1 inline-block text-[11px] text-orange-300/80 hover:text-orange-300">
+                    {categories.length ? 'Edit categories' : 'Create categories'}
+                  </Link>
                 </div>
               </div>
 

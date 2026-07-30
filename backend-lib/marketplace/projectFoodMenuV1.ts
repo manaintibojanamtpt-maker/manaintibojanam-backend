@@ -20,6 +20,16 @@ import { parseTenantMarketplace, type TenantMarketplaceProjection } from '../dom
 
 const V = CONTRACT_SCHEMA_VERSION;
 
+export interface FirestoreCategoryRecord {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly name: string;
+  readonly priority: number;
+  readonly isActive: boolean;
+  readonly showOnHome?: boolean;
+  readonly image?: string;
+}
+
 export interface FirestoreMenuItemRecord {
   readonly id: string;
   readonly tenantId: string;
@@ -320,33 +330,97 @@ function buildTheme(tenant: FirestoreTenantRecord): ThemeDTO {
   };
 }
 
+function countItemsByCategoryKey(items: readonly FirestoreMenuItemRecord[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const key = item.categoryId ?? slugify(item.category);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Prefer owner-managed category docs; fall back to deriving rails from menu item strings. */
+export function buildProjectedCategories(
+  items: readonly FirestoreMenuItemRecord[],
+  managedCategories: readonly FirestoreCategoryRecord[] = [],
+): CategoryDTO[] {
+  const counts = countItemsByCategoryKey(items);
+  const activeManaged = managedCategories
+    .filter((category) => category.isActive !== false)
+    .slice()
+    .sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
+
+  if (activeManaged.length === 0) {
+    const derived = new Map<string, { id: string; name: string; count: number }>();
+    for (const item of items) {
+      const categoryId = item.categoryId ?? slugify(item.category);
+      const existing = derived.get(categoryId);
+      if (existing) existing.count += 1;
+      else derived.set(categoryId, { id: categoryId, name: item.category, count: 1 });
+    }
+    return [...derived.values()].map((cat, index) => ({
+      schemaVersion: V,
+      categoryId: cat.id,
+      slug: cat.id,
+      name: cat.name,
+      displayOrder: index,
+      visibility: 'visible' as const,
+      itemCount: cat.count,
+    }));
+  }
+
+  const coveredKeys = new Set<string>();
+  const fromManaged: CategoryDTO[] = activeManaged.map((category, index) => {
+    const slug = slugify(category.name) || category.id;
+    coveredKeys.add(category.id);
+    coveredKeys.add(slug);
+    let itemCount = counts.get(category.id) ?? 0;
+    if (slug !== category.id) itemCount += counts.get(slug) ?? 0;
+    return {
+      schemaVersion: V,
+      categoryId: category.id,
+      slug,
+      name: category.name,
+      displayOrder: category.priority ?? index,
+      visibility: 'visible' as const,
+      itemCount,
+      image: category.image
+        ? imageFromUrl(category.image, `cat_${category.id}`, category.name)
+        : undefined,
+    };
+  });
+
+  const orphans: CategoryDTO[] = [];
+  for (const item of items) {
+    const key = item.categoryId ?? slugify(item.category);
+    if (coveredKeys.has(key)) continue;
+    coveredKeys.add(key);
+    orphans.push({
+      schemaVersion: V,
+      categoryId: key,
+      slug: key,
+      name: item.category,
+      displayOrder: fromManaged.length + orphans.length,
+      visibility: 'visible',
+      itemCount: counts.get(key) ?? 0,
+    });
+  }
+
+  return [...fromManaged, ...orphans];
+}
+
 export function projectFoodMenuV1(
   tenant: FirestoreTenantRecord,
   items: readonly FirestoreMenuItemRecord[],
   contextToken: string,
+  managedCategories: readonly FirestoreCategoryRecord[] = [],
 ): FoodMenuApiEnvelopeDTO {
   const restaurantId = tenant.marketplace?.publicRestaurantId ?? `obr_${tenant.slug}`;
   const sorted = [...items].sort(
     (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0) || a.name.localeCompare(b.name),
   );
 
-  const categoryMap = new Map<string, { id: string; name: string; count: number }>();
-  for (const item of sorted) {
-    const categoryId = item.categoryId ?? slugify(item.category);
-    const existing = categoryMap.get(categoryId);
-    if (existing) existing.count += 1;
-    else categoryMap.set(categoryId, { id: categoryId, name: item.category, count: 1 });
-  }
-
-  const categories: CategoryDTO[] = [...categoryMap.values()].map((cat, index) => ({
-    schemaVersion: V,
-    categoryId: cat.id,
-    slug: cat.id,
-    name: cat.name,
-    displayOrder: index,
-    visibility: 'visible',
-    itemCount: cat.count,
-  }));
+  const categories = buildProjectedCategories(sorted, managedCategories);
 
   const foodItems = sorted.map((item, index) =>
     mapMenuItemToFoodDTO(item, restaurantId, item.displayOrder ?? index),

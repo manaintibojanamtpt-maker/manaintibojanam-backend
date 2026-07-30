@@ -220,7 +220,17 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      // Platform admins manage all categories; kitchen owners manage their own tenant docs.
+      allow create: if isAdmin() || (
+        isTenantOwner(request.resource.data.tenantId) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0
+      );
+      allow update: if isAdmin() || (
+        isTenantOwner(resource.data.tenantId) &&
+        isTenantOwner(request.resource.data.tenantId)
+      );
+      allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId);
     }
 
     match /supportTickets/{ticketId} {

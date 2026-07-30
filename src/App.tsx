@@ -42,6 +42,7 @@ const ForecastDashboard = lazy(() => import('./pages/owner/ForecastDashboard'));
 const OwnerRecipes = lazy(() => import('./pages/owner/OwnerRecipes'));
 const OwnerMarketing = lazy(() => import('./pages/owner/OwnerMarketing'));
 const OwnerMenu = lazy(() => import('./pages/owner/OwnerMenu'));
+const OwnerCategories = lazy(() => import('./pages/owner/OwnerCategories'));
 const OwnerCustomers = lazy(() => import('./pages/owner/OwnerCustomers'));
 const OwnerReferrals = lazy(() => import('./pages/owner/OwnerReferrals'));
 const DeliveryIntelligence = lazy(() => import('./pages/owner/DeliveryIntelligence').then(module => ({ default: module.DeliveryIntelligence })));
@@ -593,6 +594,7 @@ const AppContent: React.FC = () => {
               <Route path="/owner/marketing" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="marketing"><OwnerMarketing /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/delivery" element={<OwnerRoute><OwnerLayout><EntitlementGate feature="deliveryIntelligence"><DeliveryIntelligence /></EntitlementGate></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/menu" element={<OwnerRoute><OwnerLayout><OwnerMenu /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/menu/categories" element={<OwnerRoute><OwnerLayout><OwnerCategories /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/settings" element={<OwnerRoute><OwnerLayout><OwnerSettings /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/branches" element={<OwnerRoute><OwnerLayout><OwnerBranchManagement /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/subscription" element={<OwnerRoute><OwnerLayout><OwnerSubscription /></OwnerLayout></OwnerRoute>} />

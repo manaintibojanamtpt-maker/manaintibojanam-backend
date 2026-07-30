@@ -74,6 +74,7 @@ import {
 } from "./backend-lib/marketplace/ownerRecipesRoutes.js";
 import { registerOwnerIngredientsRoutes } from "./backend-lib/marketplace/ownerIngredientsRoutes.js";
 import { registerOwnerMenuRoutes } from "./backend-lib/marketplace/ownerMenuRoutes.js";
+import { registerOwnerCategoryRoutes } from "./backend-lib/marketplace/ownerCategoryRoutes.js";
 import { queryMenuForTenant } from "./backend-lib/marketplace/menuTenantQuery.js";
 import { registerOwnerAnalyticsRoutes } from "./backend-lib/marketplace/ownerAnalyticsRoutes.js";
 import { registerOwnerDeliveryIntegrationRoutes } from "./backend-lib/marketplace/ownerDeliveryIntegrationRoutes.js";
@@ -3167,6 +3168,7 @@ registerPlatformHomeHeroRoutes(app, db, requireSuperadmin, FieldValue);
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
+registerOwnerCategoryRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerAnalyticsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerDeliveryIntegrationRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOpsRoutes(app, getIncidentRepository, requireSuperadmin);

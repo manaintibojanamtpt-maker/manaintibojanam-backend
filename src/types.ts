@@ -11,6 +11,8 @@ export interface MenuItem {
   description: string;
   price: number;
   category: string;
+  /** Owner-managed categories/{id} when assigned from the category manager. */
+  categoryId?: string;
   image: string;
   isAvailable: boolean;
   createdAt: any;

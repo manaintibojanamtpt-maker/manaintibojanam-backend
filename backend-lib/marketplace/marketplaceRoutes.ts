@@ -19,8 +19,10 @@ import {
   parseFirestoreMenuItem,
   parseFirestoreTenant,
   projectFoodMenuV1,
+  type FirestoreCategoryRecord,
   type FirestoreMenuItemRecord,
 } from './projectFoodMenuV1.js';
+import { parseOwnerCategoryDoc } from './ownerCategoryNormalization.js';
 import { queryMenuForTenant } from './menuTenantQuery.js';
 import { projectRestaurantExperience } from './projectRestaurantExperience.js';
 import {
@@ -192,6 +194,35 @@ async function loadMenuItems(
   return { items, menuSyncRevision };
 }
 
+async function loadManagedCategories(
+  db: Firestore,
+  tenantId: string,
+  tenantSlug?: string,
+): Promise<FirestoreCategoryRecord[]> {
+  const keys = tenantSlug && tenantSlug !== tenantId ? [tenantId, tenantSlug] : [tenantId];
+  const seen = new Set<string>();
+  const categories: FirestoreCategoryRecord[] = [];
+  for (const key of keys) {
+    const snapshot = await db.collection('categories').where('tenantId', '==', key).get();
+    for (const doc of snapshot.docs) {
+      if (seen.has(doc.id)) continue;
+      seen.add(doc.id);
+      const parsed = parseOwnerCategoryDoc(doc.id, doc.data() as Record<string, unknown>);
+      if (!parsed) continue;
+      categories.push({
+        id: parsed.id,
+        tenantId: parsed.tenantId,
+        name: parsed.name,
+        priority: parsed.priority,
+        isActive: parsed.isActive,
+        showOnHome: parsed.showOnHome,
+        image: parsed.image || undefined,
+      });
+    }
+  }
+  return categories;
+}
+
 async function persistCustomerNotificationEmail(
   db: Firestore,
   userId: string | null | undefined,
@@ -359,8 +390,9 @@ export function registerMarketplaceRoutes(
       }
 
       const items = await loadMenuItems(db, loaded.tenant.id, loaded.tenant.slug);
+      const managedCategories = await loadManagedCategories(db, loaded.tenant.id, loaded.tenant.slug);
       const contextToken = createMarketplaceContextToken();
-      const menu = projectFoodMenuV1(loaded.tenant, items.items, contextToken);
+      const menu = projectFoodMenuV1(loaded.tenant, items.items, contextToken, managedCategories);
       const tenantSyncRevision = mergeSyncRevisions(
         extractTenantSyncRevision(loaded.raw),
         items.menuSyncRevision,
@@ -572,7 +604,13 @@ export function registerMarketplaceRoutes(
     const loaded = await loadTenantBySlug(db, slug);
     if (!loaded) return null;
     const menuItems = await loadMenuItems(db, loaded.tenant.id, loaded.tenant.slug);
-    const menu = projectFoodMenuV1(loaded.tenant, menuItems.items, createMarketplaceContextToken());
+    const managedCategories = await loadManagedCategories(db, loaded.tenant.id, loaded.tenant.slug);
+    const menu = projectFoodMenuV1(
+      loaded.tenant,
+      menuItems.items,
+      createMarketplaceContextToken(),
+      managedCategories,
+    );
     return { loaded, menu, menuSyncRevision: menuItems.menuSyncRevision };
   }
 
