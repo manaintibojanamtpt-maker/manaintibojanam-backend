@@ -16,6 +16,13 @@ export {
 } from './application/voiceCoreBridge';
 
 export {
+  validateEnrichedCartAdd,
+  isVoiceCoreConfirmAddReady,
+  type EnrichedCartAddValidateDeps,
+  type EnrichedCartAddResult,
+} from './application/enrichedCartAddValidate';
+
+export {
   createVoiceSession,
   triageVoiceUtterance,
   initialConfirmationSnapshot,

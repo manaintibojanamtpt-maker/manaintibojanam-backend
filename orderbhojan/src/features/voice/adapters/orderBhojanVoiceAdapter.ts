@@ -1,6 +1,7 @@
 /**
  * OrderBhojan product adapter for @bhojan/voice-core.
- * Injects existing validate/apply/cart readers — never mutates without confirm.
+ * Phase 1.3: enriched validate + restaurant context before apply.
+ * Never mutates cart without explicit confirm.
  */
 import {
   createToolCallId,
@@ -20,19 +21,35 @@ import {
 } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { getCachedMenuItemsForSearch } from '@/features/search/store/searchMenuCacheStore';
+import {
+  validateEnrichedCartAdd,
+  type EnrichedCartAddValidateDeps,
+} from '../application/enrichedCartAddValidate';
 
 export type OrderBhojanVoiceAdapterDeps = {
-  readonly validateCartPlan: (input: {
+  /** Preferred Phase 1.3 path — same enrich/resolve/prefetch/validate as send(). */
+  readonly enrichedValidate?: EnrichedCartAddValidateDeps;
+  /**
+   * Legacy/simple validate. Used only when enrichedValidate is absent.
+   * Phase 1.3 live routing must not rely on this alone.
+   */
+  readonly validateCartPlan?: (input: {
     readonly itemName: string;
     readonly quantity: number;
     readonly kitchenHint?: string;
   }) => Promise<CartPlanValidationResult>;
   readonly cartMutators: ApplyConfirmedCartPlanDeps;
+  /** Required before apply — mirrors ensureRestaurantContextForCartPlan in send(). */
+  readonly ensureRestaurantContext?: (restaurant: {
+    readonly restaurantId: string;
+    readonly restaurantSlug: string;
+  }) => Promise<void>;
 };
 
 type PendingHolder = {
   plan: CartPlanValidationResult | null;
   planId: string | null;
+  restaurant: { restaurantId: string; restaurantSlug: string } | null;
 };
 
 export function createOrderBhojanVoiceAdapter(
@@ -40,8 +57,13 @@ export function createOrderBhojanVoiceAdapter(
 ): VoicePlatformAdapter & {
   readonly getPendingPlan: () => CartPlanValidationResult | null;
   readonly getPendingPlanId: () => string | null;
+  readonly getPendingRestaurant: () => {
+    readonly restaurantId: string;
+    readonly restaurantSlug: string;
+  } | null;
+  readonly isConfirmAddReady: () => boolean;
 } {
-  const pending: PendingHolder = { plan: null, planId: null };
+  const pending: PendingHolder = { plan: null, planId: null, restaurant: null };
 
   return {
     product: 'orderbhojan',
@@ -52,6 +74,14 @@ export function createOrderBhojanVoiceAdapter(
 
     getPendingPlanId() {
       return pending.planId;
+    },
+
+    getPendingRestaurant() {
+      return pending.restaurant;
+    },
+
+    isConfirmAddReady() {
+      return Boolean(deps.enrichedValidate && deps.ensureRestaurantContext);
     },
 
     async findMenuItems(args: FindMenuItemsArgs): Promise<VoiceToolResult<readonly MenuItemMatch[]>> {
@@ -102,6 +132,58 @@ export function createOrderBhojanVoiceAdapter(
     > {
       const callId = createToolCallId();
       try {
+        if (deps.enrichedValidate) {
+          const enriched = await validateEnrichedCartAdd(
+            {
+              itemName: args.itemName,
+              quantity: args.quantity,
+              ...(args.kitchenHint ? { kitchenHint: args.kitchenHint } : {}),
+            },
+            deps.enrichedValidate,
+          );
+          if (!enriched.ok) {
+            return {
+              ok: false,
+              tool: 'addItemToCart',
+              callId,
+              code: enriched.code === 'NEEDS_KITCHEN' ? 'NEEDS_CLARIFICATION' : 'INVALID_ARGS',
+              message: enriched.message,
+            };
+          }
+          const planId = `${enriched.validation.conversationId || 'plan'}_${callId}`;
+          pending.plan = enriched.validation;
+          pending.planId = planId;
+          pending.restaurant = enriched.restaurant;
+          const summarySpeech =
+            enriched.validation.status === 'validated' && enriched.validation.valid
+              ? `I can add ${args.quantity} ${args.itemName}. Say confirm to add it to your cart.`
+              : enriched.validation.clarificationQuestions[0] ||
+                enriched.validation.issues[0]?.message ||
+                'I need a bit more detail to add that item.';
+          return {
+            ok: true,
+            tool: 'addItemToCart',
+            callId,
+            data: {
+              planId,
+              status: enriched.validation.status,
+              valid: enriched.validation.valid,
+              summarySpeech,
+              clarificationQuestion: enriched.validation.clarificationQuestions[0],
+            },
+          };
+        }
+
+        if (!deps.validateCartPlan) {
+          return {
+            ok: false,
+            tool: 'addItemToCart',
+            callId,
+            code: 'NOT_SUPPORTED',
+            message: 'Enriched cart-add validation is not configured.',
+          };
+        }
+
         const result = await deps.validateCartPlan({
           itemName: args.itemName,
           quantity: args.quantity,
@@ -110,6 +192,7 @@ export function createOrderBhojanVoiceAdapter(
         const planId = `${result.conversationId || 'plan'}_${callId}`;
         pending.plan = result;
         pending.planId = planId;
+        pending.restaurant = null;
         const summarySpeech =
           result.status === 'validated' && result.valid
             ? `I can add ${args.quantity} ${args.itemName}. Say confirm to add it to your cart.`
@@ -163,28 +246,55 @@ export function createOrderBhojanVoiceAdapter(
         };
       }
 
-      const applied = applyConfirmedCartPlan({
-        userConfirmed: true,
-        validation: plan,
-        deps: deps.cartMutators,
-      });
-      if (!applied.mutatedState) {
+      // Phase 1.3 guard: do not apply without restaurant context when enriched path is required.
+      if (deps.enrichedValidate && !deps.ensureRestaurantContext) {
+        return {
+          ok: false,
+          tool: 'confirmPendingChange',
+          callId,
+          code: 'NOT_SUPPORTED',
+          message: 'Restaurant context ensure is required before voice-core cart apply.',
+        };
+      }
+
+      try {
+        if (deps.ensureRestaurantContext && pending.restaurant) {
+          await deps.ensureRestaurantContext(pending.restaurant);
+        }
+
+        const applied = applyConfirmedCartPlan({
+          userConfirmed: true,
+          validation: plan,
+          deps: deps.cartMutators,
+        });
+        if (!applied.mutatedState) {
+          return {
+            ok: false,
+            tool: 'confirmPendingChange',
+            callId,
+            code: 'UPSTREAM_ERROR',
+            message: 'Cart change could not be applied.',
+          };
+        }
+        pending.plan = null;
+        pending.planId = null;
+        pending.restaurant = null;
+        return { ok: true, tool: 'confirmPendingChange', callId, data: { applied: true } };
+      } catch (error) {
         return {
           ok: false,
           tool: 'confirmPendingChange',
           callId,
           code: 'UPSTREAM_ERROR',
-          message: 'Cart change could not be applied.',
+          message: error instanceof Error ? error.message : 'Could not apply cart change',
         };
       }
-      pending.plan = null;
-      pending.planId = null;
-      return { ok: true, tool: 'confirmPendingChange', callId, data: { applied: true } };
     },
 
     async discardPendingChange(): Promise<VoiceToolResult<{ readonly discarded: true }>> {
       pending.plan = null;
       pending.planId = null;
+      pending.restaurant = null;
       return {
         ok: true,
         tool: 'discardPendingChange',
@@ -222,7 +332,7 @@ export function createOrderBhojanVoiceAdapter(
     },
 
     async escalateToHuman(
-      args: EscalateArgs,
+      _args: EscalateArgs,
     ): Promise<VoiceToolResult<{ readonly handoffId: string }>> {
       const handoffId = `ho_${Date.now().toString(36)}`;
       return {

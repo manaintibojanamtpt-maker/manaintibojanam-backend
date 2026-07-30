@@ -684,13 +684,10 @@ export function useAssistantConversation() {
           }
         }
 
-        // Phase 1.2: voice-core pre-LLM gate (cart summary + stop).
-        // Confirm/add/clarify stay on decideVoiceCartTurn + existing cart-add path.
+        // Phase 1.2/1.3: voice-core pre-LLM gate (cart summary + stop only).
+        // Confirm/add stay on decideVoiceCartTurn until enriched adapter parity is proven.
         if (shouldHandleWithVoiceCorePreLlm(message)) {
           const adapter = createOrderBhojanVoiceAdapter({
-            validateCartPlan: async () => {
-              throw new Error('voice-core cart-add propose is not wired in Phase 1.2');
-            },
             cartMutators: { addItem, setQuantity },
           });
           const session = createVoiceSession({
