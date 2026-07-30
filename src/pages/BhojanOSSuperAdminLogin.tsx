@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { m } from 'framer-motion';
 import { Loader2, Lock, Mail, ArrowLeft, ArrowRight, AlertTriangle, Crown, Shield } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -114,21 +113,17 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
             <span>Back to BhojanOS</span>
           </Link>
 
-          <m.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full rounded-2xl sm:rounded-[1.75rem] border border-white/[0.08] bg-[#0a0a0a]/90 backdrop-blur-xl shadow-[0_32px_80px_-24px_rgba(0,0,0,0.85)] overflow-hidden"
-          >
+          {/*
+            No framer-motion opacity:0 gate here — if motion never animates
+            (lazy chunk / reduced-motion / SW race), only "Back to BhojanOS"
+            would remain visible on an otherwise blank dark page.
+          */}
+          <div className="w-full rounded-2xl sm:rounded-[1.75rem] border border-white/[0.08] bg-[#0a0a0a]/90 backdrop-blur-xl shadow-[0_32px_80px_-24px_rgba(0,0,0,0.85)] overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-red-600 via-orange-500 to-red-600" />
 
             <div className="p-5 sm:p-8">
               <div className="text-center mb-6 sm:mb-8">
-                <m.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.05 }}
-                  className="flex items-center justify-center mb-4 sm:mb-5"
-                >
+                <div className="flex items-center justify-center mb-4 sm:mb-5">
                   <div className="relative shrink-0">
                     <div className="absolute -inset-2 rounded-2xl bg-red-500/20 blur-lg" />
                     <div className="relative w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl border border-white/10 bg-[#111] p-1.5 sm:p-2 shadow-xl">
@@ -143,7 +138,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
                       <Crown size={14} className="hidden sm:block text-white" />
                     </div>
                   </div>
-                </m.div>
+                </div>
 
                 <div className="inline-flex items-center justify-center gap-1.5 max-w-full px-3 py-1.5 rounded-full border border-red-500/25 bg-red-500/10 text-[10px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.18em] text-red-300 mb-3 sm:mb-4">
                   <Shield size={11} className="shrink-0" />
@@ -183,15 +178,21 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5 block">
+                  <label
+                    htmlFor="super-admin-email"
+                    className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5 block"
+                  >
                     Super admin email
                   </label>
                   <div className="relative">
                     <Mail
                       className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
                       size={17}
+                      aria-hidden
                     />
                     <input
+                      id="super-admin-email"
+                      name="email"
                       type="email"
                       required
                       autoComplete="email"
@@ -205,15 +206,21 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5 block">
+                  <label
+                    htmlFor="super-admin-password"
+                    className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5 block"
+                  >
                     Password
                   </label>
                   <div className="relative">
                     <Lock
                       className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
                       size={17}
+                      aria-hidden
                     />
                     <input
+                      id="super-admin-password"
+                      name="password"
                       type="password"
                       required
                       autoComplete="current-password"
@@ -253,7 +260,7 @@ const BhojanOSSuperAdminLogin: React.FC = () => {
                 </Link>
               </div>
             </div>
-          </m.div>
+          </div>
 
           <p className="text-center text-[10px] sm:text-[11px] text-white/25 mt-4 sm:mt-6 px-2">
             Authorized personnel only · BhojanOS Platform
