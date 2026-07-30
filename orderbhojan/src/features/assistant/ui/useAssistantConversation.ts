@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import {
+  canUseVoiceCoreCartAdd,
+  canUseVoiceCoreConfirmApply,
   clearVoiceConfirmation,
   createOrderBhojanVoiceAdapter,
   createVoiceSession,
@@ -11,6 +13,7 @@ import {
   runVoiceCoreTurn,
   shouldHandleWithVoiceCorePreLlm,
   syncConfirmationFromPending,
+  type OrderBhojanVoiceAdapter,
 } from '@/features/voice';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
@@ -61,6 +64,7 @@ import {
 } from '../domain/voiceRuntimeState';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
 import { useAiNativeSttFeature } from '../hooks/useAiNativeSttFeature';
+import { useAiVoiceCoreConfirmAddFeature } from '../hooks/useAiVoiceCoreConfirmAddFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
 import { useAiVoiceTtsFeature } from '../hooks/useAiVoiceTtsFeature';
 import { useAssistantPersonalizationContext } from '../hooks/useAssistantPersonalizationContext';
@@ -157,6 +161,7 @@ export function useAssistantConversation() {
   const voiceEnabled = useAiVoiceFeature();
   const ttsEnabled = useAiVoiceTtsFeature();
   const nativeSttEnabled = useAiNativeSttFeature();
+  const voiceCoreConfirmAddLive = useAiVoiceCoreConfirmAddFeature();
   const navigate = useNavigate();
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
@@ -195,6 +200,7 @@ export function useAssistantConversation() {
     createVoiceSession({ product: 'orderbhojan', channel: 'web' }),
   );
   const voiceConfirmationRef = useRef(initialConfirmationSnapshot());
+  const voiceAdapterRef = useRef<OrderBhojanVoiceAdapter | null>(null);
 
   const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
@@ -206,6 +212,69 @@ export function useAssistantConversation() {
       ? syncConfirmationFromPending(next)
       : clearVoiceConfirmation();
   }, []);
+
+  const createLiveVoiceAdapter = useCallback((): OrderBhojanVoiceAdapter => {
+    if (!voiceCoreConfirmAddLive) {
+      const stub = createOrderBhojanVoiceAdapter({
+        cartMutators: { addItem, setQuantity },
+      });
+      voiceAdapterRef.current = stub;
+      return stub;
+    }
+    const adapter = createOrderBhojanVoiceAdapter({
+      cartMutators: { addItem, setQuantity },
+      enrichedValidate: {
+        validate: async (request) =>
+          validate({
+            restaurantId: request.restaurantId,
+            proposedActions: [...request.proposedActions],
+            ...(request.conversationId
+              ? { conversationId: request.conversationId }
+              : conversationId
+                ? { conversationId }
+                : {}),
+          }),
+        getActiveRestaurant: () => ({
+          restaurantId: restaurantId ?? null,
+          restaurantSlug: restaurantSlug ?? null,
+        }),
+        getCoords: () => {
+          const c = activeLocation?.coordinates;
+          return c ? { lat: c.lat, lng: c.lng } : null;
+        },
+        getNearbyKitchens: () =>
+          toNearbyKitchenHints(
+            buildOrderingAssistContext({
+              restaurantId,
+              restaurantSlug,
+              areaLabel: activeLocation?.displayLabel,
+              lat: activeLocation?.coordinates?.lat,
+              lng: activeLocation?.coordinates?.lng,
+            })?.nearbyKitchens,
+          ),
+        ...(conversationId ? { conversationId } : {}),
+      },
+      ensureRestaurantContext: async (restaurant) => {
+        const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
+        await ensureRestaurantContextForCartPlan({
+          restaurantId: restaurant.restaurantId,
+          restaurantSlug: restaurant.restaurantSlug,
+          coords,
+        });
+      },
+    });
+    voiceAdapterRef.current = adapter;
+    return adapter;
+  }, [
+    activeLocation,
+    addItem,
+    conversationId,
+    restaurantId,
+    restaurantSlug,
+    setQuantity,
+    validate,
+    voiceCoreConfirmAddLive,
+  ]);
 
   const send = useCallback(
     async (raw: string): Promise<string | undefined> => {
@@ -238,7 +307,52 @@ export function useAssistantConversation() {
         setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
         setApplying(true);
         try {
+          // Phase 1.3b: voice-core executor only when flag + readiness + parity pass.
+          // Otherwise fall through to OB ensureRestaurantContext + applyConfirmedCartPlan.
+          const liveAdapter = createLiveVoiceAdapter();
           const planRestaurant = pendingPlanRestaurantRef.current;
+          if (planRestaurant) {
+            liveAdapter.hydratePendingFromValidation(pending, planRestaurant);
+          }
+          const parity = canUseVoiceCoreConfirmApply({
+            liveFlagEnabled: voiceCoreConfirmAddLive,
+            adapterReady: liveAdapter.isConfirmAddReady(),
+            earlyRouteKind: earlyRoute.kind,
+            pending,
+            adapterPending: liveAdapter.getPendingPlan(),
+          });
+          if (parity.ok && liveAdapter.getPendingPlanId()) {
+            const voiceResult = await liveAdapter.confirmPendingChange(
+              liveAdapter.getPendingPlanId()!,
+            );
+            if (voiceResult.ok) {
+              reportCartPlanDecisionQuietly({
+                decision: 'confirm',
+                conversationId: pending.conversationId,
+                planCount: pending.proposedActions.length,
+              });
+              const reply =
+                'Added item(s) to your cart. Say checkout when ready, or ask for another dish.';
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: nextId(),
+                  role: 'system',
+                  text: 'Applied cart change(s) after your confirmation (voice-core).',
+                },
+                { id: nextId(), role: 'assistant', text: reply },
+              ]);
+              syncPendingValidation(null);
+              pendingPlanRestaurantRef.current = null;
+              pendingExploreKitchenRef.current = null;
+              recordVoiceTelemetry('confirmApplySuccess');
+              notifyToast('Applied item(s) to cart.', 'success');
+              return reply;
+            }
+            // Voice-core did not mutate — fall back to OB executor (instant rollback path).
+            recordVoiceTelemetry('confirmApplyFail');
+          }
+
           if (planRestaurant) {
             const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
             await ensureRestaurantContextForCartPlan({
@@ -556,6 +670,51 @@ export function useAssistantConversation() {
 
         const cartAddIntent = parseCartAddUserMessage(message);
         if (cartAddIntent) {
+          // Phase 1.3b: enriched voice-core propose when flag + readiness pass; else OB path.
+          const liveAddAdapter = createLiveVoiceAdapter();
+          const addGate = canUseVoiceCoreCartAdd({
+            liveFlagEnabled: voiceCoreConfirmAddLive,
+            adapterReady: liveAddAdapter.isConfirmAddReady(),
+          });
+          if (addGate.ok) {
+            const propose = await liveAddAdapter.proposeAddItemToCart({
+              itemName: cartAddIntent.itemName,
+              quantity: cartAddIntent.quantity,
+              ...(cartAddIntent.kitchenHint
+                ? { kitchenHint: cartAddIntent.kitchenHint }
+                : {}),
+            });
+            const validation = liveAddAdapter.getPendingPlan();
+            const restaurant = liveAddAdapter.getPendingRestaurant();
+            if (propose.ok && validation && restaurant) {
+              pendingPlanRestaurantRef.current = restaurant;
+              syncPendingValidation(validation);
+              if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
+              else recordVoiceTelemetry('planValidateFail');
+              const reply = propose.data.summarySpeech || validationSpeakText(validation);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: nextId(),
+                  role: 'assistant',
+                  text: reply,
+                  cartActions: validation.proposedActions,
+                },
+                {
+                  id: nextId(),
+                  role: 'system',
+                  text:
+                    validation.status === 'validated'
+                      ? 'Cart plan validated. Review and confirm to apply.'
+                      : reply,
+                  validation,
+                },
+              ]);
+              return reply;
+            }
+            // Propose failed — fall through to OB cart-add executor.
+          }
+
           const coordsForAdd = activeLocation?.coordinates;
           const nearbyForAdd = toNearbyKitchenHints(
             buildOrderingAssistContext({
@@ -651,6 +810,12 @@ export function useAssistantConversation() {
               ...(conversationId ? { conversationId } : {}),
             });
             syncPendingValidation(validation);
+            if (pendingPlanRestaurantRef.current) {
+              createLiveVoiceAdapter().hydratePendingFromValidation(
+                validation,
+                pendingPlanRestaurantRef.current,
+              );
+            }
             if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
             else recordVoiceTelemetry('planValidateFail');
             const reply = validationSpeakText(validation);
@@ -685,7 +850,7 @@ export function useAssistantConversation() {
         }
 
         // Phase 1.2/1.3: voice-core pre-LLM gate (cart summary + stop only).
-        // Confirm/add stay on decideVoiceCartTurn until enriched adapter parity is proven.
+        // Live confirm/add executor is gated separately (FF_OB_AI_VOICE_CORE_CONFIRM_ADD).
         if (shouldHandleWithVoiceCorePreLlm(message)) {
           const adapter = createOrderBhojanVoiceAdapter({
             cartMutators: { addItem, setQuantity },
@@ -1060,7 +1225,9 @@ export function useAssistantConversation() {
       restaurantSlug,
       setQuantity,
       syncPendingValidation,
+      createLiveVoiceAdapter,
       validate,
+      voiceCoreConfirmAddLive,
     ],
   );
 

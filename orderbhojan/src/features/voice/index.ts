@@ -1,5 +1,8 @@
 export { createOrderBhojanVoiceAdapter } from './adapters/orderBhojanVoiceAdapter';
-export type { OrderBhojanVoiceAdapterDeps } from './adapters/orderBhojanVoiceAdapter';
+export type {
+  OrderBhojanVoiceAdapter,
+  OrderBhojanVoiceAdapterDeps,
+} from './adapters/orderBhojanVoiceAdapter';
 
 export {
   runVoiceCoreTurn,
@@ -21,6 +24,12 @@ export {
   type EnrichedCartAddValidateDeps,
   type EnrichedCartAddResult,
 } from './application/enrichedCartAddValidate';
+
+export {
+  canUseVoiceCoreConfirmApply,
+  canUseVoiceCoreCartAdd,
+  type VoiceCoreConfirmParityResult,
+} from './application/voiceCoreConfirmAddParity';
 
 export {
   createVoiceSession,

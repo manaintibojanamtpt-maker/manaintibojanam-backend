@@ -52,9 +52,7 @@ type PendingHolder = {
   restaurant: { restaurantId: string; restaurantSlug: string } | null;
 };
 
-export function createOrderBhojanVoiceAdapter(
-  deps: OrderBhojanVoiceAdapterDeps,
-): VoicePlatformAdapter & {
+export type OrderBhojanVoiceAdapter = VoicePlatformAdapter & {
   readonly getPendingPlan: () => CartPlanValidationResult | null;
   readonly getPendingPlanId: () => string | null;
   readonly getPendingRestaurant: () => {
@@ -62,7 +60,16 @@ export function createOrderBhojanVoiceAdapter(
     readonly restaurantSlug: string;
   } | null;
   readonly isConfirmAddReady: () => boolean;
-} {
+  readonly hydratePendingFromValidation: (
+    plan: CartPlanValidationResult,
+    restaurant: { readonly restaurantId: string; readonly restaurantSlug: string } | null,
+    planId?: string,
+  ) => void;
+};
+
+export function createOrderBhojanVoiceAdapter(
+  deps: OrderBhojanVoiceAdapterDeps,
+): OrderBhojanVoiceAdapter {
   const pending: PendingHolder = { plan: null, planId: null, restaurant: null };
 
   return {
@@ -82,6 +89,12 @@ export function createOrderBhojanVoiceAdapter(
 
     isConfirmAddReady() {
       return Boolean(deps.enrichedValidate && deps.ensureRestaurantContext);
+    },
+
+    hydratePendingFromValidation(plan, restaurant, planId) {
+      pending.plan = plan;
+      pending.planId = planId ?? `${plan.conversationId || 'plan'}_hydrated`;
+      pending.restaurant = restaurant;
     },
 
     async findMenuItems(args: FindMenuItemsArgs): Promise<VoiceToolResult<readonly MenuItemMatch[]>> {

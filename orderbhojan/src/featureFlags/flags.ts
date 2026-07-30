@@ -32,6 +32,11 @@ export const FEATURE_FLAG_KEYS = [
    * No UI change; enables segmented canary + observability when server gate is wired.
    */
   'FF_OB_AI_CANARY_HEADERS',
+  /**
+   * Live voice-core confirm/add executor (Phase 1.3b) — OFF by default.
+   * When off, decideVoiceCartTurn + OB apply path remain the sole mutators (instant rollback).
+   */
+  'FF_OB_AI_VOICE_CORE_CONFIRM_ADD',
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
@@ -59,6 +64,7 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_AI_POST_ORDER: false,
   FF_OB_AI_PERSONALIZATION: false,
   FF_OB_AI_CANARY_HEADERS: false,
+  FF_OB_AI_VOICE_CORE_CONFIRM_ADD: false,
 };
 
 function readEnvFlag(key: FeatureFlagKey): boolean | undefined {
