@@ -89,7 +89,7 @@ try {
         return worker?.scriptURL ?? '';
       }),
       stalePwaCaches: cacheKeys.filter(
-        (key) => /orderbhojan-pwa-v/i.test(key) && !key.includes('orderbhojan-pwa-v11'),
+        (key) => /orderbhojan-pwa-v/i.test(key) && !key.includes('orderbhojan-pwa-v12'),
       ),
       authReturnTo: sessionStorage.getItem('auth_return_to'),
     };

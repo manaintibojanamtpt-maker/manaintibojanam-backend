@@ -10,6 +10,15 @@ interface MarketplaceSearchResultCardProps {
   readonly onResultClick?: (tenantId: string) => void;
 }
 
+/** Matches kitchen-card / discovery distance floor — hide misleading sub-100 m badges. */
+const MIN_DISPLAY_DISTANCE_KM = 0.1;
+
+function isDisplayableDistanceKm(km: number | undefined | null): km is number {
+  if (km == null || !Number.isFinite(km)) return false;
+  if (km === 0) return true;
+  return km >= MIN_DISPLAY_DISTANCE_KM;
+}
+
 const badgeStyles: Record<string, string> = {
   matched_restaurant: 'bg-[#FF7A00]/15 text-[#FF7A00] border-[#FF7A00]/30',
   matched_cuisine: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
@@ -60,10 +69,12 @@ export const MarketplaceSearchResultCardView: React.FC<MarketplaceSearchResultCa
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/60">
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" />
-              {result.distanceKm.toFixed(1)} km
-            </span>
+            {isDisplayableDistanceKm(result.distanceKm) ? (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {result.distanceKm.toFixed(1)} km
+              </span>
+            ) : null}
             {result.etaMins !== undefined && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />

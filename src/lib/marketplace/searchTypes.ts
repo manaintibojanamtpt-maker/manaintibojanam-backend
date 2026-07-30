@@ -31,7 +31,8 @@ export interface MarketplaceSearchResultCard {
   readonly tenantId: string;
   readonly slug: string;
   readonly name: string;
-  readonly distanceKm: number;
+  /** Omitted when unknown — avoid rendering a misleading 0.0 km badge. */
+  readonly distanceKm?: number;
   readonly etaMins?: number;
   readonly rating?: number;
   readonly cuisineLabel?: string;

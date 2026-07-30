@@ -37,7 +37,7 @@ describe('OrderBhojan connectivity probe', () => {
 
   it('index.html purges stale orderbhojan workbox caches before SW update', () => {
     const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
-    assert.match(indexHtml, /orderbhojan-pwa-v11/);
+    assert.match(indexHtml, /orderbhojan-pwa-v12/);
     assert.match(indexHtml, /caches\.keys\(\)/);
     assert.match(indexHtml, /caches\.delete/);
   });

@@ -12,7 +12,9 @@ export function sortMarketplaceSearchResults(
   const copy = [...results];
 
   if (sort === 'distance') {
-    return copy.sort((left, right) => left.distanceKm - right.distanceKm);
+    return copy.sort(
+      (left, right) => (left.distanceKm ?? Number.POSITIVE_INFINITY) - (right.distanceKm ?? Number.POSITIVE_INFINITY),
+    );
   }
 
   if (sort === 'rating') {
