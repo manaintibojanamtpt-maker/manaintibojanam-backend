@@ -5,6 +5,7 @@ import type { SettingsPreferenceViewModel } from '@bhojan/storefront-design-syst
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCustomerProfile } from '@/features/auth/hooks/useCustomerProfile';
 import { updateCustomerPreferences } from '@/features/auth/infrastructure/customerRepository';
+import { useDevicePushStatus } from '@/features/notifications/hooks/useDevicePushStatus';
 import { notifyToast } from '@/shared/providers/BdsToastProvider';
 
 const SPICE_LEVELS = ['Mild', 'Medium', 'Hot'] as const;
@@ -15,6 +16,7 @@ export function useCustomerSettingsActions() {
   const queryClient = useQueryClient();
   const { sessionUser } = useAuth();
   const profileQuery = useCustomerProfile();
+  const devicePush = useDevicePushStatus();
 
   const preferenceRows = useMemo((): readonly SettingsPreferenceViewModel[] => {
     const prefs = profileQuery.data?.preferences;
@@ -24,11 +26,12 @@ export function useCustomerSettingsActions() {
       {
         id: 'notifications',
         icon: '🔔',
+        // Device readiness (OS permission + FCM registration), not Firestore preference default.
         label: 'Push notifications',
-        value: prefs?.notifications === false ? 'Off' : 'On',
+        value: devicePush.settingsLabel,
       },
     ];
-  }, [profileQuery.data?.preferences]);
+  }, [devicePush.settingsLabel, profileQuery.data?.preferences]);
 
   const handlePreferenceRow = (id: string) => {
     const uid = sessionUser?.uid;

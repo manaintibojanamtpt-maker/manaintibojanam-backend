@@ -11,39 +11,27 @@ import { isNativePlatform } from '@/lib/nativePlatform';
 import {
   getLastNativePushRegistrationError,
   nativeNotificationPlatform,
-  readNativeNotificationPermission,
   requestNativePushPermission,
 } from '@/lib/nativePushNotifications';
-
-type PermissionState = 'unknown' | 'granted' | 'denied' | 'prompt';
+import { updateCustomerPreferences } from '@/features/auth/infrastructure/customerRepository';
+import {
+  notificationsEnableLabel,
+  notificationsStatusCopy,
+} from '@/features/notifications/domain/devicePushStatus';
+import { useDevicePushStatus } from '@/features/notifications/hooks/useDevicePushStatus';
 
 export function OrderBhojanNotificationsPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, sessionUser } = useAuth();
+  const push = useDevicePushStatus();
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [permission, setPermission] = useState<PermissionState>('unknown');
-  const [registered, setRegistered] = useState(false);
   const native = isNativePlatform();
 
   useEffect(() => {
-    void readNativeNotificationPermission().then((perm) => {
-      if (perm === 'granted') {
-        setPermission('granted');
-        setStatus((current) =>
-          current ??
-            'Notifications are allowed on this device. Tap Register to finish setup for order alerts.',
-        );
-        return;
-      }
-      if (perm === 'denied') {
-        setPermission('denied');
-        setStatus('Notification permission is blocked for this app.');
-        return;
-      }
-      setPermission('prompt');
-    });
-  }, []);
+    if (!push.hydrated) return;
+    setStatus((current) => current ?? notificationsStatusCopy(push.status));
+  }, [push.hydrated, push.status]);
 
   if (!isAuthenticated) {
     return <NotificationsGuestView onSignIn={() => navigate('/auth')} />;
@@ -58,16 +46,14 @@ export function OrderBhojanNotificationsPage() {
         ? await requestNativePushPermission()
         : await messaging.requestPermission();
       if (nextPermission !== 'granted') {
-        setPermission('denied');
-        setRegistered(false);
+        push.setPermissionState('denied');
         setStatus('Notification permission was not granted.');
         return;
       }
-      setPermission('granted');
+      push.setPermissionState('granted');
       const token = await messaging.getToken();
       if (!token) {
         const registrationError = native ? getLastNativePushRegistrationError() : null;
-        setRegistered(false);
         setStatus(
           native
             ? registrationError
@@ -81,13 +67,20 @@ export function OrderBhojanNotificationsPage() {
         token,
         platform: native ? nativeNotificationPlatform() : 'web',
       });
-      setRegistered(true);
+      push.markRegistered(token);
+      if (sessionUser?.uid) {
+        try {
+          await updateCustomerPreferences(sessionUser.uid, { notifications: true });
+        } catch {
+          // Preference sync is best-effort; device registration is already persisted locally.
+        }
+      }
       setStatus('Notifications enabled for this device.');
     } catch {
-      setRegistered(false);
       setStatus('Could not enable notifications. Try again later.');
     } finally {
       setBusy(false);
+      void push.refresh();
     }
   };
 
@@ -95,25 +88,22 @@ export function OrderBhojanNotificationsPage() {
     ? 'Open Android Settings → Apps → OrderBhojan → Notifications and allow alerts, then return and tap Register again.'
     : 'Open your browser site settings for OrderBhojan and allow notifications, then try again.';
 
-  const enableLabel = registered
-    ? 'Re-register this device'
-    : permission === 'granted'
-      ? 'Register this device'
-      : 'Enable push notifications';
+  const enableLabel = notificationsEnableLabel(push.status);
+  const deviceReady = push.status === 'ready';
 
   return (
     <NotificationsPageView
       title="Notifications"
       description="Stay in the loop from order to doorstep."
       enableLabel={enableLabel}
-      busyLabel={registered || permission === 'granted' ? 'Registering…' : 'Enabling…'}
-      busy={busy}
+      busyLabel={deviceReady || push.permission === 'granted' ? 'Registering…' : 'Enabling…'}
+      busy={busy || !push.hydrated}
       status={status}
       onEnable={() => void enableNotifications()}
       viewOrdersLabel="View orders"
       onViewOrders={() => navigate('/orders')}
       deniedHint={deniedHint}
-      deviceReady={registered}
+      deviceReady={deviceReady}
     />
   );
 }
