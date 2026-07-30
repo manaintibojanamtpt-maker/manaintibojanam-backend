@@ -52,18 +52,12 @@ function report(name, ok, detail = '') {
 }
 
 async function readSettingsPushValue(send) {
-  await evaluate(send, `location.assign('/settings')`, true);
-  await new Promise((r) => setTimeout(r, 1500));
-  // Profile/settings may live under /profile — try both
-  let body = await evaluate(send, `document.body.innerText.replace(/\\s+/g,' ')`);
-  if (!/Push notifications/i.test(body || '')) {
-    await evaluate(send, `location.assign('/profile')`, true);
-    await new Promise((r) => setTimeout(r, 1500));
-    body = await evaluate(send, `document.body.innerText.replace(/\\s+/g,' ')`);
-  }
-  const match = (body || '').match(/Push notifications\s+(On this device|Needs setup|Blocked|Off|…|On)/i);
+  await evaluate(send, `location.assign('/profile')`, true);
+  await new Promise((r) => setTimeout(r, 1800));
+  const body = await evaluate(send, `document.body.innerText.replace(/\\s+/g,' ')`);
+  const match = (body || '').match(/Push notifications\s+(On this device|Needs setup|Blocked|Off|…|On)\b/i);
   return {
-    bodySnippet: (body || '').slice(0, 400),
+    bodySnippet: (body || '').slice(0, 500),
     value: match?.[1] ?? null,
   };
 }
