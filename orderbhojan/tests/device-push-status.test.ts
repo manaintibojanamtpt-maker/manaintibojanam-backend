@@ -114,4 +114,16 @@ describe('settings + notifications wiring', () => {
     assert.match(page, /notificationsEnableLabel/);
     assert.match(page, /updateCustomerPreferences/);
   });
+
+  it('hook keeps local registration when OS permission is not granted', () => {
+    const hook = readFileSync(
+      join(root, 'src/features/notifications/hooks/useDevicePushStatus.ts'),
+      'utf8',
+    );
+    assert.match(hook, /Keep local registration truth/);
+    assert.doesNotMatch(
+      hook,
+      /setDeviceRegistered\(nextPermission === 'granted' && registered\)/,
+    );
+  });
 });

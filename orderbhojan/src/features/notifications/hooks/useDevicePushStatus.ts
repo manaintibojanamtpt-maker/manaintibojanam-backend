@@ -30,10 +30,11 @@ export function useDevicePushStatus() {
     const platform = currentPlatform();
     const nativePermission = await readNativeNotificationPermission();
     const nextPermission = mapNotificationPermission(nativePermission);
+    // Keep local registration truth even when OS permission is revoked/prompt.
+    // resolveDevicePushStatus decides ready vs blocked from both signals.
     const registered = isDevicePushRegisteredForPlatform(platform);
-    // Permission must still be granted for a prior registration to count as ready.
     setPermission(nextPermission);
-    setDeviceRegistered(nextPermission === 'granted' && registered);
+    setDeviceRegistered(registered);
     setHydrated(true);
   }, []);
 
