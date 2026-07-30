@@ -31,7 +31,11 @@ export function resolveDevicePushStatus(input: {
 }): DevicePushStatus {
   if (input.permission === 'unknown') return 'loading';
   if (input.permission === 'denied') return 'blocked';
-  if (input.permission === 'prompt') return 'needs_permission';
+  if (input.permission === 'prompt') {
+    // Android revoke / user toggle-off often reports prompt (not denied).
+    // If this device was registered before, surface Blocked so Settings is not a false Off.
+    return input.deviceRegistered ? 'blocked' : 'needs_permission';
+  }
   // permission === 'granted'
   return input.deviceRegistered ? 'ready' : 'needs_registration';
 }

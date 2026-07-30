@@ -30,7 +30,8 @@ export function OrderBhojanNotificationsPage() {
 
   useEffect(() => {
     if (!push.hydrated) return;
-    setStatus((current) => current ?? notificationsStatusCopy(push.status));
+    // Always refresh status copy when composite status changes (e.g. OS revoke → blocked).
+    setStatus(notificationsStatusCopy(push.status));
   }, [push.hydrated, push.status]);
 
   if (!isAuthenticated) {

@@ -33,6 +33,7 @@ describe('device push status domain', () => {
     assert.equal(resolveDevicePushStatus({ permission: 'unknown', deviceRegistered: false }), 'loading');
     assert.equal(resolveDevicePushStatus({ permission: 'denied', deviceRegistered: true }), 'blocked');
     assert.equal(resolveDevicePushStatus({ permission: 'prompt', deviceRegistered: false }), 'needs_permission');
+    assert.equal(resolveDevicePushStatus({ permission: 'prompt', deviceRegistered: true }), 'blocked');
     assert.equal(
       resolveDevicePushStatus({ permission: 'granted', deviceRegistered: false }),
       'needs_registration',
