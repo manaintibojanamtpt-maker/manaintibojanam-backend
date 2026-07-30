@@ -55,9 +55,6 @@ export function useDevicePushStatus() {
 
   const setPermissionState = useCallback((next: PushPermissionState) => {
     setPermission(next);
-    if (next !== 'granted') {
-      setDeviceRegistered(false);
-    }
   }, []);
 
   return {
