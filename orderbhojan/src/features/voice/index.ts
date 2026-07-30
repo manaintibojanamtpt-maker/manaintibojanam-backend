@@ -7,6 +7,12 @@ export {
 } from './application/runVoiceCoreTurn';
 
 export {
+  pendingValidationToConfirmation,
+  idleOrderingTask,
+  shouldHandleWithVoiceCorePreLlm,
+} from './application/voiceCoreBridge';
+
+export {
   createVoiceSession,
   triageVoiceUtterance,
   initialConfirmationSnapshot,

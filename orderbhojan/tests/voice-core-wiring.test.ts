@@ -9,6 +9,7 @@ import {
   reduceConfirmation,
   triageVoiceUtterance,
 } from '@bhojan/voice-core';
+import { shouldHandleWithVoiceCorePreLlm } from '../src/features/voice/application/voiceCoreBridge.ts';
 
 const root = join(import.meta.dirname, '..');
 
@@ -21,6 +22,7 @@ describe('OrderBhojan voice-core wiring', () => {
     );
     assert.match(index, /@bhojan\/voice-core/);
     assert.match(index, /runVoiceCoreTurn/);
+    assert.match(index, /shouldHandleWithVoiceCorePreLlm/);
     assert.match(adapter, /createOrderBhojanVoiceAdapter/);
     assert.match(adapter, /userConfirmed: true/);
     assert.match(adapter, /applyConfirmedCartPlan/);
@@ -29,6 +31,23 @@ describe('OrderBhojan voice-core wiring', () => {
   it('vite aliases @bhojan/voice-core', () => {
     const vite = readFileSync(join(root, 'vite.config.ts'), 'utf8');
     assert.match(vite, /@bhojan\/voice-core/);
+  });
+
+  it('wires voice-core pre-LLM cart summary into conversation send()', () => {
+    const src = readFileSync(
+      join(root, 'src/features/assistant/ui/useAssistantConversation.ts'),
+      'utf8',
+    );
+    assert.match(src, /runVoiceCoreTurn/);
+    assert.match(src, /shouldHandleWithVoiceCorePreLlm/);
+    assert.match(src, /decideVoiceCartTurn/);
+  });
+
+  it('Phase 1.1 pre-LLM gate only claims cart summary', () => {
+    assert.equal(shouldHandleWithVoiceCorePreLlm('what is in my cart'), true);
+    assert.equal(shouldHandleWithVoiceCorePreLlm("what's in my cart"), true);
+    assert.equal(shouldHandleWithVoiceCorePreLlm('add 1 masala dosa'), false);
+    assert.equal(shouldHandleWithVoiceCorePreLlm('confirm'), false);
   });
 
   it('shared confirmation + triage contracts are importable', () => {

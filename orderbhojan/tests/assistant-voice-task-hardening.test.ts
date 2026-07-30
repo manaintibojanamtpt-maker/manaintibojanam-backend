@@ -245,6 +245,8 @@ describe('voice task hardening — screenshot regressions', () => {
     assert.match(src, /toPendingPlanRestaurantRef/);
     assert.match(src, /captureNativeAndroidStt/);
     assert.match(src, /voiceAbortRef\.current\?\.abort\(\)/);
+    assert.match(src, /runVoiceCoreTurn/);
+    assert.match(src, /shouldHandleWithVoiceCorePreLlm/);
   });
 
   it('keeps native Android STT flag OFF by default', () => {

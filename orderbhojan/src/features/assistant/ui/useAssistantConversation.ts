@@ -2,6 +2,14 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
+import {
+  createOrderBhojanVoiceAdapter,
+  createVoiceSession,
+  idleOrderingTask,
+  pendingValidationToConfirmation,
+  runVoiceCoreTurn,
+  shouldHandleWithVoiceCorePreLlm,
+} from '@/features/voice';
 import { useActiveLocation } from '@/features/location';
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
@@ -181,6 +189,9 @@ export function useAssistantConversation() {
     id?: string;
     searchPath: string;
   } | null>(null);
+  const voiceSessionRef = useRef(
+    createVoiceSession({ product: 'orderbhojan', channel: 'web' }),
+  );
 
   const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
@@ -660,6 +671,37 @@ export function useAssistantConversation() {
             return msg;
           } finally {
             setValidating(false);
+          }
+        }
+
+        // Phase 1.1: voice-core pre-LLM gate (cart summary only).
+        // Confirm/add/clarify stay on decideVoiceCartTurn + existing cart-add path.
+        if (shouldHandleWithVoiceCorePreLlm(message)) {
+          const adapter = createOrderBhojanVoiceAdapter({
+            validateCartPlan: async () => {
+              throw new Error('voice-core cart-add propose is not wired in Phase 1.1');
+            },
+            cartMutators: { addItem, setQuantity },
+          });
+          const session = createVoiceSession({
+            product: 'orderbhojan',
+            channel: 'web',
+            conversationId: conversationId || voiceSessionRef.current.conversationId,
+          });
+          voiceSessionRef.current = session;
+          const turn = await runVoiceCoreTurn({
+            session,
+            message,
+            confirmation: pendingValidationToConfirmation(pendingValidationRef.current),
+            task: idleOrderingTask(pendingPlanRestaurantRef.current?.restaurantId),
+            adapter,
+          });
+          if (turn.kind === 'cart_summary' && turn.spoken) {
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'assistant', text: turn.spoken },
+            ]);
+            return turn.spoken;
           }
         }
 
