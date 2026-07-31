@@ -32,6 +32,12 @@ export {
 } from './application/voiceCoreConfirmAddParity';
 
 export {
+  recordVoiceCoreDualRun,
+  type VoiceCoreDualRunPath,
+  type VoiceCoreDualRunOutcome,
+} from './application/voiceCoreDualRunTelemetry';
+
+export {
   createVoiceSession,
   triageVoiceUtterance,
   initialConfirmationSnapshot,

@@ -10,6 +10,7 @@ import {
   createVoiceSession,
   idleOrderingTask,
   initialConfirmationSnapshot,
+  recordVoiceCoreDualRun,
   runVoiceCoreTurn,
   shouldHandleWithVoiceCorePreLlm,
   syncConfirmationFromPending,
@@ -321,11 +322,33 @@ export function useAssistantConversation() {
             pending,
             adapterPending: liveAdapter.getPendingPlan(),
           });
+          const dualRunSession = voiceSessionRef.current.sessionId;
+          if (!parity.ok) {
+            recordVoiceCoreDualRun({
+              path: 'confirm',
+              outcome:
+                parity.reason === 'parity_conversation_mismatch'
+                  ? 'parity_mismatch'
+                  : 'parity_blocked',
+              reason: parity.reason,
+              sessionId: dualRunSession,
+            });
+          }
           if (parity.ok && liveAdapter.getPendingPlanId()) {
+            recordVoiceCoreDualRun({
+              path: 'confirm',
+              outcome: 'attempt',
+              sessionId: dualRunSession,
+            });
             const voiceResult = await liveAdapter.confirmPendingChange(
               liveAdapter.getPendingPlanId()!,
             );
             if (voiceResult.ok) {
+              recordVoiceCoreDualRun({
+                path: 'confirm',
+                outcome: 'voice_core_success',
+                sessionId: dualRunSession,
+              });
               reportCartPlanDecisionQuietly({
                 decision: 'confirm',
                 conversationId: pending.conversationId,
@@ -351,6 +374,12 @@ export function useAssistantConversation() {
             }
             // Voice-core did not mutate — fall back to OB executor (instant rollback path).
             recordVoiceTelemetry('confirmApplyFail');
+            recordVoiceCoreDualRun({
+              path: 'confirm',
+              outcome: 'fallback_ob',
+              reason: voiceResult.ok === false ? voiceResult.code : 'voice_core_confirm_failed',
+              sessionId: dualRunSession,
+            });
           }
 
           if (planRestaurant) {
@@ -676,7 +705,21 @@ export function useAssistantConversation() {
             liveFlagEnabled: voiceCoreConfirmAddLive,
             adapterReady: liveAddAdapter.isConfirmAddReady(),
           });
+          const addSession = voiceSessionRef.current.sessionId;
+          if (!addGate.ok) {
+            recordVoiceCoreDualRun({
+              path: 'add',
+              outcome: 'parity_blocked',
+              reason: addGate.reason,
+              sessionId: addSession,
+            });
+          }
           if (addGate.ok) {
+            recordVoiceCoreDualRun({
+              path: 'add',
+              outcome: 'attempt',
+              sessionId: addSession,
+            });
             const propose = await liveAddAdapter.proposeAddItemToCart({
               itemName: cartAddIntent.itemName,
               quantity: cartAddIntent.quantity,
@@ -687,6 +730,11 @@ export function useAssistantConversation() {
             const validation = liveAddAdapter.getPendingPlan();
             const restaurant = liveAddAdapter.getPendingRestaurant();
             if (propose.ok && validation && restaurant) {
+              recordVoiceCoreDualRun({
+                path: 'add',
+                outcome: 'voice_core_success',
+                sessionId: addSession,
+              });
               pendingPlanRestaurantRef.current = restaurant;
               syncPendingValidation(validation);
               if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
@@ -713,6 +761,12 @@ export function useAssistantConversation() {
               return reply;
             }
             // Propose failed — fall through to OB cart-add executor.
+            recordVoiceCoreDualRun({
+              path: 'add',
+              outcome: 'fallback_ob',
+              reason: propose.ok === false ? propose.code : 'missing_pending_restaurant',
+              sessionId: addSession,
+            });
           }
 
           const coordsForAdd = activeLocation?.coordinates;

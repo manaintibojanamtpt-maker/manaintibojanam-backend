@@ -11,6 +11,16 @@ export type VoiceOrderingTelemetryCounters = {
   invalidConfirmAttempts: number;
   pendingRetained: number;
   pendingWiped: number;
+  /** Phase 1.3 canary — voice-core confirm/add dual-run (no PII). */
+  voiceCoreConfirmAttempt: number;
+  voiceCoreConfirmSuccess: number;
+  voiceCoreConfirmFallbackOb: number;
+  voiceCoreConfirmParityBlocked: number;
+  voiceCoreAddAttempt: number;
+  voiceCoreAddSuccess: number;
+  voiceCoreAddFallbackOb: number;
+  voiceCoreAddParityBlocked: number;
+  voiceCoreParityMismatch: number;
 };
 
 const counters: VoiceOrderingTelemetryCounters = {
@@ -24,6 +34,15 @@ const counters: VoiceOrderingTelemetryCounters = {
   invalidConfirmAttempts: 0,
   pendingRetained: 0,
   pendingWiped: 0,
+  voiceCoreConfirmAttempt: 0,
+  voiceCoreConfirmSuccess: 0,
+  voiceCoreConfirmFallbackOb: 0,
+  voiceCoreConfirmParityBlocked: 0,
+  voiceCoreAddAttempt: 0,
+  voiceCoreAddSuccess: 0,
+  voiceCoreAddFallbackOb: 0,
+  voiceCoreAddParityBlocked: 0,
+  voiceCoreParityMismatch: 0,
 };
 
 export function recordVoiceTelemetry(
