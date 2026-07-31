@@ -38,6 +38,14 @@ export {
 } from './application/voiceCoreDualRunTelemetry';
 
 export {
+  evaluateVoiceCoreConfirmAddRollout,
+  isVoiceCoreConfirmAddEnabledForClient,
+  getVoiceCoreConfirmAddRolloutDecision,
+  stickyBucket0to99,
+  type VoiceCoreConfirmAddRolloutDecision,
+} from './application/voiceCoreConfirmAddRollout';
+
+export {
   createVoiceSession,
   triageVoiceUtterance,
   initialConfirmationSnapshot,
