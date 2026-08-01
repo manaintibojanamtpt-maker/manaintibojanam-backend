@@ -8,6 +8,7 @@ import {
   peekOwnerMenuCache,
   seedOwnerMenuCache,
 } from '../../lib/ownerMenuCache';
+import { RestaurantMenuPageSkeleton } from '../../design-system/skeleton/SkeletonSystem';
 import type { MenuItem } from '../../types';
 import { useDashboardMenu } from '../../context/DashboardRealtimeProvider';
 import type {
@@ -275,20 +276,40 @@ const OwnerMenu = () => {
         addonGroups: normalizeAddonGroupsForSave(addonGroups),
       };
 
+      const previousItems = [...items];
+      const tempId = editingItem ? editingItem.id : `temp-${Date.now()}`;
+      
+      const optimisticItem = {
+        ...itemData,
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as MenuItem;
+
       if (editingItem) {
-        await updateMenuItem(editingItem.id, itemData);
-        toast.success('Item updated successfully');
+        setItems(prev => prev.map(item => item.id === tempId ? { ...item, ...optimisticItem } : item));
       } else {
-        await addMenuItem(itemData as any);
-        toast.success('Item added successfully');
+        setItems(prev => [...prev, optimisticItem]);
       }
+      
       handleCloseModal();
-      invalidateOwnerMenuCache(tenantId);
-      await loadMenuItems(tenantId, { soft: true });
-    } catch (error) {
-      console.error('Save failed:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save menu item';
-      toast.error(message);
+
+      try {
+        if (editingItem) {
+          await updateMenuItem(editingItem.id, itemData);
+          toast.success('Item updated successfully');
+        } else {
+          await addMenuItem(itemData as any);
+          toast.success('Item added successfully');
+        }
+        invalidateOwnerMenuCache(tenantId);
+        await loadMenuItems(tenantId, { soft: true });
+      } catch (error) {
+        setItems(previousItems);
+        console.error('Save failed:', error);
+        const message = error instanceof Error ? error.message : 'Failed to save menu item';
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -334,11 +355,8 @@ const OwnerMenu = () => {
   if (loading && items.length === 0) {
     return (
       <div className="p-6 md:p-12 text-white">
-        <div className="max-w-5xl mx-auto space-y-3">
-          <div className="h-10 w-48 rounded-xl bg-white/5 animate-pulse" />
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse" />
-          ))}
+        <div className="max-w-5xl mx-auto">
+          <RestaurantMenuPageSkeleton />
         </div>
       </div>
     );

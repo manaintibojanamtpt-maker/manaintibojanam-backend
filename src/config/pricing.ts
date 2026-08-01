@@ -1,4 +1,4 @@
-export type PaidPlanId = 'growth' | 'pro' | 'enterprise';
+﻿export type PaidPlanId = 'growth' | 'pro' | 'enterprise';
 export type PlanId = 'starter' | PaidPlanId;
 
 /** Trial lengths — single source of truth for onboarding & upgrade copy */

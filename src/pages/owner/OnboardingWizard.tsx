@@ -156,9 +156,23 @@ const OnboardingWizard: React.FC = () => {
         } else {
           const saveResult = await buildOwnerLocationSavePayload(addressDraft);
           if (saveResult.ok === false) {
-            throw new Error(saveResult.error.message || 'Could not resolve kitchen address');
+            // Manual fallback: if coordinate resolution fails, save the raw draft data as legacy
+            if (!addressDraft.street?.trim() || !addressDraft.cityName?.trim()) {
+              throw new Error(saveResult.error.message || 'Could not resolve kitchen address. Please ensure street and city are filled.');
+            }
+            payload.location = {
+              address: addressDraft.street.trim(),
+              city: addressDraft.cityName.trim(),
+              state: addressDraft.stateName.trim(),
+              pincode: addressDraft.pincode.trim(),
+              lat: tenantInfo.location?.lat || 0,
+              lng: tenantInfo.location?.lng || 0,
+              addressModel: 'legacy',
+            };
+            // Do not throw, allow the save to continue with fallback data
+          } else {
+            payload.location = saveResult.value;
           }
-          payload.location = saveResult.value;
         }
       } else {
         if (!address.trim() || !city.trim()) throw new Error('Address and city are required');
@@ -253,11 +267,6 @@ const OnboardingWizard: React.FC = () => {
 
   const handleNext = async () => {
     try {
-      if (currentStep === 6 && menuCount < 3) {
-        toast.error('Add at least 3 menu items before continuing. Import the template or open Menu Builder.');
-        return;
-      }
-
       if (currentStep < WIZARD_STEPS.length) {
         await saveProgress(currentStep + 1);
         navigate(`/owner/setup?step=${currentStep + 1}`, { replace: true });
@@ -307,7 +316,7 @@ const OnboardingWizard: React.FC = () => {
       setMenuSeeded(true);
       const total = await refreshMenuCount(tenantInfo.id);
       toast.success(`Added ${count} items from Cloud Kitchen template`);
-      if (total >= 3 && currentStep === 6) {
+      if (total >= 1 && currentStep === 6) {
         toast.success('Menu ready — tap Save & continue to go to the final step.');
       }
     } catch (error: any) {
@@ -452,16 +461,16 @@ const OnboardingWizard: React.FC = () => {
               <p className="text-gray-400 mt-1">{meta.description}</p>
             </div>
             <SetupStepInstructions step={meta} />
-            <div className={`p-4 rounded-xl border ${menuCount >= 3 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.02] border-white/10'}`}>
-              <p className={`text-sm font-bold ${menuCount >= 3 ? 'text-emerald-400' : 'text-white/70'}`}>
-                {menuCount >= 3 ? `${menuCount} menu items ready` : `${menuCount}/3 items added — need at least 3`}
+            <div className={`p-4 rounded-xl border ${menuCount >= 1 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.02] border-white/10'}`}>
+              <p className={`text-sm font-bold ${menuCount >= 1 ? 'text-emerald-400' : 'text-white/70'}`}>
+                {menuCount >= 1 ? `${menuCount} menu items ready` : `${menuCount} items added — add dishes now or skip and do it later`}
               </p>
             </div>
             <div className="p-8 border border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center text-center">
               <MenuIcon className="w-12 h-12 text-gray-500 mb-4" />
               <h3 className="text-lg font-medium text-white mb-2">Import a Template Menu</h3>
               <p className="text-gray-400 mb-4">Start quickly with a pre-built South Indian cloud kitchen menu.</p>
-              {menuSeeded || menuCount >= 3 ? (
+              {menuSeeded || menuCount >= 1 ? (
                 <p className="text-emerald-400 font-medium mb-4">Menu ready! You can edit items in Menu Builder.</p>
               ) : (
                 <button

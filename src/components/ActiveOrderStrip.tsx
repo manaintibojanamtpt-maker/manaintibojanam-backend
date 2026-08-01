@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase-db';
 import { useStorefrontAuth } from '../hooks/useStorefrontAuth';
 import { Order, OrderStatus } from '../types';
@@ -47,35 +47,24 @@ const ActiveOrderStrip: React.FC = () => {
       return;
     }
 
-    let cancelled = false;
+    const q = query(
+      collection(getDb(), 'orders'),
+      where('userId', '==', currentUser.uid),
+      limit(25),
+    );
 
-    const loadActiveOrder = async () => {
-      try {
-        const q = query(
-          collection(getDb(), 'orders'),
-          where('userId', '==', currentUser.uid),
-          limit(25),
-        );
-        const snapshot = await getDocs(q);
-        if (cancelled) return;
-
-        const orders = snapshot.docs.map(
-          (docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Order),
-        );
-        setActiveOrder(findActiveOrder(orders));
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.warn('ActiveOrderStrip:', message);
-        if (!cancelled) setActiveOrder(null);
-      }
-    };
-
-    loadActiveOrder();
-    const intervalId = window.setInterval(loadActiveOrder, 30000);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const orders = snapshot.docs.map(
+        (docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Order),
+      );
+      setActiveOrder(findActiveOrder(orders));
+    }, (error) => {
+      console.warn('ActiveOrderStrip:', error);
+      setActiveOrder(null);
+    });
 
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      unsubscribe();
     };
   }, [currentUser]);
 

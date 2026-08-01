@@ -88,11 +88,17 @@ const Checkout: React.FC = () => {
     }
   }, [enabledPaymentMethods, state.paymentMethod]);
 
-  useEffect(() => {
-    if (state.paymentMethod === 'online') {
-      loadRazorpay().catch(() => {});
+  React.useEffect(() => {
+    // Eagerly pre-load Razorpay SDK so it's ready when the user clicks pay
+    if (!window.Razorpay) {
+      loadRazorpay().catch(console.error);
     }
-  }, [state.paymentMethod]);
+    
+    // Clear delivery errors when payment method changes
+    if (state.deliveryError) {
+      state.setDeliveryError(null);
+    }
+  }, [state.paymentMethod, state.deliveryError]);
   // Temporary state for new address before saving
   const [newAddressLat, setNewAddressLat] = useState<number | null>(null);
   const [newAddressLng, setNewAddressLng] = useState<number | null>(null);
@@ -1343,7 +1349,11 @@ const Checkout: React.FC = () => {
       </div>
 
       {/* STICKY BOTTOM ACTION */}
-      <div className="fixed bottom-0 inset-x-0 z-[45] p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="fixed bottom-0 inset-x-0 z-[45] p-4 pt-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-lg mx-auto flex items-center justify-center gap-1.5 mb-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <ShieldCheck size={12} className="shrink-0" />
+          <span>₹0 Platform Fee - You pay only for food</span>
+        </div>
         <div className="max-w-lg mx-auto flex items-center gap-4">
            <div className="flex flex-col">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pay via {state.paymentMethod === 'cod' ? 'COD' : state.paymentMethod === 'upi' ? 'UPI' : 'ONLINE'}</p>

@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy, useState } from 'react';
+﻿import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';

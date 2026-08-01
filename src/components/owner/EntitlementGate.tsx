@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { FeaturePaywall } from './FeaturePaywall';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { Entitlements } from '../../hooks/useEntitlements';
 import { useAuth } from '../../context/AuthContext';
@@ -21,8 +21,8 @@ export const EntitlementGate: React.FC<EntitlementGateProps> = ({ feature, child
   }
 
   if (!entitlements.features[feature]) {
-    // If not entitled, redirect back to dashboard or show a paywall
-    return <Navigate to="/owner/dashboard" replace />;
+    // If not entitled, show the feature paywall instead of redirecting
+    return <FeaturePaywall featureKey={feature} />;
   }
 
   return <>{children}</>;

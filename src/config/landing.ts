@@ -1,4 +1,4 @@
-import {
+﻿import {
   Store,
   ChefHat,
   Package,
@@ -13,13 +13,13 @@ import type { LucideIcon } from 'lucide-react';
 import { marketingDemoData } from './demoData';
 
 export const landingHero = {
-  category: 'A kitchen operating system',
+  category: 'The Premium Kitchen OS',
   badges: ['0% Commission', 'No Onboarding Fee', 'AI Powered', 'Own Your Customers'],
-  headlineLines: ['Your Restaurant.', 'Your Customers.', 'Your Brand.', '0% Commission.'],
+  headlineLines: ['Run your restaurant.', 'like a tech company.', '0% Commission.'],
   subhead:
-    'Run your entire restaurant from one AI-powered operating system.',
+    'BhojanOS is the all-in-one operating system for modern restaurants.',
   description:
-    'Build your branded storefront for free. When you publish, start a 14-day Growth trial to accept live orders — 0% commission, always.',
+    'Launch a premium, app-like storefront for free. Upgrade to Growth to accept live orders and own your customers — without the 30% aggregator tax.',
   primaryCta: 'Start Free Storefront',
   secondaryCta: 'Watch 2 Minute Demo',
   demoTargetId: 'dashboard-preview',

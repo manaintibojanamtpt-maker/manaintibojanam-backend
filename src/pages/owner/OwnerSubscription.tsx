@@ -18,6 +18,8 @@ import {
   isOwnerPlanActionable,
   isGrowthTrialExpired,
   isProTrialExpired,
+  isTrialInGracePeriod,
+  gracePeriodDaysRemaining,
 } from '../../lib/planStatus';
 import { upgradeOwnerSubscriptionPlan } from '../../lib/ownerSubscriptionApi';
 import { runOwnerSubscriptionPayment } from '../../lib/ownerSubscriptionPayment';
@@ -194,13 +196,23 @@ const OwnerSubscription = () => {
                 : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
             </p>
           )}
-          {isGrowthTrialExpired(tenantInfo) && effectivePlanId === 'growth' && (
-            <p className="text-sm text-rose-400 mt-1">
+          {isTrialInGracePeriod(tenantInfo) && effectivePlanId === 'growth' && (
+            <p className="text-sm text-amber-400 mt-1 font-medium">
+              Your Growth trial has expired. You are in a 3-day grace period ({gracePeriodDaysRemaining(tenantInfo)} days left). Pay ₹999/mo below to avoid suspension.
+            </p>
+          )}
+          {!isTrialInGracePeriod(tenantInfo) && isGrowthTrialExpired(tenantInfo) && effectivePlanId === 'growth' && (
+            <p className="text-sm text-rose-400 mt-1 font-medium">
               Your Growth trial has expired. Pay ₹999/mo below to keep accepting live orders.
             </p>
           )}
-          {isProTrialExpired(tenantInfo) && effectivePlanId === 'pro' && (
-            <p className="text-sm text-rose-400 mt-1">
+          {isTrialInGracePeriod(tenantInfo) && effectivePlanId === 'pro' && (
+            <p className="text-sm text-amber-400 mt-1 font-medium">
+              Your Pro trial has expired. You are in a 3-day grace period ({gracePeriodDaysRemaining(tenantInfo)} days left). Pay ₹2,999/mo below to avoid downgrade.
+            </p>
+          )}
+          {!isTrialInGracePeriod(tenantInfo) && isProTrialExpired(tenantInfo) && effectivePlanId === 'pro' && (
+            <p className="text-sm text-rose-400 mt-1 font-medium">
               Your Pro trial has expired. Pay ₹2,999/mo below to keep Pro features active.
             </p>
           )}

@@ -170,16 +170,23 @@ const OwnerOrders: React.FC = () => {
   };
 
   const updateOrderStatus = async (orderId: string, status: string, deliveryData?: any): Promise<boolean> => {
+    // 1. Snapshot previous state for rollback
+    const previousOrders = [...orders];
+    const normalized = status.toUpperCase() as OrderStatus;
+    
     try {
-      setUpdatingOrderId(orderId);
-      const normalized = status.toUpperCase() as OrderStatus;
-      await apiUpdateOrderStatus(orderId, normalized, deliveryData);
-
+      // 2. Optimistic UI update
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
           order.id === orderId ? { ...order, status: normalized, ...deliveryData } : order
         )
       );
+      
+      setUpdatingOrderId(orderId);
+      
+      // 3. API Call
+      await apiUpdateOrderStatus(orderId, normalized, deliveryData);
+      
       toast.success(`Order marked as ${normalized}`);
 
       if (normalized === OrderStatus.DELIVERED) {
@@ -191,6 +198,9 @@ const OwnerOrders: React.FC = () => {
 
       return true;
     } catch (error) {
+      // 4. Rollback on failure
+      setOrders(previousOrders);
+      
       console.error(error);
       const message = error instanceof Error ? error.message : 'Action failed';
       if (message.toLowerCase().includes('quota')) {

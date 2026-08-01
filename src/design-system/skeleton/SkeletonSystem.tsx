@@ -102,15 +102,37 @@ export const RestaurantHeroSkeleton = () => (
 );
 
 export const RestaurantMenuPageSkeleton = () => (
-  <div className="min-h-screen space-y-4" aria-busy="true" aria-label="Loading menu">
+  <div className="animate-pulse">
     <Skeleton className="mx-4 mt-4 h-14 rounded-2xl" />
-    <div className="px-4">
+    <div className="mt-4 border-b border-white/[0.08] pb-1">
       <CategorySkeleton />
     </div>
-    <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#120d0c]">
+    <div className="flex flex-col">
       <MenuItemSkeleton />
       <MenuItemSkeleton />
       <MenuItemSkeleton />
+      <MenuItemSkeleton />
+    </div>
+  </div>
+);
+
+export const OwnerDashboardSkeleton = () => (
+  <div className="text-white space-y-6 animate-pulse p-4">
+    <Skeleton className="h-20 w-full rounded-2xl" />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+      <div className="space-y-6">
+        <Skeleton className="h-[300px] w-full rounded-2xl" />
+      </div>
     </div>
   </div>
 );

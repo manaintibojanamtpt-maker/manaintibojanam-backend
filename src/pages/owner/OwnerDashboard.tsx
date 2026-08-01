@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -42,6 +43,7 @@ import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { computeOwnerOrderMetrics } from '../../lib/ownerOrderAnalytics';
 import { formatOwnerOrderTime } from '../../lib/ownerOrderTimeFormat';
 import { fetchOwnerMenuItemsCached } from '../../lib/ownerMenuCache';
+import { OwnerDashboardSkeleton } from '../../design-system/skeleton/SkeletonSystem';
 import { ownerApiRequest } from '../../lib/ownerProvisioning';
 import { fetchLatestReleaseNote, updateOwnerTenantPreferences } from '../../lib/ownerPortalApi';
 import { DashboardProductionMetrics } from '../../components/owner/DashboardProductionMetrics';
@@ -63,15 +65,36 @@ const OwnerDashboard = () => {
   const resolvedTenantId = useOwnerTenantId();
   const tenantId = resolvedTenantId;
 
-  const [tenantInfo, setTenantInfo] = React.useState<any>(null);
-  const [analytics, setAnalytics] = React.useState<TenantAnalytics | null>(null);
-  const [segments, setSegments] = React.useState<CustomerSegmentSummary | null>(null);
-  const [healthScore, setHealthScore] = React.useState<MerchantHealthResult | null>(null);
-  const [growthSnapshot, setGrowthSnapshot] = React.useState<AIGrowthSnapshot | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+  
+  // Analytics via SWR
+  const { data: analytics } = useSWR<TenantAnalytics>(
+    tenantId && !tenantContextLoading ? ['analytics', tenantId] : null,
+    async ([_, id]) => {
+      let data = await getTenantAnalytics(id);
+      if (!data) {
+        data = await backfillAnalytics(id) as any;
+      }
+      return data as TenantAnalytics;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+
+  const { data: latestRelease } = useSWR<ReleaseNote>(
+    tenantId && !tenantContextLoading ? 'latestRelease' : null,
+    async () => {
+      const response = await fetchLatestReleaseNote();
+      return response.release as ReleaseNote;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+
+  const [segments, setSegments] = useState<CustomerSegmentSummary | null>(null);
+  const [healthScore, setHealthScore] = useState<MerchantHealthResult | null>(null);
+  const [growthSnapshot, setGrowthSnapshot] = useState<AIGrowthSnapshot | null>(null);
   const { orders: allOrders, activeOrders: orders, loading: ordersLoading } = useDashboardOrders();
   const { menuCount: ownerMenuCount, lowStockAlerts: inventoryAlerts } = useDashboardMenu();
   const { isOpen: storeAcceptingOrders } = useDashboardStoreStatus();
-  const [latestRelease, setLatestRelease] = React.useState<ReleaseNote | null>(null);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = React.useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = React.useState(false);
   const [dismissedInsights, setDismissedInsights] = React.useState<Set<number>>(new Set());
@@ -165,45 +188,7 @@ const OwnerDashboard = () => {
     };
   }, [tenantInfo, flags.onboardingWizardV2]);
 
-  React.useEffect(() => {
-    if (!tenantId || tenantContextLoading) return;
-
-    let cancelled = false;
-    const runSecondary = () => {
-      if (cancelled) return;
-
-      void getTenantAnalytics(tenantId)
-        .then((data) => {
-          if (cancelled) return;
-          if (!data) {
-            return backfillAnalytics(tenantId).then((newData) => {
-              if (!cancelled) setAnalytics(newData as any);
-            });
-          }
-          setAnalytics(data);
-        })
-        .catch((error) => {
-          console.error('Owner dashboard analytics failed:', error);
-        });
-
-      void fetchLatestReleaseNote()
-        .then((response) => {
-          if (!cancelled && response.release) {
-            setLatestRelease(response.release as ReleaseNote);
-          }
-        })
-        .catch((e) => {
-          console.error('Failed to fetch release note', e);
-        });
-    };
-
-    // Paint shell + orders first; analytics/release notes can wait a tick.
-    const timer = window.setTimeout(runSecondary, 250);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [tenantId, tenantContextLoading]);
+  // useEffects for runSecondary logic are replaced by useSWR above
 
   React.useEffect(() => {
     if (!allOrders.length) {
@@ -254,12 +239,7 @@ const OwnerDashboard = () => {
 
   // Prefer cached tenant id over blocking on profile hydrate.
   if (tenantContextLoading && !tenantId) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
-        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />
-        Loading your dashboard…
-      </div>
-    );
+    return <OwnerDashboardSkeleton />;
   }
 
   if (!tenantId) {
@@ -278,13 +258,10 @@ const OwnerDashboard = () => {
     );
   }
 
-  if (loading && !tenantInfo && !contextTenant) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-10 text-center text-white/60">
-        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-red-500" />
-        Loading your dashboard…
-      </div>
-    );
+  // Notice: 'loading' here was from earlier local state which might be unused or removed. 
+  // We'll replace the fallback UI anyway.
+  if (ordersLoading && !tenantInfo && !contextTenant) {
+    return <OwnerDashboardSkeleton />;
   }
 
   // --- Sandbox Mode ---

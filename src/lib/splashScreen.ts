@@ -1,4 +1,5 @@
 import { isMarketingRequest as isMarketingRoute } from './marketingRoutes';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 export function isMarketingPath(pathname?: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -35,6 +36,10 @@ export function dismissSplash(options?: { force?: boolean; maxWaitMs?: number })
   window.setTimeout(() => {
     loader.style.opacity = '0';
     loader.style.pointerEvents = 'none';
+    
+    // Hide the native Capacitor splash screen simultaneously
+    SplashScreen.hide().catch(() => {});
+    
     window.setTimeout(() => {
       loader.remove();
       splashDismissed = true;

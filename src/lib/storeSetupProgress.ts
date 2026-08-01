@@ -70,7 +70,7 @@ function isStepComplete(id: StoreSetupStepId, tenant: TenantSnapshot, menuCount:
       return Object.values(providers).some((p: { enabled?: boolean }) => p?.enabled === true);
     }
     case 'menu':
-      return menuCount >= 3;
+      return menuCount >= 1;
     case 'mobile':
       return !!(tenant.kyc?.mobileNumber && String(tenant.kyc.mobileNumber).replace(/\D/g, '').length >= 10);
     case 'go-live':
