@@ -161,11 +161,13 @@ export class IncidentRepository {
   async countIncidentsByTypeSince(type: string, sinceIso: string): Promise<number> {
     if (this.deps.isBackedOff()) return 0;
 
+    const sinceDate = new Date(sinceIso);
+
     try {
       const snapshot = await this.deps.db
         .collection(INCIDENT_COLLECTION)
         .where('type', '==', type)
-        .where('createdAt', '>=', sinceIso)
+        .where('createdAt', '>=', sinceDate)
         .count()
         .get();
       return snapshot.data().count;
@@ -178,7 +180,7 @@ export class IncidentRepository {
       const fallback = await this.deps.db
         .collection(INCIDENT_COLLECTION)
         .where('type', '==', type)
-        .where('createdAt', '>=', sinceIso)
+        .where('createdAt', '>=', sinceDate)
         .limit(500)
         .get();
       return fallback.size;

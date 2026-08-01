@@ -76,6 +76,7 @@ import { registerOwnerIngredientsRoutes } from "./backend-lib/marketplace/ownerI
 import { registerOwnerMenuRoutes } from "./backend-lib/marketplace/ownerMenuRoutes.js";
 import { registerOwnerCategoryRoutes } from "./backend-lib/marketplace/ownerCategoryRoutes.js";
 import { queryMenuForTenant } from "./backend-lib/marketplace/menuTenantQuery.js";
+import { requireEntitlement } from "./backend-lib/entitlements.js";
 import { registerOwnerAnalyticsRoutes } from "./backend-lib/marketplace/ownerAnalyticsRoutes.js";
 import { registerOwnerDeliveryIntegrationRoutes } from "./backend-lib/marketplace/ownerDeliveryIntegrationRoutes.js";
 import {
@@ -999,12 +1000,56 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
       payload: payload.payload
     }, correlationId as string, "webhook");
 
-    // BATCH 2: RECONCILIATION PROMOTION
+    // BATCH 2: RECONCILIATION PROMOTION & SAAS BILLING
     if (payload.event === 'payment.captured' || payload.event === 'order.paid') {
       const paymentEntity = payload.payload?.payment?.entity;
+      const notesType = paymentEntity?.notes?.type;
       const draftId = paymentEntity?.notes?.draftId;
       
-      if (draftId && _db && razorpay) {
+      if (eventId && eventId !== 'unknown' && _db) {
+        // Top-level deduplication for webhook events not handled inside transactions
+        const eventRef = _db.collection('webhook_events').doc(eventId);
+        const eventDoc = await eventRef.get();
+        if (eventDoc.exists) {
+          logger.info({ message: "Webhook event already processed", eventId });
+          return res.status(200).json({ status: "ok" });
+        }
+      }
+
+      if (notesType === 'owner_saas' && _db) {
+        const tenantId = paymentEntity?.notes?.tenantId;
+        const planId = paymentEntity?.notes?.planId;
+        if (tenantId && planId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const now = new Date().toISOString();
+            await tenantRef.set({
+              status: 'active',
+              storeStatus: 'active',
+              subscription: {
+                planId,
+                status: 'active',
+                trialUsed: true,
+                paidActivatedAt: now,
+                razorpayOrderId: paymentEntity.order_id,
+                razorpayPaymentId: paymentEntity.id,
+              },
+              updatedAt: FieldValue.serverTimestamp(),
+            }, { merge: true });
+            
+            if (eventId && eventId !== 'unknown') {
+              await _db.collection('webhook_events').doc(eventId).set({
+                createdAt: FieldValue.serverTimestamp(),
+                type: payload.event,
+                tenantId,
+              });
+            }
+            logger.info({ message: "SaaS Subscription Webhook Promotion Success", tenantId, planId, eventId });
+          } catch (saasErr: any) {
+            logger.error({ message: "SaaS Subscription Webhook Promotion Failed", tenantId, eventId, err: saasErr.message });
+          }
+        }
+      } else if (draftId && _db && razorpay) {
         try {
           const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
           if (!draftDoc.exists) {
@@ -2462,12 +2507,42 @@ const startAutoWorkflow = () => {
 };
 
 // ================= EMAIL NOTIFICATION =================
-app.post("/api/send-order-email", async (req, res) => {
-  const { order } = req.body;
-  if (!order) return res.status(400).json({ success: false, error: "Order data missing" });
+app.post("/api/send-order-email", verifyFirebaseToken, async (req: any, res: any) => {
+  const { orderId } = req.body;
+  if (!orderId) return res.status(400).json({ success: false, error: "orderId missing" });
+  if (!_db) return res.status(500).json({ success: false, error: "Database not initialized" });
 
-  await notifyCustomer(order, 'PENDING');
-  res.json({ success: true });
+  try {
+    const doc = await _db.collection('orders').doc(orderId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+    const order = { id: doc.id, ...doc.data() } as any;
+    
+    let isAuthorized = false;
+    if (order.userId && order.userId === req.user.uid) isAuthorized = true;
+    if (req.user.admin === true) isAuthorized = true;
+    
+    if (!isAuthorized && order.tenantId) {
+      const userDoc = await _db.collection('users').doc(req.user.uid).get();
+      if (userDoc.exists) {
+         const userData = userDoc.data();
+         if (userData?.ownedTenantIds?.includes(order.tenantId)) {
+           isAuthorized = true;
+         }
+      }
+    }
+    
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, error: "Forbidden: Not authorized for this order" });
+    }
+
+    await notifyCustomer(order, 'PENDING');
+    res.json({ success: true });
+  } catch (err: any) {
+    logger.error({ message: "Failed to send order email", error: err.message });
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
 });
 
 // ================= WHATSAPP NOTIFICATION =================
@@ -3165,6 +3240,12 @@ registerOwnerSubscriptionRoutes(app, db, verifyFirebaseToken, assertOwnerTenantA
 registerPlatformTenantSubscriptionRoutes(app, db, requireSuperadmin, FieldValue);
 registerPlatformKycReviewRoutes(app, db, requireSuperadmin, FieldValue);
 registerPlatformHomeHeroRoutes(app, db, requireSuperadmin, FieldValue);
+
+// Entitlement-gated owner routes
+app.use('/api/owner/ingredients', requireEntitlement(db, 'inventory'));
+app.use('/api/owner/recipes/intelligence', requireEntitlement(db, 'aiCore'));
+app.use('/api/owner/delivery-integrations', requireEntitlement(db, 'deliveryEngine'));
+
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerMenuRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
@@ -5520,6 +5601,41 @@ const initializeMonitoringJobs = () => {
     const baseUrl = process.env.STOREFRONT_BASE_URL || "https://bhojanos.com";
     await processAllTenants(_db, "critical_scan", sendWhatsAppNotification, baseUrl);
   }));
+
+  // Daily Trial Expiry Sweep (12:05 AM)
+  cron.schedule("5 0 * * *", withCronHealth("Trial Expiry Sweep", async () => {
+    if (!_db) return;
+    try {
+      const gracePeriodEnd = new Date();
+      gracePeriodEnd.setDate(gracePeriodEnd.getDate() - 3);
+      const cutoff = gracePeriodEnd.toISOString();
+      const expiredSnapshot = await _db.collection('tenants')
+        .where('subscription.status', '==', 'trialing')
+        .where('subscription.trialExpiresAt', '<=', cutoff)
+        .get();
+        
+      if (expiredSnapshot.empty) return;
+      
+      const batch = _db.batch();
+      let count = 0;
+      for (const doc of expiredSnapshot.docs) {
+        batch.update(doc.ref, {
+          'subscription.status': 'past_due',
+          'storeStatus': 'inactive',
+          'updatedAt': FieldValue.serverTimestamp()
+        });
+        count++;
+        if (count >= 500) break; // batch limit
+      }
+      
+      if (count > 0) {
+        await batch.commit();
+        logger.info({ message: "Processed expired trials", count });
+      }
+    } catch (err: any) {
+      logger.error({ message: "Trial Expiry Sweep Failed", err: err.message });
+    }
+  }));
   } else {
     logger.info({ message: "Free tier: AutoPilot + tenant report crons disabled to protect Firestore quota" });
   }
@@ -5657,7 +5773,7 @@ async function reconcileUserDocsForEmail(
 }
 
 // ================= BOOTSTRAP ADMIN CLAIM =================
-app.post("/api/admin/grant-claim", async (req, res) => {
+app.post("/api/admin/grant-claim", verifyFirebaseToken, async (req: any, res: any) => {
   const { secret, uid } = req.body;
   if (!process.env.CRON_SECRET) {
     return res.status(500).json({ success: false, error: "No bootstrap secret configured" });
@@ -5679,7 +5795,7 @@ app.post("/api/admin/grant-claim", async (req, res) => {
 });
 
 /** Grant superadmin role in Firestore (client cannot write role field). Lookup by uid or email. */
-app.post("/api/platform/grant-superadmin", async (req, res) => {
+app.post("/api/platform/grant-superadmin", verifyFirebaseToken, async (req: any, res: any) => {
   const { secret, uid, email } = req.body || {};
   if (!process.env.CRON_SECRET) {
     return res.status(500).json({ success: false, error: "No bootstrap secret configured" });

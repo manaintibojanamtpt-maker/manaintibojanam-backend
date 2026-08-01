@@ -44,7 +44,9 @@ function createMockDb() {
               const actual = row.data[filter.field];
               if (filter.op === '==') return actual === filter.value;
               if (filter.op === '>=') {
-                return String(actual ?? '') >= String(filter.value ?? '');
+                const actualStr = actual instanceof Date ? actual.toISOString() : String(actual ?? '');
+                const filterStr = filter.value instanceof Date ? filter.value.toISOString() : String(filter.value ?? '');
+                return actualStr >= filterStr;
               }
               return false;
             }),

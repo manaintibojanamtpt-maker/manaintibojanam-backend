@@ -320,8 +320,7 @@ service cloud.firestore {
         isAdmin() ||
         request.auth.token.email == 'bhojanos26@gmail.com' ||
         request.auth.token.email == 'manaintibojanamtpt@gmail.com' ||
-        isTenantOwner(tenantId) ||
-        (isUnmodified(['createdAt', 'ownerId']))
+        isTenantOwner(tenantId)
       );
       
       match /analytics/{docId} {

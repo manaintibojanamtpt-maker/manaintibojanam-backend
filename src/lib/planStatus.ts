@@ -1,4 +1,5 @@
 import { PLAN_TRIALS, growthOnboardingTrialExpiresAt } from '../config/pricing';
+import { hasEntitlement } from './entitlements';
 
 type TenantPlanSnapshot = {
   subscription?: {
@@ -45,6 +46,14 @@ export function isGrowthTrialExpired(tenant: TenantPlanSnapshot | null | undefin
   const planId = tenant.subscription?.planId || 'starter';
   if (planId === 'starter') return false;
   return !isTrialCurrentlyActive(tenant) && tenant.subscription?.status === 'trialing';
+}
+
+export function isTrialInGracePeriod(tenant: TenantPlanSnapshot | null | undefined): boolean {
+  if (!tenant?.subscription?.trialExpiresAt) return false;
+  const expiresAt = new Date(tenant.subscription.trialExpiresAt).getTime();
+  const now = Date.now();
+  const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+  return now > expiresAt && now <= (expiresAt + threeDaysMs) && tenant.subscription?.status === 'trialing';
 }
 
 export function isProTrialExpired(tenant: TenantPlanSnapshot | null | undefined): boolean {
@@ -164,12 +173,14 @@ export function getOwnerTrialNote(
 
 export function hasActiveGrowthAccess(tenant: TenantPlanSnapshot | null | undefined): boolean {
   if (!tenant) return false;
-  const planId = tenant.subscription?.planId || 'starter';
-  if (planId === 'starter') return false;
+  const effectivePlanId = getEffectivePlanId(tenant);
+  // Re-verify that if trial is expired, effectivePlanId might fall back, but getEffectivePlanId handles it or we should check trial expiry.
   if (tenant.subscription?.status === 'trialing' && tenant.subscription.trialExpiresAt) {
-    return new Date(tenant.subscription.trialExpiresAt).getTime() > Date.now();
+    if (new Date(tenant.subscription.trialExpiresAt).getTime() <= Date.now()) {
+      return false; // Trial expired
+    }
   }
-  return ['growth', 'pro', 'enterprise'].includes(planId);
+  return hasEntitlement(effectivePlanId, 'advancedAnalytics');
 }
 
 /** Starter (or expired trial) still needs Growth activation */
@@ -208,6 +219,16 @@ export function growthTrialDaysRemaining(tenant: TenantPlanSnapshot | null | und
   const expiresAt = tenant?.subscription?.trialExpiresAt;
   if (!expiresAt) return null;
   const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+export function gracePeriodDaysRemaining(tenant: TenantPlanSnapshot | null | undefined): number | null {
+  if (!isTrialInGracePeriod(tenant)) return null;
+  const expiresAt = tenant?.subscription?.trialExpiresAt;
+  if (!expiresAt) return null;
+  const graceEnd = new Date(expiresAt).getTime() + (3 * 24 * 60 * 60 * 1000);
+  const ms = graceEnd - Date.now();
   if (ms <= 0) return 0;
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
