@@ -1,10 +1,10 @@
 # BhojanOS Operational Rules
 
-## FEATURE FREEZE (Effective June 2026)
+## FEATURE FREEZE (Conditionally Lifted - August 2026)
 
-**CRITICAL:** BhojanOS is currently in the **Founder Beta PMF Validation Phase**.
+**STATUS:** The Founder Beta PMF Validation Phase feature freeze is **conditionally lifted** following the completion of the 24-hour security blockers (SEC-1, SEC-2, SEC-3).
 
-Do NOT write code for, suggest, or implement any of the following:
+New product modules and OrderBhojan milestones (M7+) may now resume, provided they adhere to strict security and observability checks.
 - New product modules or major features
 - New dashboards or structural redesigns
 - New AI agent workflows
@@ -31,4 +31,4 @@ If a user request violates the feature freeze, remind the user of the Founder Be
 - **Single source of truth:** [docs/PROGRAM-STATUS.md](../docs/PROGRAM-STATUS.md)
 - **BAEO v1.1** governance files exist under `.cursor/` and `docs/baeo/` but **agent activation is SUSPENDED** during this freeze (new AI workflows are prohibited).
 - **OrderBhojan** implementation lives in `orderbhojan/` (M0–M6.5 complete on `main`). Do **not** treat `docs/orderbhojan/` as current status — it is an archived pre-implementation ARB draft pack.
-- **No new OrderBhojan milestones** (M7+, PX sprints, production launch) without CEO waiver and freeze lift.
+- **OrderBhojan milestones M7+ and production launch are now AUTHORIZED** following the conditional freeze lift (August 2026).

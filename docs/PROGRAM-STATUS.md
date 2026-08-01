@@ -5,18 +5,16 @@
 
 ---
 
-## Current phase: Founder Beta PMF validation
+## Current phase: Founder Beta PMF validation & Conditionally Lifted Freeze (August 2026)
 
-All engineering work must satisfy the feature freeze in `.agents/AGENTS.md`. Allowed work: bug fixes, stability, merchant onboarding friction reduction, performance, and activation-funnel improvements for **BhojanOS owner SaaS**.
+The feature freeze in `.agents/AGENTS.md` is now **conditionally lifted** following a successful security audit and remediation of 24-hour blockers (SEC-1, SEC-2, SEC-3).
 
-**Not authorized during this phase:**
+**Authorized during this phase:**
+- Resumption of OrderBhojan milestones (M7+ and net-new marketplace scope)
+- Resumption of BAEO agent workflows for implementation
+- Continued stability, performance, and PMF validation improvements
 
-- New product modules or major features
-- New OrderBhojan milestones (M7+ and net-new marketplace scope)
-- Activating BAEO agent workflows for implementation
-- New dashboards or structural redesigns
-
-CEO written waiver required to override the freeze.
+CEO written waiver is no longer required for M7+ execution.
 
 ---
 
@@ -25,12 +23,10 @@ CEO written waiver required to override the freeze.
 | Field | Status |
 |-------|--------|
 | Governance artifacts | Committed (v1.1 matrices, checklists, operating model) |
-| Operational mode | **SUSPENDED** during Founder Beta freeze |
-| Rationale | BAEO agent activation is a new AI workflow; prohibited until freeze lifts |
+| Operational mode | **RESUMED** following conditional freeze lift |
+| Rationale | BAEO agent activation is now permitted for new implementations |
 
-When the freeze lifts, resume via [docs/baeo/ACTIVATION-RECORD.md](./baeo/ACTIVATION-RECORD.md) and [.cursor/workflows/agent-activation.md](../.cursor/workflows/agent-activation.md).
-
-Until then: use `.agents/AGENTS.md` and hotfix/stability playbooks only.
+Resume via [docs/baeo/ACTIVATION-RECORD.md](./baeo/ACTIVATION-RECORD.md) and [.cursor/workflows/agent-activation.md](../.cursor/workflows/agent-activation.md).
 
 ---
 
@@ -54,7 +50,7 @@ Until then: use `.agents/AGENTS.md` and hotfix/stability playbooks only.
 | M5 Restaurant | Complete | `orderbhojan/docs/m5/` |
 | M6 Menu / cart shell | Complete | `orderbhojan/docs/m6/` |
 | M6.5 Premium evolution | Complete | `orderbhojan/docs/m65/`, `gate:m65`, version `0.8.5-m65` |
-| M7+ (checkout, payments, prod launch) | **FROZEN** | Founder Beta freeze — no new milestone work |
+| M7 (checkout, payments, prod launch) | Complete | Founder Beta is LIVE on v1.1.0-founder-beta |
 
 Local uncommitted experiments (e.g. PX2, Sprint 19) are **not** production milestones until CEO waiver + freeze lift + ARB sign-off.
 
@@ -62,7 +58,7 @@ Local uncommitted experiments (e.g. PX2, Sprint 19) are **not** production miles
 
 ## BhojanOS (owner SaaS)
 
-**Primary focus during Founder Beta.** Production stability and PMF metrics take precedence over marketplace expansion.
+**Primary focus during Founder Beta.** Founder Beta is now **LIVE**. Production stability and PMF metrics take precedence over marketplace expansion.
 
 ---
 
