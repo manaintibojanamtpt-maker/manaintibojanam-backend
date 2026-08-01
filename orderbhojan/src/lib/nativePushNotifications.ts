@@ -134,10 +134,39 @@ export async function bootstrapNativePushListeners(): Promise<void> {
     await PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
       const data = notification.data as { path?: string; url?: string } | undefined;
       const target = data?.path ?? data?.url;
-      if (target && typeof window !== 'undefined') {
+      if (!target || typeof window === 'undefined') return;
+      void (async () => {
+        try {
+          const { tryOpenNativeTrackFromPath } = await import('@/features/nativeTrack/nativeTrackBridge');
+          const { trackEvent } = await import('@/telemetry/analytics');
+          const native = await tryOpenNativeTrackFromPath(target, { source: 'push' });
+          if (native.opened) {
+            trackEvent({
+              name: 'push_open_track',
+              properties: {
+                orderId: native.orderId,
+                impl: 'native',
+                client: Capacitor.getPlatform(),
+              },
+            });
+            return;
+          }
+          if (native.orderId) {
+            trackEvent({
+              name: 'push_open_track',
+              properties: {
+                orderId: native.orderId,
+                impl: 'hybrid',
+                client: Capacitor.getPlatform(),
+              },
+            });
+          }
+        } catch {
+          // Fall through to hybrid routing.
+        }
         window.history.pushState({}, '', target);
         window.dispatchEvent(new PopStateEvent('popstate'));
-      }
+      })();
     });
   } catch (error) {
     if (import.meta.env.DEV) {

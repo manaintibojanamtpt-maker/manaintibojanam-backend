@@ -15,6 +15,7 @@ import {
   publishPersonalizationBootstrap,
 } from '@/features/assistant/ui/personalizationBootstrapStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
+import { useNativeTrackHandoff } from '@/features/nativeTrack/useNativeTrackHandoff';
 import { useOrderTracking } from '@/features/tracking/hooks/useOrderTracking';
 import { useReorderFromTracking } from '@/features/tracking/hooks/useReorderFromTracking';
 import { normalizeTrackingStatus } from '@/features/tracking/utils/trackingSteps';
@@ -40,6 +41,8 @@ export function OrderBhojanTrackingPage() {
   const canFetch = isAuthenticated || submittedPhone.replace(/\D/g, '').length >= 4;
   const trackingQuery = useOrderTracking(orderId, needsGuestPhone ? submittedPhone : undefined);
   const { reorder, busy: reorderBusy } = useReorderFromTracking();
+  // Native handoff when FF_NATIVE_HOST && FF_NATIVE_TRACK && cohort; else hybrid (default).
+  useNativeTrackHandoff(orderId);
 
   const etaLabel = useMemo(() => {
     const eta = trackingQuery.data?.etaMinutes;

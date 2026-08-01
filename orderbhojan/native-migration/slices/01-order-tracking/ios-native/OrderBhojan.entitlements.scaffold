@@ -1,0 +1,16 @@
+<!--
+  Add this to the app's entitlements file (e.g. App.entitlements or OrderBhojan.entitlements)
+  via Xcode or directly in the file.
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Existing entitlements... -->
+    
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <string>applinks:PLACEHOLDER_DOMAIN</string>
+    </array>
+</dict>
+</plist>

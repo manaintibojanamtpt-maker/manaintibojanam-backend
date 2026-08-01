@@ -37,6 +37,16 @@ export const FEATURE_FLAG_KEYS = [
    * When off, decideVoiceCartTurn + OB apply path remain the sole mutators (instant rollback).
    */
   'FF_OB_AI_VOICE_CORE_CONFIRM_ADD',
+  /**
+   * Master kill for any native screen host — OFF by default.
+   * Not cascaded by FF_OB_FIRESTORE. Hybrid remains default when false.
+   */
+  'FF_NATIVE_HOST',
+  /**
+   * Native order tracking screen — OFF by default.
+   * Requires FF_NATIVE_HOST + cohort (see nativeTrackRollout).
+   */
+  'FF_NATIVE_TRACK',
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
@@ -65,6 +75,8 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_AI_PERSONALIZATION: false,
   FF_OB_AI_CANARY_HEADERS: false,
   FF_OB_AI_VOICE_CORE_CONFIRM_ADD: false,
+  FF_NATIVE_HOST: false,
+  FF_NATIVE_TRACK: false,
 };
 
 function readEnvFlag(key: FeatureFlagKey): boolean | undefined {

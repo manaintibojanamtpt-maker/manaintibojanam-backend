@@ -7,7 +7,11 @@ export type AnalyticsEventName =
   | 'api_request'
   | 'api_error'
   | 'feature_flag_evaluated'
-  | 'auth_state_changed';
+  | 'auth_state_changed'
+  | 'native_track_open'
+  | 'native_track_fallback_hybrid'
+  | 'order_track_status_change'
+  | 'push_open_track';
 
 export interface AnalyticsEvent {
   readonly name: AnalyticsEventName;

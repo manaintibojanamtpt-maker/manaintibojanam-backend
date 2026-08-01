@@ -7,8 +7,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // Register local plugin before bridge init so JS registerPlugin can resolve it.
+        // Register local plugins before bridge init so JS registerPlugin can resolve them.
         registerPlugin(OrderBhojanNativeSttPlugin.class);
+        registerPlugin(OrderBhojanNativeTrackPlugin.class);
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
     }

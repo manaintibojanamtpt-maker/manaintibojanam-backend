@@ -24,5 +24,7 @@ describe('featureFlags', () => {
     assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_POST_ORDER'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_CANARY_HEADERS'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_VOICE_CORE_CONFIRM_ADD'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_NATIVE_HOST'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_NATIVE_TRACK'), false);
   });
 });

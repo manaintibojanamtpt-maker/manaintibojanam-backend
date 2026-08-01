@@ -28,6 +28,10 @@ interface ImportMetaEnv {
   readonly VITE_FF_OB_NOTIFICATIONS?: string;
   readonly VITE_FF_OB_PAYMENTS?: string;
   readonly VITE_FF_OB_PROMOTIONS?: string;
+  readonly VITE_FF_NATIVE_HOST?: string;
+  readonly VITE_FF_NATIVE_TRACK?: string;
+  readonly VITE_OB_NATIVE_TRACK_PCT?: string;
+  readonly VITE_OB_NATIVE_TRACK_INTERNAL_EMAILS?: string;
 }
 
 interface ImportMeta {

@@ -1,0 +1,17 @@
+<!-- 
+  Add this to the <activity android:name=".TrackActivity"> block in AndroidManifest.xml
+  once Phase 2 dogfood starts.
+  Make sure `android:autoVerify="true"` is included for App Links.
+-->
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    
+    <data android:scheme="https" />
+    <data android:host="PLACEHOLDER_DOMAIN" />
+    
+    <!-- Supported deep link paths for order tracking -->
+    <data android:pathPattern="/track/.*" />
+    <data android:pathPattern="/order/.*" />
+</intent-filter>

@@ -15,6 +15,14 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		A11B00011F01000100000001 /* NativeFeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B00001F01000100000001 /* NativeFeatureFlags.swift */; };
+		A11B00031F01000100000002 /* NativeTrackCohort.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B00021F01000100000002 /* NativeTrackCohort.swift */; };
+		A11B00051F01000100000003 /* NativeRouteDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B00041F01000100000003 /* NativeRouteDispatcher.swift */; };
+		A11B00071F01000100000004 /* TrackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B00061F01000100000004 /* TrackModels.swift */; };
+		A11B00091F01000100000005 /* TrackApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B00081F01000100000005 /* TrackApiClient.swift */; };
+		A11B000B1F01000100000006 /* TrackScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B000A1F01000100000006 /* TrackScreen.swift */; };
+		A11B000D1F01000100000007 /* TrackHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B000C1F01000100000007 /* TrackHostingController.swift */; };
+		A11B000F1F01000100000008 /* OrderBhojanNativeTrackPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B000E1F01000100000008 /* OrderBhojanNativeTrackPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +36,14 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A11B00001F01000100000001 /* NativeFeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeFeatureFlags.swift; sourceTree = "<group>"; };
+		A11B00021F01000100000002 /* NativeTrackCohort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTrackCohort.swift; sourceTree = "<group>"; };
+		A11B00041F01000100000003 /* NativeRouteDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeRouteDispatcher.swift; sourceTree = "<group>"; };
+		A11B00061F01000100000004 /* TrackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackModels.swift; sourceTree = "<group>"; };
+		A11B00081F01000100000005 /* TrackApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackApiClient.swift; sourceTree = "<group>"; };
+		A11B000A1F01000100000006 /* TrackScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackScreen.swift; sourceTree = "<group>"; };
+		A11B000C1F01000100000007 /* TrackHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackHostingController.swift; sourceTree = "<group>"; };
+		A11B000E1F01000100000008 /* OrderBhojanNativeTrackPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderBhojanNativeTrackPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +80,14 @@
 			children = (
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
+				A11B00001F01000100000001 /* NativeFeatureFlags.swift */,
+				A11B00021F01000100000002 /* NativeTrackCohort.swift */,
+				A11B00041F01000100000003 /* NativeRouteDispatcher.swift */,
+				A11B00061F01000100000004 /* TrackModels.swift */,
+				A11B00081F01000100000005 /* TrackApiClient.swift */,
+				A11B000A1F01000100000006 /* TrackScreen.swift */,
+				A11B000C1F01000100000007 /* TrackHostingController.swift */,
+				A11B000E1F01000100000008 /* OrderBhojanNativeTrackPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -156,6 +180,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				A11B00011F01000100000001 /* NativeFeatureFlags.swift in Sources */,
+				A11B00031F01000100000002 /* NativeTrackCohort.swift in Sources */,
+				A11B00051F01000100000003 /* NativeRouteDispatcher.swift in Sources */,
+				A11B00071F01000100000004 /* TrackModels.swift in Sources */,
+				A11B00091F01000100000005 /* TrackApiClient.swift in Sources */,
+				A11B000B1F01000100000006 /* TrackScreen.swift in Sources */,
+				A11B000D1F01000100000007 /* TrackHostingController.swift in Sources */,
+				A11B000F1F01000100000008 /* OrderBhojanNativeTrackPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

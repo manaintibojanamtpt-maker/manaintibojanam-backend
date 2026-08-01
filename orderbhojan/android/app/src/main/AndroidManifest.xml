@@ -42,6 +42,14 @@
             </intent-filter>
         </activity>
 
+        <!-- True-native order tracking (Phase 1). Opened only behind FF_NATIVE_* flags. -->
+        <activity
+            android:name=".track.TrackActivity"
+            android:exported="false"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:parentActivityName=".MainActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

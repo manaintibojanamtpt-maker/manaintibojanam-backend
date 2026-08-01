@@ -15,4 +15,7 @@ ext {
     cordovaAndroidVersion = '14.0.1'
     rgcfaIncludeGoogle = true
     androidxCredentialsVersion = '1.3.0'
+    composeBomVersion = '2024.10.00'
+    lifecycleRuntimeKtxVersion = '2.8.7'
+    activityComposeVersion = '1.9.3'
 }
