@@ -17,8 +17,35 @@ export type SpeechSynthesisLike = {
 export type SpeechSynthesisFactory = () => SpeechSynthesisLike | null;
 export type UtteranceFactory = (text: string) => SpeechSynthesisUtteranceLike;
 
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
+
 function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
   return () => {
+    if (Capacitor.isNativePlatform()) {
+      return {
+        get speaking() {
+          return false;
+        },
+        cancel: () => {
+          TextToSpeech.stop().catch(console.error);
+        },
+        speak: async (utterance) => {
+          try {
+            await TextToSpeech.speak({
+              text: utterance.text,
+              lang: utterance.lang,
+              rate: utterance.rate,
+            });
+            utterance.onend?.(undefined);
+          } catch (err) {
+            console.error('Native TTS error:', err);
+            utterance.onerror?.(err);
+          }
+        },
+      };
+    }
+
     if (typeof window === 'undefined' || !window.speechSynthesis) return null;
     const synth = window.speechSynthesis;
     return {
@@ -36,12 +63,43 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
             retryable: false,
           });
         }
+        
         const native = new SpeechSynthesisUtterance(utterance.text);
         native.lang = utterance.lang;
         native.rate = utterance.rate;
         native.onend = () => utterance.onend?.(undefined);
         native.onerror = () => utterance.onerror?.(undefined);
-        synth.speak(native);
+
+        const trySpeak = (voices: SpeechSynthesisVoice[]) => {
+          if (voices.length > 0) {
+            const langPrefix = utterance.lang.split('-')[0];
+            const matchedVoice = voices.find(v => v.lang === utterance.lang) || 
+                                 voices.find(v => v.lang.startsWith(langPrefix)) ||
+                                 voices.find(v => v.default);
+            if (matchedVoice) {
+              native.voice = matchedVoice;
+            }
+          }
+          synth.speak(native);
+        };
+
+        let voices = synth.getVoices();
+        if (voices.length > 0) {
+          trySpeak(voices);
+        } else {
+          // Wait for voiceschanged, with fallback timeout
+          let fired = false;
+          const onVoicesChanged = () => {
+            if (fired) return;
+            fired = true;
+            synth.removeEventListener('voiceschanged', onVoicesChanged);
+            trySpeak(synth.getVoices());
+          };
+          synth.addEventListener('voiceschanged', onVoicesChanged);
+          setTimeout(() => {
+            if (!fired) onVoicesChanged();
+          }, 1000);
+        }
       },
     };
   };

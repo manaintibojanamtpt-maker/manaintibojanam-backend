@@ -58,6 +58,7 @@
     "@bhojan/location-core": "file:../packages/location-core",
     "@bhojan/marketplace-contracts": "file:../packages/marketplace-contracts",
     "@bhojan/voice-core": "file:../packages/voice-core",
+    "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor-firebase/authentication": "^8.3.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
