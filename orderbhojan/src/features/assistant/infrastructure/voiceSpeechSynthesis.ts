@@ -264,13 +264,36 @@ export async function speakVoiceConfirmation(params: {
   utterance.lang = targetLang;
   utterance.rate = 1;
 
-  const voices = synth.getVoices ? synth.getVoices() : [];
+  let voices = synth.getVoices ? synth.getVoices() : [];
+  if (voices.length === 0 && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    await new Promise<void>((resolve) => {
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      }, 500); // give it up to 500ms to load voices
+      window.speechSynthesis.onvoiceschanged = () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeout);
+          resolve();
+        }
+      };
+    });
+    voices = synth.getVoices ? synth.getVoices() : [];
+  }
+
   if (voices.length > 0) {
     const primaryLang = targetLang.split('-')[0].toLowerCase();
-    // Try exact match first, then primary language match
+    // 1. Try exact match (e.g. te-IN)
+    // 2. Try primary language match (e.g. te)
+    // 3. Try to find any "Google" voice for that language if available
     const voice = 
       voices.find(v => v.lang.toLowerCase() === targetLang.toLowerCase()) || 
-      voices.find(v => v.lang.toLowerCase().startsWith(primaryLang));
+      voices.find(v => v.lang.toLowerCase().startsWith(primaryLang)) ||
+      voices.find(v => v.name.toLowerCase().includes('google') && v.lang.toLowerCase().startsWith(primaryLang));
     if (voice) {
       utterance.voice = voice;
     }
