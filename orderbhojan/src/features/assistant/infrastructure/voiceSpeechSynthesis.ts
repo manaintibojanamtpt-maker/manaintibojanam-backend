@@ -6,12 +6,14 @@ export type SpeechSynthesisUtteranceLike = {
   rate: number;
   onend: ((ev?: unknown) => void) | null;
   onerror: ((ev?: unknown) => void) | null;
+  voice?: any;
 };
 
 export type SpeechSynthesisLike = {
   speaking: boolean;
   cancel: () => void;
   speak: (utterance: SpeechSynthesisUtteranceLike) => void;
+  getVoices?: () => any[];
 };
 
 export type SpeechSynthesisFactory = () => SpeechSynthesisLike | null;
@@ -262,7 +264,7 @@ export async function speakVoiceConfirmation(params: {
   utterance.lang = targetLang;
   utterance.rate = 1;
 
-  const voices = synth.getVoices();
+  const voices = synth.getVoices ? synth.getVoices() : [];
   if (voices.length > 0) {
     const primaryLang = targetLang.split('-')[0].toLowerCase();
     // Try exact match first, then primary language match
