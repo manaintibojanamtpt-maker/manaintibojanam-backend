@@ -232,12 +232,13 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const flags = loadFeatureFlags();
-  if (isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') && typeof window !== 'undefined') {
+  const cloudTtsEnabled = isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') && typeof window !== 'undefined';
+
+  if (cloudTtsEnabled) {
     try {
       await speakCloudTts(text, params.signal);
       return;
     } catch (err) {
-      // Silently log and fall back to native TTS
       console.warn('[Voice TTS] Cloud fallback to native:', err);
       trackEvent({
         name: 'cloud_tts_fallback',
@@ -252,6 +253,15 @@ export async function speakVoiceConfirmation(params: {
   const createUtterance = params.createUtterance ?? getDefaultUtteranceFactory();
   const synth = createSynthesis();
   if (!synth) {
+    // If no native TTS, try cloud as a last resort before failing
+    if (!cloudTtsEnabled && typeof window !== 'undefined') {
+       try {
+         await speakCloudTts(text, params.signal);
+         return;
+       } catch (e) {
+         // ignore
+       }
+    }
     throw new AssistantApiError({
       code: 'AI_TTS_UNSUPPORTED',
       message: 'Speech synthesis is not available on this device/browser.',
@@ -296,6 +306,18 @@ export async function speakVoiceConfirmation(params: {
       voices.find(v => v.name.toLowerCase().includes('google') && v.lang.toLowerCase().startsWith(primaryLang));
     if (voice) {
       utterance.voice = voice;
+    } else {
+      // No native voice installed for this language!
+      // Native TTS will likely stay silent or speak garbage.
+      // Force fallback to Cloud TTS.
+      if (!cloudTtsEnabled && typeof window !== 'undefined') {
+        try {
+          await speakCloudTts(text, params.signal);
+          return;
+        } catch (e) {
+          // ignore, will try native as absolute last resort
+        }
+      }
     }
   }
 
