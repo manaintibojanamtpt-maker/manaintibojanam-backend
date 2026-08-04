@@ -40,7 +40,7 @@ export function OrderBhojanFoodRestaurantStrip({
           <ProfileImage name={name} imageUrl={logo.src} alt={`${name} logo`} className="h-10 w-10" />
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">From</p>
-            <p className="truncate text-sm font-bold text-white">{name}</p>
+            <p className="line-clamp-2 leading-tight text-sm font-bold text-white">{name}</p>
           </div>
         </GlassCard>
       </div>

@@ -49,6 +49,7 @@ export function CartLineView({ line, onQuantityChange }: CartLineViewProps) {
           <div className="self-center">
             <QuantityStepperView
               value={line.quantity}
+              min={0}
               ariaLabel={`Quantity for ${line.name}`}
               onChange={(next) => onQuantityChange(line.lineId, next)}
             />

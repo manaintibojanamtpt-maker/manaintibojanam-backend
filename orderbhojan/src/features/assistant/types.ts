@@ -115,6 +115,7 @@ export interface ConsumerAssistRequest {
   readonly authToken?: string | null;
   readonly signal?: AbortSignal;
   readonly orderingContext?: OrderingAssistContext;
+  readonly preferredLanguage?: string;
 }
 
 export interface VoiceTranscriptResult {

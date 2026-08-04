@@ -45,6 +45,7 @@ export function registerOwnerStorefrontRoutes(
         tenantId: resolvedTenantId,
         name: data.name ?? '',
         businessType: typeof data.businessType === 'string' ? data.businessType : 'home_kitchen',
+        dietaryPreference: typeof data.dietaryPreference === 'string' ? data.dietaryPreference : 'both',
         contact: data.contact ?? {},
         deliveryNotes: data.deliveryNotes ?? '',
         location: data.location ?? {},
@@ -110,6 +111,10 @@ export function registerOwnerStorefrontRoutes(
       if (typeof body.businessType === 'string') {
         const allowed = new Set(['home_kitchen', 'cloud_kitchen', 'restaurant', 'chef_kitchen']);
         if (allowed.has(body.businessType)) updates.businessType = body.businessType;
+      }
+      if (typeof body.dietaryPreference === 'string') {
+        const allowed = new Set(['pure_veg', 'non_veg', 'both']);
+        if (allowed.has(body.dietaryPreference)) updates.dietaryPreference = body.dietaryPreference;
       }
       if (body.contact) mergeObject('contact', body.contact);
       if (typeof body.deliveryNotes === 'string') updates.deliveryNotes = body.deliveryNotes;

@@ -349,7 +349,14 @@ export function ReleaseCenter({ releases: syncedReleases, syncToken = 0, onRelea
                 <h3 className="font-bold text-white text-lg">{release.title}</h3>
                 <p className="text-gray-400 text-sm mt-1">{release.summary}</p>
                 {release.isPublished && release.publishedAt && (
-                  <p className="text-xs text-gray-500 mt-2">Published: {new Date(release.publishedAt.toMillis ? release.publishedAt.toMillis() : release.publishedAt).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Published: {new Date(
+                      typeof release.publishedAt === 'number' ? release.publishedAt :
+                      typeof release.publishedAt === 'string' ? new Date(release.publishedAt).getTime() :
+                      typeof release.publishedAt.toMillis === 'function' ? release.publishedAt.toMillis() :
+                      (release.publishedAt.seconds ? release.publishedAt.seconds * 1000 : new Date(release.publishedAt as any).getTime())
+                    ).toLocaleString()}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-4 flex-shrink-0">

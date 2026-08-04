@@ -84,8 +84,7 @@ export async function bootstrapCapacitorNative(): Promise<void> {
   await unregisterServiceWorkersOnNative();
 
   try {
-    const [{ SplashScreen }, { StatusBar, Style }] = await Promise.all([
-      import('@capacitor/splash-screen'),
+    const [{ StatusBar, Style }] = await Promise.all([
       import('@capacitor/status-bar'),
     ]);
 
@@ -102,7 +101,9 @@ export async function bootstrapCapacitorNative(): Promise<void> {
     window.addEventListener('orientationchange', applyNativeSafeAreaInsets);
 
     try {
-      await SplashScreen.hide({ fadeOutDuration: 200 });
+      // Splash screen is intentionally NOT hidden here.
+      // It will be hidden by the app shell (AppRouter) once mounted
+      // to prevent white flashes during React render.
     } catch {
       // Non-fatal.
     }

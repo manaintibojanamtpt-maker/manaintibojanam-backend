@@ -30,7 +30,7 @@ export function restaurantToHeroOfferSlide(restaurant: RestaurantPublic): HomeHe
     restaurantName: restaurant.displayName,
     restaurantSlug: restaurant.restaurantSlug,
     cta: 'Order now',
-    ctaPath: `/restaurant/${restaurant.restaurantSlug}`,
+    ctaPath: `/restaurant/${restaurant.restaurantSlug}/menu`,
   };
 }
 

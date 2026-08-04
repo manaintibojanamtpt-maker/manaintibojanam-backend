@@ -29,6 +29,12 @@ export function deriveKitchenBadges(
     badges.push({ id: 'closest', label: 'Closest' });
   }
 
+  if (restaurant.dietaryPreference === 'pure_veg') {
+    badges.push({ id: 'pure_veg', label: 'Pure Veg' });
+  } else if (restaurant.dietaryPreference === 'non_veg') {
+    badges.push({ id: 'non_veg', label: 'Non-Veg' });
+  }
+
   if (restaurant.eligibility.isServiceable) {
     badges.push({ id: 'within_delivery_radius', label: 'Within Delivery Radius' });
   }

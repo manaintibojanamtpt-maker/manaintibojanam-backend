@@ -49,6 +49,7 @@ const OwnerSettings: React.FC = () => {
     whatsapp: '',
     deliveryNotes: '',
     logoUrl: '',
+    dietaryPreference: 'both' as 'pure_veg' | 'non_veg' | 'both',
     subscriptionEnabled: false,
     address: '',
     city: '',
@@ -92,6 +93,7 @@ const OwnerSettings: React.FC = () => {
           whatsapp: typeof data.contact?.whatsapp === 'string' ? data.contact.whatsapp : '',
           deliveryNotes: data.deliveryNotes || '',
           logoUrl: typeof branding.logoUrl === 'string' ? branding.logoUrl : '',
+          dietaryPreference: (data as any).dietaryPreference || 'both',
           subscriptionEnabled: data.features?.subscriptionEnabled === true,
           address: typeof data.location?.address === 'string' ? data.location.address : '',
           city: typeof data.location?.city === 'string' ? data.location.city : '',
@@ -151,6 +153,7 @@ const OwnerSettings: React.FC = () => {
         contact: { whatsapp: formData.whatsapp },
         deliveryNotes: formData.deliveryNotes,
         branding: { logoUrl: formData.logoUrl },
+        dietaryPreference: formData.dietaryPreference,
         features: { subscriptionEnabled: formData.subscriptionEnabled },
         location: {
           address: formData.address,
@@ -504,6 +507,51 @@ const OwnerSettings: React.FC = () => {
                     JPG, PNG or WEBP up to 5MB.
                   </p>
                 </div>
+              </div>
+            </div>
+            {/* Dietary Preference */}
+            <div className="pt-6 border-t border-white/10">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">Dietary Preference</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <label className={`flex flex-col p-4 border rounded-xl cursor-pointer transition-all ${formData.dietaryPreference === 'pure_veg' ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-[#0a0a0a] border-white/10 hover:border-white/30'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="dietaryPreference"
+                      value="pure_veg"
+                      checked={formData.dietaryPreference === 'pure_veg'}
+                      onChange={(e) => setFormData({ ...formData, dietaryPreference: 'pure_veg' })}
+                      className="text-emerald-500 focus:ring-emerald-500 bg-black border-gray-700"
+                    />
+                    <span className="font-bold text-white">Pure Veg</span>
+                  </div>
+                </label>
+                <label className={`flex flex-col p-4 border rounded-xl cursor-pointer transition-all ${formData.dietaryPreference === 'non_veg' ? 'bg-red-500/10 border-red-500/50' : 'bg-[#0a0a0a] border-white/10 hover:border-white/30'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="dietaryPreference"
+                      value="non_veg"
+                      checked={formData.dietaryPreference === 'non_veg'}
+                      onChange={(e) => setFormData({ ...formData, dietaryPreference: 'non_veg' })}
+                      className="text-red-500 focus:ring-red-500 bg-black border-gray-700"
+                    />
+                    <span className="font-bold text-white">Non-Veg</span>
+                  </div>
+                </label>
+                <label className={`flex flex-col p-4 border rounded-xl cursor-pointer transition-all ${formData.dietaryPreference === 'both' ? 'bg-orange-500/10 border-orange-500/50' : 'bg-[#0a0a0a] border-white/10 hover:border-white/30'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="dietaryPreference"
+                      value="both"
+                      checked={formData.dietaryPreference === 'both'}
+                      onChange={(e) => setFormData({ ...formData, dietaryPreference: 'both' })}
+                      className="text-orange-500 focus:ring-orange-500 bg-black border-gray-700"
+                    />
+                    <span className="font-bold text-white">Veg & Non-Veg</span>
+                  </div>
+                </label>
               </div>
             </div>
 

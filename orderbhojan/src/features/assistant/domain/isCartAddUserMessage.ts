@@ -27,12 +27,20 @@ const FROM_SEP = String.raw`(?:from|feom|fom|form|fro)\s+`;
 const ADD_PATTERNS: readonly RegExp[] = [
   // add 2 quantity Masala Dosa from Inti bhojanam
   new RegExp(
-    String.raw`^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    String.raw`^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+)$`,
     'i',
   ),
   // add two quantity Masala Dosa from Inti…
   new RegExp(
-    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+)$`,
     'i',
   ),
   /^(?:please\s+)?add\s+(\d+)\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
@@ -40,16 +48,24 @@ const ADD_PATTERNS: readonly RegExp[] = [
   /^(?:please\s+)?(?:put|include)\s+(\d+)\s+(.+?)\s+in\s+(?:my\s+)?cart\s*[.!]?$/i,
   // I want 2 Andhra Veg Thali from …
   new RegExp(
-    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(\d+)\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(\d+)\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(\d+)\s+(.+)$`,
     'i',
   ),
   // I want Andhra Veg Thali / order masala dosa from …
   new RegExp(
-    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(.+?)(?:\s+${FROM_SEP}(.+))?$`,
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(.+)$`,
     'i',
   ),
   // add Masala Dosa from Inti bhojanam
-  new RegExp(String.raw`^(?:please\s+)?add\s+(.+?)(?:\s+${FROM_SEP}(.+))$`, 'i'),
+  new RegExp(String.raw`^(?:please\s+)?add\s+(.+?)\s+${FROM_SEP}(.+)$`, 'i'),
   // add Masala Dosa
   /^(?:please\s+)?add\s+(.+)$/i,
   /^(\d+)\s*[x×]\s*(.+)$/i,

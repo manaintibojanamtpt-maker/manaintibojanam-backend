@@ -419,6 +419,7 @@ export interface Tenant {
   status: TenantLifecycleStatus;
   storeStatus: StoreLifecycleStatus;
   lastViewedReleaseVersion?: string;
+  dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
 
   // Phase 2: KYC
   kyc?: {
@@ -770,4 +771,12 @@ export interface CaseStudy {
   revenueGrowth: number; // %
   retentionGrowth: number; // %
   operationalImprovements: string[];
+}
+
+export interface HomeCategory {
+  id: string;
+  label: string;
+  imageUrl: string;
+  emoji?: string;
+  sortOrder?: number;
 }

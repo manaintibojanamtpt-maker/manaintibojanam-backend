@@ -1,6 +1,6 @@
 import { QuantityStepperView } from '@bhojan/storefront-design-system/primitives/QuantityStepperView';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
-import { buildCartLineId, useCartStore } from '@/features/cart/store/cartStore';
+import { useCartStore } from '@/features/cart/store/cartStore';
 import type { MockFoodItem } from '../../domain/experience.types';
 import { addExperienceFoodToCart } from '../../utils/experienceCart';
 import { foodPhotoUrl } from '../../utils/foodPhotoUrl';
@@ -11,10 +11,12 @@ export interface MarketplaceFoodTileProps {
 }
 
 export function MarketplaceFoodTile({ item }: MarketplaceFoodTileProps) {
-  const lineId = buildCartLineId({ foodId: item.id });
-  const line = useCartStore((s) => s.lines.find((entry) => entry.lineId === lineId));
+  const quantity = useCartStore((state) => state.lines.reduce((acc, l) => (l.foodId === item.id ? acc + l.quantity : acc), 0));
+  const targetLineId = useCartStore((state) => {
+    const lines = state.lines.filter((l) => l.foodId === item.id);
+    return lines.length > 0 ? lines[lines.length - 1].lineId : undefined;
+  });
   const setQuantity = useCartStore((s) => s.setQuantity);
-  const quantity = line?.quantity ?? 0;
 
   const discount =
     item.oldPrice && item.oldPrice > item.price
@@ -72,7 +74,7 @@ export function MarketplaceFoodTile({ item }: MarketplaceFoodTileProps) {
             <QuantityStepperView
               value={quantity}
               min={0}
-              onChange={(next) => setQuantity(lineId, next)}
+              onChange={(next) => targetLineId && setQuantity(targetLineId, next)}
               ariaLabel={`Quantity for ${item.name}`}
             />
           ) : (

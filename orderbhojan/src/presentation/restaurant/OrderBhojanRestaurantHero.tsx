@@ -27,11 +27,6 @@ export function OrderBhojanRestaurantHero({
   data,
   collapsed,
   enterFromPoster,
-  coverSrc,
-  coverSrcSet,
-  coverSizes,
-  coverBlurDataURL,
-  coverSources,
   logoSrc,
 }: OrderBhojanRestaurantHeroProps) {
   const { experience } = data;
@@ -46,31 +41,13 @@ export function OrderBhojanRestaurantHero({
     <header className="relative">
       <div
         className={`relative overflow-hidden transition-all duration-500 ease-out ${
-          collapsed ? 'h-28' : 'h-[46vh] min-h-[220px]'
+          collapsed ? 'h-28' : 'h-36 min-h-[144px]'
         } ${enterFromPoster && !collapsed ? 'origin-top scale-[1.02]' : ''}`}
       >
-        {coverSrc ? (
-          <picture>
-            {coverSources?.map((source) => (
-              <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
-            ))}
-            <img
-              src={coverSrc}
-              srcSet={coverSrcSet}
-              sizes={coverSizes}
-              alt={`${experience.displayName} — cover`}
-              fetchPriority="high"
-              decoding="async"
-              className="h-full w-full object-cover"
-              style={coverBlurDataURL ? { backgroundImage: `url(${coverBlurDataURL})`, backgroundSize: 'cover' } : undefined}
-            />
-          </picture>
-        ) : (
-          <div
-            className="h-full w-full bg-gradient-to-br from-[#120d0c] via-[#0a0706] to-[#050403]"
-            aria-hidden
-          />
-        )}
+        <div
+          className="h-full w-full bg-gradient-to-br from-[#120d0c] via-[#0a0706] to-[#050403]"
+          aria-hidden
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050403] via-[#050403]/40 to-transparent" />
 
         <div className="absolute left-4 right-4 top-[max(1rem,env(safe-area-inset-top))] flex justify-end">

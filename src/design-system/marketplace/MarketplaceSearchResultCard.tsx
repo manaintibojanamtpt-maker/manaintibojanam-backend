@@ -25,6 +25,8 @@ const badgeStyles: Record<string, string> = {
   matched_area: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   matched_tag: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   matched: 'bg-white/10 text-white/70 border-white/15',
+  pure_veg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  non_veg: 'bg-red-500/15 text-red-300 border-red-500/30',
 };
 
 export const MarketplaceSearchResultCardView: React.FC<MarketplaceSearchResultCardProps> = ({

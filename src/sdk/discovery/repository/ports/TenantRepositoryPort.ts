@@ -36,6 +36,7 @@ export interface TenantReadRecord {
   readonly logo?: string;
   readonly cuisineTags?: readonly string[];
   readonly ratingAggregate?: number;
+  readonly dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
 }
 
 export interface TenantRepositoryPort {

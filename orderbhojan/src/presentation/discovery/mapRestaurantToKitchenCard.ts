@@ -63,7 +63,7 @@ export function mapRestaurantPublicToKitchenCard(restaurant: RestaurantPublic): 
     eligibilityLabel: restaurant.isOpen ? kitchenFormatLabel(restaurant.kitchenFormat) : 'Currently closed',
     deliveryFeeLabel: formatDeliveryFee(restaurant),
     badges: buildBadges(restaurant),
-    storePath: `/restaurant/${restaurant.restaurantSlug}`,
+    storePath: `/restaurant/${restaurant.restaurantSlug}/menu`,
   };
 }
 
@@ -100,6 +100,6 @@ export function mapMockRestaurantToKitchenCard(restaurant: MockRestaurant): Mark
     eligibilityLabel: restaurant.isOpen ? 'Home kitchen' : 'Currently closed',
     deliveryFeeLabel: restaurant.deliveryFee,
     badges,
-    storePath: `/restaurant/${restaurant.slug}`,
+    storePath: `/restaurant/${restaurant.slug}/menu`,
   };
 }

@@ -184,14 +184,14 @@ export function LocationSelectorSheet() {
                     type="button"
                     tone="ghost"
                     fullWidth
-                    className="!h-auto !min-h-11 !flex-col !items-start !gap-1 !py-3 touch-manipulation"
+                    className="!h-auto !min-h-11 !flex-col !items-start !gap-1 !py-3 overflow-hidden min-w-0 touch-manipulation"
                     onClick={() => void selectSavedAddress(addr.id)}
                   >
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-sm font-bold text-white truncate w-full text-left">
                       {addr.customLabel ?? addr.label}
                       {addr.isDefault ? ' · Default' : ''}
                     </span>
-                    <span className="text-xs text-white/60">{addr.address.formattedAddress ?? addr.address.street}</span>
+                    <span className="text-xs text-white/60 truncate w-full text-left">{addr.address.formattedAddress ?? addr.address.street}</span>
                   </SoftButton>
                 ))
               )}

@@ -108,7 +108,7 @@ export function DiscoveryFiltersBar() {
   const [sortOpen, setSortOpen] = useState(false);
 
   const activeFilterCount = [
-    filters.vegOnly,
+    filters.dietaryPreference != null && filters.dietaryPreference !== 'both',
     filters.kitchenFormat,
     filters.offersOnly,
     filters.openNowOnly,
@@ -140,11 +140,11 @@ export function DiscoveryFiltersBar() {
         onRemove: () => setFilters({ openNowOnly: false }),
       });
     }
-    if (filters.vegOnly) {
+    if (filters.dietaryPreference && filters.dietaryPreference !== 'both') {
       chips.push({
-        id: 'vegOnly',
-        label: 'Veg',
-        onRemove: () => setFilters({ vegOnly: false }),
+        id: 'dietaryPreference',
+        label: filters.dietaryPreference === 'pure_veg' ? 'Pure Veg' : 'Non-Veg',
+        onRemove: () => setFilters({ dietaryPreference: 'both' }),
       });
     }
     if (filters.offersOnly) {
@@ -254,10 +254,16 @@ export function DiscoveryFiltersBar() {
                 Open now
               </SheetOption>
               <SheetOption
-                selected={Boolean(filters.vegOnly)}
-                onClick={() => setFilters({ vegOnly: !filters.vegOnly })}
+                selected={filters.dietaryPreference === 'pure_veg'}
+                onClick={() => setFilters({ dietaryPreference: filters.dietaryPreference === 'pure_veg' ? 'both' : 'pure_veg' })}
               >
-                Veg
+                Pure Veg Only
+              </SheetOption>
+              <SheetOption
+                selected={filters.dietaryPreference === 'non_veg'}
+                onClick={() => setFilters({ dietaryPreference: filters.dietaryPreference === 'non_veg' ? 'both' : 'non_veg' })}
+              >
+                Non-Veg Only
               </SheetOption>
               <SheetOption
                 selected={Boolean(filters.offersOnly)}

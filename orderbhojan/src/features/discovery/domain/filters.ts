@@ -23,9 +23,13 @@ export function applyDiscoveryFilters(
       return fee <= filters.maxDeliveryFee!;
     });
   }
-  if (filters.vegOnly) {
+  if (filters.dietaryPreference === 'pure_veg') {
     result = result.filter(
-      (r) => r.badges.includes('veg') || r.badges.includes('pure_veg'),
+      (r) => r.badges.includes('pure_veg'),
+    );
+  } else if (filters.dietaryPreference === 'non_veg') {
+    result = result.filter(
+      (r) => r.badges.includes('non_veg'),
     );
   }
   if (filters.cloudKitchenOnly) {
@@ -81,7 +85,7 @@ export function serializeDiscoveryFilters(filters: DiscoveryFilters): Record<str
   if (filters.maxDistanceKm != null) query.maxDistanceKm = filters.maxDistanceKm;
   if (filters.minRating != null) query.minRating = filters.minRating;
   if (filters.maxDeliveryFee != null) query.maxDeliveryFee = filters.maxDeliveryFee;
-  if (filters.vegOnly) query.vegOnly = true;
+  if (filters.dietaryPreference) query.dietaryPreference = filters.dietaryPreference;
   if (filters.cloudKitchenOnly) query.cloudKitchenOnly = true;
   if (filters.kitchenFormat) query.kitchenFormat = filters.kitchenFormat;
   if (filters.offersOnly) query.offersOnly = true;

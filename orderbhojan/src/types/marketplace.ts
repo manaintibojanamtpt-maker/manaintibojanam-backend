@@ -3,7 +3,8 @@ export type RestaurantBadge =
   | 'pure_veg'
   | 'cloud_kitchen'
   | 'new'
-  | 'offer';
+  | 'offer'
+  | 'non_veg';
 
 export type KitchenFormat = 'cloud_kitchen' | 'restaurant' | 'chef_kitchen' | 'home_kitchen';
 

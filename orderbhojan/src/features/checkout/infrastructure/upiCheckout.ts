@@ -24,6 +24,12 @@ const UPI_QUERY_PARAM_ORDER = ['pa', 'pn', 'am', 'tr', 'tn', 'cu', 'mc', 'tid', 
 
 export type UpiLaunchOutcome = 'opened' | 'fallback_required' | 'failed';
 
+export interface UpiLaunchContext {
+  readonly amount: number;
+  readonly orderId: string;
+  readonly orderNumber?: string;
+}
+
 export interface UpiLaunchResult {
   readonly outcome: UpiLaunchOutcome;
   readonly deepLinkTried?: string;
@@ -115,9 +121,28 @@ export function buildAndroidUpiIntent(
 /**
  * Candidate deep links for an app. First entry is preferred; callers may try fallbacks.
  */
-export function buildUpiAppDeepLinkCandidates(appId: UpiAppId, upiUrl: string): string[] {
+export function buildUpiAppDeepLinkCandidates(
+  appId: UpiAppId,
+  upiUrl: string,
+  context?: UpiLaunchContext,
+): string[] {
   const params = parseUpiPayUrl(upiUrl);
   if (!params) return [];
+
+  // Mandatory fields
+  if (!params.pa || !params.pn) return [];
+
+  if (context) {
+    params.am = formatUpiAmount(context.amount);
+    params.tr = context.orderId;
+    if (context.orderNumber && !params.tn) {
+      params.tn = `Order ${context.orderNumber}`;
+    }
+  } else if (params.am) {
+    params.am = formatUpiAmount(Number(params.am));
+  }
+
+  params.cu = 'INR';
 
   const query = buildUpiQueryString(params);
   const canonical = `upi://pay?${query}`;
@@ -159,8 +184,12 @@ export function buildUpiAppDeepLinkCandidates(appId: UpiAppId, upiUrl: string): 
  * Builds an app-specific UPI deep link from a standard `upi://pay` URL.
  * iOS Safari cannot enumerate installed UPI apps, so each PSP needs its own scheme.
  */
-export function buildUpiAppDeepLink(appId: UpiAppId, upiUrl: string): string | null {
-  return buildUpiAppDeepLinkCandidates(appId, upiUrl)[0] ?? null;
+export function buildUpiAppDeepLink(
+  appId: UpiAppId,
+  upiUrl: string,
+  context?: UpiLaunchContext,
+): string | null {
+  return buildUpiAppDeepLinkCandidates(appId, upiUrl, context)[0] ?? null;
 }
 
 export function extractUpiPayeeAddress(upiUrl: string): string | undefined {
@@ -204,8 +233,12 @@ export function launchUpiIntent(upiUrl: string): void {
  * Attempts to open a UPI app. Returns whether a deep link was attempted.
  * Callers must treat silent OS failures via visibility timeout → QR/copy fallback.
  */
-export function launchUpiApp(appId: UpiAppId, upiUrl: string): boolean {
-  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl);
+export function launchUpiApp(
+  appId: UpiAppId,
+  upiUrl: string,
+  context?: UpiLaunchContext,
+): boolean {
+  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl, context);
   if (candidates.length === 0) return false;
   launchUpiDeepLink(candidates[0]!);
   return true;
@@ -220,9 +253,18 @@ export function launchUpiApp(appId: UpiAppId, upiUrl: string): boolean {
 export async function launchUpiAppWithFallback(
   appId: UpiAppId,
   upiUrl: string,
+  context: UpiLaunchContext,
 ): Promise<UpiLaunchResult> {
-  if (!parseUpiPayUrl(upiUrl)) {
+  const params = parseUpiPayUrl(upiUrl);
+  if (!params) {
     return { outcome: 'failed', message: 'Invalid UPI payment link. Use copy details or QR.' };
+  }
+
+  if (!params.pa || !params.pn) {
+    return {
+      outcome: 'fallback_required',
+      message: 'Merchant UPI details incomplete. Please use the QR code or copy details to pay.',
+    };
   }
 
   if (isIosDevice() && appId === 'other') {
@@ -232,7 +274,7 @@ export async function launchUpiAppWithFallback(
     };
   }
 
-  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl);
+  const candidates = buildUpiAppDeepLinkCandidates(appId, upiUrl, context);
   if (candidates.length === 0) {
     return { outcome: 'failed', message: 'Unable to build a UPI link for that app.' };
   }

@@ -560,6 +560,10 @@ export function setMarketplaceAuthTokenProvider(
   singleton = null;
 }
 
+export function getMarketplaceAuthTokenProvider(): (() => Promise<string | null>) | null {
+  return authTokenProvider;
+}
+
 export function getMarketplaceApiClient(): MarketplaceApiClient {
   if (!singleton) {
     singleton = new MarketplaceApiClient(

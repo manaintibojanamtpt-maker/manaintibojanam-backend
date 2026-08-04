@@ -237,7 +237,7 @@ export function DiscoveryHomeFeed() {
         await query.refetch();
       }}
     >
-      <div className="space-y-3">
+      <div className={`space-y-3 transition-opacity duration-300 ${query.isPlaceholderData && query.isFetching ? 'opacity-50 pointer-events-none blur-[1px]' : ''}`}>
         <div className="opacity-90">
           <DiscoveryFeedControls />
         </div>

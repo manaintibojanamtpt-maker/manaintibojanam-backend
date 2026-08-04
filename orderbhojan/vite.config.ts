@@ -9,7 +9,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/firebase')) return 'firebase';
+          if (id.includes('node_modules/firebase/auth') || id.includes('node_modules/@firebase/auth')) return 'firebase-auth';
+          if (id.includes('node_modules/firebase/firestore') || id.includes('node_modules/@firebase/firestore')) return 'firebase-firestore';
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) return 'firebase-core';
+          if (id.includes('node_modules/@capacitor')) return 'capacitor-bridge';
+          if (id.includes('node_modules/zustand')) return 'state-vendor';
           if (id.includes('node_modules/framer-motion')) return 'motion';
           if (id.includes('node_modules/@tanstack/react-query')) return 'query';
           if (id.includes('react-router-dom') || id.includes('node_modules/react-router')) return 'router';
@@ -81,7 +85,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        cacheId: 'orderbhojan-pwa-v12',
+        cacheId: 'orderbhojan-pwa-v14',
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
         globIgnores: ['**/hero/**', '**/categories/**', 'offline.html'],
         // Serve the SPA shell on navigation failures — not the dead-end offline page.

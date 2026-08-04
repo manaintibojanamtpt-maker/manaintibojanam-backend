@@ -28,6 +28,8 @@ const badgeStyles: Record<string, string> = {
   offer: 'bg-[#e85d04]/15 text-[#e85d04] border-[#e85d04]/30',
   closed: 'bg-red-500/15 text-red-300 border-red-500/30',
   kitchen_format: 'bg-white/10 text-white/80 border-white/15',
+  pure_veg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  non_veg: 'bg-red-500/15 text-red-300 border-red-500/30',
 };
 
 function KitchenThumbnail({
@@ -132,7 +134,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
     return (
       <Link
         to={kitchen.storePath}
-        className={`group flex items-center gap-3 py-3 transition active:bg-white/[0.03] ${className}`}
+        className={`group flex items-center gap-3 py-3 transition active:bg-white/[0.03] active:scale-[0.98] touch-manipulation ${className}`}
       >
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5">
           <KitchenThumbnail
@@ -183,7 +185,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
     return (
       <Link
         to={kitchen.storePath}
-        className={`group block overflow-hidden rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_24px_56px_rgba(0,0,0,0.45)] ${className}`}
+        className={`group block overflow-hidden rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_24px_56px_rgba(0,0,0,0.45)] active:scale-[0.98] touch-manipulation ${className}`}
       >
         <div className="relative h-48 overflow-hidden bg-white/5">
           <KitchenThumbnail
@@ -215,7 +217,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   return (
     <Link
       to={kitchen.storePath}
-      className={`group block h-full min-w-0 rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] p-4 transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.38)] ${className}`}
+      className={`group block h-full min-w-0 rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] p-4 transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.38)] active:scale-[0.98] touch-manipulation ${className}`}
     >
       <div className="flex gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-white/5">

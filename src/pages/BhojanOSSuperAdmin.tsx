@@ -53,6 +53,12 @@ const OrderBhojanHomeHeroPanel = lazy(() =>
   })),
 );
 
+const HomeCategoriesAdmin = lazy(() =>
+  import('../components/admin/HomeCategoriesAdmin').then((m) => ({
+    default: m.HomeCategoriesAdmin,
+  })),
+);
+
 const PanelFallback = () => (
   <div className="flex items-center justify-center py-16">
     <div className="w-8 h-8 border-2 border-white/10 border-t-orange-500 rounded-full animate-spin" />
@@ -1445,7 +1451,7 @@ export default function BhojanOSSuperAdmin() {
                     <ReleaseCenter
                       releases={releases}
                       syncToken={syncGeneration}
-                      onReleasesChanged={() => void loadData({ silent: true })}
+                      onReleasesChanged={() => loadData({ silent: true })}
                     />
                   </Suspense>
                 </m.div>
@@ -1458,7 +1464,12 @@ export default function BhojanOSSuperAdmin() {
                   transition={{ duration: 0.3 }}
                 >
                   <Suspense fallback={<PanelFallback />}>
-                    <OrderBhojanHomeHeroPanel />
+                    <div className="space-y-12">
+                      <OrderBhojanHomeHeroPanel />
+                      <div className="border-t border-white/10 pt-12">
+                        <HomeCategoriesAdmin />
+                      </div>
+                    </div>
                   </Suspense>
                 </m.div>
               )}

@@ -387,6 +387,13 @@ html.ob-native .ob-transactional-shell {
   box-shadow: 0 -12px 40px -16px rgba(0, 0, 0, 0.55);
 }
 
+html.ob-native-android .ob-fixed-cta-bar {
+  /* Safe fallback leveraging the injected --ob-safe-bottom from capacitorBootstrap.
+     Guarantees at least 3.5rem (56px) to safely clear the standard 48dp Android 3-button nav,
+     while scaling up if safe-area-inset-bottom or the injected variable is larger. */
+  padding-bottom: max(calc(var(--ob-safe-bottom) + 0.75rem), 3.5rem) !important;
+}
+
 /* Auth — premium sign-in shell (edge-to-edge on native, safe-area aware) */
 .ob-auth-layout {
   position: relative;
@@ -665,5 +672,45 @@ html.ob-native .ob-auth-shell {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+}
+
+html.ob-native .ds-discovery-hero__steam,
+html.ob-native .ob-shimmer {
+  animation: none !important;
+}
+
+html.ob-native .ds-discovery-hero__steam {
+  opacity: 0.15 !important;
+}
+
+/* ==========================================================================
+   Android-Specific Performance Overrides (Phase B Addendum)
+   These rules explicitly disable heavy compositing (blur/gradients)
+   to eliminate Main Thread scroll jank on Android's WebView.
+   ========================================================================== */
+
+/* Disable Backdrop Blur on Android */
+html.ob-native-android .mib-glass,
+html.ob-native-android .ds-discovery-hero__offer-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(18, 13, 12, 0.98) !important; /* Resets gradient layers to a solid fallback */
+}
+
+/* Disable aesthetic GPU-heavy radial glow layers */
+html.ob-native-android .ds-discovery-hero__glow,
+html.ob-native-android .ds-discovery-hero__spotlight,
+html.ob-native-android .ds-discovery-hero__copy::before {
+  display: none !important;
+}
+
+/* Simplify the scrim to a fast 3-stop linear gradient for strong text contrast */
+html.ob-native-android .ds-discovery-hero__scrim {
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 3, 0.98) 0%,
+    rgba(5, 4, 3, 0.60) 50%,
+    transparent 100%
+  ) !important;
 }
 

@@ -48,7 +48,8 @@
             android:exported="false"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBar"
-            android:parentActivityName=".MainActivity" />
+            android:parentActivityName=".MainActivity"
+        />
 
         <provider
             android:name="androidx.core.content.FileProvider"

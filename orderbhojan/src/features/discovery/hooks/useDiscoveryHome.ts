@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useActiveLocation } from '@/features/location';
 import {
@@ -83,8 +83,7 @@ export function useDiscoveryHome() {
       coords
         ? getDiscoverySessionCacheUpdatedAt(coords.lat, coords.lng, filters) ?? undefined
         : undefined,
-    placeholderData: (previous) =>
-      previous ?? (coords ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined),
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
     refetchInterval: false,
     retry: 1,

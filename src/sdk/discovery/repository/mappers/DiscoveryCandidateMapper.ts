@@ -62,6 +62,7 @@ export function mapTenantToDiscoveryCandidate(tenant: TenantReadRecord): Discove
     prepTimeMins: tenant.deliveryConfig?.prepTime,
     cuisineTags: tenant.cuisineTags,
     rating: tenant.ratingAggregate,
+    dietaryPreference: tenant.dietaryPreference,
     isOpen: tenant.storeOperations?.isStoreOpen,
     isLive: tenant.storeStatus === 'published' || tenant.storeStatus === 'active',
     status: tenant.status,

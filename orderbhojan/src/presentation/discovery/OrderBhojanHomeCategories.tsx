@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { HOME_CATEGORY_CHIPS } from '@/features/experience/data/mockCatalog';
+import { useHomeCategories } from '@/hooks/useHomeCategories';
 import {
   isHomeCategoryDiscoveryFilterActive,
   toggleHomeCategoryDiscoveryFilter,
@@ -7,9 +7,7 @@ import {
 import { useDiscoveryFeatureEnabled } from '@/features/discovery/hooks/useDiscoveryFeature';
 import { useDiscoveryFilterStore } from '@/features/discovery/store/discoveryFilterStore';
 import {
-  HOME_CATEGORY_PHOTO_ASSETS,
-  pictureSources,
-  resolveCategoryChipPhoto,
+
 } from '@/features/experience/data/food-photo-manifest';
 import { useCategoryStore } from '@/features/experience/store/categoryStore';
 import type { FoodCategoryId } from '@/features/experience/domain/experience.types';
@@ -18,22 +16,16 @@ export interface OrderBhojanHomeCategoriesProps {
   readonly compact?: boolean;
 }
 
-const CATEGORY_IMAGE_OBJECT_POSITION: Record<(typeof HOME_CATEGORY_CHIPS)[number]['id'], string> = {
-  pizza: '50% 45%',
-  biryani: '50% 50%',
-  meals: '50% 38%',
-  'south-indian': '50% 42%',
-  'north-indian': '50% 48%',
-};
+
 
 export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCategoriesProps) {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
   const { selectedId, select } = useCategoryStore();
   const cuisines = useDiscoveryFilterStore((s) => s.filters.cuisines);
   const setFilters = useDiscoveryFilterStore((s) => s.setFilters);
+  const { data: categories = [] } = useHomeCategories();
 
   const circleSize = compact ? 'size-[3.85rem]' : 'size-[4.25rem]';
-  const photoWidth = compact ? 120 : 136;
 
   return (
     <div className="space-y-0">
@@ -45,9 +37,7 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
         role="list"
         aria-label="Browse cuisines"
       >
-        {HOME_CATEGORY_CHIPS.map((cat) => {
-          const assetId = HOME_CATEGORY_PHOTO_ASSETS[cat.id];
-          const photo = resolveCategoryChipPhoto(assetId, photoWidth, 84);
+        {categories.map((cat: any) => {
           const selected = discoveryEnabled
             ? isHomeCategoryDiscoveryFilterActive(cat.id, cuisines)
             : selectedId === cat.id;
@@ -90,17 +80,13 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
                     selected && 'ring-2 ring-[#050403]/80',
                   )}
                 >
-                  {pictureSources(photo, compact ? '3.85rem' : '4.25rem').map((source) => (
-                    <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={source.sizes} />
-                  ))}
                   <img
-                    src={photo.src}
+                    src={cat.imageUrl}
                     alt=""
                     className={clsx(
                       'size-full scale-[1.12] object-cover transition-transform duration-500 ease-out',
                       'group-hover:scale-[1.18] group-active:scale-[1.08]',
                     )}
-                    style={{ objectPosition: CATEGORY_IMAGE_OBJECT_POSITION[cat.id] }}
                     loading="lazy"
                     decoding="async"
                   />

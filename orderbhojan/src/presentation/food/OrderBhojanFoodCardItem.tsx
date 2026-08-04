@@ -3,20 +3,12 @@ import { Minus, Plus } from 'lucide-react';
 import { MenuItemCardView } from '@bhojan/storefront-design-system/food/MenuItemCardView';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
 import type { FoodPublic } from '@/types/marketplace-food';
-import { useCartStore, buildCartLineId } from '@/features/cart/store/cartStore';
+import { useCartStore } from '@/features/cart/store/cartStore';
 import { mapFoodToMenuItemCardView } from './mapFoodToMenuItemCardView';
 
-function selectLineQuantity(lineId: string) {
-  return (state: ReturnType<typeof useCartStore.getState>) => {
-    for (const line of state.lines) {
-      if (line.lineId === lineId) return line.quantity;
-    }
-    return 0;
-  };
-}
+
 
 const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
-  lineId,
   foodName,
   hasOptions,
   unitPrice,
@@ -24,7 +16,6 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
   food,
   onCustomize,
 }: {
-  readonly lineId: string;
   readonly foodName: string;
   readonly hasOptions: boolean;
   readonly unitPrice: number;
@@ -32,9 +23,14 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
   readonly onCustomize: (food: FoodPublic) => void;
   readonly food: FoodPublic;
 }) {
-  const quantity = useCartStore(selectLineQuantity(lineId));
+  const total = useCartStore((s) => s.lines.reduce((acc, l) => (l.foodId === foodId ? acc + l.quantity : acc), 0));
+  const targetLineId = useCartStore((s) => {
+    const lines = s.lines.filter((l) => l.foodId === foodId);
+    return lines.length > 0 ? lines[lines.length - 1].lineId : undefined;
+  });
   const addItem = useCartStore((s) => s.addItem);
   const setQuantity = useCartStore((s) => s.setQuantity);
+  const lines = useCartStore((s) => s.lines);
 
   return (
     <div className="flex h-11 w-full items-center justify-between rounded-full border border-[#e85d04]/35 bg-[#120d0c] px-1 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
@@ -44,12 +40,16 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
         aria-label={`Decrease quantity of ${foodName}`}
         onClick={(e) => {
           e.stopPropagation();
-          setQuantity(lineId, quantity - 1);
+          if (!targetLineId) return;
+          const line = lines.find((l) => l.lineId === targetLineId);
+          if (line) {
+            setQuantity(targetLineId, line.quantity - 1);
+          }
         }}
       >
         <Minus className="h-4 w-4 text-[#f4a261]" strokeWidth={3} aria-hidden />
       </button>
-      <span className="min-w-[1.5rem] text-center text-sm font-black tabular-nums text-[#fff8f0]">{quantity}</span>
+      <span className="min-w-[1.5rem] text-center text-sm font-black tabular-nums text-[#fff8f0]">{total}</span>
       <button
         type="button"
         className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 touch-manipulation"
@@ -79,8 +79,7 @@ export const OrderBhojanFoodCardItem = memo(function OrderBhojanFoodCardItem({
   priority = false,
   index = 0,
 }: OrderBhojanFoodCardItemProps) {
-  const lineId = buildCartLineId({ foodId: food.foodId });
-  const quantity = useCartStore(selectLineQuantity(lineId));
+  const quantity = useCartStore((s) => s.lines.reduce((acc, l) => (l.foodId === food.foodId ? acc + l.quantity : acc), 0));
   const addItem = useCartStore((s) => s.addItem);
   const [fly, setFly] = useState(false);
 
@@ -106,7 +105,6 @@ export const OrderBhojanFoodCardItem = memo(function OrderBhojanFoodCardItem({
   const actionSlot =
     quantity > 0 ? (
       <FoodCartQuantitySelector
-        lineId={lineId}
         foodName={food.name}
         hasOptions={hasOptions}
         unitPrice={unitPrice}

@@ -69,6 +69,9 @@ export function mapFirestoreTenantDocument(doc: FirestoreTenantDocument): Tenant
     logo: asString(data.logo),
     cuisineTags: asStringArray(data.cuisineTags),
     ratingAggregate: asNumber(data.ratingAggregate),
+    dietaryPreference: ['pure_veg', 'non_veg', 'both'].includes(asString(data.dietaryPreference) || '') 
+      ? asString(data.dietaryPreference) as 'pure_veg' | 'non_veg' | 'both'
+      : undefined,
   };
 }
 

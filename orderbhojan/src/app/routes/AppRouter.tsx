@@ -8,6 +8,9 @@ import { AuthReturnNavigator } from '@/presentation/auth/AuthReturnNavigator';
 import { CartExperiencePage } from '@/features/experience';
 import { CheckoutPage } from '@/features/checkout';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
+import { useAndroidBackButton } from '@/hooks/useAndroidBackButton';
+import { useEffect } from 'react';
+import { isNativePlatform } from '@/lib/nativePlatform';
 
 const FoundationPage = lazy(() =>
   import('@/app/pages/FoundationPage').then((m) => ({ default: m.FoundationPage })),
@@ -84,6 +87,17 @@ function LazyRoute({ children, fallback }: { children: ReactNode; fallback?: Rea
 }
 
 export function AppRouter() {
+  useAndroidBackButton();
+
+  useEffect(() => {
+    if (isNativePlatform()) {
+      import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+        // App shell is mounted and React has painted the initial DOM.
+        SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
+      });
+    }
+  }, []);
+
   return (
     <>
       <AuthReturnNavigator />

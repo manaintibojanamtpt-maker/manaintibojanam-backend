@@ -44,6 +44,7 @@ export interface DiscoveryCandidate {
   readonly maxRadiusKm?: number;
   readonly prepTimeMins?: number;
   readonly cuisineTags?: readonly string[];
+  readonly dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
   readonly rating?: number;
   readonly isOpen?: boolean;
   readonly isLive?: boolean;
@@ -76,6 +77,7 @@ export interface NearbyRestaurant {
   readonly eligibility: DeliveryEligibility;
   readonly eta?: ETAEstimate;
   readonly rating?: number;
+  readonly dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
   readonly isOpen: boolean;
   readonly thumbnailUrl?: string;
   readonly ranking?: RankingReason;

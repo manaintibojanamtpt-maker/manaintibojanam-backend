@@ -41,6 +41,8 @@ interface ConsumerAssistantSheetProps {
   readonly voiceAvailable?: boolean;
   readonly personalizationEnabled?: boolean;
   readonly assistMode?: 'ordering' | 'post_order';
+  readonly voiceLanguage?: string;
+  readonly onVoiceLanguageChange?: (lang: string) => void;
   readonly onClose: () => void;
   readonly onSend: (text: string) => void;
   readonly onVoiceStart?: () => void;
@@ -67,6 +69,8 @@ export function ConsumerAssistantSheet({
   voiceAvailable = false,
   personalizationEnabled = false,
   assistMode = 'ordering',
+  voiceLanguage = 'en-IN',
+  onVoiceLanguageChange,
   onClose,
   onSend,
   onVoiceStart,
@@ -123,29 +127,43 @@ export function ConsumerAssistantSheet({
       aria-labelledby="consumer-assistant-title"
       data-testid="consumer-assistant-sheet"
     >
-      <header className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={
-              listening || speaking || voiceAgentActive
-                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ffb347] shadow-[0_0_20px_rgba(255,122,0,0.55)]'
-                : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#FF7A00]/40 bg-black/40'
-            }
-            aria-hidden
-          >
-            <span className="flex h-3.5 items-end gap-[2px]">
-              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-2 animate-pulse bg-black/80' : 'h-2 bg-[#FF7A00]'}`} />
-              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-3.5 animate-pulse bg-black/90' : 'h-3.5 bg-[#FF7A00]'}`} />
-              <span className={`w-[2.5px] rounded-full ${listening || speaking ? 'h-2.5 animate-pulse bg-black/80' : 'h-2.5 bg-[#FF7A00]'}`} />
-            </span>
-          </div>
-          <div className="min-w-0">
-            <h2 id="consumer-assistant-title" className="text-sm font-semibold text-[#fffaf3]">
-              OrderBhojan Voice Agent
-            </h2>
-            <p className="text-xs text-[#d0c4b5]">
+      <header className="flex shrink-0 items-start justify-between border-b border-white/10 px-4 py-3">
+        <div className="flex items-center gap-3 w-full max-w-[80%]">
+          {speaking ? (
+            <div className="flex h-10 w-10 animate-pulse items-center justify-center rounded-full bg-[#FF7A00]/20 text-[#FF7A00]">
+              <Mic className="h-5 w-5" />
+            </div>
+          ) : listening ? (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-[0_0_12px_rgba(255,122,0,0.5)]">
+              <Mic className="h-5 w-5" />
+            </div>
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-[#d0c4b5]">
+              <Mic className="h-5 w-5" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 id="consumer-assistant-title" className="text-sm font-semibold text-[#fffaf3] whitespace-nowrap">
+                {isPostOrder ? 'Support Assistant' : 'OrderBhojan Voice Agent'}
+              </h2>
+              {voiceEnabled && onVoiceLanguageChange && (
+                <select
+                  value={voiceLanguage}
+                  onChange={(e) => onVoiceLanguageChange(e.target.value)}
+                  className="bg-[#1a1412] border border-white/20 text-xs text-[#fffaf3] rounded px-1.5 py-0.5 outline-none focus:border-[#FF7A00] shrink-0"
+                >
+                  <option value="en-IN">English</option>
+                  <option value="te-IN">Telugu</option>
+                  <option value="hi-IN">Hindi</option>
+                  <option value="ta-IN">Tamil</option>
+                  <option value="mr-IN">Marathi</option>
+                </select>
+              )}
+            </div>
+            <p className="text-xs text-[#d0c4b5] truncate mt-0.5">
               {isPostOrder
-                ? 'Post-order help · speak tracking or support questions'
+                ? 'Order support & help'
                 : voiceAgentActive
                   ? 'Live voice · say a dish, then “confirm” to add'
                   : 'Voice + chat · cart still needs your confirm'}
@@ -155,7 +173,7 @@ export function ConsumerAssistantSheet({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-2 py-1 text-xs text-[#d0c4b5] hover:bg-white/5 hover:text-white"
+          className="rounded-lg px-2 py-1 text-xs text-[#d0c4b5] hover:bg-white/5 hover:text-white shrink-0 ml-2"
         >
           Close
         </button>

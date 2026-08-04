@@ -5,7 +5,7 @@ export function hasDiscoveryFilterOverrides(
   filters: DiscoveryFilters = DEFAULT_DISCOVERY_FILTERS,
 ): boolean {
   return Boolean(
-    filters.vegOnly ||
+    (filters.dietaryPreference != null && filters.dietaryPreference !== 'both') ||
       filters.kitchenFormat ||
       filters.offersOnly ||
       filters.openNowOnly ||

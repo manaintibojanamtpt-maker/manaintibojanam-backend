@@ -91,7 +91,7 @@ export interface DiscoveryFilters {
   readonly maxDistanceKm?: number;
   readonly minRating?: number;
   readonly maxDeliveryFee?: number;
-  readonly vegOnly?: boolean;
+  readonly dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
   readonly cloudKitchenOnly?: boolean;
   readonly kitchenFormat?: KitchenFormat;
   readonly offersOnly?: boolean;
@@ -474,8 +474,10 @@ function applyDiscoveryFilters(
   if (filters.maxDeliveryFee != null) {
     result = result.filter((r) => (r.deliveryFee ?? 0) <= filters.maxDeliveryFee!);
   }
-  if (filters.vegOnly) {
-    result = result.filter((r) => r.badges.includes('veg') || r.badges.includes('pure_veg'));
+  if (filters.dietaryPreference === 'pure_veg') {
+    result = result.filter((r) => r.badges.includes('pure_veg'));
+  } else if (filters.dietaryPreference === 'non_veg') {
+    result = result.filter((r) => r.badges.includes('non_veg'));
   }
   if (filters.cloudKitchenOnly) {
     result = result.filter((r) => r.badges.includes('cloud_kitchen') || r.kitchenFormat === 'cloud_kitchen');
@@ -685,7 +687,7 @@ export function parseDiscoveryRequest(url: URL): DiscoveryRequestParams {
     ...(maxDistanceKm ? { maxDistanceKm: Number(maxDistanceKm) } : {}),
     ...(minRating ? { minRating: Number(minRating) } : {}),
     ...(maxDeliveryFee ? { maxDeliveryFee: Number(maxDeliveryFee) } : {}),
-    ...(url.searchParams.get('vegOnly') === 'true' ? { vegOnly: true } : {}),
+    ...(url.searchParams.get('dietaryPreference') ? { dietaryPreference: url.searchParams.get('dietaryPreference') as 'pure_veg' | 'non_veg' | 'both' } : {}),
     ...(url.searchParams.get('cloudKitchenOnly') === 'true' ? { cloudKitchenOnly: true } : {}),
     ...(kitchenFormat ? { kitchenFormat: kitchenFormat as KitchenFormat } : {}),
     ...(url.searchParams.get('offersOnly') === 'true' ? { offersOnly: true } : {}),

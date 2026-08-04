@@ -66,7 +66,7 @@ export function TrackingActivePageView({
   feedbackSlot,
 }: TrackingActivePageViewProps) {
   return (
-    <TransactionalPageShell title="Track order" subtitle="" className="!gap-3 !pb-[calc(5.5rem+var(--ob-safe-bottom))]">
+    <TransactionalPageShell embedded={true} title="Track order" subtitle="" className="!gap-3">
       <header className="px-0.5">
         <h1 className="text-xl font-extrabold tracking-tight text-[#fff8f0]">Track order</h1>
         <p className="mt-0.5 text-xs text-[#c4b5a5]">Live status for this order</p>

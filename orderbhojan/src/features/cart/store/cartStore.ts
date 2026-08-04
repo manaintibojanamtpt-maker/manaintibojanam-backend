@@ -166,8 +166,13 @@ export const useCartStore = create<CartState>()(
   ),
 );
 
+export function cartLineUnitPrice(line: CartLine): number {
+  const addonsTotal = line.addons?.reduce((sum, addon) => sum + addon.price, 0) ?? 0;
+  return line.price + addonsTotal;
+}
+
 export function cartSubtotal(lines: readonly CartLine[]): number {
-  return lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+  return lines.reduce((sum, line) => sum + cartLineUnitPrice(line) * line.quantity, 0);
 }
 
 export function cartItemCount(lines: readonly CartLine[]): number {
@@ -175,5 +180,5 @@ export function cartItemCount(lines: readonly CartLine[]): number {
 }
 
 export function formatCartLineTotal(line: CartLine): string {
-  return `₹${line.price * line.quantity}`;
+  return `₹${cartLineUnitPrice(line) * line.quantity}`;
 }

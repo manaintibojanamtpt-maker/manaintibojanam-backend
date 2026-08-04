@@ -34,7 +34,7 @@ export interface DiscoveryFilters {
   readonly maxDistanceKm?: number;
   readonly minRating?: number;
   readonly maxDeliveryFee?: number;
-  readonly vegOnly?: boolean;
+  readonly dietaryPreference?: 'pure_veg' | 'non_veg' | 'both';
   readonly cloudKitchenOnly?: boolean;
   readonly kitchenFormat?: KitchenFormat;
   readonly offersOnly?: boolean;

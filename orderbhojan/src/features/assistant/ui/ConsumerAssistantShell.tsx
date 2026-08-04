@@ -31,6 +31,8 @@ export function ConsumerAssistantShell() {
           voiceAvailable={chat.voiceAvailable}
           personalizationEnabled={chat.personalizationEnabled}
           assistMode={chat.postOrderMode ? 'post_order' : 'ordering'}
+          voiceLanguage={chat.voiceLanguage}
+          onVoiceLanguageChange={chat.setVoiceLanguage}
           onClose={() => chat.setOpen(false)}
           onSend={chat.send}
           onVoiceStart={() => void chat.sendFromVoice()}

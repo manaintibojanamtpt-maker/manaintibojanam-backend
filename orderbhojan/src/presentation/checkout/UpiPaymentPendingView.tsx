@@ -6,6 +6,7 @@ import {
   buildUpiCopyText,
   buildUpiQrImageUrl,
   isMobileDevice,
+  isAndroidDevice,
   launchUpiAppWithFallback,
   UPI_APP_CHOICES,
   watchUpiHandoffReturn,
@@ -70,6 +71,10 @@ export function UpiPaymentPendingView({
   const [upiReference, setUpiReference] = useState('');
   const [notifyMessage, setNotifyMessage] = useState<string | null>(null);
   const [notifySubmitting, setNotifySubmitting] = useState(false);
+  
+  const [hasAutoLaunched, setHasAutoLaunched] = useState(false);
+  const [autoLaunching, setAutoLaunching] = useState(false);
+
   const handoffCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -82,6 +87,7 @@ export function UpiPaymentPendingView({
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
+        setAutoLaunching(false);
         onCheckPayment();
       }
     };
@@ -89,9 +95,39 @@ export function UpiPaymentPendingView({
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [onCheckPayment]);
 
+  useEffect(() => {
+    if (isAndroidDevice() && mobile && !hasAutoLaunched) {
+      setHasAutoLaunched(true);
+      setAutoLaunching(true);
+      
+      launchUpiAppWithFallback('other', upiUrl, { amount, orderId, orderNumber }).then((result) => {
+        if (result.outcome === 'failed' || result.outcome === 'fallback_required') {
+          setShowQr(true);
+          setLaunchMessage(result.message ?? 'Unable to open UPI app automatically.');
+          setAutoLaunching(false);
+          return;
+        }
+
+        if (result.message) {
+          setLaunchMessage(result.message);
+        }
+
+        handoffCleanupRef.current = watchUpiHandoffReturn({
+          timeoutMs: isAndroidDevice() ? 10000 : undefined,
+          onLikelyFailed: () => {
+            setShowQr(true);
+            setLaunchMessage('UPI app did not open cleanly. Scan the QR or copy payment details into GPay / PhonePe / Paytm.');
+            setAutoLaunching(false);
+          },
+        });
+      });
+    }
+  }, [hasAutoLaunched, mobile, upiUrl]);
+
   const revealFallback = (message: string) => {
     setShowQr(true);
     setLaunchMessage(message);
+    setAutoLaunching(false);
   };
 
   const handleOpenApp = async (appId: UpiAppId) => {
@@ -99,7 +135,7 @@ export function UpiPaymentPendingView({
     handoffCleanupRef.current = null;
     setLaunchMessage(null);
 
-    const result = await launchUpiAppWithFallback(appId, upiUrl);
+    const result = await launchUpiAppWithFallback(appId, upiUrl, { amount, orderId, orderNumber });
 
     if (result.outcome === 'failed' || result.outcome === 'fallback_required') {
       revealFallback(
@@ -114,6 +150,7 @@ export function UpiPaymentPendingView({
     }
 
     handoffCleanupRef.current = watchUpiHandoffReturn({
+      timeoutMs: isAndroidDevice() ? 10000 : undefined,
       onLikelyFailed: () => {
         revealFallback(
           'UPI app did not open cleanly. Scan the QR or copy payment details into GPay / PhonePe / Paytm.',
@@ -145,6 +182,7 @@ export function UpiPaymentPendingView({
       );
     } catch (err) {
       setNotifyMessage(err instanceof Error ? err.message : 'Unable to notify kitchen right now.');
+
     } finally {
       setNotifySubmitting(false);
     }
@@ -156,7 +194,7 @@ export function UpiPaymentPendingView({
       subtitle={`${formatAmount(amount)} · payment pending`}
       embedded
     >
-      <div className="mx-auto max-w-lg space-y-3 pb-4">
+      <div className="mx-auto max-w-lg space-y-3 pb-[180px]">
         <div className="rounded-2xl border border-white/10 bg-[#120d0c] p-3.5 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
           <OrderBhojanOrderTrustPanel
             orderNumber={orderNumber}
@@ -175,72 +213,112 @@ export function UpiPaymentPendingView({
             statement — that is when your order is marked paid.
           </p>
           {expiryLabel ? (
-            <p className="text-xs text-amber-200/90">Complete payment by {expiryLabel} or the order expires.</p>
+            <p className="mt-1 text-xs text-amber-200/90">Complete payment by {expiryLabel} or the order expires.</p>
           ) : null}
         </div>
 
-        {mobile ? (
-          <div className="rounded-2xl border border-[#e85d04]/25 bg-[#120d0c] p-3.5 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-            <p className="text-sm font-semibold text-white/90">Choose your UPI app</p>
-            <p className="mt-1 text-xs text-white/50">
-              If an app does not open, use QR or copy details — do not retry blindly.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {UPI_APP_CHOICES.map((app) => (
-                <SoftButton
-                  key={app.id}
-                  type="button"
-                  tone="secondary"
-                  fullWidth
-                  onClick={() => void handleOpenApp(app.id)}
-                >
-                  {app.shortLabel}
-                </SoftButton>
-              ))}
-            </div>
-            {launchMessage ? (
-              <p className="mt-3 text-xs text-amber-200/90" aria-live="polite">
-                {launchMessage}
-              </p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <SoftButton type="button" tone="ghost" onClick={() => void handleCopyDetails()}>
-                Copy payment details
-              </SoftButton>
-              <SoftButton type="button" tone="ghost" onClick={() => setShowQr((value) => !value)}>
-                {showQr ? 'Hide QR code' : 'Show QR code'}
-              </SoftButton>
-            </div>
-            {copyMessage ? (
-              <p className="mt-2 text-xs text-emerald-200/90" aria-live="polite">
-                {copyMessage}
-              </p>
-            ) : null}
+        {autoLaunching ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-white/5 bg-[#120d0c]/40 p-6 backdrop-blur-sm">
+            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+            <p className="text-center font-medium text-white/90">Opening your UPI app...</p>
+            <p className="mt-2 text-center text-xs text-white/50">Please do not press back</p>
           </div>
-        ) : null}
-
-        {!mobile || showQr ? (
-          <div className="rounded-2xl border border-white/10 bg-[#120d0c] p-3.5 text-center">
-            <p className="mb-3 text-sm text-white/70">
-              {mobile
-                ? 'Scan this QR with your UPI app, or copy the payment details above.'
-                : 'Scan this QR with GPay, PhonePe, or Paytm on your phone'}
-            </p>
-            {!qrFailed ? (
-              <img
-                src={buildUpiQrImageUrl(upiUrl)}
-                alt={`UPI QR code for order ${orderNumber}`}
-                className="mx-auto h-[200px] w-[200px] rounded-xl bg-white p-2"
-                onError={() => setQrFailed(true)}
-              />
-            ) : (
-              <p className="text-sm text-white/60">
-                QR preview unavailable. Use copy payment details on your phone.
-              </p>
+        ) : (
+          <div className="rounded-2xl border border-white/5 bg-[#120d0c]/40 backdrop-blur-sm">
+            {!mobile && !showQr && (
+              <div className="border-b border-white/5 p-6 text-center">
+                <p className="text-sm text-white/70">
+                  Scan the QR code with your phone camera or UPI app.
+                </p>
+                <div className="mt-4">
+                  <SoftButton
+                    type="button"
+                    fullWidth
+                    tone="primary"
+                    onClick={() => setShowQr(true)}
+                  >
+                    Show QR Code
+                  </SoftButton>
+                </div>
+              </div>
             )}
-            <p className="mt-3 break-all text-xs text-white/45">{upiUrl}</p>
+            {mobile && (
+              <div className="p-3.5">
+                <p className="text-sm font-semibold text-white/90">Choose your UPI app</p>
+                <p className="mt-1 text-xs text-white/50">
+                  If an app does not open, use QR or copy details — do not retry blindly.
+                </p>
+                {isAndroidDevice() ? (
+                  <div className="mt-3">
+                    <SoftButton
+                      type="button"
+                      tone="secondary"
+                      fullWidth
+                      onClick={() => void handleOpenApp('other')}
+                    >
+                      Pay via installed UPI app
+                    </SoftButton>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {UPI_APP_CHOICES.map((app) => (
+                      <SoftButton
+                        key={app.id}
+                        type="button"
+                        tone="secondary"
+                        fullWidth
+                        onClick={() => void handleOpenApp(app.id)}
+                      >
+                        {app.shortLabel}
+                      </SoftButton>
+                    ))}
+                  </div>
+                )}
+                {launchMessage ? (
+                  <p className="mt-3 text-xs text-amber-200/90" aria-live="polite">
+                    {launchMessage}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <SoftButton type="button" tone="ghost" onClick={() => void handleCopyDetails()}>
+                    Copy payment details
+                  </SoftButton>
+                  <SoftButton type="button" tone="ghost" onClick={() => setShowQr((value) => !value)}>
+                    {showQr ? 'Hide QR code' : 'Show QR code'}
+                  </SoftButton>
+                </div>
+                {copyMessage ? (
+                  <p className="mt-2 text-xs text-emerald-200/90" aria-live="polite">
+                    {copyMessage}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            {showQr && (
+              <div className="border-t border-white/5 p-3.5 text-center">
+                <p className="mb-3 text-sm text-white/70">
+                  {mobile
+                    ? 'Scan this QR with your UPI app, or copy the payment details above.'
+                    : 'Scan this QR with GPay, PhonePe, or Paytm on your phone'}
+                </p>
+                {!qrFailed ? (
+                  <img
+                    src={buildUpiQrImageUrl(upiUrl)}
+                    alt={`UPI QR code for order ${orderNumber}`}
+                    className="mx-auto h-[200px] w-[200px] rounded-xl bg-white p-2"
+                    onError={() => setQrFailed(true)}
+                  />
+                ) : (
+                  <p className="text-sm text-white/60">
+                    QR preview unavailable. Use copy payment details on your phone.
+                  </p>
+                )}
+                <p className="mt-3 break-all text-xs text-white/45">{upiUrl}</p>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
 
         {onNotifyKitchen ? (
           <div className="rounded-2xl border border-white/10 bg-[#120d0c] p-3.5 space-y-2.5">
@@ -282,9 +360,11 @@ export function UpiPaymentPendingView({
             {errorMessage}
           </p>
         ) : null}
+      </div>
 
-        <div className="sticky bottom-2 z-10 space-y-2 rounded-2xl border border-white/10 bg-[#0c0908]/95 p-3 backdrop-blur-md">
-          <SoftButton type="button" fullWidth disabled={verifying} onClick={onCheckPayment}>
+      <div className="ob-fixed-cta-bar">
+        <div className="mx-auto flex max-w-lg flex-col gap-2">
+          <SoftButton type="button" fullWidth tone="primary" disabled={verifying} onClick={onCheckPayment}>
             {verifying ? 'Checking payment…' : 'I have paid — check status'}
           </SoftButton>
           <div className="flex gap-2">

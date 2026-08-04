@@ -54,6 +54,11 @@ export async function openExternalUrl(url: string): Promise<boolean> {
   if (!trimmed || typeof window === 'undefined') return false;
 
   if (isNativePlatform()) {
+    if (/^intent:/i.test(trimmed)) {
+      window.location.assign(trimmed);
+      return true;
+    }
+
     try {
       const { App } = await import('@capacitor/app');
       const appPlugin = App as typeof App & {
@@ -83,6 +88,13 @@ export async function openExternalUrl(url: string): Promise<boolean> {
     }
 
     launchAnchorFallback(trimmed);
+    return true;
+  }
+
+  // On Web/PWA, hidden anchor clicks for deep links are often blocked by Chrome.
+  // Use direct location assignment for intent/upi schemes.
+  if (/^(intent:|upi:|gpay:|phonepe:|paytmmp:|tez:)/i.test(trimmed)) {
+    window.location.assign(trimmed);
     return true;
   }
 

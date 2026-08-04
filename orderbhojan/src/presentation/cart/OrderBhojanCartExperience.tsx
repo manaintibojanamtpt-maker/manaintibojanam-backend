@@ -15,6 +15,7 @@ import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmat
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { markPerf } from '@/lib/perfMarks';
+import { ContextualRecommendations } from './ContextualRecommendations';
 
 const DELIVERY_LOCATION_GATE_MESSAGE =
   'Set your delivery location to see delivery options and continue to checkout.';
@@ -146,6 +147,7 @@ export function OrderBhojanCartExperience() {
       onClear={clear}
       onMenu={slug ? () => navigate(`/restaurant/${slug}/menu`) : undefined}
       onQuantityChange={setQuantity}
+      recommendationsContent={slug ? <ContextualRecommendations restaurantSlug={slug} /> : null}
     />
   );
 }

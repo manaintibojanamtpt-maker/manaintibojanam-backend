@@ -109,7 +109,7 @@ export function HomeExperiencePage() {
   };
 
   return (
-    <div className="bg-[#050403] pb-5 text-[#fff8f0]">
+    <div className="bg-[#050403] pb-[calc(env(safe-area-inset-bottom)+5rem)] min-h-[100dvh] text-[#fff8f0]">
       <OrderBhojanHomeHero />
 
       {locationEnabled && showLocationNudge ? (

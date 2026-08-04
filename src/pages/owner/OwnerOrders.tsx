@@ -97,7 +97,16 @@ const OwnerOrders: React.FC = () => {
       tenantId,
       orderLimit,
       (fetchedOrders, hasMoreOrders) => {
-        setOrders(fetchedOrders as Order[]);
+        setOrders((currentOrders) => {
+          // Merge incoming orders, preserving optimistic status for updating orders
+          return fetchedOrders.map((serverOrder) => {
+            const currentOptimistic = currentOrders.find((o) => o.id === serverOrder.id);
+            if (currentOptimistic && updatingOrderId === serverOrder.id) {
+              return { ...serverOrder, status: currentOptimistic.status, paymentStatus: currentOptimistic.paymentStatus };
+            }
+            return serverOrder;
+          }) as Order[];
+        });
         setHasMore(hasMoreOrders);
         setLoading(false);
         setRefreshing(false);
@@ -171,7 +180,7 @@ const OwnerOrders: React.FC = () => {
 
   const updateOrderStatus = async (orderId: string, status: string, deliveryData?: any): Promise<boolean> => {
     // 1. Snapshot previous state for rollback
-    const previousOrders = [...orders];
+    const previousOrder = orders.find(o => o.id === orderId);
     const normalized = status.toUpperCase() as OrderStatus;
     
     try {
@@ -199,7 +208,9 @@ const OwnerOrders: React.FC = () => {
       return true;
     } catch (error) {
       // 4. Rollback on failure
-      setOrders(previousOrders);
+      if (previousOrder) {
+        setOrders((curr) => curr.map((o) => (o.id === orderId ? previousOrder : o)));
+      }
       
       console.error(error);
       const message = error instanceof Error ? error.message : 'Action failed';
@@ -591,14 +602,12 @@ const OwnerOrders: React.FC = () => {
                     <>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
-                        disabled={updatingOrderId === order.id}
                         className="flex items-center justify-center px-4 py-3 sm:py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
                       >
-                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Accept'}
+                        <CheckCircle className="w-4 h-4 mr-2" /> Accept
                       </button>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'REJECTED')}
-                        disabled={updatingOrderId === order.id}
                         className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                       >
                         <XCircle className="w-4 h-4 mr-2" /> Reject
@@ -610,7 +619,6 @@ const OwnerOrders: React.FC = () => {
                     <>
                       <button
                         onClick={() => void handleVerifyUpiPayment(order, true)}
-                        disabled={updatingOrderId === order.id}
                         className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
                       >
                         <IndianRupee className="w-4 h-4 mr-2" />
@@ -618,14 +626,12 @@ const OwnerOrders: React.FC = () => {
                       </button>
                       <button
                         onClick={() => void handleVerifyUpiPayment(order, false)}
-                        disabled={updatingOrderId === order.id}
                         className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                       >
                         Verify only
                       </button>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'REJECTED')}
-                        disabled={updatingOrderId === order.id}
                         className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                       >
                         <XCircle className="w-4 h-4 mr-2" /> Reject
@@ -637,10 +643,9 @@ const OwnerOrders: React.FC = () => {
                     <>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
-                        disabled={updatingOrderId === order.id}
                         className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
                       >
-                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Accept Order'}
+                        <CheckCircle className="w-4 h-4 mr-2" /> Accept Order
                       </button>
                     </>
                   )}
@@ -648,10 +653,9 @@ const OwnerOrders: React.FC = () => {
                   {orderStatus === 'ACCEPTED' && (
                     <button
                       onClick={() => updateOrderStatus(order.id, 'PREPARING')}
-                      disabled={updatingOrderId === order.id}
                       className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                     >
-                      <ChefHat className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Preparing'}
+                      <ChefHat className="w-4 h-4 mr-2" /> Mark Preparing
                     </button>
                   )}
 
@@ -671,14 +675,12 @@ const OwnerOrders: React.FC = () => {
                     <>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        disabled={updatingOrderId === order.id}
                         className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                       >
-                        <CheckCircle className="w-4 h-4 mr-2" /> {updatingOrderId === order.id ? 'Saving...' : 'Mark Delivered'}
+                        <CheckCircle className="w-4 h-4 mr-2" /> Mark Delivered
                       </button>
                       <button
                         onClick={() => updateOrderStatus(order.id, 'FAILED_DELIVERY')}
-                        disabled={updatingOrderId === order.id}
                         className="col-span-2 flex items-center justify-center px-4 py-3 sm:py-2 bg-white/5 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                       >
                         <PackageX className="w-4 h-4 mr-2" /> Delivery failed / returned

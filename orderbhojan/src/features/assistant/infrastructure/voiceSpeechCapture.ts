@@ -190,18 +190,24 @@ export async function captureVoiceTranscript(params: {
     recognition.onresult = (event) => {
       sawResult = true;
       const results = event.results;
-      let best = '';
+      let interimBuilder = '';
+      let finalBuilder = '';
+      
       for (let i = 0; i < (results?.length ?? 0); i += 1) {
         const row = results[i];
         const alt = row?.[0];
         const piece = typeof alt?.transcript === 'string' ? alt.transcript.trim() : '';
         if (!piece) continue;
-        // Prefer final results; keep interim as fallback.
+        
         const isFinal = Boolean((row as { isFinal?: boolean }).isFinal);
-        if (isFinal || !best) best = piece;
-        if (isFinal) finalTranscript = [finalTranscript, piece].filter(Boolean).join(' ').trim();
+        if (isFinal) {
+          finalBuilder += piece + ' ';
+        } else {
+          interimBuilder += piece + ' ';
+        }
       }
-      if (!finalTranscript && best) finalTranscript = best;
+      
+      finalTranscript = finalBuilder.trim() || interimBuilder.trim();
 
       // Resolve once we have a final segment — stop recognition promptly.
       const last = results?.[(results.length ?? 1) - 1] as { isFinal?: boolean } | undefined;

@@ -297,6 +297,9 @@ export function registerAiGatewayRoutes(
     });
 
     try {
+      const preferredLanguage = typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim() ? body.preferredLanguage.trim() : '';
+      const languageAddon = preferredLanguage ? ` IMPORTANT: Reply exclusively in the ${preferredLanguage} language/locale (e.g. if te-IN, use Telugu) for your 'reply' field. Do not use English unless the locale is English.` : '';
+
       const postOrderAddon =
         body.mode === 'consumer_ordering' && postOrder.used && postOrder.context
           ? ` ${buildPostOrderSystemAddon(postOrder.context)}`
@@ -305,7 +308,7 @@ export function registerAiGatewayRoutes(
         body.mode === 'consumer_ordering' && ordering.used && ordering.context
           ? ` ${buildOrderingSystemAddon(ordering.context)}`
           : '';
-      const systemPrompt = `${buildModeSystemPrompt(body.mode)} ${buildStructuredOutputSystemAddon(body.mode)}${postOrderAddon}${orderingAddon}`;
+      const systemPrompt = `${buildModeSystemPrompt(body.mode)} ${buildStructuredOutputSystemAddon(body.mode)}${postOrderAddon}${orderingAddon}${languageAddon}`;
       const completion = await openRouterChatCompletion({
         config: latest,
         messages: [

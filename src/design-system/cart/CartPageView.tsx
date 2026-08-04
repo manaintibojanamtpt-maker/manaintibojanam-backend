@@ -22,6 +22,7 @@ export interface CartPageViewProps {
   readonly onClear: () => void;
   readonly onMenu?: () => void;
   readonly onQuantityChange: (lineId: string, quantity: number) => void;
+  readonly recommendationsContent?: React.ReactNode;
 }
 
 export function CartPageView({
@@ -39,10 +40,11 @@ export function CartPageView({
   onClear,
   onMenu,
   onQuantityChange,
+  recommendationsContent,
 }: CartPageViewProps) {
   return (
-    <div className="relative">
-      <TransactionalPageShell title={title} subtitle={subtitle} className="!gap-3 !pb-[var(--ob-focus-bottom)]" embedded>
+    <div className="relative pb-36">
+      <TransactionalPageShell title={title} subtitle={subtitle} className="!gap-3" embedded>
         <header className="px-0.5">
           <h1 className="text-xl font-extrabold tracking-tight text-[#fff8f0]">{title}</h1>
           <p className="mt-0.5 text-xs text-[#c4b5a5]">{subtitle}</p>
@@ -58,7 +60,20 @@ export function CartPageView({
           {lines.map((line) => (
             <CartLineView key={line.lineId} line={line} onQuantityChange={onQuantityChange} />
           ))}
+          {onMenu ? (
+            <li className="mt-1 flex justify-center pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                className="text-sm font-bold text-[#e85d04] hover:text-[#f0701a] active:scale-95 touch-manipulation"
+                onClick={onMenu}
+              >
+                + Add more items
+              </button>
+            </li>
+          ) : null}
         </ul>
+
+        {recommendationsContent}
 
         <div className="rounded-2xl border border-white/[0.08] bg-[#120d0c] p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
           <CartSummaryView summary={summary} />

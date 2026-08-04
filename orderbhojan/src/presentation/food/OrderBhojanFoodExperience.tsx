@@ -14,6 +14,8 @@ import { hasBestsellerLabel } from '@/features/food/domain/contractPresentation'
 import { useCategoryScrollSpy } from '@/features/food/hooks/useCategoryScrollSpy';
 import { useFoodMenu } from '@/features/food/hooks/useFoodMenu';
 import { useTenantRevisionSync } from '@/features/marketplace/hooks/useTenantRevisionSync';
+import { useRestaurantExperience } from '@/features/restaurant/hooks/useRestaurantExperience';
+
 import { OrderBhojanFoodCustomizeSheet as FoodCustomizeSheet } from './OrderBhojanFoodCustomizeSheet';
 import {
   OrderBhojanDiscoveryOfflineNotice,
@@ -116,13 +118,17 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
     );
   }
 
+  const restaurantQuery = useRestaurantExperience(restaurantSlug);
+  const restaurantData = restaurantQuery.data;
+
+
   return (
     <div
       className={`ob-menu-page min-h-screen bg-[#030303] text-white${enterFromRestaurant ? ' ob-menu-enter' : ''}`}
     >
       <OrderBhojanFoodRestaurantStrip
         slug={restaurantSlug}
-        name={restaurantName}
+        name={restaurantData?.experience.displayName ?? restaurantName}
         onBack={() => navigate(`/restaurant/${restaurantSlug}`)}
         onHome={() => navigate('/')}
       />
