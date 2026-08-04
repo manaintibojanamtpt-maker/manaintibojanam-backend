@@ -258,8 +258,21 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const utterance = createUtterance(text.slice(0, 500));
-  utterance.lang = params.lang ?? 'en-IN';
+  const targetLang = params.lang ?? 'en-IN';
+  utterance.lang = targetLang;
   utterance.rate = 1;
+
+  const voices = synth.getVoices();
+  if (voices.length > 0) {
+    const primaryLang = targetLang.split('-')[0].toLowerCase();
+    // Try exact match first, then primary language match
+    const voice = 
+      voices.find(v => v.lang.toLowerCase() === targetLang.toLowerCase()) || 
+      voices.find(v => v.lang.toLowerCase().startsWith(primaryLang));
+    if (voice) {
+      utterance.voice = voice;
+    }
+  }
 
   return new Promise<void>((resolve, reject) => {
     let settled = false;
