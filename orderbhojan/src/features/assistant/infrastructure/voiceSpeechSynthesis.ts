@@ -20,6 +20,7 @@ export type UtteranceFactory = (text: string) => SpeechSynthesisUtteranceLike;
 import { Capacitor } from '@capacitor/core';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { loadFeatureFlags, isFeatureEnabled } from '../../../featureFlags/flags';
+import { getAppConfig } from '@/config';
 import { getMarketplaceAuthTokenProvider } from '@/marketplace-api';
 import { trackEvent } from '@/telemetry';
 
@@ -140,7 +141,7 @@ export function unlockAudioContext(): void {
 }
 
 async function speakCloudTts(text: string, signal?: AbortSignal): Promise<void> {
-  const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+  const apiUrl = getAppConfig().marketplaceApiBaseUrl.replace(/\/$/, '');
   const tokenProvider = getMarketplaceAuthTokenProvider();
   const token = tokenProvider ? await tokenProvider() : null;
 
