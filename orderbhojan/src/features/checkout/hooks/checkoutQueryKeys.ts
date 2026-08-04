@@ -6,4 +6,4 @@ export const checkoutKeys = {
 export const CHECKOUT_PREPARE_STALE_MS = 30_000;
 export const CHECKOUT_PREPARE_GC_MS = 5 * 60_000;
 /** Fail fast on quote/prepare; stale session quote covers slow networks. */
-export const CHECKOUT_PREPARE_TIMEOUT_MS = 12_000;
+export const CHECKOUT_PREPARE_TIMEOUT_MS = 25_000;
