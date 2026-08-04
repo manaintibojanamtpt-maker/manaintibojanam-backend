@@ -99,6 +99,9 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
     return merged.slice(0, 6);
   }, [dietaryFilter, filteredItems, itemMap, menu?.featuredIds]);
 
+  const restaurantQuery = useRestaurantExperience(restaurantSlug);
+  const restaurantData = restaurantQuery.data;
+
   if (query.isPending && !menu) return <OrderBhojanFoodMenuSkeleton />;
 
   if (query.isError || !menu) {
@@ -117,9 +120,6 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
       </OrderBhojanRestaurantUxShell>
     );
   }
-
-  const restaurantQuery = useRestaurantExperience(restaurantSlug);
-  const restaurantData = restaurantQuery.data;
 
 
   return (
