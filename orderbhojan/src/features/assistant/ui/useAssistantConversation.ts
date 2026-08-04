@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -38,7 +38,6 @@ import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
 import { decideVoiceCartTurn } from '../domain/decideVoiceCartTurn';
 import {
   isStopVoiceAgentMessage,
-  toSpokenAssistantReply,
 } from '../domain/isConfirmCartUserMessage';
 import { isPostOrderUserMessage } from '../domain/isPostOrderUserMessage';
 import {
@@ -54,32 +53,17 @@ import {
   formatCartPlanSummarySpeech,
   summarizePendingCartPlan,
 } from '../domain/summarizePendingCartPlan';
-import {
-  captureNativeAndroidStt,
-  isNativeAndroidSttAvailable,
-  nativeSttCancelListening,
-} from '../infrastructure/nativeAndroidSttBridge';
-import {
-  nextVoiceRuntimeState,
-  type VoiceRuntimeState,
-} from '../domain/voiceRuntimeState';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
-import { useAiNativeSttFeature } from '../hooks/useAiNativeSttFeature';
 import { useAiVoiceCoreConfirmAddFeature } from '../hooks/useAiVoiceCoreConfirmAddFeature';
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
-import { useAiVoiceTtsFeature } from '../hooks/useAiVoiceTtsFeature';
 import { useAssistantPersonalizationContext } from '../hooks/useAssistantPersonalizationContext';
 import { useAssistantPostOrderContext } from '../hooks/useAssistantPostOrderContext';
-import { useConsumerAssist } from '../hooks/useConsumerAssist';
-import { usePostOrderAssist } from '../hooks/usePostOrderAssist';
-import { useValidateCartPlan } from '../hooks/useValidateCartPlan';
 import { getAssistantApiClient } from '../infrastructure/assistantApiClient';
-import { captureVoiceTranscript, isVoiceCaptureAvailable } from '../infrastructure/voiceSpeechCapture';
-import {
-  isSpeechSynthesisAvailable,
-  speakVoiceConfirmation,
-} from '../infrastructure/voiceSpeechSynthesis';
 import { AssistantApiError, type ConsumerAssistHint } from '../types';
+import { useAssistantApi } from '../hooks/useAssistantApi';
+import { useVoiceStt } from '../hooks/useVoiceStt';
+import { useVoiceTts } from '../hooks/useVoiceTts';
+import { unlockAudioContext } from '../infrastructure/voiceSpeechSynthesis';
 
 /** Best-effort audit; never blocks confirm/discard UX. */
 function reportCartPlanDecisionQuietly(params: {
@@ -152,16 +136,15 @@ function toNearbyKitchenHints(
 }
 
 export function useAssistantConversation() {
-  const { ask } = useConsumerAssist();
-  const { ask: askPostOrder, enabled: postOrderAssistEnabled } = usePostOrderAssist();
+  const { ask, askPostOrder, postOrderAssistEnabled, validate, loading, setLoading, validating, setValidating, error, setError } = useAssistantApi();
+  const { listening, setListening, startListening, cancelListening, voiceCaptureAvailable, voiceAbortRef } = useVoiceStt();
+  const { speaking, setSpeaking, voiceLanguage, setVoiceLanguage, speakReply } = useVoiceTts();
+
   const postOrderFlag = useAiPostOrderFeature();
   const orderContext = useAssistantPostOrderContext();
   const { enabled: personalizationEnabled, bootstrap: personalizationBootstrap } =
     useAssistantPersonalizationContext();
-  const { validate } = useValidateCartPlan();
   const voiceEnabled = useAiVoiceFeature();
-  const ttsEnabled = useAiVoiceTtsFeature();
-  const nativeSttEnabled = useAiNativeSttFeature();
   const voiceCoreConfirmAddLive = useAiVoiceCoreConfirmAddFeature();
   const navigate = useNavigate();
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
@@ -175,17 +158,11 @@ export function useAssistantConversation() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<readonly AssistantThreadMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
-  const [validating, setValidating] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [voiceAgentActive, setVoiceAgentActive] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
-  const voiceAbortRef = useRef<AbortController | null>(null);
+  
   const voiceAgentActiveRef = useRef(false);
-  const voiceRuntimeStateRef = useRef<VoiceRuntimeState>('idle');
   const pendingValidationRef = useRef<CartPlanValidationResult | null>(null);
   const pendingPlanRestaurantRef = useRef<{
     restaurantId: string;
@@ -202,8 +179,6 @@ export function useAssistantConversation() {
   );
   const voiceConfirmationRef = useRef(initialConfirmationSnapshot());
   const voiceAdapterRef = useRef<OrderBhojanVoiceAdapter | null>(null);
-
-  const voiceAvailable = useMemo(() => isVoiceCaptureAvailable(), []);
 
   pendingValidationRef.current = pendingValidation;
 
@@ -927,13 +902,7 @@ export function useAssistantConversation() {
             if (voiceAgentActiveRef.current) {
               voiceAgentActiveRef.current = false;
               setVoiceAgentActive(false);
-              voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-                voiceRuntimeStateRef.current,
-                'STOP',
-              );
-              voiceAbortRef.current?.abort();
-              void nativeSttCancelListening();
-              setListening(false);
+              cancelListening();
               setSpeaking(false);
             }
             setMessages((prev) => [
@@ -1286,46 +1255,15 @@ export function useAssistantConversation() {
   );
 
   const cancelVoice = useCallback(() => {
-    voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-      voiceRuntimeStateRef.current,
-      'BARGE_IN',
-    );
-    voiceAbortRef.current?.abort();
-    void nativeSttCancelListening();
-  }, []);
+    cancelListening();
+  }, [cancelListening]);
 
   const stopVoiceAgent = useCallback(() => {
     voiceAgentActiveRef.current = false;
     setVoiceAgentActive(false);
-    voiceRuntimeStateRef.current = nextVoiceRuntimeState(voiceRuntimeStateRef.current, 'STOP');
-    voiceAbortRef.current?.abort();
-    void nativeSttCancelListening();
-    setListening(false);
+    cancelListening();
     setSpeaking(false);
-  }, []);
-
-  const speakReply = useCallback(
-    async (reply: string | undefined, signal: AbortSignal, forceSpeak: boolean) => {
-      const spoken = toSpokenAssistantReply(reply ?? '');
-      if (!spoken) return;
-      if (!forceSpeak && !ttsEnabled) return;
-      if (!isSpeechSynthesisAvailable()) return;
-      setSpeaking(true);
-      try {
-        await speakVoiceConfirmation({ text: spoken, signal });
-      } catch (ttsErr) {
-        if (
-          ttsErr instanceof AssistantApiError &&
-          (ttsErr.code === 'AI_TTS_ABORTED' || ttsErr.code === 'AI_VOICE_ABORTED')
-        ) {
-          return;
-        }
-      } finally {
-        setSpeaking(false);
-      }
-    },
-    [ttsEnabled],
-  );
+  }, [cancelListening, setSpeaking]);
 
   /**
    * One listen → assist → speak turn. Used by tap-mic and the live voice-agent loop.
@@ -1338,86 +1276,20 @@ export function useAssistantConversation() {
       readonly agentMode?: boolean;
     }): Promise<'ok' | 'stop' | 'abort' | 'error' | 'timeout'> => {
       if (!voiceEnabled) return 'error';
-      const canUseNative =
-        nativeSttEnabled && isNativeAndroidSttAvailable();
-      if (!canUseNative && !isVoiceCaptureAvailable()) {
-        setError(
-          'Speech recognition is not available on this device. Type your request, or install the latest OrderBhojan Android app for native voice.',
-        );
-        return 'error';
-      }
 
       // Barge-in: stop any in-flight TTS before opening the mic.
-      voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-        voiceRuntimeStateRef.current,
-        'BARGE_IN',
-      );
-      voiceAbortRef.current?.abort();
-      void nativeSttCancelListening();
+      cancelListening();
       const ac = new AbortController();
-      voiceAbortRef.current = ac;
       setSpeaking(false);
-      setListening(true);
       setError(null);
-      voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-        voiceRuntimeStateRef.current,
-        'START_LISTEN',
-      );
       const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
 
       try {
-        let transcript: string | undefined;
-        try {
-          const native = await captureNativeAndroidStt({
-            enabled: canUseNative,
-            signal: ac.signal,
-            lang: 'en-IN',
-          });
-          if (native?.transcript) {
-            transcript = native.transcript;
-          }
-        } catch (nativeErr) {
-          // Permission denied → stop; other native failures fall through to Web Speech.
-          if (
-            nativeErr instanceof AssistantApiError &&
-            nativeErr.code === 'AI_VOICE_PERMISSION_DENIED'
-          ) {
-            throw nativeErr;
-          }
-          if (
-            nativeErr instanceof AssistantApiError &&
-            (nativeErr.code === 'AI_VOICE_ABORTED' ||
-              (nativeErr.code === 'AI_VOICE_EMPTY' && !isVoiceCaptureAvailable()))
-          ) {
-            throw nativeErr;
-          }
-        }
-        if (!transcript) {
-          if (!isVoiceCaptureAvailable()) {
-            throw new AssistantApiError({
-              code: 'AI_VOICE_UNSUPPORTED',
-              message:
-                'Native voice failed and Web Speech is unavailable. Type your request instead.',
-              retryable: false,
-            });
-          }
-          const web = await captureVoiceTranscript({
-            signal: ac.signal,
-            platform: 'web',
-            // Agent mode: longer window so users can speak naturally after TTS.
-            timeoutMs: agentMode ? 14_000 : 10_000,
-          });
-          transcript = web.transcript;
-        }
-        setListening(false);
-        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-          voiceRuntimeStateRef.current,
-          'FINAL',
-        );
-        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-          voiceRuntimeStateRef.current,
-          'THINK',
-        );
+        const transcript = await startListening({
+          lang: voiceLanguage,
+          agentMode,
+          ac
+        });
 
         const coords = activeLocation?.coordinates;
         const orderingContext = buildOrderingAssistContext({
@@ -1441,22 +1313,9 @@ export function useAssistantConversation() {
         }
 
         const reply = await send(corrected);
-        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-          voiceRuntimeStateRef.current,
-          'SPEAK',
-        );
         await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current);
-        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-          voiceRuntimeStateRef.current,
-          'IDLE',
-        );
         return 'ok';
       } catch (err) {
-        setListening(false);
-        voiceRuntimeStateRef.current = nextVoiceRuntimeState(
-          voiceRuntimeStateRef.current,
-          'ERROR',
-        );
         if (err instanceof AssistantApiError) {
           if (err.code === 'AI_VOICE_ABORTED') return 'abort';
           // Soft-fail timeouts in live agent — re-listen without a scary red banner.
@@ -1471,45 +1330,52 @@ export function useAssistantConversation() {
             );
             return 'error';
           }
+          if (err.code === 'AI_VOICE_UNSUPPORTED') {
+            setError(err.message);
+            return 'error';
+          }
           setError(err.message);
           return 'error';
         }
         setError(err instanceof Error ? err.message : 'Voice capture failed');
         return 'error';
-      } finally {
-        if (voiceAbortRef.current === ac) voiceAbortRef.current = null;
-        setListening(false);
       }
     },
     [
       activeLocation?.coordinates,
       activeLocation?.displayLabel,
-      nativeSttEnabled,
       restaurantId,
       restaurantSlug,
       send,
       speakReply,
       voiceEnabled,
+      startListening,
+      cancelListening,
+      setSpeaking,
+      setError,
+      voiceLanguage,
     ],
   );
 
   /** Tap mic: single turn with spoken reply when TTS is on. */
   const sendFromVoice = useCallback(async () => {
+    unlockAudioContext();
     if (!voiceEnabled || loading || listening || validating || applying || speaking) return;
-    await runVoiceTurn({ forceSpeak: ttsEnabled });
-  }, [applying, listening, loading, runVoiceTurn, speaking, ttsEnabled, validating, voiceEnabled]);
+    await runVoiceTurn({ forceSpeak: true }); // Always force speak on tap-mic for now or conditionally
+  }, [applying, listening, loading, runVoiceTurn, speaking, validating, voiceEnabled]);
 
   /**
    * Live voice agent: listen → reply (spoken) → listen again until stop / error / close.
    * Cart still requires spoken or tapped Confirm — never blind checkout.
    */
   const startVoiceAgent = useCallback(async () => {
+    unlockAudioContext();
     if (!voiceEnabled) {
       setError('Enable voice on this build to use the live Voice Agent.');
       return;
     }
     if (voiceAgentActiveRef.current) return;
-    if (!isVoiceCaptureAvailable()) {
+    if (!voiceCaptureAvailable) {
       setError('Speech recognition is not available on this device/browser.');
       return;
     }
@@ -1726,10 +1592,12 @@ export function useAssistantConversation() {
     error,
     pendingValidation,
     voiceEnabled,
-    voiceAvailable,
+    voiceAvailable: voiceCaptureAvailable,
     postOrderEnabled: postOrderFlag,
     postOrderMode,
     personalizationEnabled,
+    voiceLanguage,
+    setVoiceLanguage,
     send,
     sendFromVoice,
     startVoiceAgent,

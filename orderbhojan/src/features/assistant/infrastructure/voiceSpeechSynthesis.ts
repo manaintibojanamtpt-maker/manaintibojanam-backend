@@ -19,6 +19,9 @@ export type UtteranceFactory = (text: string) => SpeechSynthesisUtteranceLike;
 
 import { Capacitor } from '@capacitor/core';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { loadFeatureFlags, isFeatureEnabled } from '../../../featureFlags/flags';
+import { getMarketplaceAuthTokenProvider } from '@/marketplace-api';
+import { trackEvent } from '@/telemetry';
 
 function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
   return () => {
@@ -121,6 +124,90 @@ export function isSpeechSynthesisAvailable(
   return createSynthesis() !== null;
 }
 
+let sharedAudioContext: AudioContext | null = null;
+
+export function unlockAudioContext(): void {
+  if (typeof window === 'undefined') return;
+  if (!sharedAudioContext) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      sharedAudioContext = new AudioContextClass();
+    }
+  }
+  if (sharedAudioContext && sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume().catch(console.warn);
+  }
+}
+
+async function speakCloudTts(text: string, signal?: AbortSignal): Promise<void> {
+  const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+  const tokenProvider = getMarketplaceAuthTokenProvider();
+  const token = tokenProvider ? await tokenProvider() : null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${apiUrl}/api/voice/tts`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ text }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cloud TTS failed with status ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+
+  if (!sharedAudioContext) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) {
+      throw new Error('AudioContext not supported on this device');
+    }
+    sharedAudioContext = new AudioContextClass();
+  }
+
+  // Best effort resume if it's still suspended
+  if (sharedAudioContext.state === 'suspended') {
+    await sharedAudioContext.resume().catch(console.warn);
+  }
+
+  const audioBuffer = await sharedAudioContext.decodeAudioData(arrayBuffer);
+
+  return new Promise<void>((resolve, reject) => {
+    if (!sharedAudioContext) {
+      reject(new Error('AudioContext was lost'));
+      return;
+    }
+    const source = sharedAudioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(sharedAudioContext.destination);
+
+    const onAbort = () => {
+      source.stop();
+      source.disconnect();
+      reject(new AssistantApiError({ code: 'AI_TTS_ABORTED', message: 'Aborted', retryable: false }));
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    source.onended = () => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+      source.disconnect();
+      resolve();
+    };
+
+    source.start(0);
+  });
+}
+
 /**
  * Optional TTS confirmation — speaks reply text only.
  * Injectable for tests. Never triggers cart/checkout actions.
@@ -139,6 +226,23 @@ export async function speakVoiceConfirmation(params: {
       message: 'Nothing to speak.',
       retryable: false,
     });
+  }
+
+  const flags = loadFeatureFlags();
+  if (isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') && typeof window !== 'undefined') {
+    try {
+      await speakCloudTts(text, params.signal);
+      return;
+    } catch (err) {
+      // Silently log and fall back to native TTS
+      console.warn('[Voice TTS] Cloud fallback to native:', err);
+      trackEvent({
+        name: 'cloud_tts_fallback',
+        properties: {
+          error_message: err instanceof Error ? err.message : String(err),
+        },
+      });
+    }
   }
 
   const createSynthesis = params.createSynthesis ?? getDefaultSynthesisFactory();

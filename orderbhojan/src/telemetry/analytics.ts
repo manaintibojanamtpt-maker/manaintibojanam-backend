@@ -11,7 +11,8 @@ export type AnalyticsEventName =
   | 'native_track_open'
   | 'native_track_fallback_hybrid'
   | 'order_track_status_change'
-  | 'push_open_track';
+  | 'push_open_track'
+  | 'cloud_tts_fallback';
 
 export interface AnalyticsEvent {
   readonly name: AnalyticsEventName;

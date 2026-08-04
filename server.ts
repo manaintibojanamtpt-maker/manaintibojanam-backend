@@ -86,6 +86,7 @@ import {
 } from "./backend-lib/observability/IncidentRepository.js";
 import { registerOpsRoutes } from "./backend-lib/observability/registerOpsRoutes.js";
 import { registerAiGatewayRoutes } from "./backend-lib/ai/registerAiGatewayRoutes.js";
+import { createVoiceTtsRoute } from "./backend-lib/api/routes/voiceTtsRoute.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
@@ -3261,6 +3262,8 @@ registerAiGatewayRoutes(app, {
   onQuotaError: noteFirestoreQuotaExceeded,
   isQuotaError: isFirestoreQuotaError,
 });
+
+app.use('/api/voice', verifyFirebaseToken, createVoiceTtsRoute());
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
