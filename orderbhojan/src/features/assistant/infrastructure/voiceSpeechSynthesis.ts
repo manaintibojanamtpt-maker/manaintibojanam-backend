@@ -111,10 +111,10 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
   };
 }
 
-function getDefaultUtteranceFactory(): UtteranceFactory {
+function getDefaultUtteranceFactory(defaultLang: string = 'en-IN'): UtteranceFactory {
   return (text: string) => ({
     text,
-    lang: 'en-IN',
+    lang: defaultLang,
     rate: 1,
     onend: null,
     onerror: null,
@@ -142,7 +142,7 @@ export function unlockAudioContext(): void {
   }
 }
 
-async function speakCloudTts(text: string, signal?: AbortSignal): Promise<void> {
+async function speakCloudTts(text: string, lang?: string, signal?: AbortSignal): Promise<void> {
   const apiUrl = getAppConfig().marketplaceApiBaseUrl.replace(/\/$/, '');
   const tokenProvider = getMarketplaceAuthTokenProvider();
   const token = tokenProvider ? await tokenProvider() : null;
@@ -157,7 +157,7 @@ async function speakCloudTts(text: string, signal?: AbortSignal): Promise<void> 
   const response = await fetch(`${apiUrl}/api/voice/tts`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, lang: lang ?? 'en-IN' }),
     signal,
   });
 
@@ -236,7 +236,7 @@ export async function speakVoiceConfirmation(params: {
 
   if (cloudTtsEnabled) {
     try {
-      await speakCloudTts(text, params.signal);
+      await speakCloudTts(text, params.lang, params.signal);
       return;
     } catch (err) {
       console.warn('[Voice TTS] Cloud fallback to native:', err);
@@ -250,13 +250,13 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const createSynthesis = params.createSynthesis ?? getDefaultSynthesisFactory();
-  const createUtterance = params.createUtterance ?? getDefaultUtteranceFactory();
+  const createUtterance = params.createUtterance ?? getDefaultUtteranceFactory(params.lang ?? 'en-IN');
   const synth = createSynthesis();
   if (!synth) {
     // If no native TTS, try cloud as a last resort before failing
     if (!cloudTtsEnabled && typeof window !== 'undefined') {
        try {
-         await speakCloudTts(text, params.signal);
+         await speakCloudTts(text, params.lang, params.signal);
          return;
        } catch (e) {
          // ignore
@@ -312,7 +312,7 @@ export async function speakVoiceConfirmation(params: {
       // Force fallback to Cloud TTS.
       if (!cloudTtsEnabled && typeof window !== 'undefined') {
         try {
-          await speakCloudTts(text, params.signal);
+          await speakCloudTts(text, params.lang, params.signal);
           return;
         } catch (e) {
           // ignore, will try native as absolute last resort

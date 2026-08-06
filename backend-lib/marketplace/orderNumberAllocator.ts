@@ -3,24 +3,6 @@ import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 const COUNTER_DOC = 'marketplace_order_numbers';
 const STARTING_VALUE = 100_000;
 
-export async function allocateMarketplaceOrderNumber(
-  db: Firestore,
-  fieldValue: typeof FieldValue,
-): Promise<number> {
-  const counterRef = db.collection('system_counters').doc(COUNTER_DOC);
-
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(counterRef);
-    const current = snap.exists ? Number(snap.data()?.value ?? STARTING_VALUE) : STARTING_VALUE;
-    const next = Number.isFinite(current) ? Math.floor(current) + 1 : STARTING_VALUE + 1;
-    tx.set(
-      counterRef,
-      { value: next, updatedAt: fieldValue.serverTimestamp() },
-      { merge: true },
-    );
-    return next;
-  });
-}
 
 export function readOrderNumber(data: Record<string, unknown>): number | undefined {
   const raw = data.orderNumber;
@@ -55,7 +37,7 @@ export async function ensureOrderNumberOnRecord(
   const existing = readOrderNumber(data);
   if (existing) return data;
 
-  const allocated = await allocateMarketplaceOrderNumber(db, fieldValue);
+  const allocated = Number(formatOrderNumberLabel(undefined, orderId));
   await db.collection('orders').doc(orderId).set({ orderNumber: allocated }, { merge: true });
   return { ...data, orderNumber: allocated };
 }

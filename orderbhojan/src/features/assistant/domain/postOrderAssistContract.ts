@@ -25,6 +25,7 @@ export interface PostOrderAssistRequest {
   readonly conversationId?: string;
   readonly orderContext?: PostOrderContext;
   readonly authToken?: string | null;
+  readonly preferredLanguage?: string;
   readonly signal?: AbortSignal;
 }
 

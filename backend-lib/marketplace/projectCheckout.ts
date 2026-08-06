@@ -1,6 +1,6 @@
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
-import { allocateMarketplaceOrderNumber } from './orderNumberAllocator.js';
+import { formatOrderNumberLabel } from './orderNumberAllocator.js';
 import { normalizeDeliveryAddressFields } from './deliveryAddressFields.js';
 import {
   DEFAULT_PREP_TIME_MINUTES,
@@ -582,10 +582,16 @@ export async function placeMarketplaceOrder(
       : request.paymentMethod === 'upi'
         ? 'upi'
         : 'cod';
-  const [{ tenantId, quote, menuPrices, etaMinutes }, orderNumber] = await Promise.all([
+  const [{ tenantId, quote, menuPrices, etaMinutes }] = await Promise.all([
     buildMarketplaceQuoteContext(db, request),
-    allocateMarketplaceOrderNumber(db, fieldValue),
   ]);
+
+  const docId =
+    paymentMethod === 'razorpay'
+      ? db.collection('order_drafts').doc().id
+      : db.collection('orders').doc().id;
+      
+  const orderNumber = Number(formatOrderNumberLabel(undefined, docId));
 
   const tenantDoc = await db.collection('tenants').doc(tenantId).get();
   const tenantRaw = (tenantDoc.data() ?? {}) as TenantRaw;
@@ -615,7 +621,7 @@ export async function placeMarketplaceOrder(
     }
 
     const expiresAt = new Date(Date.now() + UPI_PAYMENT_EXPIRY_MS).toISOString();
-    const ref = await db.collection('orders').add({
+    await db.collection('orders').doc(docId).set({
       ...orderPayload,
       expiresAt,
       createdAt: fieldValue.serverTimestamp(),
@@ -632,7 +638,7 @@ export async function placeMarketplaceOrder(
       upiId,
       merchantName,
       amount: quote.grandTotal,
-      orderId: ref.id,
+      orderId: docId,
       transactionNote: `OrderBhojan #${orderNumber}`,
     });
 
@@ -648,7 +654,7 @@ export async function placeMarketplaceOrder(
 
     return {
       kind: 'upi',
-      orderId: ref.id,
+      orderId: docId,
       orderNumber,
       tenantId,
       quote,
@@ -659,7 +665,7 @@ export async function placeMarketplaceOrder(
   }
 
   if (paymentMethod === 'razorpay') {
-    const draftRef = db.collection('order_drafts').doc();
+    const draftRef = db.collection('order_drafts').doc(docId);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
     await draftRef.set({
       id: draftRef.id,
@@ -682,7 +688,7 @@ export async function placeMarketplaceOrder(
     };
   }
 
-  const ref = await db.collection('orders').add({
+  await db.collection('orders').doc(docId).set({
     ...orderPayload,
     createdAt: fieldValue.serverTimestamp(),
     updatedAt: fieldValue.serverTimestamp(),
@@ -698,7 +704,7 @@ export async function placeMarketplaceOrder(
   }
   await batch.commit().catch(() => undefined);
 
-  return { kind: 'cod', orderId: ref.id, orderNumber, tenantId, quote };
+  return { kind: 'cod', orderId: docId, orderNumber, tenantId, quote };
 }
 
 export function createCheckoutCorrelationId(): string {

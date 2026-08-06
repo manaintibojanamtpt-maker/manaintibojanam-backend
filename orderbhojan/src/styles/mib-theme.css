@@ -221,6 +221,7 @@ html.ob-native .ob-app-shell {
   max-width: 100%;
   min-width: 0;
   overflow-x: hidden;
+  transform: translateZ(0);
 }
 
 .ob-menu-sticky-chrome {
@@ -591,6 +592,8 @@ html.ob-native .ob-auth-shell {
 .ds-discovery-hero__steam {
   background: radial-gradient(ellipse 50% 40% at 50% 70%, rgba(255, 248, 240, 0.08), transparent 70%);
   animation: ds-discovery-hero-steam 9s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .ds-discovery-hero__copy {

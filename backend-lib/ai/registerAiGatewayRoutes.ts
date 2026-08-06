@@ -45,6 +45,9 @@ import {
 } from './structuredOutput.js';
 import type { AiAssistResponse } from './assistResponse.js';
 import type { AiGatewayDisabledResponse } from './types.js';
+import { SessionManager, InMemoryConversationRepository } from '../conversation/session/SessionManager.js';
+import { FirestoreConversationRepository } from '../conversation/session/FirestoreConversationRepository.js';
+import { ConversationEngine } from '../conversation/engine/ConversationEngine.js';
 
 type LoggerLike = {
   info: (payload: Record<string, unknown>) => void;
@@ -102,6 +105,15 @@ export function registerAiGatewayRoutes(
     isQuotaError: deps.isQuotaError,
     log,
   });
+
+  // Phase 2 Conversation Engine Singletons
+  const isPersistenceEnabled = process.env.FF_OB_AI_CONVERSATION_PERSISTENCE === 'true';
+  const conversationRepo = isPersistenceEnabled && db 
+    ? new FirestoreConversationRepository(db) 
+    : new InMemoryConversationRepository();
+    
+  const sessionManager = new SessionManager(conversationRepo);
+  const conversationEngine = new ConversationEngine(sessionManager);
 
   const aiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -295,6 +307,35 @@ export function registerAiGatewayRoutes(
       ),
       ...canaryMeta,
     });
+
+    // Phase 1: Passive Observation by Conversation Engine
+    if (process.env.FF_OB_AI_CONVERSATION_ENGINE_PASSIVE === 'true') {
+      try {
+        const preferredLanguage = typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim() ? body.preferredLanguage.trim() : 'en-IN';
+        Promise.resolve().then(async () => {
+          try {
+            let session = await sessionManager.loadSession(conversationId);
+            if (!session) {
+              // Note: using conversationId as sessionId for bridging legacy to engine
+              session = await sessionManager.createSession('tenant_unknown');
+              // Manually override the sessionId in this Phase 1 mapping
+              session = { ...session, sessionId: conversationId }; 
+            }
+            await conversationEngine.receiveTranscript(conversationId, message, {
+              clientPlatform: 'unknown',
+              preferredLanguage,
+            });
+          } catch (engineErr) {
+            log?.warn({
+              eventType: 'ai.conversation_engine.passive_error',
+              error: engineErr instanceof Error ? engineErr.message : String(engineErr),
+            });
+          }
+        }).catch(() => { /* strict fire-and-forget safety */ });
+      } catch (outerErr) {
+        // Guaranteed zero-impact on legacy latency or reliability
+      }
+    }
 
     try {
       const preferredLanguage = typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim() ? body.preferredLanguage.trim() : '';

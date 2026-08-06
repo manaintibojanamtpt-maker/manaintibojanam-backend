@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { cn } from '../../utils/cn';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export type BdsButtonVariant = 'primary' | 'secondary' | 'outlined' | 'ghost' | 'danger' | 'fab' | 'appetite';
 export type BdsButtonSize = 'default' | 'compact';
@@ -29,13 +30,26 @@ export function Button({
   className,
   disabled,
   children,
+  onClick,
   ...props
 }: ButtonProps) {
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (disabled || loading) return;
+      // Trigger native light haptic feedback if running on Capacitor
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
+        Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+      }
+      onClick?.(e);
+    },
+    [disabled, loading, onClick]
+  );
+
   return (
     <button
       type="button"
       className={cn(
-        'bds-btn',
+        'bds-btn relative overflow-hidden', // added relative overflow-hidden for ripple
         variantClass[variant],
         size === 'compact' && 'bds-btn--compact',
         fullWidth && 'bds-btn--block',
@@ -43,9 +57,11 @@ export function Button({
       )}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      onClick={handleClick}
       {...props}
     >
       {loading ? 'Loading…' : children}
     </button>
   );
 }
+

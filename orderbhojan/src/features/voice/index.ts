@@ -25,11 +25,7 @@ export {
   type EnrichedCartAddResult,
 } from './application/enrichedCartAddValidate';
 
-export {
-  canUseVoiceCoreConfirmApply,
-  canUseVoiceCoreCartAdd,
-  type VoiceCoreConfirmParityResult,
-} from './application/voiceCoreConfirmAddParity';
+
 
 export {
   recordVoiceCoreDualRun,

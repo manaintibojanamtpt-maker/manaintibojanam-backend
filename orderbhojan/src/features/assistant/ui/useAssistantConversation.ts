@@ -3,16 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import {
-  canUseVoiceCoreCartAdd,
-  canUseVoiceCoreConfirmApply,
   clearVoiceConfirmation,
   createOrderBhojanVoiceAdapter,
   createVoiceSession,
   idleOrderingTask,
   initialConfirmationSnapshot,
-  recordVoiceCoreDualRun,
   runVoiceCoreTurn,
-  shouldHandleWithVoiceCorePreLlm,
   syncConfirmationFromPending,
   type OrderBhojanVoiceAdapter,
 } from '@/features/voice';
@@ -33,9 +29,10 @@ import {
   classifyPersonalizationIntent,
   isPersonalizationCartIntent,
 } from '../domain/isPersonalizationUserMessage';
-import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
 import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
-import { decideVoiceCartTurn } from '../domain/decideVoiceCartTurn';
+import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
+
+
 import {
   isStopVoiceAgentMessage,
 } from '../domain/isConfirmCartUserMessage';
@@ -54,7 +51,7 @@ import {
   summarizePendingCartPlan,
 } from '../domain/summarizePendingCartPlan';
 import { useAiPostOrderFeature } from '../hooks/useAiPostOrderFeature';
-import { useAiVoiceCoreConfirmAddFeature } from '../hooks/useAiVoiceCoreConfirmAddFeature';
+
 import { useAiVoiceFeature } from '../hooks/useAiVoiceFeature';
 import { useAssistantPersonalizationContext } from '../hooks/useAssistantPersonalizationContext';
 import { useAssistantPostOrderContext } from '../hooks/useAssistantPostOrderContext';
@@ -145,7 +142,7 @@ export function useAssistantConversation() {
   const { enabled: personalizationEnabled, bootstrap: personalizationBootstrap } =
     useAssistantPersonalizationContext();
   const voiceEnabled = useAiVoiceFeature();
-  const voiceCoreConfirmAddLive = useAiVoiceCoreConfirmAddFeature();
+  const voiceCoreConfirmAddLive = true;
   const navigate = useNavigate();
   const restaurantId = useRestaurantContextStore((s) => s.restaurantId);
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
@@ -257,304 +254,69 @@ export function useAssistantConversation() {
       const message = raw.trim();
       if (!message || loading) return undefined;
 
+      
+      const liveAdapter = createLiveVoiceAdapter();
+      const planRestaurant = pendingPlanRestaurantRef.current;
       const pending = pendingValidationRef.current;
-      const earlyRoute = decideVoiceCartTurn({
-        message,
-        pending,
-        kitchenNameHint: pendingPlanRestaurantRef.current?.restaurantSlug,
+      if (pending && planRestaurant) {
+        liveAdapter.hydratePendingFromValidation(pending, planRestaurant);
+      }
+      
+      const session = createVoiceSession({
+        product: 'orderbhojan',
+        channel: 'web',
+        conversationId: conversationId || voiceSessionRef.current.conversationId,
       });
+      voiceSessionRef.current = session;
+      
+      const turn = await runVoiceCoreTurn({
+        session,
+        message,
+        confirmation: voiceConfirmationRef.current,
+        task: idleOrderingTask(planRestaurant?.restaurantId),
+        adapter: liveAdapter,
+      });
+      
+      voiceConfirmationRef.current = turn.confirmation;
+      
+      if (turn.kind !== 'continue_llm') {
+        const validation = liveAdapter.getPendingPlan();
+        syncPendingValidation(validation || null);
+        if (validation) {
+          const res = liveAdapter.getPendingRestaurant();
+          pendingPlanRestaurantRef.current = res ? { restaurantId: res.restaurantId, restaurantSlug: res.restaurantSlug } : null;
+        } else {
+          pendingPlanRestaurantRef.current = null;
+        }
 
-      // “Confirm” while clarifying — keep task; do not wipe or fall into generic chat.
-      if (earlyRoute.kind === 'confirm_while_clarifying') {
-        setError(null);
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        recordVoiceTelemetry('invalidConfirmAttempts');
-        recordVoiceTelemetry('clarificationLoopCount');
+        if (turn.kind === 'stop_agent' && turn.spoken) {
+          if (voiceAgentActiveRef.current) {
+            voiceAgentActiveRef.current = false;
+            setVoiceAgentActive(false);
+            cancelListening();
+            setSpeaking(false);
+          }
+        }
+        
         setMessages((prev) => [
           ...prev,
-          { id: nextId(), role: 'assistant', text: earlyRoute.reply },
+          { id: nextId(), role: 'user', text: message },
+          { 
+            id: nextId(), 
+            role: 'assistant', 
+            text: turn.spoken, 
+            ...(validation?.proposedActions ? { cartActions: validation.proposedActions } : {}),
+            ...(validation ? { validation } : {})
+          },
         ]);
-        return earlyRoute.reply;
-      }
-
-      // Voice/text confirm — only when plan is already validated (not bare “yes” on clarify).
-      if (earlyRoute.kind === 'apply_validated_confirm' && pending) {
-        setError(null);
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        setApplying(true);
-        try {
-          // Phase 1.3b: voice-core executor only when flag + readiness + parity pass.
-          // Otherwise fall through to OB ensureRestaurantContext + applyConfirmedCartPlan.
-          const liveAdapter = createLiveVoiceAdapter();
-          const planRestaurant = pendingPlanRestaurantRef.current;
-          if (planRestaurant) {
-            liveAdapter.hydratePendingFromValidation(pending, planRestaurant);
-          }
-          const parity = canUseVoiceCoreConfirmApply({
-            liveFlagEnabled: voiceCoreConfirmAddLive,
-            adapterReady: liveAdapter.isConfirmAddReady(),
-            earlyRouteKind: earlyRoute.kind,
-            pending,
-            adapterPending: liveAdapter.getPendingPlan(),
-          });
-          const dualRunSession = voiceSessionRef.current.sessionId;
-          if (!parity.ok) {
-            recordVoiceCoreDualRun({
-              path: 'confirm',
-              outcome:
-                parity.reason === 'parity_conversation_mismatch'
-                  ? 'parity_mismatch'
-                  : 'parity_blocked',
-              reason: parity.reason,
-              sessionId: dualRunSession,
-            });
-          }
-          if (parity.ok && liveAdapter.getPendingPlanId()) {
-            recordVoiceCoreDualRun({
-              path: 'confirm',
-              outcome: 'attempt',
-              sessionId: dualRunSession,
-            });
-            const voiceResult = await liveAdapter.confirmPendingChange(
-              liveAdapter.getPendingPlanId()!,
-            );
-            if (voiceResult.ok) {
-              recordVoiceCoreDualRun({
-                path: 'confirm',
-                outcome: 'voice_core_success',
-                sessionId: dualRunSession,
-              });
-              reportCartPlanDecisionQuietly({
-                decision: 'confirm',
-                conversationId: pending.conversationId,
-                planCount: pending.proposedActions.length,
-              });
-              const reply =
-                'Added item(s) to your cart. Say checkout when ready, or ask for another dish.';
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: nextId(),
-                  role: 'system',
-                  text: 'Applied cart change(s) after your confirmation (voice-core).',
-                },
-                { id: nextId(), role: 'assistant', text: reply },
-              ]);
-              syncPendingValidation(null);
-              pendingPlanRestaurantRef.current = null;
-              pendingExploreKitchenRef.current = null;
-              recordVoiceTelemetry('confirmApplySuccess');
-              notifyToast('Applied item(s) to cart.', 'success');
-              return reply;
-            }
-            // Voice-core did not mutate — fall back to OB executor (instant rollback path).
-            recordVoiceTelemetry('confirmApplyFail');
-            recordVoiceCoreDualRun({
-              path: 'confirm',
-              outcome: 'fallback_ob',
-              reason: voiceResult.ok === false ? voiceResult.code : 'voice_core_confirm_failed',
-              sessionId: dualRunSession,
-            });
-          }
-
-          if (planRestaurant) {
-            const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };
-            await ensureRestaurantContextForCartPlan({
-              restaurantId: planRestaurant.restaurantId,
-              restaurantSlug: planRestaurant.restaurantSlug,
-              coords,
-            });
-          }
-          const result = applyConfirmedCartPlan({
-            userConfirmed: true,
-            validation: pending,
-            deps: { addItem, setQuantity },
-          });
-          reportCartPlanDecisionQuietly({
-            decision: 'confirm',
-            conversationId: pending.conversationId,
-            planCount: pending.proposedActions.length,
-          });
-          if (result.appliedCount > 0) {
-            const reply = `Added ${result.appliedCount} item${result.appliedCount === 1 ? '' : 's'} to your cart. Say checkout when ready, or ask for another dish.`;
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: nextId(),
-                role: 'system',
-                text: `Applied ${result.appliedCount} cart change(s) after your confirmation.`,
-              },
-              { id: nextId(), role: 'assistant', text: reply },
-            ]);
-            syncPendingValidation(null);
-            pendingPlanRestaurantRef.current = null;
-            pendingExploreKitchenRef.current = null;
-            recordVoiceTelemetry('confirmApplySuccess');
-            notifyToast(`Applied ${result.appliedCount} item(s) to cart.`, 'success');
-            return reply;
-          }
-          const fail =
-            result.skipped[0]?.reason || 'Could not apply cart plan — try the menu ADD button.';
-          recordVoiceTelemetry('confirmApplyFail');
-          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
-          notifyToast(fail, 'warning');
-          return fail;
-        } catch (err) {
-          recordVoiceTelemetry('confirmApplyFail');
-          recordVoiceTelemetry('restaurantResolutionFailures');
-          const fail =
-            err instanceof Error ? err.message : 'Could not apply cart plan right now.';
-          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: fail }]);
-          return fail;
-        } finally {
-          setApplying(false);
+        
+        if (turn.kind === 'apply_confirmed_change') {
+            notifyToast('Applied item(s) to cart.', 'success');
         }
+        
+        return turn.spoken;
       }
-
-      if (earlyRoute.kind === 'discard' && pending) {
-        setError(null);
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        reportCartPlanDecisionQuietly({
-          decision: 'discard',
-          conversationId: pending.conversationId,
-          planCount: pending.proposedActions.length,
-        });
-        syncPendingValidation(null);
-        pendingPlanRestaurantRef.current = null;
-        pendingExploreKitchenRef.current = null;
-        const reply = 'Discarded — nothing was added. What would you like instead?';
-        setMessages((prev) => [
-          ...prev,
-          { id: nextId(), role: 'system', text: 'Cart plan discarded — nothing was added to cart.' },
-          { id: nextId(), role: 'assistant', text: reply },
-        ]);
-        return reply;
-      }
-
-      // Clarification reply: user names the dish after “which menu item…”
-      if (earlyRoute.kind === 'clarify_dish' && pending) {
-        const dishName = earlyRoute.dishName;
-        const clarifyQty = earlyRoute.quantity;
-        setError(null);
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        setLoading(true);
-        try {
-          const planRestaurant = pendingPlanRestaurantRef.current;
-          const nearbyForClarify = toNearbyKitchenHints(
-            buildOrderingAssistContext({
-              restaurantId: planRestaurant?.restaurantId ?? restaurantId,
-              restaurantSlug: planRestaurant?.restaurantSlug ?? restaurantSlug,
-              areaLabel: activeLocation?.displayLabel,
-              lat: activeLocation?.coordinates?.lat,
-              lng: activeLocation?.coordinates?.lng,
-            })?.nearbyKitchens,
-          );
-          const draft: CartPlanAction = {
-            type: 'cart_add_plan',
-            requiresConfirmation: true,
-            executable: false,
-            payload: {
-              name: dishName,
-              quantity: clarifyQty,
-              ...(planRestaurant?.restaurantId
-                ? { restaurantId: planRestaurant.restaurantId }
-                : restaurantId
-                  ? { restaurantId }
-                  : {}),
-            },
-            reason: 'user_clarification_item',
-          };
-          const cartActions = enrichCartPlansFromMenuCache([draft], {
-            activeRestaurantId: planRestaurant?.restaurantId ?? restaurantId,
-            userMessage: message,
-            nearbyKitchens: nearbyForClarify,
-          });
-          const planRestaurantId = resolveCartPlanRestaurantId({
-            plan: cartActions[0],
-            userMessage: `${dishName}`,
-            nearbyKitchens: nearbyForClarify,
-            activeRestaurantId: planRestaurant?.restaurantId ?? restaurantId,
-          });
-          if (!planRestaurantId) {
-            const reply = `I heard “${dishName}”. Open that kitchen’s menu or name the kitchen, then I’ll validate the cart plan.`;
-            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
-            return reply;
-          }
-          pendingPlanRestaurantRef.current = toPendingPlanRestaurantRef({
-            planRestaurantId,
-            activeRestaurantId: restaurantId,
-            activeRestaurantSlug: restaurantSlug,
-          });
-          await prefetchKitchenMenuForAssist({
-            restaurantId: planRestaurantId,
-            restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
-            lat: activeLocation?.coordinates?.lat,
-            lng: activeLocation?.coordinates?.lng,
-          });
-          setValidating(true);
-          const validation = await validate({
-            restaurantId: planRestaurantId,
-            proposedActions: cartActions,
-            ...(conversationId ? { conversationId } : {}),
-          });
-          syncPendingValidation(validation);
-          if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
-          else recordVoiceTelemetry('planValidateFail');
-          const reply = validationSpeakText(validation);
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: nextId(),
-              role: 'assistant',
-              text: reply,
-              cartActions,
-              validation,
-            },
-          ]);
-          return reply;
-        } catch (err) {
-          const msg =
-            err instanceof AssistantApiError
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : 'Could not validate that item';
-          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: msg }]);
-          return msg;
-        } finally {
-          setValidating(false);
-          setLoading(false);
-        }
-      }
-
-      // “Yes” after “explore kitchen X?” → open search/menu, don’t reset to Hello.
-      const explore = pendingExploreKitchenRef.current;
-      if (
-        explore &&
-        /^(yes|yeah|yep|yup|ok|okay|sure|haan|ha|open\s*it|show\s*(me\s*)?(it|them|menu)?)\b/i.test(
-          message,
-        )
-      ) {
-        setError(null);
-        pendingExploreKitchenRef.current = null;
-        setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
-        navigate(explore.searchPath);
-        const reply = `Opening ${explore.name}. Browse the live menu, then say “add” plus a dish name — Confirm is still required before cart changes.`;
-        setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply }]);
-        return reply;
-      }
-
-      setError(null);
-      // Retain active ordering task unless user cancels or starts a new “add …” intent.
-      if (earlyRoute.retainPending) {
-        recordVoiceTelemetry('pendingRetained');
-        // Keep pendingValidation / restaurant refs; continue into cart-add / assist paths.
-      } else {
-        recordVoiceTelemetry('pendingWiped');
-        syncPendingValidation(null);
-        pendingPlanRestaurantRef.current = null;
-        pendingExploreKitchenRef.current = null;
-      }
+      
       setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: message }]);
       setLoading(true);
 
@@ -671,262 +433,14 @@ export function useAssistantConversation() {
             return guidance.reply;
           }
         }
-
-        const cartAddIntent = parseCartAddUserMessage(message);
-        if (cartAddIntent) {
-          // Phase 1.3b: enriched voice-core propose when flag + readiness pass; else OB path.
-          const liveAddAdapter = createLiveVoiceAdapter();
-          const addGate = canUseVoiceCoreCartAdd({
-            liveFlagEnabled: voiceCoreConfirmAddLive,
-            adapterReady: liveAddAdapter.isConfirmAddReady(),
-          });
-          const addSession = voiceSessionRef.current.sessionId;
-          if (!addGate.ok) {
-            recordVoiceCoreDualRun({
-              path: 'add',
-              outcome: 'parity_blocked',
-              reason: addGate.reason,
-              sessionId: addSession,
-            });
-          }
-          if (addGate.ok) {
-            recordVoiceCoreDualRun({
-              path: 'add',
-              outcome: 'attempt',
-              sessionId: addSession,
-            });
-            const propose = await liveAddAdapter.proposeAddItemToCart({
-              itemName: cartAddIntent.itemName,
-              quantity: cartAddIntent.quantity,
-              ...(cartAddIntent.kitchenHint
-                ? { kitchenHint: cartAddIntent.kitchenHint }
-                : {}),
-            });
-            const validation = liveAddAdapter.getPendingPlan();
-            const restaurant = liveAddAdapter.getPendingRestaurant();
-            if (propose.ok && validation && restaurant) {
-              recordVoiceCoreDualRun({
-                path: 'add',
-                outcome: 'voice_core_success',
-                sessionId: addSession,
-              });
-              pendingPlanRestaurantRef.current = restaurant;
-              syncPendingValidation(validation);
-              if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
-              else recordVoiceTelemetry('planValidateFail');
-              const reply = propose.data.summarySpeech || validationSpeakText(validation);
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: nextId(),
-                  role: 'assistant',
-                  text: reply,
-                  cartActions: validation.proposedActions,
-                },
-                {
-                  id: nextId(),
-                  role: 'system',
-                  text:
-                    validation.status === 'validated'
-                      ? 'Cart plan validated. Review and confirm to apply.'
-                      : reply,
-                  validation,
-                },
-              ]);
-              return reply;
-            }
-            // Propose failed — fall through to OB cart-add executor.
-            recordVoiceCoreDualRun({
-              path: 'add',
-              outcome: 'fallback_ob',
-              reason: propose.ok === false ? propose.code : 'missing_pending_restaurant',
-              sessionId: addSession,
-            });
-          }
-
-          const coordsForAdd = activeLocation?.coordinates;
-          const nearbyForAdd = toNearbyKitchenHints(
-            buildOrderingAssistContext({
-              restaurantId,
-              restaurantSlug,
-              areaLabel: activeLocation?.displayLabel,
-              lat: coordsForAdd?.lat,
-              lng: coordsForAdd?.lng,
-            })?.nearbyKitchens,
-          );
-          const kitchenHintMsg = cartAddIntent.kitchenHint
-            ? `${cartAddIntent.itemName} from ${cartAddIntent.kitchenHint}`
-            : message;
-          const kitchenFromHint = cartAddIntent.kitchenHint
-            ? matchKitchenFragmentInMessage(cartAddIntent.kitchenHint, nearbyForAdd)
-            : null;
-          const draftPlan: CartPlanAction = {
-            type: 'cart_add_plan',
-            requiresConfirmation: true,
-            executable: false,
-            payload: {
-              name: cartAddIntent.itemName,
-              quantity: cartAddIntent.quantity,
-              ...(kitchenFromHint?.id
-                ? { restaurantId: kitchenFromHint.id }
-                : restaurantId
-                  ? { restaurantId }
-                  : {}),
-            },
-            reason: 'user_cart_add_intent',
-          };
-          const cartActions = enrichCartPlansFromMenuCache([draftPlan], {
-            activeRestaurantId: kitchenFromHint?.id ?? restaurantId,
-            userMessage: kitchenHintMsg,
-            nearbyKitchens: nearbyForAdd,
-          });
-          const planRestaurantId = resolveCartPlanRestaurantId({
-            plan: cartActions[0],
-            userMessage: kitchenHintMsg,
-            nearbyKitchens: nearbyForAdd,
-            activeRestaurantId: kitchenFromHint?.id ?? restaurantId,
-          });
-
-          if (!planRestaurantId) {
-            const q = cartAddIntent.kitchenHint || cartAddIntent.itemName;
-            const searchPath = `/search?q=${encodeURIComponent(q)}`;
-            pendingExploreKitchenRef.current = {
-              name: cartAddIntent.kitchenHint || cartAddIntent.itemName,
-              searchPath,
-            };
-            const reply = cartAddIntent.kitchenHint
-              ? `I couldn’t load ${cartAddIntent.kitchenHint}’s menu yet. Say yes to open search for it, or open the kitchen and ask again.`
-              : `To add ${cartAddIntent.quantity}× ${cartAddIntent.itemName}, open a kitchen menu first (or name the kitchen), then ask again — I’ll prepare a reviewable cart plan. Nothing is added until you confirm.`;
-            const hints: ConsumerAssistHint[] = [
-              { type: 'navigate', target: searchPath },
-              { type: 'navigate', target: '/' },
-            ];
-            setMessages((prev) => [
-              ...prev,
-              { id: nextId(), role: 'assistant', text: reply, hints },
-            ]);
-            return reply;
-          }
-
-          const resolvedName =
-            (typeof cartActions[0]?.payload?.name === 'string' && cartActions[0].payload.name) ||
-            cartAddIntent.itemName;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: nextId(),
-              role: 'assistant',
-              text: `Checking ${cartAddIntent.quantity}× ${resolvedName} on the menu…`,
-              cartActions,
-            },
-          ]);
-          pendingPlanRestaurantRef.current = toPendingPlanRestaurantRef({
-            planRestaurantId,
-            activeRestaurantId: restaurantId,
-            activeRestaurantSlug: restaurantSlug,
-          });
-          await prefetchKitchenMenuForAssist({
-            restaurantId: planRestaurantId,
-            restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
-            lat: activeLocation?.coordinates?.lat,
-            lng: activeLocation?.coordinates?.lng,
-          });
-          setValidating(true);
-          try {
-            const validation = await validate({
-              restaurantId: planRestaurantId,
-              proposedActions: cartActions,
-              ...(conversationId ? { conversationId } : {}),
-            });
-            syncPendingValidation(validation);
-            if (pendingPlanRestaurantRef.current) {
-              createLiveVoiceAdapter().hydratePendingFromValidation(
-                validation,
-                pendingPlanRestaurantRef.current,
-              );
-            }
-            if (validation.status === 'validated') recordVoiceTelemetry('planValidateSuccess');
-            else recordVoiceTelemetry('planValidateFail');
-            const reply = validationSpeakText(validation);
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: nextId(),
-                role: 'system',
-                text:
-                  validation.status === 'validated'
-                    ? 'Cart plan validated. Review and confirm to apply.'
-                    : reply,
-                validation,
-              },
-            ]);
-            return reply;
-          } catch (err) {
-            const msg =
-              err instanceof AssistantApiError
-                ? err.message
-                : err instanceof Error
-                  ? err.message
-                  : 'Could not validate cart plan';
-            setMessages((prev) => [
-              ...prev,
-              { id: nextId(), role: 'system', text: `Validation skipped: ${msg}` },
-            ]);
-            return msg;
-          } finally {
-            setValidating(false);
-          }
-        }
-
-        // Phase 1.2/1.3: voice-core pre-LLM gate (cart summary + stop only).
-        // Live confirm/add executor is gated separately (FF_OB_AI_VOICE_CORE_CONFIRM_ADD).
-        if (shouldHandleWithVoiceCorePreLlm(message)) {
-          const adapter = createOrderBhojanVoiceAdapter({
-            cartMutators: { addItem, setQuantity },
-          });
-          const session = createVoiceSession({
-            product: 'orderbhojan',
-            channel: 'web',
-            conversationId: conversationId || voiceSessionRef.current.conversationId,
-          });
-          voiceSessionRef.current = session;
-          const turn = await runVoiceCoreTurn({
-            session,
-            message,
-            confirmation: voiceConfirmationRef.current,
-            task: idleOrderingTask(pendingPlanRestaurantRef.current?.restaurantId),
-            adapter,
-          });
-          voiceConfirmationRef.current = turn.confirmation;
-          if (turn.kind === 'stop_agent' && turn.spoken) {
-            if (voiceAgentActiveRef.current) {
-              voiceAgentActiveRef.current = false;
-              setVoiceAgentActive(false);
-              cancelListening();
-              setSpeaking(false);
-            }
-            setMessages((prev) => [
-              ...prev,
-              { id: nextId(), role: 'assistant', text: turn.spoken },
-            ]);
-            return turn.spoken;
-          }
-          if (turn.kind === 'cart_summary' && turn.spoken) {
-            setMessages((prev) => [
-              ...prev,
-              { id: nextId(), role: 'assistant', text: turn.spoken },
-            ]);
-            return turn.spoken;
-          }
-        }
-
-        const usePostOrderPath =
+const usePostOrderPath =
           postOrderAssistEnabled &&
           (orderContext != null || isPostOrderUserMessage(message));
 
         if (usePostOrderPath) {
           const result = await askPostOrder({
             message,
+            preferredLanguage: voiceLanguage,
             ...(conversationId ? { conversationId } : {}),
             ...(orderContext ? { orderContext } : {}),
           });
@@ -1036,6 +550,7 @@ export function useAssistantConversation() {
 
         const result = await ask({
           message,
+          preferredLanguage: voiceLanguage,
           ...(conversationId ? { conversationId } : {}),
           ...(orderingContext ? { orderingContext } : {}),
         });
