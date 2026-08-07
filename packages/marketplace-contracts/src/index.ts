@@ -315,6 +315,7 @@ export interface FoodMenuDTO {
 
 export interface FoodMenuApiEnvelopeDTO extends FoodMenuDTO {
   readonly contextToken: string;
+  readonly paymentMethods?: readonly string[];
 }
 
 export interface MarketplaceErrorDTO {

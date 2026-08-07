@@ -2,6 +2,7 @@ import { getAppConfig } from '@/config';
 import { fetchBearerToken } from '@/features/auth/application/authService';
 import { obDebugTrustEvent } from '@/lib/obDebug';
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
+import { enterRazorpayNativeChrome, exitRazorpayNativeChrome } from './razorpayNativeChrome';
 
 const RAZORPAY_SCRIPT_ID = 'razorpay-checkout-js';
 const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -122,28 +123,77 @@ interface RazorpayWindow extends Window {
   };
 }
 
+async function paymentFetchJson<T>(
+  path: string,
+  body: Record<string, unknown>,
+  attempts = 3,
+): Promise<T> {
+  const url = `${getApiBaseUrl()}${path}`;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: await paymentRequestHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as T & {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          (typeof data.error === 'string' && data.error) ||
+            `Payment request failed (${response.status})`,
+        );
+      }
+
+      return data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err ?? '');
+      lastError =
+        /failed to fetch|networkerror|load failed|network request failed/i.test(message)
+          ? new Error(
+              'Couldn’t reach payment servers. Check your connection and try again.',
+            )
+          : err instanceof Error
+            ? err
+            : new Error(message || 'Payment request failed');
+
+      const retryable =
+        /couldn’t reach|failed to fetch|network|timed out|503|502|429/i.test(
+          lastError.message,
+        ) || /failed to fetch|networkerror/i.test(message);
+
+      if (!retryable || attempt >= attempts - 1) {
+        throw lastError;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+  }
+
+  throw lastError ?? new Error('Payment request failed');
+}
+
 export async function createRazorpayOrder(params: {
   readonly draftId: string;
   readonly userId?: string | null;
 }): Promise<CreateRazorpayOrderResult> {
-  const response = await fetch(`${getApiBaseUrl()}/api/create-razorpay-order`, {
-    method: 'POST',
-    headers: await paymentRequestHeaders(),
-    body: JSON.stringify({
-      draftId: params.draftId,
-      userId: params.userId ?? undefined,
-    }),
-  });
-
-  const data = (await response.json()) as {
+  const data = await paymentFetchJson<{
     success?: boolean;
     isMock?: boolean;
     order?: { id: string; amount: number; currency?: string };
     key?: string;
     error?: string;
-  };
+  }>('/api/create-razorpay-order', {
+    draftId: params.draftId,
+    userId: params.userId ?? undefined,
+  });
 
-  if (!response.ok || !data.success || !data.order?.id) {
+  if (!data.order?.id) {
     throw new Error(data.error || 'Failed to create secure payment session');
   }
 
@@ -160,26 +210,16 @@ export async function verifyRazorpayPayment(
   payment: RazorpayPaymentResponse,
   draftId: string,
 ): Promise<VerifyRazorpayPaymentResult> {
-  const response = await fetch(`${getApiBaseUrl()}/api/verify-razorpay-payment`, {
-    method: 'POST',
-    headers: await paymentRequestHeaders(),
-    body: JSON.stringify({
-      ...payment,
-      draftId,
-    }),
-  });
-
-  const data = (await response.json()) as {
+  const data = await paymentFetchJson<{
     success?: boolean;
     verified?: boolean;
     orderId?: string;
     orderNumber?: number | string | null;
     error?: string;
-  };
-
-  if (!response.ok || !data.success) {
-    throw new Error(data.error || 'Payment could not be confirmed');
-  }
+  }>('/api/verify-razorpay-payment', {
+    ...payment,
+    draftId,
+  });
 
   return {
     orderId: data.orderId ?? draftId,
@@ -209,53 +249,78 @@ export async function openRazorpayCheckout(options: {
   }
 
   await ensureRazorpayLoaded();
+  await enterRazorpayNativeChrome();
 
   if (checkoutOpen) {
+    await exitRazorpayNativeChrome();
     throw new Error('Payment is already in progress. Close the payment window and try again.');
   }
 
   return new Promise((resolve, reject) => {
     const Razorpay = (window as RazorpayWindow).Razorpay;
     if (!Razorpay) {
+      void exitRazorpayNativeChrome();
       reject(new Error('Razorpay SDK is unavailable'));
       return;
     }
 
     checkoutOpen = true;
+    let settled = false;
     const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
       checkoutOpen = false;
-      fn();
+      void exitRazorpayNativeChrome().finally(fn);
     };
 
-    const rzp = new Razorpay({
-      key: options.key,
-      amount: options.amount,
-      currency: options.currency,
-      name: options.merchantName ?? 'OrderBhojan',
-      description: `Order ${options.draftId}`,
-      order_id: options.razorpayOrderId,
-      modal_id: uniqueRazorpayModalId('ob_checkout'),
-      prefill: {
-        name: options.customerName?.trim() || undefined,
-        email: options.customerEmail?.trim().toLowerCase() || undefined,
-        contact: options.phone.replace(/\D/g, '').slice(-10),
-      },
-      theme: { color: '#ff7a00' },
-      handler: (response: RazorpayPaymentResponse) => {
-        finish(() => resolve(response));
-      },
-      modal: {
-        ondismiss: () => {
-          finish(() => reject(new Error('Payment window closed')));
+    try {
+      const rzp = new Razorpay({
+        key: options.key,
+        amount: options.amount,
+        currency: options.currency,
+        name: options.merchantName ?? 'OrderBhojan',
+        description: `Order ${options.draftId}`,
+        order_id: options.razorpayOrderId,
+        modal_id: uniqueRazorpayModalId('ob_checkout'),
+        prefill: {
+          name: options.customerName?.trim() || undefined,
+          email: options.customerEmail?.trim().toLowerCase() || undefined,
+          contact: options.phone.replace(/\D/g, '').slice(-10),
         },
-      },
-    });
+        theme: { color: '#ff7a00' },
+        handler: (response: RazorpayPaymentResponse) => {
+          finish(() => resolve(response));
+        },
+        modal: {
+          ondismiss: () => {
+            finish(() => reject(new Error('Payment window closed')));
+          },
+          escape: true,
+          confirm_close: true,
+          backdropclose: false,
+        },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
+      });
 
-    rzp.on('payment.failed', (response) => {
-      finish(() => reject(new Error(response.error?.description || 'Payment failed')));
-    });
+      rzp.on('payment.failed', (response) => {
+        finish(() => reject(new Error(response.error?.description || 'Payment failed')));
+      });
 
-    rzp.open();
+      rzp.open();
+    } catch (err) {
+      finish(() =>
+        reject(
+          err instanceof Error
+            ? err
+            : new Error('Unable to open Razorpay. Try Pay via UPI or Cash on delivery.'),
+        ),
+      );
+    }
   });
 }
 
@@ -281,48 +346,64 @@ export async function runRazorpayCheckoutFlow(params: {
     },
   );
 
-  const session = await createRazorpayOrder({
-    draftId: params.draftId,
-    userId: params.userId,
-  });
+  // Warm SDK + native chrome in parallel with order creation — cuts "Please wait…"
+  // and avoids system-nav overlap when the modal mounts.
+  let chromeReady = false;
+  try {
+    const [, , session] = await Promise.all([
+      loadRazorpayScript(),
+      enterRazorpayNativeChrome().then(() => {
+        chromeReady = true;
+      }),
+      createRazorpayOrder({
+        draftId: params.draftId,
+        userId: params.userId,
+      }),
+    ]);
 
-  obDebugTrustEvent(
-    'razorpay',
-    'create-razorpay-order response',
-    {
+    obDebugTrustEvent(
+      'razorpay',
+      'create-razorpay-order response',
+      {
+        draftId: params.draftId,
+        amountPaise: session.amount,
+        razorpayOrderId: session.razorpayOrderId,
+        expectedAmountPaise: params.expectedAmountPaise ?? null,
+        amountMatchesExpected:
+          params.expectedAmountPaise == null ? null : session.amount === params.expectedAmountPaise,
+      },
+      {
+        razorpayAmountPaise: session.amount,
+      },
+    );
+
+    const paymentResponse = await openRazorpayCheckout({
       draftId: params.draftId,
-      amountPaise: session.amount,
       razorpayOrderId: session.razorpayOrderId,
-      expectedAmountPaise: params.expectedAmountPaise ?? null,
-      amountMatchesExpected:
-        params.expectedAmountPaise == null ? null : session.amount === params.expectedAmountPaise,
-    },
-    {
-      razorpayAmountPaise: session.amount,
-    },
-  );
+      amount: session.amount,
+      currency: session.currency,
+      key: session.key,
+      phone: params.phone,
+      customerName: params.customerName,
+      customerEmail: params.customerEmail,
+      merchantName: params.merchantName,
+      isMock: session.isMock,
+    });
 
-  const paymentResponse = await openRazorpayCheckout({
-    draftId: params.draftId,
-    razorpayOrderId: session.razorpayOrderId,
-    amount: session.amount,
-    currency: session.currency,
-    key: session.key,
-    phone: params.phone,
-    customerName: params.customerName,
-    customerEmail: params.customerEmail,
-    merchantName: params.merchantName,
-    isMock: session.isMock,
-  });
-
-  const verified = await verifyRazorpayPayment(paymentResponse, params.draftId);
-  return {
-    orderId: verified.orderId,
-    orderNumber: formatCustomerOrderLabel(
-      verified.orderNumber ?? params.orderNumber,
-      verified.orderId,
-    ),
-  };
+    const verified = await verifyRazorpayPayment(paymentResponse, params.draftId);
+    return {
+      orderId: verified.orderId,
+      orderNumber: formatCustomerOrderLabel(
+        verified.orderNumber ?? params.orderNumber,
+        verified.orderId,
+      ),
+    };
+  } catch (err) {
+    if (chromeReady && !checkoutOpen) {
+      await exitRazorpayNativeChrome();
+    }
+    throw err;
+  }
 }
 
 export async function createSubscriptionRazorpayOrder(params: {

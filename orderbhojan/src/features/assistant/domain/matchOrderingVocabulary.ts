@@ -6,15 +6,11 @@ import {
   scoreFoodName,
   type NearbyKitchenHint,
 } from './resolveCartPlanRestaurant';
+import { normalizeOrderingText } from './orderingTextNormalize';
+import { normalizeKitchenAsr, scoreKitchenHint } from './kitchenAsrNormalize';
 
 function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeOrderingText(value);
 }
 
 function scoreNames(query: string, candidate: string): number {
@@ -25,7 +21,7 @@ export function matchKitchenFragmentInMessage(
   message: string,
   kitchens: readonly { readonly id?: string; readonly name: string }[],
 ): { readonly id?: string; readonly name: string } | null {
-  const text = normalize(message);
+  const text = normalizeKitchenAsr(normalize(message));
   if (!text || text.length < 3 || kitchens.length === 0) return null;
 
   const ranked = [...kitchens]
@@ -33,13 +29,16 @@ export function matchKitchenFragmentInMessage(
       const name = normalize(k.name);
       const compactText = text.replace(/\s/g, '');
       const compactName = name.replace(/\s/g, '');
-      let score = scoreNames(text, k.name);
+      let score = Math.max(scoreNames(text, k.name), scoreKitchenHint(text, k.name));
       if (compactText.includes(compactName) || compactName.includes(compactText)) {
         score = Math.max(score, 0.95);
       }
       const first = name.split(' ')[0] ?? '';
       if (first.length >= 4 && (text.includes(first) || compactText.includes(first))) {
         score = Math.max(score, 0.84);
+      }
+      if (/mana/i.test(name) && /\b(mana|money|mony|many|mani)\b/i.test(text)) {
+        score = Math.max(score, 0.9);
       }
       return { kitchen: k, score };
     })
@@ -120,6 +119,25 @@ export function enrichCartPlansFromMenuCache(
 
     const name = typeof payload.name === 'string' ? payload.name.trim() : '';
     if (!name || menu.length === 0) {
+      // Target kitchen menu empty / miss — try any cached kitchen that owns this dish.
+      if (name) {
+        const cross = findBestDishAcrossMenus(name, cached);
+        if (cross) {
+          return {
+            ...plan,
+            payload: {
+              ...payload,
+              foodId: cross.item.id,
+              itemId: cross.item.id,
+              name: cross.item.label,
+              restaurantId: cross.restaurantId,
+              ...(typeof cross.item.meta?.price === 'number'
+                ? { unitPrice: cross.item.meta.price }
+                : {}),
+            },
+          };
+        }
+      }
       if (targetRestaurantId) {
         return {
           ...plan,
@@ -137,6 +155,22 @@ export function enrichCartPlansFromMenuCache(
     const top = scored[0];
     const second = scored[1];
     if (!top) {
+      const cross = findBestDishAcrossMenus(name, cached);
+      if (cross) {
+        return {
+          ...plan,
+          payload: {
+            ...payload,
+            foodId: cross.item.id,
+            itemId: cross.item.id,
+            name: cross.item.label,
+            restaurantId: cross.restaurantId,
+            ...(typeof cross.item.meta?.price === 'number'
+              ? { unitPrice: cross.item.meta.price }
+              : {}),
+          },
+        };
+      }
       if (targetRestaurantId) {
         return {
           ...plan,
@@ -168,6 +202,38 @@ export function enrichCartPlansFromMenuCache(
       },
     };
   });
+}
+
+function findBestDishAcrossMenus(
+  dishName: string,
+  cached: readonly {
+    readonly id: string;
+    readonly type: string;
+    readonly label: string;
+    readonly meta?: Record<string, unknown>;
+    readonly restaurant?: { readonly restaurantId?: string };
+  }[],
+): { readonly item: { readonly id: string; readonly label: string; readonly meta?: Record<string, unknown> }; readonly restaurantId: string } | null {
+  const scored = cached
+    .filter((item) => item.type === 'food' && item.restaurant?.restaurantId)
+    .map((item) => ({ item, score: scoreNames(dishName, item.label) }))
+    .filter((entry) => entry.score >= 0.78)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+  const top = scored[0]!;
+  const bestTopScore = top.score;
+  const topRestaurants = new Set(
+    scored
+      .filter((entry) => entry.score >= bestTopScore - 0.05)
+      .map((entry) => entry.item.restaurant!.restaurantId!),
+  );
+  if (topRestaurants.size !== 1) return null;
+
+  return {
+    item: top.item,
+    restaurantId: top.item.restaurant!.restaurantId!,
+  };
 }
 
 /**

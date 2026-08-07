@@ -11,6 +11,7 @@ export {
 
 export {
   pendingValidationToConfirmation,
+  pendingPlanIdFromValidation,
   syncConfirmationFromPending,
   clearVoiceConfirmation,
   foldVoiceConfirmationUtterance,

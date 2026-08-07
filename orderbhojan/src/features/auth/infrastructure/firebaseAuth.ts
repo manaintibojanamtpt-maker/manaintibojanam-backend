@@ -109,9 +109,20 @@ function mapNativeGoogleSignInError(error: unknown): AuthFlowError {
     return error;
   }
   const message = error instanceof Error ? error.message : 'Native Google sign-in failed.';
-  if (isNoCredentialsAvailableError(error)) {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : '';
+  // Google Sign-In CommonStatusCodes.DEVELOPER_ERROR === 10 (SHA-1 / OAuth client mismatch).
+  const isDeveloperError =
+    code === '10' ||
+    /^10\b/.test(message.trim()) ||
+    /DEVELOPER_ERROR|ApiException:\s*10\b/i.test(message) ||
+    isNoCredentialsAvailableError(error);
+
+  if (isDeveloperError) {
     return new AuthFlowError(
-      'Google sign-in is not configured for this Android build. Add the debug/release SHA-1 fingerprint to the bhojanos-prod Firebase Android app (com.bhojanos.orderbhojan), re-download google-services.json, then rebuild.',
+      'Google sign-in isn’t set up for this debug build. Add this machine’s debug SHA-1 to Firebase (bhojanos-prod → Android app com.bhojanos.orderbhojan), re-download google-services.json, then rebuild. Or use phone OTP to continue.',
     );
   }
   return new AuthFlowError(message);

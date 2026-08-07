@@ -13,7 +13,19 @@ export class AddItemRule implements IntentRule {
   public readonly priority = 50;
 
   // Common verbs associated with adding items
-  private readonly addVerbs = new Set(['add', 'want', 'give', 'get', 'need', 'kavali', 'chahiye']);
+  private readonly addVerbs = new Set([
+    'add',
+    'want',
+    'give',
+    'get',
+    'need',
+    'kavali',
+    'chahiye',
+    'cheyyandi',
+    'cheyandi',
+    'petandi',
+    'order',
+  ]);
 
   public matches(normalizedTranscript: string): boolean {
     // We want this rule to evaluate almost any transcript because users often

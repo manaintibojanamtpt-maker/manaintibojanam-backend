@@ -154,6 +154,61 @@ describe('assistant Phase 5 Android parity + voice hooks', () => {
     assert.equal(result.assist.mutatedState, false);
   });
 
+  it('preserves scheduleVoiceFeedback on Android channel assist result (no cart apply)', async () => {
+    const result = await runVoiceConsumerAssist({
+      assistantEnabled: true,
+      voiceEnabled: true,
+      isNative: () => true,
+      getIdToken: async () => null,
+      createRecognition: () => {
+        const recognition = {
+          lang: '',
+          interimResults: false,
+          maxAlternatives: 1,
+          continuous: false,
+          onresult: null as null | ((event: unknown) => void),
+          onerror: null as null | ((event: unknown) => void),
+          onend: null as null | (() => void),
+          start() {
+            queueMicrotask(() => {
+              this.onresult?.({
+                results: [[{ transcript: ' schedule later ', confidence: 0.9 }]],
+              });
+            });
+          },
+          stop() {},
+          abort() {},
+        };
+        return recognition;
+      },
+      client: {
+        consumerAssist: async () => ({
+          schemaVersion: '3.0' as const,
+          conversationId: 'c-sched',
+          channel: 'orderbhojan_android' as const,
+          reply: 'Please say a clear time — now, 8 PM, or tomorrow lunch.',
+          intent: 'cart_question',
+          safetyBlocked: false,
+          suggestedHints: [{ type: 'none' as const }],
+          proposedCartActions: [],
+          scheduleVoiceFeedback: {
+            kind: 'clarify' as const,
+            reason: 'AmbiguousDeliveryTime',
+            message: 'Please say a clear time — now, 8 PM, or tomorrow lunch.',
+          },
+          sideEffects: [] as const,
+          mutatedState: false as const,
+        }),
+      },
+    });
+
+    assert.equal(result.assist.channel, 'orderbhojan_android');
+    assert.equal(result.assist.scheduleVoiceFeedback?.kind, 'clarify');
+    assert.equal(result.assist.scheduleVoiceFeedback?.reason, 'AmbiguousDeliveryTime');
+    assert.equal(result.assist.proposedScheduleActions, undefined);
+    assert.equal(result.assist.mutatedState, false);
+  });
+
   it('reports unsupported when SpeechRecognition is missing', async () => {
     await assert.rejects(
       () =>

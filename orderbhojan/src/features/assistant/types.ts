@@ -36,6 +36,26 @@ export interface ConsumerAssistResult {
    * Never auto-apply — validate + explicit user confirmation required (Phase 14 UI).
    */
   readonly proposedCartActions: readonly ConsumerAssistCartPlanAction[];
+  /**
+   * Schedule metadata from voice WorkflowResponseMapper (`set_delivery_schedule`).
+   * Applied to checkout deliveryTimeSlot only — not payment.
+   */
+  readonly proposedScheduleActions?: readonly {
+    readonly deliveryType: 'asap' | 'scheduled';
+    readonly deliveryTimeSlot?: string;
+    readonly slotLabel?: string;
+    readonly scheduledFor?: string;
+    readonly source: 'voice';
+  }[];
+  /**
+   * Ambiguous / invalid / missing delivery time from voice clarify.
+   * Prefer over proposedScheduleActions when present.
+   */
+  readonly scheduleVoiceFeedback?: {
+    readonly kind: 'clarify' | 'error';
+    readonly reason: string;
+    readonly message: string;
+  };
   readonly providerModel?: string;
   readonly sideEffects: [];
   readonly mutatedState: false;

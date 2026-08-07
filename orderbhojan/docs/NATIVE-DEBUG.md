@@ -54,8 +54,14 @@ Native Android Google sign-in uses `@capacitor-firebase/authentication` with `sk
 
 1. **Project:** [bhojanos-prod → Project settings](https://console.firebase.google.com/project/bhojanos-prod/settings/general)
 2. **Android app:** `com.bhojanos.orderbhojan` (`1:170989397954:android:c72d024605511a5060185b`)
-3. **SHA-1 / SHA-256:** Add debug + release keystore fingerprints under the Android app (Settings → Your apps). Debug SHA-1 from `orderbhojan/android` (`./gradlew signingReport`):
-   `9A:0E:E4:A5:84:5D:72:B5:8D:71:E3:82:BE:0E:7E:A4:79:1B:30:5F`
+3. **SHA-1 / SHA-256:** Add debug + release keystore fingerprints under the Android app (Settings → Your apps).  
+   - **Shared/team debug SHA-1** (in `google-services.json` today):  
+     `9A:0E:E4:A5:84:5D:72:B5:8D:71:E3:82:BE:0E:7E:A4:79:1B:30:5F`  
+   - **This machine’s default debug keystore** (`%USERPROFILE%\.android\debug.keystore`) — must also be added or Google Sign-In returns error **10 / DEVELOPER_ERROR**:  
+     `7C:35:4E:6A:10:75:21:21:CA:2A:C2:9A:22:1A:F4:6C:5F:70:A0:82`  
+     SHA-256: `D4:A6:44:F9:99:26:38:BF:44:16:79:0D:8D:BA:C4:4A:5E:CC:65:10:A7:16:4F:65:8A:0D:B9:28:60:60:84:AA`  
+   Print fingerprints anytime:  
+   `keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android`  
    **Release SHA-1:** derive from the Play upload keystore (`keytool -list -v -keystore release.keystore`) and add it separately — see `docs/PLAY-INTERNAL-TESTING.md`. Google Sign-In on release/Internal Testing builds fails until this is registered.
    After adding SHA-1, re-download `google-services.json` — it should include an `oauth_client` entry with `client_type` **1** (Android), not just type **3** (Web).
 4. **Google provider:** [Authentication → Sign-in method → Google](https://console.firebase.google.com/project/bhojanos-prod/authentication/providers) — enabled.

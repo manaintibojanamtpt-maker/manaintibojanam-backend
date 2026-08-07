@@ -8,6 +8,16 @@ import {
   type CheckoutSchedulingContext,
 } from './deliveryTimeSlots';
 
+export type BillDeliveryScheduleLine = {
+  readonly label: string;
+  readonly amountLabel: string;
+};
+
+/** Minimal notice shape — avoids domain → store coupling. */
+export type BillScheduleVoiceNotice = {
+  readonly kind: 'applied' | 'clarify' | 'error';
+};
+
 export function formatCheckoutDeliveryAddress(
   activeLocation: CustomerLocation | null,
   v2Address = getLocationStoreAddress(),
@@ -35,6 +45,68 @@ export function formatCheckoutEstimatedDelivery(
 
   const slotLabel = deliveryTimeSlot.replace(/^(Today|Tomorrow), /, '$1 · ');
   return slotLabel || formatDeliverySlotLabel(deliveryTimeSlot);
+}
+
+/**
+ * Bill breakdown row for delivery timing (metadata only).
+ * Clarify/error voice notices win until the shopper picks a slot (notice cleared).
+ */
+export function formatBillDeliveryScheduleLine(input: {
+  readonly deliveryTimeSlot?: string | null;
+  readonly voiceScheduleNotice?: BillScheduleVoiceNotice | null;
+}): BillDeliveryScheduleLine | null {
+  const notice = input.voiceScheduleNotice;
+  if (notice?.kind === 'clarify') {
+    return {
+      label: 'Delivery',
+      amountLabel: 'Schedule unclear — please select a time',
+    };
+  }
+  if (notice?.kind === 'error') {
+    return {
+      label: 'Delivery',
+      amountLabel: 'Schedule unavailable — please select a time',
+    };
+  }
+
+  const slot = (input.deliveryTimeSlot ?? '').trim();
+  if (!slot) return null;
+
+  if (isAsapSlot(slot)) {
+    return { label: 'Delivery', amountLabel: 'Deliver now' };
+  }
+
+  const slotLabel = formatDeliverySlotLabel(slot);
+  return {
+    label: 'Delivery',
+    amountLabel: `Scheduled for ${slotLabel}`,
+  };
+}
+
+/**
+ * Success / UPI trust panel delivery line (metadata only).
+ * Same priority as bill; post-place clarify/error asks shopper to contact support.
+ */
+export function formatTrustPanelDeliverySchedule(input: {
+  readonly deliveryTimeSlot?: string | null;
+  readonly voiceScheduleNotice?: BillScheduleVoiceNotice | null;
+}): string | undefined {
+  const notice = input.voiceScheduleNotice;
+  if (notice?.kind === 'clarify') {
+    return 'Schedule unclear — please contact support';
+  }
+  if (notice?.kind === 'error') {
+    return 'Schedule unavailable — please contact support';
+  }
+
+  const slot = (input.deliveryTimeSlot ?? '').trim();
+  if (!slot) return undefined;
+
+  if (isAsapSlot(slot)) {
+    return 'Deliver now';
+  }
+
+  return `Scheduled for ${formatDeliverySlotLabel(slot)}`;
 }
 
 export function buildOrderTrustCopyText(input: {

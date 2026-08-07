@@ -62,6 +62,19 @@ describe('confirmation state machine', () => {
     assert.equal(canApplyConfirmedChange(state), true);
   });
 
+  it('applies on natural confirm-and-add when validated', () => {
+    let state = reduceConfirmation(initialConfirmationSnapshot(), {
+      type: 'SET_PENDING',
+      pending: { planId: 'p2b', status: 'validated', valid: true },
+    });
+    state = reduceConfirmation(state, {
+      type: 'USER_UTTERANCE',
+      message: 'confirm Andhra add to cart',
+    });
+    assert.equal(state.phase, 'ready_to_apply');
+    assert.equal(canApplyConfirmedChange(state), true);
+  });
+
   it('discards on cancel', () => {
     let state = reduceConfirmation(initialConfirmationSnapshot(), {
       type: 'SET_PENDING',
@@ -124,6 +137,28 @@ describe('triage orchestrator', () => {
       task: idleTask,
     });
     assert.equal(decision.kind, 'cart_summary');
+  });
+
+  it('routes pending-item questions to cart summary', () => {
+    const { decision } = triageVoiceUtterance({
+      message: 'item that was added in the cart',
+      confirmation: initialConfirmationSnapshot(),
+      task: idleTask,
+    });
+    assert.equal(decision.kind, 'cart_summary');
+  });
+
+  it('routes natural confirm-and-add to apply when validated', () => {
+    const confirmation = reduceConfirmation(initialConfirmationSnapshot(), {
+      type: 'SET_PENDING',
+      pending: { planId: 'p-confirm', status: 'validated', valid: true },
+    });
+    const { decision } = triageVoiceUtterance({
+      message: 'confirm and add to cart',
+      confirmation,
+      task: idleTask,
+    });
+    assert.equal(decision.kind, 'apply_confirmed_change');
   });
 
   it('escalates after clarification loop threshold', () => {

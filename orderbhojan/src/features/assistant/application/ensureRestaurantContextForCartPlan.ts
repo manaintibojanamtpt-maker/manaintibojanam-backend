@@ -1,4 +1,5 @@
 import { getMarketplaceApiClient } from '@/marketplace-api';
+import { MarketplaceApiError } from '@/marketplace-api/errors';
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { resolveRestaurantSlugForApi } from '../domain/restaurantIdSlug';
 
@@ -31,10 +32,19 @@ export async function ensureRestaurantContextForCartPlan(params: {
   }
 
   const coords = params.coords ?? { lat: 0, lng: 0 };
-  const experience = await getMarketplaceApiClient().restaurantExperience(restaurantSlug, coords);
-  useRestaurantContextStore.getState().setContext({
-    restaurantId,
-    restaurantSlug,
-    contextToken: experience.contextToken,
-  });
+  try {
+    const experience = await getMarketplaceApiClient().restaurantExperience(restaurantSlug, coords);
+    useRestaurantContextStore.getState().setContext({
+      restaurantId,
+      restaurantSlug,
+      contextToken: experience.contextToken,
+    });
+  } catch (err) {
+    if (err instanceof MarketplaceApiError && (err.status === 404 || err.code === 'NOT_FOUND')) {
+      throw new Error(
+        `I couldn’t open that kitchen menu yet. Try naming the kitchen again (e.g. “Inti Bhojanam”).`,
+      );
+    }
+    throw err;
+  }
 }

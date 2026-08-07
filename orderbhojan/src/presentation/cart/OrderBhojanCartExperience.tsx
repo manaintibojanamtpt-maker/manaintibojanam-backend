@@ -11,6 +11,9 @@ import {
 } from '@/features/cart/store/cartStore';
 import { useCartValidation } from '@/features/cart/hooks/useCartValidation';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
+import { useKitchenPaymentMethodsPrefetch } from '@/features/checkout/hooks/useKitchenPaymentMethodsPrefetch';
+import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
+import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmation, useActiveLocation, useLocationActions } from '@/features/location';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
@@ -55,6 +58,15 @@ export function OrderBhojanCartExperience() {
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
   const isCheckoutReady = hasReadyDeliveryLocation(activeLocation);
   useCheckoutPrefetch(itemCount > 0);
+  useKitchenPaymentMethodsPrefetch(itemCount > 0);
+
+  const paymentMethods = useRestaurantContextStore((s) => s.paymentMethods);
+  useEffect(() => {
+    if (itemCount <= 0) return;
+    if (paymentMethods?.includes('razorpay') || paymentMethods == null) {
+      prefetchRazorpayCheckoutScript();
+    }
+  }, [itemCount, paymentMethods]);
 
   const checkoutAuthGate = useMemo(
     () => resolveCheckoutAuthGate({ status: authStatus, sessionUser }),

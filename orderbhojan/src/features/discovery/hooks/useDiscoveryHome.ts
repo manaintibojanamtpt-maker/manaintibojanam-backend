@@ -5,24 +5,28 @@ import {
   resolveActiveDeliveryCoords,
   resolveActiveDeliveryLocation,
 } from '@/features/location/domain/activeDeliveryLocation';
+import { homeHeroQueryKey } from '@/features/experience/hooks/useHomeHeroConfig';
 import { obDebugTrustEvent } from '@/lib/obDebug';
 import { markPerf } from '@/lib/perfMarks';
 import { loadDiscoveryHome } from '../engine/discoveryEngine';
 import {
   getDiscoverySessionCacheUpdatedAt,
   readDiscoverySessionCache,
+  readNearestDiscoverySessionCache,
 } from '../engine/discoverySessionCache';
 import { discoveryKeys, DISCOVERY_GC_TIME_MS, DISCOVERY_STALE_TIME_MS } from './discoveryQueryKeys';
 import { useDiscoveryFilterStore } from '../store/discoveryFilterStore';
 import { useDiscoveryFeatureEnabled } from './useDiscoveryFeature';
 
 export function useDiscoveryHome() {
+  const queryClient = useQueryClient();
   const enabled = useDiscoveryFeatureEnabled();
   const activeLocation = useActiveLocation();
   const filters = useDiscoveryFilterStore((s) => s.filters);
   const coords = resolveActiveDeliveryCoords(activeLocation);
   const hasConfirmedCoords = coords != null;
   const deliveryLocation = resolveActiveDeliveryLocation(activeLocation);
+  const heroRefreshedAfterDiscoveryRef = useRef(false);
 
   useEffect(() => {
     obDebugTrustEvent(
@@ -55,7 +59,7 @@ export function useDiscoveryHome() {
     hasConfirmedCoords,
   ]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: hasConfirmedCoords
       ? discoveryKeys.home(coords.lat, coords.lng, filters)
       : [...discoveryKeys.all, 'home', 'unconfirmed', filters],
@@ -78,7 +82,10 @@ export function useDiscoveryHome() {
     staleTime: DISCOVERY_STALE_TIME_MS,
     gcTime: DISCOVERY_GC_TIME_MS,
     initialData: () =>
-      coords ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined,
+      coords
+        ? readNearestDiscoverySessionCache(coords.lat, coords.lng, filters) ??
+          readDiscoverySessionCache(coords.lat, coords.lng, filters)
+        : undefined,
     initialDataUpdatedAt: () =>
       coords
         ? getDiscoverySessionCacheUpdatedAt(coords.lat, coords.lng, filters) ?? undefined
@@ -88,6 +95,15 @@ export function useDiscoveryHome() {
     refetchInterval: false,
     retry: 1,
   });
+
+  // After kitchens load, refresh Super Admin hero so Android does not stick on DEFAULT seed.
+  useEffect(() => {
+    if (!query.isSuccess || heroRefreshedAfterDiscoveryRef.current) return;
+    heroRefreshedAfterDiscoveryRef.current = true;
+    void queryClient.invalidateQueries({ queryKey: homeHeroQueryKey() });
+  }, [query.isSuccess, queryClient]);
+
+  return query;
 }
 
 /** Invalidates discovery cache when customer location changes. */

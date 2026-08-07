@@ -248,32 +248,21 @@ export function UpiPaymentPendingView({
                 <p className="mt-1 text-xs text-white/50">
                   If an app does not open, use QR or copy details — do not retry blindly.
                 </p>
-                {isAndroidDevice() ? (
-                  <div className="mt-3">
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {UPI_APP_CHOICES.map((app) => (
                     <SoftButton
+                      key={app.id}
                       type="button"
-                      tone="secondary"
+                      tone={app.id === 'other' ? 'primary' : 'secondary'}
                       fullWidth
-                      onClick={() => void handleOpenApp('other')}
+                      onClick={() => void handleOpenApp(app.id)}
                     >
-                      Pay via installed UPI app
+                      {app.id === 'other' && isAndroidDevice()
+                        ? 'Any UPI app'
+                        : app.shortLabel}
                     </SoftButton>
-                  </div>
-                ) : (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {UPI_APP_CHOICES.map((app) => (
-                      <SoftButton
-                        key={app.id}
-                        type="button"
-                        tone="secondary"
-                        fullWidth
-                        onClick={() => void handleOpenApp(app.id)}
-                      >
-                        {app.shortLabel}
-                      </SoftButton>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
                 {launchMessage ? (
                   <p className="mt-3 text-xs text-amber-200/90" aria-live="polite">
                     {launchMessage}

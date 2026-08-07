@@ -65,7 +65,7 @@ describe('checkout success confirmation', () => {
 
     assert.match(checkout, /OrderBhojanCheckoutSuccessView/);
     assert.match(checkout, /formatCheckoutDeliveryAddress/);
-    assert.match(checkout, /formatCheckoutEstimatedDelivery/);
+    assert.match(checkout, /formatTrustPanelDeliverySchedule/);
     assert.match(checkout, /deliveryAddress=\{deliveryAddressLabel\}/);
   });
 
@@ -94,5 +94,7 @@ describe('checkout success confirmation', () => {
     assert.match(success, /Continue browsing/);
     assert.match(trustPanel, /Order placed successfully/);
     assert.match(trustPanel, /Copy order details/);
+    assert.match(trustPanel, /\n\s*Delivery\s*\n/);
+    assert.doesNotMatch(trustPanel, /Estimated delivery/);
   });
 });

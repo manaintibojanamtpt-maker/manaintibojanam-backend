@@ -65,7 +65,8 @@ export async function runVoiceCoreTurn(input: {
       }
       return {
         confirmation: { phase: 'none', pending: null },
-        spoken: 'Done. I added that to your cart.',
+        spoken:
+          'Done. I added that to your cart. Voice is paused — tap the AI button anytime to order more.',
         kind: decision.kind,
         applied: true,
       };

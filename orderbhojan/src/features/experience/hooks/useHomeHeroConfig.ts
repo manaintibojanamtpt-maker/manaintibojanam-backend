@@ -22,6 +22,10 @@ function resolveSeed(): { config: HomeHeroConfig; updatedAt: number; fromCache: 
   return { config: DEFAULT_HOME_HERO_CONFIG, updatedAt: 0, fromCache: false };
 }
 
+function hasUsableHeroSlides(config: HomeHeroConfig | null | undefined): boolean {
+  return Boolean(config?.slides?.some((slide) => Boolean(slide?.id?.trim())));
+}
+
 export function useHomeHeroConfig() {
   const seed = resolveSeed();
 
@@ -30,6 +34,12 @@ export function useHomeHeroConfig() {
     queryFn: async (): Promise<HomeHeroConfig> => {
       try {
         const config = await getMarketplaceApiClient().homeHero();
+        if (!hasUsableHeroSlides(config)) {
+          if (import.meta.env?.DEV) {
+            console.warn('[home-hero] API returned empty slides; keeping last-known / defaults');
+          }
+          return seed.config;
+        }
         writeHomeHeroSessionCache(config);
         return config;
       } catch {

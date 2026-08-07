@@ -12,7 +12,7 @@ declare global {
 }
 
 const ANDROID_STATUS_BAR_FALLBACK_PX = 28;
-const ANDROID_GESTURE_BAR_FALLBACK_PX = 32;
+const ANDROID_GESTURE_BAR_FALLBACK_PX = 48;
 const IOS_STATUS_BAR_FALLBACK_PX = 47;
 
 function applyNativeSafeAreaInsets(): void {

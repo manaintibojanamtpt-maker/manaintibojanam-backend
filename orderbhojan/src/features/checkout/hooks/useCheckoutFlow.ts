@@ -17,6 +17,10 @@ import {
   type CheckoutPrepareQueryData,
 } from '../infrastructure/checkoutQuoteSession';
 import {
+  persistKitchenPaymentMethods,
+  readKitchenPaymentMethods,
+} from '../infrastructure/kitchenPaymentMethodsCache';
+import {
   claimCustomerUpiPayment,
   fetchOrderPaymentSnapshot,
   pollUpiPaymentStatus,
@@ -26,11 +30,14 @@ import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/c
 import {
   resolveDefaultDeliverySlot,
 } from '../domain/deliveryTimeSlots';
+import { tryResolveSlotFromScheduleAction } from '../domain/resolveVoiceScheduleSlot';
+import { useCheckoutScheduleStore } from '../store/checkoutScheduleStore';
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
 import { obDebugTrustEvent } from '@/lib/obDebug';
+import { MarketplaceApiError } from '@/marketplace-api/errors';
 import {
   checkoutKeys,
   CHECKOUT_PREPARE_GC_MS,
@@ -104,6 +111,11 @@ export interface CheckoutFlowState {
   readonly cartSyncMessages: readonly string[];
   readonly appliedCouponCode: string | null;
   readonly setAppliedCouponCode: (code: string | null) => void;
+  readonly voiceScheduleNotice: {
+    readonly kind: 'applied' | 'clarify' | 'error';
+    readonly message: string;
+    readonly reason?: string;
+  } | null;
   setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
@@ -134,6 +146,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const restaurantSlug = useRestaurantContextStore((s) => s.restaurantSlug);
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
   const appliedCouponCode = useRestaurantContextStore((s) => s.appliedCouponCode);
+  const storePaymentMethods = useRestaurantContextStore((s) => s.paymentMethods);
   const setAppliedCouponCode = useRestaurantContextStore((s) => s.setAppliedCouponCode);
   const activeLocation = useActiveLocation();
   const { sessionUser, status: authStatus } = useAuth();
@@ -152,6 +165,9 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [upiPollMessage, setUpiPollMessage] = useState<string | null>(null);
   const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
+  const voiceSchedulePref = useCheckoutScheduleStore((s) => s.preference);
+  const voiceScheduleUpdatedAt = useCheckoutScheduleStore((s) => s.updatedAt);
+  const voiceScheduleNotice = useCheckoutScheduleStore((s) => s.notice);
   const placeInFlightRef = useRef(false);
   const upiPollAbortRef = useRef<AbortController | null>(null);
   const previousPrepareSignatureRef = useRef<string | null>(null);
@@ -273,6 +289,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
       if (prepareSignature && cartSignature) {
         persistCheckoutPrepareSession(prepareSignature, cartSignature, response);
       }
+      if (resolvedRestaurantId && response.paymentMethods?.length) {
+        persistKitchenPaymentMethods(resolvedRestaurantId, response.paymentMethods);
+        useRestaurantContextStore.getState().setPaymentMethods(response.paymentMethods);
+      }
       return cloneCheckoutPrepareForQuery(response);
     },
     enabled: canCheckout && Boolean(prepareSignature),
@@ -289,7 +309,14 @@ export function useCheckoutFlow(): CheckoutFlowState {
       return sessionPrepare ? cloneCheckoutPrepareForQuery(sessionPrepare) : undefined;
     },
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: (failureCount, error) => {
+      if (failureCount >= 3) return false;
+      if (error instanceof MarketplaceApiError) return error.retryable;
+      return /network|fetch|timeout|reach/i.test(
+        error instanceof Error ? error.message : String(error ?? ''),
+      );
+    },
+    retryDelay: (attempt) => Math.min(1500, 350 * 2 ** attempt),
   });
 
   useEffect(() => {
@@ -315,8 +342,16 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   useEffect(() => {
     if (!prepareQuery.isError || !cartSignature) return;
+    // Keep last good quote/methods on transient network blips — only wipe on hard failures.
+    const err = prepareQuery.error;
+    const retryable =
+      (err instanceof MarketplaceApiError && err.retryable) ||
+      /network|fetch|timeout|reach|connection/i.test(
+        err instanceof Error ? err.message : String(err ?? ''),
+      );
+    if (retryable) return;
     clearCheckoutPrepareSessionForCart(cartSignature);
-  }, [cartSignature, prepareQuery.isError]);
+  }, [cartSignature, prepareQuery.error, prepareQuery.isError]);
 
   useEffect(() => {
     if (
@@ -364,7 +399,20 @@ export function useCheckoutFlow(): CheckoutFlowState {
     (prepareQuery.isFetching || prepareQuery.isLoading);
   const quote = prepareData?.quote ?? null;
   const scheduling = prepareData?.scheduling ?? null;
-  const paymentMethods = prepareData?.paymentMethods ?? [];
+  // Never blank the payment UI — live → query → session → restaurant store → kitchen memory → COD.
+  const paymentMethods = (() => {
+    const fromLive = prepareData?.paymentMethods;
+    if (fromLive && fromLive.length > 0) return fromLive;
+    const fromQuery = prepareQuery.data?.paymentMethods;
+    if (fromQuery && fromQuery.length > 0) return fromQuery;
+    const fromSession = sessionPrepare?.paymentMethods;
+    if (fromSession && fromSession.length > 0) return fromSession;
+    const fromStore = storePaymentMethods;
+    if (fromStore && fromStore.length > 0) return fromStore;
+    const fromKitchen = readKitchenPaymentMethods(resolvedRestaurantId);
+    if (fromKitchen && fromKitchen.length > 0) return fromKitchen;
+    return ['cod'] as string[];
+  })();
   const quoteIsRefreshing = prepareQuery.isFetching && Boolean(quote) && !prepareQuery.isError;
   const quoteIsStale =
     Boolean(quote) && prepareQuery.isFetching && !prepareQuery.isError && hasFreshPrepare;
@@ -374,16 +422,45 @@ export function useCheckoutFlow(): CheckoutFlowState {
 
   const prepareErrorMessage =
     prepareQuery.isError && prepareQuery.error instanceof Error
-      ? prepareQuery.error.message
+      ? /failed to fetch/i.test(prepareQuery.error.message)
+        ? 'Couldn’t reach OrderBhojan servers. Check your connection and retry.'
+        : prepareQuery.error.message
       : null;
 
   useEffect(() => {
     if (!scheduling?.deliverySlots?.length) return;
+    // Voice set_delivery_schedule wins when present — strict match onto kitchen slots.
+    if (voiceSchedulePref) {
+      const resolved = tryResolveSlotFromScheduleAction(
+        voiceSchedulePref,
+        scheduling.deliverySlots,
+        scheduling,
+      );
+      if (resolved.ok) {
+        setDeliveryTimeSlot(resolved.slot);
+      } else {
+        useCheckoutScheduleStore.getState().setNotice({
+          kind: 'error',
+          message: resolved.message,
+          reason: resolved.reason,
+        });
+      }
+      return;
+    }
     setDeliveryTimeSlot((current) => {
       if (scheduling.deliverySlots.includes(current)) return current;
       return resolveDefaultDeliverySlot(scheduling.deliverySlots);
     });
-  }, [scheduling]);
+  }, [scheduling, voiceSchedulePref, voiceScheduleUpdatedAt]);
+
+  const applyDeliveryTimeSlot = useCallback((slot: string) => {
+    setDeliveryTimeSlot(slot);
+    // Manual pick overrides voice preference / clarify notice.
+    const store = useCheckoutScheduleStore.getState();
+    if (store.preference || store.notice) {
+      store.clear();
+    }
+  }, []);
 
   const status: CheckoutFlowStatus = useMemo(() => {
     if (placeStatus === 'placing') return 'placing';
@@ -448,8 +525,10 @@ export function useCheckoutFlow(): CheckoutFlowState {
   }, [getPayload, prepareSignature, queryClient]);
 
   const prepareCheckout = useCallback(async () => {
+    setPlaceError(null);
+    if (placeStatus === 'error') setPlaceStatus('idle');
     await prepareQuery.refetch();
-  }, [prepareQuery]);
+  }, [placeStatus, prepareQuery]);
 
   const placeCodOrder = useCallback(
     async (phone: string, customerName?: string, notificationEmail?: string) => {
@@ -547,10 +626,21 @@ export function useCheckoutFlow(): CheckoutFlowState {
             razorpayAmountPaise: placeAmountPaise ?? expectedPaise,
           },
         );
+
+        // Authoritative amount is what the place API stamped on the draft.
+        const chargePaise =
+          typeof placeAmountPaise === 'number' && placeAmountPaise > 0
+            ? placeAmountPaise
+            : expectedPaise;
+        if (chargePaise <= 0) {
+          throw new Error(
+            'Payment amount is not ready yet. Wait for the total to update, then try again.',
+          );
+        }
         if (
-          expectedPaise <= 0 ||
-          placeAmountPaise == null ||
-          placeAmountPaise !== expectedPaise
+          expectedPaise > 0 &&
+          typeof placeAmountPaise === 'number' &&
+          Math.abs(placeAmountPaise - expectedPaise) > 1
         ) {
           throw new Error(
             'Payment amount does not match your bill. Please refresh checkout and try again.',
@@ -564,7 +654,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
           customerEmail: resolvedEmail ?? undefined,
           userId: sessionUser?.uid ?? null,
           orderNumber: response.orderNumber,
-          expectedAmountPaise: expectedPaise,
+          expectedAmountPaise: chargePaise,
         });
 
         setOrderId(confirmed.orderId);
@@ -578,7 +668,12 @@ export function useCheckoutFlow(): CheckoutFlowState {
         };
       } catch (err) {
         setPlaceStatus('error');
-        setPlaceError(err instanceof Error ? err.message : 'Unable to complete payment');
+        const raw = err instanceof Error ? err.message : 'Unable to complete payment';
+        setPlaceError(
+          /failed to fetch|networkerror|load failed/i.test(raw)
+            ? 'Couldn’t open Razorpay — check your connection and try again, or use UPI / cash on delivery.'
+            : raw,
+        );
         return null;
       } finally {
         placeInFlightRef.current = false;
@@ -808,6 +903,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     setUpiVerifying(false);
     setUpiPollMessage(null);
     setDeliveryTimeSlot('ASAP');
+    useCheckoutScheduleStore.getState().clear();
     if (prepareSignature) {
       void queryClient.removeQueries({ queryKey: checkoutKeys.prepare(prepareSignature) });
     }
@@ -834,7 +930,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
     cartSyncMessages,
     appliedCouponCode,
     setAppliedCouponCode,
-    setDeliveryTimeSlot,
+    voiceScheduleNotice,
+    setDeliveryTimeSlot: applyDeliveryTimeSlot,
     refreshQuote,
     prepareCheckout,
     placeCodOrder,

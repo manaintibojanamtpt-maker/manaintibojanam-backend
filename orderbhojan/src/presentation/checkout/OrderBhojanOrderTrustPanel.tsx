@@ -128,7 +128,7 @@ export function OrderBhojanOrderTrustPanel({
         {estimatedDelivery ? (
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-              Estimated delivery
+              Delivery
             </p>
             <p className="mt-1 text-sm text-white/75">{estimatedDelivery}</p>
           </div>

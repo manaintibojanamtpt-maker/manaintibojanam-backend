@@ -5,6 +5,7 @@ import {
   buildMarketplaceCheckoutPrepare,
   buildMarketplaceQuote,
   createCheckoutCorrelationId,
+  enabledPaymentMethods,
   placeMarketplaceOrder,
   type MarketplacePlaceRequest,
   type MarketplaceQuoteRequest,
@@ -393,13 +394,17 @@ export function registerMarketplaceRoutes(
       const managedCategories = await loadManagedCategories(db, loaded.tenant.id, loaded.tenant.slug);
       const contextToken = createMarketplaceContextToken();
       const menu = projectFoodMenuV1(loaded.tenant, items.items, contextToken, managedCategories);
+      const paymentMethods = enabledPaymentMethods(loaded.raw);
       const tenantSyncRevision = mergeSyncRevisions(
         extractTenantSyncRevision(loaded.raw),
         items.menuSyncRevision,
       );
 
       if (req.query.schemaVersion === '1.0') {
-        return sendMarketplaceJson(res, success(menu, { tenantSyncRevision }));
+        return sendMarketplaceJson(
+          res,
+          success({ ...menu, paymentMethods }, { tenantSyncRevision }),
+        );
       }
 
       const legacyItems = menu.items.map((food) => ({
@@ -470,12 +475,33 @@ export function registerMarketplaceRoutes(
             featuredIds: menu.featuredFoodIds,
             todaysSpecialIds: menu.todaysSpecialFoodIds,
             contextToken,
+            paymentMethods,
           },
           { tenantSyncRevision },
         ),
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load menu';
+      res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
+    }
+  });
+
+  app.get(`${prefix}/restaurants/:slug/payment-methods`, async (req: Request, res: Response) => {
+    try {
+      const slug = String(req.params.slug);
+      const loaded = await loadTenantBySlug(db, slug);
+      if (!loaded) {
+        return res.status(404).json(notFound(`Restaurant not found: ${slug}`));
+      }
+      sendMarketplaceJson(
+        res,
+        success({
+          slug: loaded.tenant.slug,
+          paymentMethods: enabledPaymentMethods(loaded.raw),
+        }),
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load payment methods';
       res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
     }
   });

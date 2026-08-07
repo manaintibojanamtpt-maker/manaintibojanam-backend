@@ -1,15 +1,18 @@
 /**
  * Purpose: Maps WorkflowTurnResult → deterministic systemReply + proposedActions.
  * Public API: WorkflowResponseMapper, WorkflowTurnResponse
- * Dependencies: WorkflowEngine types, ConversationIntent, ConversationEntity
- * Consumers: Future ConversationEngine / gateway adapters (not wired yet)
- *
- * Non-goals: LLM copy, session mutation, ConversationEngine integration.
+ * Dependencies: WorkflowEngine types, ConversationIntent, localizeWorkflowReply
+ * Consumers: ConversationTurnOrchestrator / ConversationEngine
  */
 
 import { ConversationIntent } from '../models/ConversationIntent.js';
-import type { FoodItemEntity, QuantityEntity } from '../models/ConversationEntity.js';
+import type {
+  DeliveryTimeEntity,
+  FoodItemEntity,
+  QuantityEntity,
+} from '../models/ConversationEntity.js';
 import type { WorkflowDecisionKind, WorkflowTurnResult } from './WorkflowEngine.js';
+import { localizeWorkflowReply } from './localizeWorkflowReply.js';
 
 export interface WorkflowProposedAction {
   readonly type: string;
@@ -25,6 +28,8 @@ export interface WorkflowTurnResponse {
 }
 
 export class WorkflowResponseMapper {
+  constructor(private readonly locale: string = 'en-IN') {}
+
   /**
    * Builds a user-facing reply and optional action stubs from a workflow decision.
    */
@@ -95,7 +100,7 @@ export class WorkflowResponseMapper {
     switch (turn.intent) {
       case ConversationIntent.Greeting:
         return {
-          reply: 'Hello! What would you like to order?',
+          reply: localizeWorkflowReply('greet', this.locale),
           actions: [{ type: 'greet' }],
         };
       case ConversationIntent.AddItem: {
@@ -104,7 +109,7 @@ export class WorkflowResponseMapper {
         const quantity = qty?.numericValue ?? 1;
         const name = food?.normalizedValue || food?.rawValue || 'that item';
         return {
-          reply: `Adding ${quantity} × ${name} to your cart.`,
+          reply: localizeWorkflowReply('add_item', this.locale, { quantity, name }),
           actions: [
             {
               type: 'add_item',
@@ -119,12 +124,53 @@ export class WorkflowResponseMapper {
       }
       case ConversationIntent.Checkout:
         return {
-          reply: 'Alright, proceeding to checkout.',
+          reply: localizeWorkflowReply('checkout', this.locale),
           actions: [{ type: 'checkout' }],
         };
+      case ConversationIntent.ScheduleDelivery: {
+        const delivery = turn.entities.find(
+          (e): e is DeliveryTimeEntity => e.type === 'DeliveryTime',
+        );
+        if (delivery?.mode === 'asap') {
+          return {
+            reply: localizeWorkflowReply('schedule_asap', this.locale),
+            actions: [
+              {
+                type: 'set_delivery_schedule',
+                payload: {
+                  deliveryType: 'asap',
+                  deliveryTimeSlot: delivery.deliveryTimeSlot ?? 'ASAP',
+                  slotLabel: delivery.slotLabel ?? 'ASAP',
+                },
+              },
+            ],
+          };
+        }
+        const slot =
+          delivery?.slotLabel ||
+          delivery?.deliveryTimeSlot ||
+          delivery?.normalizedValue ||
+          'that time';
+        return {
+          reply: localizeWorkflowReply('schedule_set', this.locale, { slot }),
+          actions: [
+            {
+              type: 'set_delivery_schedule',
+              payload: {
+                deliveryType: 'scheduled',
+                deliveryTimeSlot: delivery?.deliveryTimeSlot ?? slot,
+                slotLabel: slot,
+                ...(delivery?.scheduledForHint
+                  ? { scheduledFor: delivery.scheduledForHint }
+                  : {}),
+              },
+            },
+          ],
+        };
+      }
       case ConversationIntent.Cancel:
         return {
-          reply: 'Okay, I cancelled that.',
+          reply: localizeWorkflowReply('cancel', this.locale),
           actions: [{ type: 'cancel' }],
         };
       case ConversationIntent.Confirmation: {
@@ -132,7 +178,7 @@ export class WorkflowResponseMapper {
           (e) => e.type === 'Confirmation' && 'booleanValue' in e && e.booleanValue === true,
         );
         return {
-          reply: confirmed ? 'Confirmed.' : 'Okay, cancelled.',
+          reply: localizeWorkflowReply(confirmed ? 'confirmed' : 'cancelled', this.locale),
           actions: [
             {
               type: 'confirmation',
@@ -143,7 +189,7 @@ export class WorkflowResponseMapper {
       }
       default:
         return {
-          reply: 'Okay.',
+          reply: localizeWorkflowReply('ok', this.locale),
           actions: [{ type: 'noop', payload: { intent: turn.intent } }],
         };
     }
@@ -151,24 +197,48 @@ export class WorkflowResponseMapper {
 
   private clarifyReply(turn: WorkflowTurnResult): string {
     if (turn.missingEntities?.includes('FoodItem') || turn.reason === 'MissingFoodItem') {
-      return 'Which item would you like to add?';
+      return localizeWorkflowReply('missing_food', this.locale);
     }
     if (turn.missingEntities?.includes('Address')) {
-      return 'Please share your delivery address to continue checkout.';
+      return localizeWorkflowReply('missing_address', this.locale);
+    }
+    if (
+      turn.missingEntities?.includes('DeliveryTime') ||
+      turn.reason === 'MissingDeliveryTime' ||
+      turn.reason === 'AmbiguousDeliveryTime' ||
+      turn.reason === 'InvalidDeliveryTime' ||
+      turn.reason === 'OutOfHorizonDeliveryTime' ||
+      turn.pipeline.clarificationReason === 'MissingDeliveryTime' ||
+      turn.pipeline.clarificationReason === 'OutOfHorizonDeliveryTime' ||
+      turn.pipeline.clarificationReason === 'AmbiguousDeliveryTime'
+    ) {
+      if (
+        turn.reason === 'OutOfHorizonDeliveryTime' ||
+        turn.pipeline.clarificationReason === 'OutOfHorizonDeliveryTime'
+      ) {
+        return localizeWorkflowReply('schedule_horizon', this.locale);
+      }
+      if (turn.reason === 'AmbiguousDeliveryTime') {
+        return localizeWorkflowReply('ambiguous_schedule', this.locale);
+      }
+      if (turn.reason === 'InvalidDeliveryTime') {
+        return localizeWorkflowReply('invalid_schedule', this.locale);
+      }
+      return localizeWorkflowReply('missing_schedule', this.locale);
     }
     if (turn.intent === ConversationIntent.Unknown || turn.reason === 'NoMatchingIntent') {
-      return "Sorry, I didn't catch that. You can add an item, checkout, or cancel.";
+      return localizeWorkflowReply('unknown', this.locale);
     }
     if (turn.reason === 'UnrecognizedIntent') {
-      return "Sorry, I didn't catch that. You can add an item, checkout, or cancel.";
+      return localizeWorkflowReply('unknown', this.locale);
     }
-    return 'Could you clarify that for me?';
+    return localizeWorkflowReply('clarify', this.locale);
   }
 
   private denyReply(turn: WorkflowTurnResult): string {
     if (turn.reason && /Cart is empty/i.test(turn.reason)) {
-      return 'Your cart is empty. Add something before checkout.';
+      return localizeWorkflowReply('empty_cart', this.locale);
     }
-    return turn.reason || 'I cannot do that right now.';
+    return turn.reason || localizeWorkflowReply('deny', this.locale);
   }
 }

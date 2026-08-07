@@ -12,7 +12,7 @@ import {
 import { restaurantKeys } from '@/features/restaurant/hooks/restaurantQueryKeys';
 import { collectUniqueRestaurants } from '@/features/experience/utils/homeSpotlightFeed';
 
-const PREFETCH_KITCHEN_LIMIT = 4;
+const PREFETCH_KITCHEN_LIMIT = 10;
 
 /** Warm restaurant + menu queries for above-the-fold kitchens (silent, stale-aware). */
 export function usePrefetchDiscoveryKitchens(feed: DiscoveryHomeResponse | undefined): void {
@@ -44,7 +44,8 @@ export function usePrefetchDiscoveryKitchens(feed: DiscoveryHomeResponse | undef
             lat: coords.lat,
             lng: coords.lng,
           }),
-        staleTime: liveQuery.staleTime,
+        staleTime: Math.max(liveQuery.staleTime, 60_000),
+        gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
       });
 
       void queryClient.prefetchQuery({
@@ -55,7 +56,8 @@ export function usePrefetchDiscoveryKitchens(feed: DiscoveryHomeResponse | undef
             lat: coords.lat,
             lng: coords.lng,
           }),
-        staleTime: liveQuery.staleTime,
+        staleTime: Math.max(liveQuery.staleTime, 60_000),
+        gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
       });
     }
 

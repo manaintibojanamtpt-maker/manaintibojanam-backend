@@ -21,6 +21,19 @@ const WORD_TO_NUMBER: ReadonlyMap<string, number> = new Map([
   ['ten', 10],
   ['a', 1],
   ['an', 1],
+  // Telugu (romanized + common forms)
+  ['okati', 1],
+  ['oka', 1],
+  ['rendu', 2],
+  ['moodu', 3],
+  ['nalugu', 4],
+  ['aidu', 5],
+  // Hindi (romanized)
+  ['ek', 1],
+  ['do', 2],
+  ['teen', 3],
+  ['char', 4],
+  ['paanch', 5],
 ]);
 
 export class RegexQuantityExtractor implements IEntityExtractor {

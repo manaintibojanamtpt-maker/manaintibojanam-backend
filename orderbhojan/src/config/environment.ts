@@ -54,22 +54,52 @@ function resolveFirebaseProjectId(liveMarketplace: boolean): string {
   return explicit || (liveMarketplace ? 'bhojanos-prod' : 'orderbhojan');
 }
 
-export function loadAppConfig(): AppConfig {
-  const liveMarketplace = isLiveMarketplaceBuild();
+/** Live Render backend — used when production builds accidentally inherit a loopback proxy. */
+export const LIVE_MARKETPLACE_API_DEFAULT = 'https://manaintibojanam-backend.onrender.com';
+
+/** True for hosts that phones / Capacitor WebViews cannot reach as an API base. */
+export function isNonRoutableDevApiHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '[::1]' ||
+      host === '::1' ||
+      host.endsWith('.local')
+    );
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(url);
+  }
+}
+
+function resolveMarketplaceApiBaseUrl(liveMarketplace: boolean): string {
   const explicitApiUrl = readEnv('VITE_MARKETPLACE_API_URL');
-  const marketplaceApiBaseUrl = explicitApiUrl
+  let marketplaceApiBaseUrl = explicitApiUrl
     ? explicitApiUrl.replace(/\/$/, '')
     : liveMarketplace && import.meta.env?.DEV
       ? typeof window !== 'undefined'
         ? window.location.origin
         : readEnv('VITE_MARKETPLACE_API_PROXY', 'http://localhost:8080')
       : liveMarketplace
-        ? readEnv('VITE_MARKETPLACE_API_PROXY', 'https://manaintibojanam-backend.onrender.com')
+        ? readEnv('VITE_MARKETPLACE_API_PROXY', LIVE_MARKETPLACE_API_DEFAULT)
         : import.meta.env?.DEV
           ? typeof window !== 'undefined'
             ? window.location.origin
             : 'http://localhost:5174'
-          : 'https://manaintibojanam-backend.onrender.com';
+          : LIVE_MARKETPLACE_API_DEFAULT;
+
+  // Capacitor/`vite build` must never ship localhost from a leftover .env proxy.
+  if (import.meta.env?.PROD && isNonRoutableDevApiHost(marketplaceApiBaseUrl)) {
+    marketplaceApiBaseUrl = LIVE_MARKETPLACE_API_DEFAULT;
+  }
+
+  return marketplaceApiBaseUrl.replace(/\/$/, '');
+}
+
+export function loadAppConfig(): AppConfig {
+  const liveMarketplace = isLiveMarketplaceBuild();
+  const marketplaceApiBaseUrl = resolveMarketplaceApiBaseUrl(liveMarketplace);
 
   return {
     environment: resolveEnvironment(),

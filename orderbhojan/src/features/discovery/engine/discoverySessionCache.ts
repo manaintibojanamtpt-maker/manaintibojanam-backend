@@ -4,8 +4,8 @@ import type { DiscoveryFilters, DiscoveryHomeResponse } from '@/types/marketplac
 
 const STORAGE_KEY = 'ob-discovery-feed-v2';
 const IDB_PREFIX = 'discovery:';
-const SESSION_TTL_MS = 30 * 60_000;
-const MAX_ENTRIES = 8;
+const SESSION_TTL_MS = 60 * 60_000;
+const MAX_ENTRIES = 12;
 
 interface DiscoverySessionEntry {
   readonly lat: number;
@@ -84,6 +84,45 @@ export function readDiscoverySessionCache(
     (entry) => coordsMatch(entry.lat, entry.lng, lat, lng) && filtersMatch(entry.filters, filters),
   );
   return match?.data;
+}
+
+/** Approximate Haversine km — used only for stale-while-revalidate nearest cache. */
+function approxDistanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * Instant first paint: prefer exact coords, else nearest prior feed within maxKm
+ * (Zomato-style — show kitchens immediately, refresh in background).
+ */
+export function readNearestDiscoverySessionCache(
+  lat: number,
+  lng: number,
+  filters: DiscoveryFilters = {},
+  maxKm = 2.5,
+): DiscoveryHomeResponse | undefined {
+  const exact = readDiscoverySessionCache(lat, lng, filters);
+  if (exact) return exact;
+
+  let best: DiscoverySessionEntry | null = null;
+  let bestKm = Number.POSITIVE_INFINITY;
+  for (const entry of readAllEntries()) {
+    if (!filtersMatch(entry.filters, filters)) continue;
+    const km = approxDistanceKm(lat, lng, entry.lat, entry.lng);
+    if (km <= maxKm && km < bestKm) {
+      best = entry;
+      bestKm = km;
+    }
+  }
+  return best?.data;
 }
 
 export function getDiscoverySessionCacheUpdatedAt(

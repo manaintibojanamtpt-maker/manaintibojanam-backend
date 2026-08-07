@@ -19,6 +19,8 @@ export function useRestaurantExperience(slug: string | undefined) {
   const lng = coords?.lng ?? 0;
   const liveQuery = getMarketplaceQueryBehavior();
 
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: restaurantKeys.experience(slug ?? '', lat, lng),
     queryFn: () =>
@@ -29,6 +31,19 @@ export function useRestaurantExperience(slug: string | undefined) {
       }),
     enabled: enabled && Boolean(slug),
     ...liveQuery,
+    gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
+    staleTime: Math.max(liveQuery.staleTime, 60_000),
+    initialData: () =>
+      slug
+        ? queryClient.getQueryData(restaurantKeys.experience(slug, lat, lng))
+        : undefined,
+    initialDataUpdatedAt: () =>
+      slug
+        ? queryClient.getQueryState(restaurantKeys.experience(slug, lat, lng))?.dataUpdatedAt
+        : undefined,
+    placeholderData: (previous) =>
+      previous ??
+      (slug ? queryClient.getQueryData(restaurantKeys.experience(slug, lat, lng)) : undefined),
     retry: 2,
   });
 }

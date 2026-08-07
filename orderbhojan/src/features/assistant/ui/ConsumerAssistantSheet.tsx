@@ -34,6 +34,7 @@ interface ConsumerAssistantSheetProps {
   readonly applying: boolean;
   readonly listening?: boolean;
   readonly speaking?: boolean;
+  readonly voiceTurnPhase?: 'idle' | 'listening' | 'thinking' | 'speaking';
   readonly voiceAgentActive?: boolean;
   readonly error: string | null;
   readonly pendingValidation: CartPlanValidationResult | null;
@@ -62,6 +63,7 @@ export function ConsumerAssistantSheet({
   applying,
   listening = false,
   speaking = false,
+  voiceTurnPhase = 'idle',
   voiceAgentActive = false,
   error,
   pendingValidation,
@@ -109,7 +111,25 @@ export function ConsumerAssistantSheet({
     !listening;
 
   const showMic = voiceEnabled && voiceAvailable && Boolean(onVoiceStart);
-  const micBusy = loading || validating || applying || listening;
+  const micBusy =
+    loading ||
+    validating ||
+    applying ||
+    listening ||
+    voiceTurnPhase === 'thinking' ||
+    voiceTurnPhase === 'speaking';
+  const statusPhase =
+    voiceTurnPhase !== 'idle'
+      ? voiceTurnPhase
+      : listening
+        ? 'listening'
+        : speaking
+          ? 'speaking'
+          : loading
+            ? 'thinking'
+            : validating
+              ? 'validating'
+              : null;
   const starters =
     assistMode === 'post_order'
       ? POST_ORDER_STARTERS
@@ -279,17 +299,21 @@ export function ConsumerAssistantSheet({
           </div>
         ))}
 
-        {(loading || validating || listening || speaking) && (
+        {(statusPhase || applying) && (
           <div className="text-xs text-[#d0c4b5]" aria-live="polite">
-            {listening
+            {statusPhase === 'listening'
               ? voiceAgentActive
                 ? 'Listening live… speak naturally, then pause.'
                 : 'Listening… speak, then pause.'
-              : speaking
+              : statusPhase === 'speaking'
                 ? 'Speaking…'
-                : loading
+                : statusPhase === 'thinking'
                   ? 'Thinking…'
-                  : 'Validating cart plan…'}
+                  : statusPhase === 'validating' || validating
+                    ? 'Validating cart plan…'
+                    : applying
+                      ? 'Applying…'
+                      : null}
           </div>
         )}
 

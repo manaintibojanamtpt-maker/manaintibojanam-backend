@@ -23,6 +23,12 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 export type SpeechRecognitionFactory = () => SpeechRecognitionLike | null;
 
+/** Serialize Web Speech sessions — Chrome aborts overlapping start()/abort(). */
+let captureGate: Promise<void> = Promise.resolve();
+let lastRecognitionEndedAt = 0;
+let activeRecognition: SpeechRecognitionLike | null = null;
+let captureGeneration = 0;
+
 function getDefaultSpeechRecognitionFactory(): SpeechRecognitionFactory {
   return () => {
     if (typeof window === 'undefined') return null;
@@ -75,9 +81,10 @@ function mapSpeechRecognitionError(err: string): {
         retryable: true,
       };
     case 'aborted':
+      // Chrome often fires this after TTS, stop(), or rapid restart — not a hard failure.
       return {
-        code: 'AI_VOICE_ERROR',
-        message: 'Voice capture was interrupted. Tap the mic to try again.',
+        code: 'AI_VOICE_TIMEOUT',
+        message: 'Listening reset — tap the mic and speak again.',
         retryable: true,
       };
     default:
@@ -86,6 +93,57 @@ function mapSpeechRecognitionError(err: string): {
         message: `Speech recognition failed (${err}). Tap the mic to try again.`,
         retryable: err === 'network' || err === 'no-speech',
       };
+  }
+}
+
+/** Release TTS/audio before opening the mic (Web Speech + speechSynthesis share the device). */
+export async function settleMicForSpeechCapture(minGapMs = 450): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {
+    // ignore
+  }
+  const elapsed = Date.now() - lastRecognitionEndedAt;
+  const wait = Math.max(minGapMs, Math.max(0, 280 - elapsed));
+  await new Promise((r) => setTimeout(r, wait));
+}
+
+/**
+ * Hard-stop any in-flight Web Speech recognition + cancel TTS.
+ * Must run on sheet close — AbortController alone can miss gaps between turns.
+ */
+export function forceStopSpeechCapture(): void {
+  captureGeneration += 1;
+  const rec = activeRecognition;
+  activeRecognition = null;
+  if (rec) {
+    try {
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+    } catch {
+      // ignore
+    }
+    try {
+      rec.abort();
+    } catch {
+      try {
+        rec.stop();
+      } catch {
+        // ignore
+      }
+    }
+  }
+  lastRecognitionEndedAt = Date.now();
+  try {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -119,179 +177,294 @@ export async function captureVoiceTranscript(params: {
   }
 
   // Allow a natural pause after TTS before declaring timeout.
-  const timeoutMs = params.timeoutMs ?? 12_000;
+  const timeoutMs = params.timeoutMs ?? 8_000;
   const platform = params.platform ?? 'unknown';
+  const myGeneration = captureGeneration;
 
-  return new Promise<VoiceTranscriptResult>((resolve, reject) => {
-    let settled = false;
-    let finalTranscript = '';
-    let sawResult = false;
+  const run = async (): Promise<VoiceTranscriptResult> => {
+    // A close/hard-stop while we were queued must not open the mic.
+    if (myGeneration !== captureGeneration || params.signal?.aborted) {
+      throw new AssistantApiError({
+        code: 'AI_VOICE_ABORTED',
+        message: 'Voice capture was aborted.',
+        retryable: false,
+      });
+    }
 
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      params.signal?.removeEventListener('abort', onAbort);
-      fn();
-    };
+    await settleMicForSpeechCapture(params.signal?.aborted ? 0 : 450);
 
-    const onAbort = () => {
-      try {
-        recognition.abort();
-      } catch {
-        // ignore
-      }
-      finish(() =>
-        reject(
-          new AssistantApiError({
-            code: 'AI_VOICE_ABORTED',
-            message: 'Voice capture was aborted.',
-            retryable: false,
-          }),
-        ),
-      );
-    };
+    if (myGeneration !== captureGeneration || params.signal?.aborted) {
+      throw new AssistantApiError({
+        code: 'AI_VOICE_ABORTED',
+        message: 'Voice capture was aborted.',
+        retryable: false,
+      });
+    }
 
-    const timer = setTimeout(() => {
-      try {
-        recognition.stop();
-      } catch {
-        // ignore
-      }
-      // Prefer any transcript collected over a hard timeout error.
-      if (finalTranscript.trim()) {
-        finish(() =>
-          resolve({
-            transcript: finalTranscript.trim(),
-            source: 'web_speech',
-            platform,
-          }),
-        );
-        return;
-      }
-      finish(() =>
-        reject(
-          new AssistantApiError({
-            code: 'AI_VOICE_TIMEOUT',
-            message: 'Voice capture timed out.',
-            retryable: true,
-          }),
-        ),
-      );
-    }, timeoutMs);
+    return new Promise<VoiceTranscriptResult>((resolve, reject) => {
+      let settled = false;
+      let finalTranscript = '';
+      let sawResult = false;
+      let intentionalAbort = false;
 
-    params.signal?.addEventListener('abort', onAbort, { once: true });
+      activeRecognition = recognition;
 
-    recognition.lang = params.lang ?? 'en-IN';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
-    recognition.continuous = false;
-
-    recognition.onresult = (event) => {
-      sawResult = true;
-      const results = event.results;
-      let interimBuilder = '';
-      let finalBuilder = '';
-      
-      for (let i = 0; i < (results?.length ?? 0); i += 1) {
-        const row = results[i];
-        const alt = row?.[0];
-        const piece = typeof alt?.transcript === 'string' ? alt.transcript.trim() : '';
-        if (!piece) continue;
-        
-        const isFinal = Boolean((row as { isFinal?: boolean }).isFinal);
-        if (isFinal) {
-          finalBuilder += piece + ' ';
-        } else {
-          interimBuilder += piece + ' ';
+      const markEnded = () => {
+        if (activeRecognition === recognition) {
+          activeRecognition = null;
         }
-      }
-      
-      finalTranscript = finalBuilder.trim() || interimBuilder.trim();
+        lastRecognitionEndedAt = Date.now();
+      };
 
-      // Resolve once we have a final segment — stop recognition promptly.
-      const last = results?.[(results.length ?? 1) - 1] as { isFinal?: boolean } | undefined;
-      if (last?.isFinal && finalTranscript.trim()) {
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        params.signal?.removeEventListener('abort', onAbort);
+        markEnded();
+        fn();
+      };
+
+      const onAbort = () => {
+        intentionalAbort = true;
+        try {
+          recognition.abort();
+        } catch {
+          // ignore
+        }
+        finish(() =>
+          reject(
+            new AssistantApiError({
+              code: 'AI_VOICE_ABORTED',
+              message: 'Voice capture was aborted.',
+              retryable: false,
+            }),
+          ),
+        );
+      };
+
+      const timer = setTimeout(() => {
         try {
           recognition.stop();
         } catch {
           // ignore
         }
+        // Prefer any transcript collected over a hard timeout error.
+        if (finalTranscript.trim()) {
+          finish(() =>
+            resolve({
+              transcript: finalTranscript.trim(),
+              source: 'web_speech',
+              platform,
+            }),
+          );
+          return;
+        }
         finish(() =>
-          resolve({
-            transcript: finalTranscript.trim(),
-            source: 'web_speech',
-            platform,
-          }),
+          reject(
+            new AssistantApiError({
+              code: 'AI_VOICE_TIMEOUT',
+              message: 'Voice capture timed out.',
+              retryable: true,
+            }),
+          ),
         );
-      }
-    };
+      }, timeoutMs);
 
-    recognition.onerror = (event) => {
-      const err = event.error ?? 'unknown';
-      // no-speech after partial interim — still try to use what we heard.
-      if ((err === 'no-speech' || err === 'aborted') && finalTranscript.trim()) {
-        finish(() =>
-          resolve({
-            transcript: finalTranscript.trim(),
-            source: 'web_speech',
-            platform,
-          }),
-        );
-        return;
-      }
-      const mapped = mapSpeechRecognitionError(err);
-      finish(() =>
-        reject(
-          new AssistantApiError({
-            code: mapped.code,
-            message: mapped.message,
-            retryable: mapped.retryable,
-          }),
-        ),
-      );
-    };
+      params.signal?.addEventListener('abort', onAbort, { once: true });
 
-    recognition.onend = () => {
-      if (finalTranscript.trim()) {
-        finish(() =>
-          resolve({
-            transcript: finalTranscript.trim(),
-            source: 'web_speech',
-            platform,
-          }),
-        );
-        return;
-      }
-      finish(() =>
-        reject(
-          new AssistantApiError({
-            code: 'AI_VOICE_EMPTY',
-            message: sawResult
-              ? 'Speech was unclear. Please say the dish and kitchen again.'
-              : 'No speech was recognized. Please try again.',
-            retryable: true,
-          }),
-        ),
-      );
-    };
+      recognition.lang = params.lang ?? 'en-IN';
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 3;
+      recognition.continuous = false;
 
-    try {
-      recognition.start();
-    } catch (error) {
-      finish(() =>
-        reject(
-          error instanceof AssistantApiError
-            ? error
-            : new AssistantApiError({
-                code: 'AI_VOICE_ERROR',
-                message: error instanceof Error ? error.message : 'Failed to start speech recognition',
+      recognition.onresult = (event) => {
+        if (myGeneration !== captureGeneration) {
+          intentionalAbort = true;
+          try {
+            recognition.abort();
+          } catch {
+            // ignore
+          }
+          finish(() =>
+            reject(
+              new AssistantApiError({
+                code: 'AI_VOICE_ABORTED',
+                message: 'Voice capture was aborted.',
                 retryable: false,
               }),
-        ),
-      );
-    }
-  });
+            ),
+          );
+          return;
+        }
+        sawResult = true;
+        const results = event.results;
+        let interimBuilder = '';
+        let finalBuilder = '';
+
+        for (let i = 0; i < (results?.length ?? 0); i += 1) {
+          const row = results[i];
+          const alt = row?.[0];
+          const piece = typeof alt?.transcript === 'string' ? alt.transcript.trim() : '';
+          if (!piece) continue;
+
+          const isFinal = Boolean((row as { isFinal?: boolean }).isFinal);
+          if (isFinal) {
+            finalBuilder += piece + ' ';
+          } else {
+            interimBuilder += piece + ' ';
+          }
+        }
+
+        finalTranscript = finalBuilder.trim() || interimBuilder.trim();
+
+        // Resolve once we have a final segment — stop recognition promptly.
+        const last = results?.[(results.length ?? 1) - 1] as { isFinal?: boolean } | undefined;
+        if (last?.isFinal && finalTranscript.trim()) {
+          try {
+            recognition.stop();
+          } catch {
+            // ignore
+          }
+          finish(() =>
+            resolve({
+              transcript: finalTranscript.trim(),
+              source: 'web_speech',
+              platform,
+            }),
+          );
+        }
+      };
+
+      recognition.onerror = (event) => {
+        const err = event.error ?? 'unknown';
+        // Intentional AbortSignal → already rejected as AI_VOICE_ABORTED.
+        if (err === 'aborted' && intentionalAbort) {
+          return;
+        }
+        // Hard-stop generation bump — treat as abort, not user-facing error.
+        if (myGeneration !== captureGeneration || err === 'aborted') {
+          if (finalTranscript.trim()) {
+            finish(() =>
+              resolve({
+                transcript: finalTranscript.trim(),
+                source: 'web_speech',
+                platform,
+              }),
+            );
+            return;
+          }
+          if (myGeneration !== captureGeneration || intentionalAbort || params.signal?.aborted) {
+            finish(() =>
+              reject(
+                new AssistantApiError({
+                  code: 'AI_VOICE_ABORTED',
+                  message: 'Voice capture was aborted.',
+                  retryable: false,
+                }),
+              ),
+            );
+            return;
+          }
+        }
+        // no-speech after partial interim — still try to use what we heard.
+        if (err === 'no-speech' && finalTranscript.trim()) {
+          finish(() =>
+            resolve({
+              transcript: finalTranscript.trim(),
+              source: 'web_speech',
+              platform,
+            }),
+          );
+          return;
+        }
+        const mapped = mapSpeechRecognitionError(err);
+        finish(() =>
+          reject(
+            new AssistantApiError({
+              code: mapped.code,
+              message: mapped.message,
+              retryable: mapped.retryable,
+            }),
+          ),
+        );
+      };
+
+      recognition.onend = () => {
+        if (finalTranscript.trim()) {
+          finish(() =>
+            resolve({
+              transcript: finalTranscript.trim(),
+              source: 'web_speech',
+              platform,
+            }),
+          );
+          return;
+        }
+        // If we already rejected/resolved via onerror/timer, ignore.
+        if (settled) return;
+        if (myGeneration !== captureGeneration || params.signal?.aborted) {
+          finish(() =>
+            reject(
+              new AssistantApiError({
+                code: 'AI_VOICE_ABORTED',
+                message: 'Voice capture was aborted.',
+                retryable: false,
+              }),
+            ),
+          );
+          return;
+        }
+        finish(() =>
+          reject(
+            new AssistantApiError({
+              code: 'AI_VOICE_EMPTY',
+              message: sawResult
+                ? 'Speech was unclear. Please say the dish and kitchen again.'
+                : 'No speech was recognized. Please try again.',
+              retryable: true,
+            }),
+          ),
+        );
+      };
+
+      try {
+        if (myGeneration !== captureGeneration || params.signal?.aborted) {
+          throw new AssistantApiError({
+            code: 'AI_VOICE_ABORTED',
+            message: 'Voice capture was aborted.',
+            retryable: false,
+          });
+        }
+        recognition.start();
+      } catch (error) {
+        // InvalidStateError = recognition already started — soft-retry as timeout.
+        const msg = error instanceof Error ? error.message : 'Failed to start speech recognition';
+        finish(() =>
+          reject(
+            error instanceof AssistantApiError
+              ? error
+              : new AssistantApiError({
+                  code: /already started|InvalidState/i.test(msg)
+                    ? 'AI_VOICE_TIMEOUT'
+                    : 'AI_VOICE_ERROR',
+                  message: /already started|InvalidState/i.test(msg)
+                    ? 'Listening reset — tap the mic and speak again.'
+                    : msg,
+                  retryable: true,
+                }),
+          ),
+        );
+      }
+    });
+  };
+
+  const queued = captureGate.then(run, run);
+  captureGate = queued.then(
+    () => undefined,
+    () => undefined,
+  );
+  return queued;
 }
 
 export function isVoiceCaptureAvailable(

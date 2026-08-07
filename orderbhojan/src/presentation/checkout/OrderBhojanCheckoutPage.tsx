@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getLocationStoreAddress, subscribeLocationStore } from '@bhojan/location-core';
 import { MarketplaceUxStateView } from '@bhojan/storefront-design-system/marketplace/MarketplaceUxStateView';
 import { CheckoutPageView } from '@bhojan/storefront-design-system/cart/CheckoutPageView';
+import type { CheckoutPaymentMethodId } from '@bhojan/storefront-design-system/cart/CheckoutPageView';
 import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
 import { phoneNumberSchema } from '@/features/auth/domain/auth.types';
 import {
@@ -18,13 +19,15 @@ import { useAuth } from '@/shared/providers/AuthProvider';
 import { useCheckoutFlow } from '@/features/checkout/hooks/useCheckoutFlow';
 import { useCheckoutPrefetch } from '@/features/checkout/hooks/useCheckoutPrefetch';
 import { useCheckoutPromoOffers } from '@/features/checkout/hooks/useCheckoutPromoOffers';
+import { useKitchenPaymentMethodsPrefetch } from '@/features/checkout/hooks/useKitchenPaymentMethodsPrefetch';
 import { prefetchRazorpayCheckoutScript } from '@/features/checkout/infrastructure/razorpayCheckout';
 import { UpiPaymentPendingView } from '@/presentation/checkout/UpiPaymentPendingView';
 import { OrderBhojanCheckoutSuccessView } from '@/presentation/checkout/OrderBhojanCheckoutSuccessView';
 import { CheckoutAuthGateView } from '@/presentation/checkout/CheckoutAuthGateView';
 import {
+  formatBillDeliveryScheduleLine,
   formatCheckoutDeliveryAddress,
-  formatCheckoutEstimatedDelivery,
+  formatTrustPanelDeliverySchedule,
 } from '@/features/checkout/domain/checkoutDeliveryDisplay';
 import { markPerf } from '@/lib/perfMarks';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
@@ -55,6 +58,7 @@ export function OrderBhojanCheckoutPage() {
     scheduling,
     deliveryTimeSlot,
     setDeliveryTimeSlot,
+    voiceScheduleNotice,
     paymentMethods,
     status,
     error,
@@ -77,8 +81,10 @@ export function OrderBhojanCheckoutPage() {
     upiPollMessage,
     checkUpiPayment,
     notifyKitchenUpiPaid,
+    prepareCheckout,
   } = useCheckoutFlow();
   useCheckoutPrefetch(canCheckout);
+  useKitchenPaymentMethodsPrefetch(canCheckout);
   const { selectableCodes } = useCheckoutPromoOffers(canCheckout);
 
   const [promoInput, setPromoInput] = useState('');
@@ -124,6 +130,8 @@ export function OrderBhojanCheckoutPage() {
   const notificationEmail = sessionEmail || emailOverride.trim().toLowerCase() || undefined;
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lastPaymentMethod, setLastPaymentMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<CheckoutPaymentMethodId | null>(null);
 
   const isPreparing = status === 'preparing';
   const isPlacing = status === 'placing';
@@ -131,13 +139,56 @@ export function OrderBhojanCheckoutPage() {
   const quoteReady = Boolean(quote);
   // Keep pay tappable once we have an estimated bill; place handlers still require authoritative quote.
   const checkoutActionsDisabled =
-    isPlacing || Boolean(error) || (!quoteReady && estimatedSubtotal <= 0);
+    isPlacing ||
+    (Boolean(error) && !/reach|network|fetch|timeout|connection/i.test(error ?? '')) ||
+    (!quoteReady && estimatedSubtotal <= 0);
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const supportsUpi = paymentMethods.includes('upi');
-  const showRazorpayButton = supportsRazorpay;
-  const showUpiButton = supportsUpi && !supportsRazorpay;
-  const showBothPaymentOptions = (showRazorpayButton || showUpiButton) && supportsCod;
+  // Show every kitchen-enabled method — UPI (owner VPA) must stay visible even when Razorpay exists.
+  const paymentOptions = useMemo(() => {
+    const options: {
+      id: CheckoutPaymentMethodId;
+      title: string;
+      subtitle: string;
+      badge?: string;
+    }[] = [];
+    if (supportsUpi) {
+      options.push({
+        id: 'upi',
+        title: 'Pay via UPI',
+        subtitle: 'Opens GPay, PhonePe or Paytm with this kitchen’s UPI ID',
+        badge: 'Recommended',
+      });
+    }
+    if (supportsCod) {
+      options.push({
+        id: 'cod',
+        title: 'Pay on delivery',
+        subtitle: 'Pay cash when your order arrives',
+      });
+    }
+    if (supportsRazorpay) {
+      options.push({
+        id: 'razorpay',
+        title: 'Pay online',
+        subtitle: 'Cards, net banking & UPI via Razorpay',
+      });
+    }
+    return options;
+  }, [supportsCod, supportsRazorpay, supportsUpi]);
+
+  useEffect(() => {
+    if (paymentOptions.length === 0) {
+      setSelectedPaymentMethod(null);
+      return;
+    }
+    setSelectedPaymentMethod((current) => {
+      if (current && paymentOptions.some((option) => option.id === current)) return current;
+      return paymentOptions[0]!.id;
+    });
+  }, [paymentOptions]);
+
   const hasDeliveryLocation = hasActiveDeliveryLocation(activeLocation);
   const requiresFlatConfirmation = needsFlatConfirmation(activeLocation);
   const [v2Address, setV2Address] = useState(() => getLocationStoreAddress());
@@ -145,25 +196,25 @@ export function OrderBhojanCheckoutPage() {
   useEffect(() => subscribeLocationStore(setV2Address), []);
 
   const paymentSubtitle = useMemo(() => {
-    if (showBothPaymentOptions) return 'Choose how you want to pay';
-    if (showRazorpayButton) return 'Pay online securely';
-    if (showUpiButton) return 'Pay via UPI';
+    if (paymentOptions.length > 1) return 'Choose how you want to pay';
+    if (supportsUpi) return 'Pay via kitchen UPI';
+    if (supportsRazorpay) return 'Pay online securely';
     return 'Cash on delivery';
-  }, [showBothPaymentOptions, showRazorpayButton, showUpiButton]);
+  }, [paymentOptions.length, supportsRazorpay, supportsUpi]);
 
   const paymentHint = useMemo(() => {
     const trust = PRICING_TRUST.checkoutHint;
-    if (supportsCod && !showBothPaymentOptions) {
+    if (supportsUpi) {
+      return `${trust} UPI opens your installed app with the kitchen’s registered UPI ID — no manual entry.`;
+    }
+    if (supportsRazorpay && supportsCod) {
+      return `${trust} Pay online or choose cash on delivery.`;
+    }
+    if (supportsCod) {
       return `${trust} Pay with cash when your order arrives.`;
     }
-    if (showUpiButton) {
-      return `${trust} Opens GPay, PhonePe, or Paytm with the kitchen UPI ID pre-filled.`;
-    }
-    if (showRazorpayButton && showBothPaymentOptions) {
-      return `${trust} Pay online with UPI, cards, or net banking. COD remains available if you prefer cash on delivery.`;
-    }
     return trust;
-  }, [showBothPaymentOptions, showRazorpayButton, showUpiButton, supportsCod]);
+  }, [supportsCod, supportsRazorpay, supportsUpi]);
 
   useEffect(() => {
     markPerf('cart_to_checkout');
@@ -200,24 +251,59 @@ export function OrderBhojanCheckoutPage() {
   };
 
   const handlePlaceCod = async () => {
-    if (isPlacing || !quote) return;
+    if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('cod');
     await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceRazorpay = async () => {
-    if (isPlacing || !quote) return;
+    if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('razorpay');
     await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
 
   const handlePlaceUpi = async () => {
-    if (isPlacing || !quote) return;
+    if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
     setLastPaymentMethod('upi');
     await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
+  };
+
+  const placeOrderLabel = useMemo(() => {
+    if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
+      return 'Retry checkout';
+    }
+    const total = quote ? `₹${quote.grandTotal}` : `₹${estimatedSubtotal}`;
+    if (!quoteReady && estimatedSubtotal > 0) {
+      if (selectedPaymentMethod === 'upi') return `Pay ~${total} via UPI`;
+      if (selectedPaymentMethod === 'razorpay') return `Pay ~${total} online`;
+      if (selectedPaymentMethod === 'cod') return `Place order · ~${total}`;
+      return `Continue · ~${total}`;
+    }
+    if (!quoteReady) return 'Updating total…';
+    if (selectedPaymentMethod === 'upi') return `Pay ${total} via UPI`;
+    if (selectedPaymentMethod === 'razorpay') return `Pay ${total} online`;
+    if (selectedPaymentMethod === 'cod') return `Place order · ${total}`;
+    return `Continue · ${total}`;
+  }, [error, estimatedSubtotal, quote, quoteReady, selectedPaymentMethod]);
+
+  const handlePlaceOrder = () => {
+    if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
+      void prepareCheckout();
+      return;
+    }
+    if (!selectedPaymentMethod) return;
+    if (selectedPaymentMethod === 'upi') {
+      void handlePlaceUpi();
+      return;
+    }
+    if (selectedPaymentMethod === 'razorpay') {
+      void handlePlaceRazorpay();
+      return;
+    }
+    void handlePlaceCod();
   };
 
   if (!checkoutAuthGate.allowed && authStatus !== 'loading') {
@@ -225,7 +311,10 @@ export function OrderBhojanCheckoutPage() {
   }
 
   const deliveryAddressLabel = formatCheckoutDeliveryAddress(activeLocation, v2Address);
-  const estimatedDeliveryLabel = formatCheckoutEstimatedDelivery(deliveryTimeSlot, scheduling);
+  const estimatedDeliveryLabel = formatTrustPanelDeliverySchedule({
+    deliveryTimeSlot,
+    voiceScheduleNotice,
+  });
 
   if (status === 'awaiting_payment' && upiSession) {
     return (
@@ -336,6 +425,11 @@ export function OrderBhojanCheckoutPage() {
       ? 'Detecting location…'
       : v2Address?.text?.shortLabel?.trim() || activeLocation?.displayLabel || DELIVERY_ADDRESS_PLACEHOLDER;
 
+  const billDeliveryLine = formatBillDeliveryScheduleLine({
+    deliveryTimeSlot,
+    voiceScheduleNotice,
+  });
+
   const billView = quote
     ? {
         lines: [
@@ -353,9 +447,7 @@ export function OrderBhojanCheckoutPage() {
                 },
               ]
             : []),
-          ...(deliveryTimeSlot && !isAsapSlot(deliveryTimeSlot)
-            ? [{ label: 'Delivery slot', amountLabel: formatDeliverySlotLabel(deliveryTimeSlot) }]
-            : []),
+          ...(billDeliveryLine ? [billDeliveryLine] : []),
         ],
         totalLabel: `₹${quote.grandTotal}`,
         deliveryPendingNote: quote.deliveryPending
@@ -376,6 +468,7 @@ export function OrderBhojanCheckoutPage() {
                   },
                 ]
               : []),
+            ...(billDeliveryLine ? [billDeliveryLine] : []),
           ],
           totalLabel: `₹${estimatedSubtotal}`,
           deliveryPendingNote:
@@ -447,6 +540,12 @@ export function OrderBhojanCheckoutPage() {
             ? undefined
             : deliveryTimeSlot.replace(/^(Today|Tomorrow), /, '$1 · '),
           closedMessage: scheduling.closedMessage,
+          ...(voiceScheduleNotice
+            ? {
+                voiceScheduleNotice: voiceScheduleNotice.message,
+                voiceScheduleNoticeKind: voiceScheduleNotice.kind,
+              }
+            : {}),
           isAsap: isAsapSlot,
           formatLabel: formatDeliverySlotLabel,
         }
@@ -505,28 +604,19 @@ export function OrderBhojanCheckoutPage() {
       errorMessage={errorMessage}
       backLabel="Back to cart"
       onBack={() => navigate('/cart')}
-      codLabel="Pay on delivery"
-      razorpayLabel={
-        !quoteReady
-          ? 'Updating total…'
-          : showUpiButton
-            ? 'Pay via UPI'
-            : 'Pay online'
+      paymentOptions={paymentOptions}
+      selectedPaymentMethod={selectedPaymentMethod}
+      onSelectPaymentMethod={setSelectedPaymentMethod}
+      placeOrderLabel={placeOrderLabel}
+      placeOrderBusy={placingMethod != null}
+      onPlaceOrder={handlePlaceOrder}
+      actionsDisabled={
+        Boolean(error && /reach|network|fetch|timeout|connection/i.test(error))
+          ? false
+          : checkoutActionsDisabled
       }
-      codBusy={placingMethod === 'cod'}
-      razorpayBusy={placingMethod === 'razorpay' || placingMethod === 'upi'}
-      showCod={supportsCod}
-      showRazorpay={showRazorpayButton || showUpiButton}
-      actionsDisabled={checkoutActionsDisabled || !quoteReady}
       hint={paymentHint}
-      onPlaceCod={supportsCod ? () => void handlePlaceCod() : undefined}
-      onPlaceRazorpay={
-        showRazorpayButton
-          ? () => void handlePlaceRazorpay()
-          : showUpiButton
-            ? () => void handlePlaceUpi()
-            : undefined
-      }
+      paymentMethodsLoading={isPreparing && paymentOptions.length === 0}
     />
   );
 }

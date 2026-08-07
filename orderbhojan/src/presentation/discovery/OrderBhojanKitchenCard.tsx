@@ -84,10 +84,12 @@ export function OrderBhojanKitchenCard({
           lat: coords.lat,
           lng: coords.lng,
         }),
-      staleTime: liveQuery.staleTime,
+      staleTime: Math.max(liveQuery.staleTime, 60_000),
+      gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
     });
   }, [
     activeLocation,
+    liveQuery.gcTime,
     liveQuery.staleTime,
     queryClient,
     restaurant.restaurantSlug,
@@ -110,13 +112,18 @@ export function OrderBhojanKitchenCard({
           lat: coords.lat,
           lng: coords.lng,
         }),
-      staleTime: liveQuery.staleTime,
+      staleTime: Math.max(liveQuery.staleTime, 60_000),
+      gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
     });
     void import('@/features/restaurant');
     void import('@/features/food/ui/FoodRoutePage');
-  }, [activeLocation, liveQuery.staleTime, prefetchRestaurant, queryClient, restaurant.restaurantSlug]);
+  }, [activeLocation, liveQuery.gcTime, liveQuery.staleTime, prefetchRestaurant, queryClient, restaurant.restaurantSlug]);
 
   const kitchen = useMemo(() => mapRestaurantPublicToKitchenCard(restaurant), [restaurant]);
+  const kitchenLinkState = useMemo(
+    () => ({ kitchenName: restaurant.displayName }),
+    [restaurant.displayName],
+  );
   const isGridCard = variant === 'grid' || className.includes('lg:w-full');
   const offerBadge = kitchen.badges.find((badge) => badge.id === 'offer');
 
@@ -181,6 +188,7 @@ export function OrderBhojanKitchenCard({
           variant="list"
           favoriteSlot={listFavoriteSlot}
           imageLoading={imageLoading}
+          linkState={kitchenLinkState}
         />
       </div>
     );
@@ -197,6 +205,7 @@ export function OrderBhojanKitchenCard({
       >
         <Link
           to={kitchen.storePath}
+          state={kitchenLinkState}
           className="group block h-full overflow-hidden rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
           onMouseEnter={prefetchKitchenNavigation}
           onFocus={prefetchKitchenNavigation}
@@ -275,6 +284,7 @@ export function OrderBhojanKitchenCard({
         imageLoading={imageLoading}
         className={variant === 'spotlight' ? 'h-full' : 'h-full'}
         spotlightEyebrow="Cooking now"
+        linkState={kitchenLinkState}
       />
     </div>
   );

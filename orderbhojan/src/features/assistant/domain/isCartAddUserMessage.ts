@@ -1,28 +1,23 @@
 /** Free-form cart-add intent — builds non-executable plans for validate + confirm. */
 
+import { expandIndicOrderingUtterance } from './orderingTextNormalize';
+import { normalizeKitchenAsr } from './kitchenAsrNormalize';
+import {
+  normalizeQuantityAsr,
+  parseQuantityToken,
+} from './quantityAsrNormalize';
+
 export interface ParsedCartAddIntent {
   readonly quantity: number;
   readonly itemName: string;
   readonly kitchenHint?: string;
 }
 
-const NUMBER_WORDS: Readonly<Record<string, number>> = {
-  a: 1,
-  an: 1,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-};
+/** ASR-tolerant “from” separator (from / feom / fom / form / nundi). */
+const FROM_SEP = String.raw`(?:from|feom|fom|form|fro|nundi|నుండి|నుంచి)\s+`;
 
-/** ASR-tolerant “from” separator (from / feom / fom / form). */
-const FROM_SEP = String.raw`(?:from|feom|fom|form|fro)\s+`;
+const QTY_WORD =
+  'one|won|two|three|tree|four|five|six|seven|eight|ate|nine|ten|a|an|rendu|moodu|nalugu|రెండు|మూడు|నాలుగు';
 
 const ADD_PATTERNS: readonly RegExp[] = [
   // add 2 quantity Masala Dosa from Inti bhojanam
@@ -34,13 +29,13 @@ const ADD_PATTERNS: readonly RegExp[] = [
     String.raw`^(?:please\s+)?add\s+(\d+)\s*(?:x|×|times|quantity|qty)?\s+(.+)$`,
     'i',
   ),
-  // add two quantity Masala Dosa from Inti…
+  // add two / to quantity Masala Dosa from Inti…
   new RegExp(
-    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    String.raw`^(?:please\s+)?add\s+(${QTY_WORD})\s*(?:x|×|times|quantity|qty)?\s+(.+?)\s+${FROM_SEP}(.+)$`,
     'i',
   ),
   new RegExp(
-    String.raw`^(?:please\s+)?add\s+(one|two|three|four|five|six|seven|eight|nine|ten|a|an)\s*(?:x|×|times|quantity|qty)?\s+(.+)$`,
+    String.raw`^(?:please\s+)?add\s+(${QTY_WORD})\s*(?:x|×|times|quantity|qty)?\s+(.+)$`,
     'i',
   ),
   /^(?:please\s+)?add\s+(\d+)\s+(.+?)\s+to\s+(?:my\s+)?cart\s*[.!]?$/i,
@@ -53,6 +48,14 @@ const ADD_PATTERNS: readonly RegExp[] = [
   ),
   new RegExp(
     String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(\d+)\s+(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(${QTY_WORD})\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  new RegExp(
+    String.raw`^(?:please\s+)?(?:i\s+want|i'?d\s+like|get\s+me|give\s+me|order)\s+(${QTY_WORD})\s+(.+)$`,
     'i',
   ),
   // I want Andhra Veg Thali / order masala dosa from …
@@ -69,6 +72,12 @@ const ADD_PATTERNS: readonly RegExp[] = [
   // add Masala Dosa
   /^(?:please\s+)?add\s+(.+)$/i,
   /^(\d+)\s*[x×]\s*(.+)$/i,
+  // Telugu / Hinglish waiter style
+  new RegExp(
+    String.raw`^(rendu|two|2|రెండు|moodu|three|3|మూడు|nalugu|four|4|నాలుగు)\s+(.+?)\s+${FROM_SEP}(.+)$`,
+    'i',
+  ),
+  /^(rendu|two|2|రెండు|moodu|three|3|మూడు)\s+(.+)$/iu,
 ];
 
 function cleanItemName(raw: string): string {
@@ -82,26 +91,44 @@ function cleanItemName(raw: string): string {
     .trim();
 }
 
-function parseQuantityToken(token: string | undefined): number | null {
-  if (!token) return null;
-  if (/^\d+$/.test(token)) return Math.min(20, Math.max(1, Number(token)));
-  const word = NUMBER_WORDS[token.toLowerCase()];
-  return word != null ? word : null;
-}
-
 /** Normalize common ASR typos before regex parse. */
 function normalizeAddUtterance(raw: string): string {
-  return raw
+  return normalizeKitchenAsr(normalizeQuantityAsr(expandIndicOrderingUtterance(raw)))
     .replace(/\b(feom|fom|frm|fro|form)\b/gi, 'from')
-    .replace(/\b(masla|masaala)\b/gi, 'masala')
-    .replace(/\b(inti\s*bojanam|intibojanam|inti\s*bhojan)\b/gi, 'inti bhojanam')
+    .replace(/\b(masla|masaala|malasa)\b/gi, 'masala')
+    .replace(/\b(inti\s*bojanam|intibojanam|inti\s*bhojan|antibody)\b/gi, 'inti bhojanam')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function isQuantityToken(token: string | undefined): boolean {
+  if (!token) return false;
+  return parseQuantityToken(token) != null;
+}
+
+/** Telugu/SOV: “రెండు మసాలా దోశ ఇంటి భోజనం నుండి” / “two masala dosa inti bhojanam”. */
+function parseIndicSovOrder(text: string): ParsedCartAddIntent | null {
+  const sov = text.match(
+    /^(rendu|two|2|రెండు|moodu|three|3|మూడు|nalugu|four|4|నాలుగు)\s+(.+?)\s+(inti\s*bhojanam|ఇంటి\s*భోజనం|mana\s*inti|మన\s*ఇంటి)(?:\s*(?:నుండి|నుంచి|from))?.*$/iu,
+  );
+  if (!sov) return null;
+  const quantity = parseQuantityToken(sov[1]);
+  const itemName = cleanItemName(sov[2] ?? '');
+  const kitchenHint = cleanItemName(sov[3] ?? '');
+  if (quantity == null || itemName.length < 2) return null;
+  return {
+    quantity,
+    itemName,
+    ...(kitchenHint ? { kitchenHint } : {}),
+  };
 }
 
 export function parseCartAddUserMessage(message: string): ParsedCartAddIntent | null {
   const text = normalizeAddUtterance(message);
   if (!text || text.length > 200) return null;
+
+  const sov = parseIndicSovOrder(text);
+  if (sov) return sov;
 
   for (const pattern of ADD_PATTERNS) {
     const match = text.match(pattern);
@@ -110,8 +137,16 @@ export function parseCartAddUserMessage(message: string): ParsedCartAddIntent | 
     // Patterns with qty in group 1 and item in group 2 (+ optional kitchen 3)
     const qtyFromFirst = parseQuantityToken(match[1]);
     if (qtyFromFirst != null && match[2]) {
-      const itemName = cleanItemName(match[2]);
-      const kitchenHint = match[3] ? cleanItemName(match[3]) : undefined;
+      let itemName = cleanItemName(match[2]);
+      let kitchenHint = match[3] ? cleanItemName(match[3]) : undefined;
+      // Strip trailing kitchen tokens glued into the dish name.
+      const kitchenTrail = itemName.match(
+        /^(.*?)\s+(inti\s*bhojanam|ఇంటి\s*భోజనం|antibody)\s*$/iu,
+      );
+      if (kitchenTrail && !kitchenHint) {
+        itemName = cleanItemName(kitchenTrail[1] ?? itemName);
+        kitchenHint = 'inti bhojanam';
+      }
       if (itemName.length >= 2) {
         return {
           quantity: qtyFromFirst,
@@ -123,7 +158,7 @@ export function parseCartAddUserMessage(message: string): ParsedCartAddIntent | 
     }
 
     // add X to cart / add X from kitchen — item in group 1
-    if (match[1] && !/^\d+$/.test(match[1]) && !NUMBER_WORDS[match[1].toLowerCase()]) {
+    if (match[1] && !isQuantityToken(match[1])) {
       const itemName = cleanItemName(match[1]);
       const kitchenHint = match[2] ? cleanItemName(match[2]) : undefined;
       // Avoid treating pure confirm/discard as dish names via the bare "from" pattern.
@@ -157,3 +192,9 @@ export function parseDishClarificationMessage(message: string): string | null {
 export function isCartAddUserMessage(message: string): boolean {
   return parseCartAddUserMessage(message) != null;
 }
+
+export {
+  normalizeQuantityAsr,
+  parseQuantityOnlyMessage,
+  parseQuantityToken,
+} from './quantityAsrNormalize';

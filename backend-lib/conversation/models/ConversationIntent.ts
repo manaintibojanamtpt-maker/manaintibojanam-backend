@@ -12,6 +12,8 @@ export enum ConversationIntent {
   AddItem = 'ADD_ITEM',
   RemoveItem = 'REMOVE_ITEM',
   ModifyItem = 'MODIFY_ITEM',
+  /** Set ASAP or a future delivery window (schedule metadata only). */
+  ScheduleDelivery = 'SCHEDULE_DELIVERY',
   Checkout = 'CHECKOUT',
   Payment = 'PAYMENT',
   TrackOrder = 'TRACK_ORDER',

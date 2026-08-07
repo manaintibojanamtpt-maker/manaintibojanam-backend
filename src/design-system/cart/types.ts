@@ -59,6 +59,9 @@ export interface CheckoutDeliverySlotViewModel {
   readonly selectedIsAsap: boolean;
   readonly selectedSummary?: string;
   readonly closedMessage?: string;
+  /** Voice clarify / unmatched schedule — shown beside kitchen closed copy. */
+  readonly voiceScheduleNotice?: string;
+  readonly voiceScheduleNoticeKind?: 'clarify' | 'error' | 'applied';
   readonly isAsap: (slot: string) => boolean;
   readonly formatLabel: (slot: string) => string;
 }

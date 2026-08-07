@@ -51,20 +51,24 @@ export function mapUnknownError(error: unknown): MarketplaceApiError {
   if (error instanceof DOMException && error.name === 'AbortError') {
     return new MarketplaceApiError({
       code: 'TIMEOUT',
-      message: 'Request timed out',
+      message: 'Request timed out — tap retry in a moment',
       retryable: true,
     });
   }
-  if (error instanceof TypeError) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (
+    error instanceof TypeError ||
+    /failed to fetch|networkerror|load failed|network request failed/i.test(message)
+  ) {
     return new MarketplaceApiError({
       code: 'NETWORK_ERROR',
-      message: 'Network request failed',
+      message: 'Couldn’t reach OrderBhojan servers. Check your connection and retry.',
       retryable: true,
     });
   }
   return new MarketplaceApiError({
     code: 'UNKNOWN',
-    message: error instanceof Error ? error.message : 'Unknown error',
+    message: message || 'Unknown error',
     retryable: false,
   });
 }

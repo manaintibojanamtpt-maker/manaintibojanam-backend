@@ -23,5 +23,11 @@ export function formatAuthError(error: unknown): string {
     return 'Guest browsing is available without Firebase anonymous sign-in.';
   }
 
+  const message = error instanceof Error ? error.message : '';
+  // Google Sign-In DEVELOPER_ERROR (SHA-1 missing for this debug keystore).
+  if (code === '10' || /^10\b/.test(message.trim()) || /DEVELOPER_ERROR|ApiException:\s*10\b/i.test(message)) {
+    return 'Google sign-in isn’t set up for this debug build. Add this machine’s debug SHA-1 to Firebase (bhojanos-prod → Android app com.bhojanos.orderbhojan), re-download google-services.json, then rebuild. Or use phone OTP to continue.';
+  }
+
   return error instanceof Error ? error.message : 'Sign-in failed. Please try again.';
 }

@@ -18,6 +18,8 @@ export interface MarketplaceKitchenCardViewProps {
   readonly className?: string;
   readonly imageLoading?: 'lazy' | 'eager';
   readonly spotlightEyebrow?: string;
+  /** Passed to react-router Link for instant destination chrome (e.g. kitchen name). */
+  readonly linkState?: Record<string, unknown>;
 }
 
 const badgeStyles: Record<string, string> = {
@@ -123,6 +125,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   className = '',
   imageLoading = 'lazy',
   spotlightEyebrow = 'Cooking now',
+  linkState,
 }) => {
   if (variant === 'list') {
     const offerBadge = kitchen.badges.find((badge) => badge.id === 'offer');
@@ -134,6 +137,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
     return (
       <Link
         to={kitchen.storePath}
+        state={linkState}
         className={`group flex items-center gap-3 py-3 transition active:bg-white/[0.03] active:scale-[0.98] touch-manipulation ${className}`}
       >
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/5">
@@ -185,6 +189,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
     return (
       <Link
         to={kitchen.storePath}
+        state={linkState}
         className={`group block overflow-hidden rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_24px_56px_rgba(0,0,0,0.45)] active:scale-[0.98] touch-manipulation ${className}`}
       >
         <div className="relative h-48 overflow-hidden bg-white/5">
@@ -217,6 +222,7 @@ export const MarketplaceKitchenCardView: React.FC<MarketplaceKitchenCardViewProp
   return (
     <Link
       to={kitchen.storePath}
+      state={linkState}
       className={`group block h-full min-w-0 rounded-2xl border border-[color:var(--mib-border,white/10)] bg-[#120d0c] p-4 transition hover:border-[#e85d04]/40 hover:bg-[#120d0c]/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.38)] active:scale-[0.98] touch-manipulation ${className}`}
     >
       <div className="flex gap-4">

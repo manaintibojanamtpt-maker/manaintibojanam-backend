@@ -16,11 +16,13 @@ import { EntityResolver } from './EntityResolver.js';
 import { IntentResolver } from './IntentResolver.js';
 import { IntentRuleRegistry } from './IntentRuleRegistry.js';
 import { RegexQuantityExtractor } from './extractors/RegexQuantityExtractor.js';
+import { RegexDeliveryTimeExtractor } from './extractors/RegexDeliveryTimeExtractor.js';
 import { MenuFoodItemExtractor } from './extractors/MenuFoodItemExtractor.js';
 import { GreetingRule } from './rules/GreetingRule.js';
 import { ConfirmationRule } from './rules/ConfirmationRule.js';
 import { CancelRule } from './rules/CancelRule.js';
 import { CheckoutRule } from './rules/CheckoutRule.js';
+import { ScheduleDeliveryRule } from './rules/ScheduleDeliveryRule.js';
 import { AddItemRule } from './rules/AddItemRule.js';
 import { FallbackRule } from './rules/FallbackRule.js';
 
@@ -62,6 +64,8 @@ export class IntentPipeline {
 export interface CreateDefaultIntentPipelineOptions {
   /** Injected restaurant/menu catalog for FoodItem matching. Empty = no food matches. */
   readonly menu?: readonly MenuCatalogItem[];
+  /** BCP-47 locale for workflow replies (e.g. te-IN). */
+  readonly locale?: string;
 }
 
 /**
@@ -76,11 +80,13 @@ export function createDefaultIntentPipeline(
   registry.register(new ConfirmationRule());
   registry.register(new CancelRule());
   registry.register(new CheckoutRule());
+  registry.register(new ScheduleDeliveryRule());
   registry.register(new AddItemRule());
   registry.register(new FallbackRule());
 
   const extractors = [
     new RegexQuantityExtractor(),
+    new RegexDeliveryTimeExtractor(),
     new MenuFoodItemExtractor(options.menu ?? []),
   ];
 

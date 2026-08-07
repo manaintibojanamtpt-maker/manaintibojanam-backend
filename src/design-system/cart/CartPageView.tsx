@@ -60,17 +60,6 @@ export function CartPageView({
           {lines.map((line) => (
             <CartLineView key={line.lineId} line={line} onQuantityChange={onQuantityChange} />
           ))}
-          {onMenu ? (
-            <li className="mt-1 flex justify-center pt-2 border-t border-white/[0.08]">
-              <button
-                type="button"
-                className="text-sm font-bold text-[#e85d04] hover:text-[#f0701a] active:scale-95 touch-manipulation"
-                onClick={onMenu}
-              >
-                + Add more items
-              </button>
-            </li>
-          ) : null}
         </ul>
 
         {recommendationsContent}

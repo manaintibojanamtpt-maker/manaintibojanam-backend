@@ -54,7 +54,17 @@ export async function openExternalUrl(url: string): Promise<boolean> {
   if (!trimmed || typeof window === 'undefined') return false;
 
   if (isNativePlatform()) {
-    if (/^intent:/i.test(trimmed)) {
+    // Kitchen UPI VPA: open installed apps via native startActivity (not WebView).
+    if (/^(upi:|intent:|tez:|gpay:|phonepe:|paytmmp:)/i.test(trimmed)) {
+      try {
+        const { nativeOpenUpiPayUrl } = await import(
+          '@/features/checkout/infrastructure/nativeUpiBridge'
+        );
+        const opened = await nativeOpenUpiPayUrl(trimmed);
+        if (opened) return true;
+      } catch {
+        // Fall through to location.assign.
+      }
       window.location.assign(trimmed);
       return true;
     }

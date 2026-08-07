@@ -107,15 +107,34 @@ export function buildAndroidUpiIntent(
   options?: { readonly packageName?: string; readonly fallbackUrl?: string },
 ): string {
   const query = buildUpiQueryString(params);
-  const parts = [`intent://pay?${query}#Intent`, 'scheme=upi', 'action=android.intent.action.VIEW'];
+  const parts = [
+    `intent://pay?${query}#Intent`,
+    'scheme=upi',
+    'action=android.intent.action.VIEW',
+    'category=android.intent.category.BROWSABLE',
+  ];
   if (options?.packageName) {
     parts.push(`package=${options.packageName}`);
   }
-  if (options?.fallbackUrl) {
+  // Avoid browser_fallback_url on Capacitor/WebView — it traps users in-browser
+  // instead of opening GPay/PhonePe/Paytm for the kitchen VPA.
+  if (options?.fallbackUrl && !isNativeCapacitorLikely()) {
     parts.push(`S.browser_fallback_url=${encodeURIComponent(options.fallbackUrl)}`);
   }
   parts.push('end');
   return parts.join(';');
+}
+
+function isNativeCapacitorLikely(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return (
+      (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() ===
+        true || /android|iphone|ipad/i.test(window.navigator.userAgent)
+    );
+  } catch {
+    return isAndroidDevice() || isIosDevice();
+  }
 }
 
 /**
@@ -172,8 +191,10 @@ export function buildUpiAppDeepLinkCandidates(
           : canonical,
       ];
     case 'other':
+      // Prefer canonical upi:// so Android shows the system app chooser for the kitchen VPA.
+      // Then package-free intent (no browser fallback) for Capacitor WebViews.
       return isAndroidDevice()
-        ? [buildAndroidUpiIntent(params, { fallbackUrl: canonical }), canonical]
+        ? [canonical, buildAndroidUpiIntent(params)]
         : [canonical];
     default:
       return [];
@@ -279,27 +300,29 @@ export async function launchUpiAppWithFallback(
     return { outcome: 'failed', message: 'Unable to build a UPI link for that app.' };
   }
 
-  const primary = candidates[0]!;
-  const opened = await openExternalUrl(primary);
-  if (!opened) {
-    return {
-      outcome: 'fallback_required',
-      deepLinkTried: primary,
-      message: 'Could not open that UPI app. Scan the QR or copy payment details.',
-    };
+  // Try preferred deep link first; on Android Capacitor, upi:// / intent:// open installed apps.
+  let lastTried = candidates[0]!;
+  for (const candidate of candidates) {
+    lastTried = candidate;
+    const opened = await openExternalUrl(candidate);
+    if (opened) {
+      if (isIosDevice()) {
+        return {
+          outcome: 'opened',
+          deepLinkTried: candidate,
+          message:
+            'If the UPI app did not open, scan the QR or copy payment details into GPay / PhonePe / Paytm.',
+        };
+      }
+      return { outcome: 'opened', deepLinkTried: candidate };
+    }
   }
 
-  // OS cannot confirm the app actually handled the URL. Prefer QR on iOS after attempt.
-  if (isIosDevice()) {
-    return {
-      outcome: 'opened',
-      deepLinkTried: primary,
-      message:
-        'If the UPI app did not open, scan the QR or copy payment details into GPay / PhonePe / Paytm.',
-    };
-  }
-
-  return { outcome: 'opened', deepLinkTried: primary };
+  return {
+    outcome: 'fallback_required',
+    deepLinkTried: lastTried,
+    message: 'Could not open that UPI app. Scan the QR or copy payment details.',
+  };
 }
 
 /** Watch for quick return from a failed app handoff (user stayed in foreground / bounced back). */

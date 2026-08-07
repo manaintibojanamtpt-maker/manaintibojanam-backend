@@ -48,6 +48,8 @@ import type { AiGatewayDisabledResponse } from './types.js';
 import { SessionManager, InMemoryConversationRepository } from '../conversation/session/SessionManager.js';
 import { FirestoreConversationRepository } from '../conversation/session/FirestoreConversationRepository.js';
 import { ConversationEngine } from '../conversation/engine/ConversationEngine.js';
+import { mapWorkflowToAssistResponse } from '../conversation/engine/mapWorkflowToAssistResponse.js';
+import type { MenuCatalogItem } from '../conversation/workflow/intent/extractors/MenuFoodItemExtractor.js';
 
 type LoggerLike = {
   info: (payload: Record<string, unknown>) => void;
@@ -175,6 +177,7 @@ export function registerAiGatewayRoutes(
         shadowTrafficValidation: true,
         shadowTrafficReplay: true,
         aiCanaryLiveRolloutGates: true,
+        conversationEngineActive: true,
       },
       observability: getAiObservabilitySnapshot(),
       rollout: buildAiCanaryRolloutSnapshot(),
@@ -183,7 +186,12 @@ export function registerAiGatewayRoutes(
         collection: 'ai_audit_events',
         mode: 'fire_and_forget',
       },
-      note: 'Gateway is OFF unless AI_GATEWAY_ENABLED=true. Durable AI audit writes require AI_AUDIT_PERSISTENCE_ENABLED=true. Consumer assist UI is flag-gated (FF_OB_AI_ASSISTANT). Canary cohort headers require FF_OB_AI_CANARY_HEADERS on OrderBhojan. Personalization requires FF_OB_AI_PERSONALIZATION. Cart plans require explicit confirmation. Frontends must not call OpenRouter directly.',
+      conversationEngine: {
+        active: process.env.FF_OB_AI_CONVERSATION_ENGINE_ACTIVE === 'true',
+        passive: process.env.FF_OB_AI_CONVERSATION_ENGINE_PASSIVE === 'true',
+        persistence: process.env.FF_OB_AI_CONVERSATION_PERSISTENCE === 'true',
+      },
+      note: 'Gateway is OFF unless AI_GATEWAY_ENABLED=true. Durable AI audit writes require AI_AUDIT_PERSISTENCE_ENABLED=true. Consumer assist UI is flag-gated (FF_OB_AI_ASSISTANT). ConversationEngine owns deterministic turns when FF_OB_AI_CONVERSATION_ENGINE_ACTIVE=true (LLM fallthrough for unknown). Canary cohort headers require FF_OB_AI_CANARY_HEADERS on OrderBhojan. Personalization requires FF_OB_AI_PERSONALIZATION. Cart plans require explicit confirmation. Frontends must not call OpenRouter directly.',
     });
   });
 
@@ -308,22 +316,22 @@ export function registerAiGatewayRoutes(
       ...canaryMeta,
     });
 
-    // Phase 1: Passive Observation by Conversation Engine
+    const preferredLanguage =
+      typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim()
+        ? body.preferredLanguage.trim()
+        : '';
+
+    // Passive observer (rollback / dual-run) — fire-and-forget, never blocks LLM path.
     if (process.env.FF_OB_AI_CONVERSATION_ENGINE_PASSIVE === 'true') {
-      try {
-        const preferredLanguage = typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim() ? body.preferredLanguage.trim() : 'en-IN';
-        Promise.resolve().then(async () => {
+      Promise.resolve()
+        .then(async () => {
           try {
-            let session = await sessionManager.loadSession(conversationId);
-            if (!session) {
-              // Note: using conversationId as sessionId for bridging legacy to engine
-              session = await sessionManager.createSession('tenant_unknown');
-              // Manually override the sessionId in this Phase 1 mapping
-              session = { ...session, sessionId: conversationId }; 
-            }
             await conversationEngine.receiveTranscript(conversationId, message, {
               clientPlatform: 'unknown',
-              preferredLanguage,
+              preferredLanguage: preferredLanguage || 'en-IN',
+              tenantId: ordering.context?.restaurantId || 'tenant_unknown',
+              restaurantId: ordering.context?.restaurantId,
+              ensureSession: true,
             });
           } catch (engineErr) {
             log?.warn({
@@ -331,14 +339,79 @@ export function registerAiGatewayRoutes(
               error: engineErr instanceof Error ? engineErr.message : String(engineErr),
             });
           }
-        }).catch(() => { /* strict fire-and-forget safety */ });
-      } catch (outerErr) {
-        // Guaranteed zero-impact on legacy latency or reliability
+        })
+        .catch(() => {
+          /* strict fire-and-forget safety */
+        });
+    }
+
+    // Active ConversationEngine — owns deterministic turns; fall through to OpenRouter when needed.
+    if (
+      process.env.FF_OB_AI_CONVERSATION_ENGINE_ACTIVE === 'true' &&
+      body.mode === 'consumer_ordering'
+    ) {
+      try {
+        const menu: MenuCatalogItem[] = (ordering.context?.menuItems ?? [])
+          .filter((item) => typeof item.name === 'string' && item.name.trim())
+          .map((item) => ({
+            id: (item.id && String(item.id).trim()) || item.name.trim(),
+            name: item.name.trim(),
+          }));
+
+        const engineResult = await conversationEngine.receiveTranscript(
+          conversationId,
+          message,
+          {
+            clientPlatform:
+              channel === 'orderbhojan_android'
+                ? 'android'
+                : channel === 'orderbhojan_web'
+                  ? 'web'
+                  : 'unknown',
+            preferredLanguage: preferredLanguage || 'en-IN',
+            tenantId: ordering.context?.restaurantId || 'tenant_unknown',
+            restaurantId: ordering.context?.restaurantId,
+            menu,
+            ensureSession: true,
+          },
+        );
+
+        if (engineResult.success && engineResult.fallthroughToLlm !== true) {
+          const response = mapWorkflowToAssistResponse({
+            result: engineResult,
+            mode: body.mode,
+            channel,
+            conversationId,
+            restaurantId: ordering.context?.restaurantId,
+            readOnlyConsumer,
+          });
+
+          emitAiAuditEvent(log, 'info', {
+            eventType: 'ai.assist.response',
+            correlationId,
+            conversationId,
+            mode: body.mode,
+            channel,
+            intent: response.intent,
+            model: 'conversation-engine/workflow',
+            latencyMs: Date.now() - startedAt,
+            success: true,
+            safetyBlocked: response.structured.safety.blocked,
+            ...canaryMeta,
+          });
+
+          return res.json(response);
+        }
+      } catch (engineErr) {
+        log?.warn({
+          eventType: 'ai.conversation_engine.active_error',
+          error: engineErr instanceof Error ? engineErr.message : String(engineErr),
+        });
+        // Fall through to OpenRouter on engine failure.
       }
     }
 
     try {
-      const preferredLanguage = typeof body.preferredLanguage === 'string' && body.preferredLanguage.trim() ? body.preferredLanguage.trim() : '';
       const languageAddon = preferredLanguage ? ` IMPORTANT: Reply exclusively in the ${preferredLanguage} language/locale (e.g. if te-IN, use Telugu) for your 'reply' field. Do not use English unless the locale is English.` : '';
 
       const postOrderAddon =

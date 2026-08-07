@@ -10,6 +10,8 @@ public class MainActivity extends BridgeActivity {
         // Register local plugins before bridge init so JS registerPlugin can resolve them.
         registerPlugin(OrderBhojanNativeSttPlugin.class);
         registerPlugin(OrderBhojanNativeTrackPlugin.class);
+        registerPlugin(OrderBhojanNativeUpiPlugin.class);
+        registerPlugin(OrderBhojanNativeChromePlugin.class);
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
     }

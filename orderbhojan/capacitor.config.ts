@@ -58,6 +58,13 @@ const config: CapacitorConfig = {
     // Android WebView origin is https://localhost (must match backend CORS allowlist).
     androidScheme: 'https',
     hostname: 'localhost',
+    // Razorpay Checkout opens hosted pages — must leave the WebView shell.
+    allowNavigation: [
+      'checkout.razorpay.com',
+      'api.razorpay.com',
+      '*.razorpay.com',
+      '*.razorpay.in',
+    ],
   },
   android: {
     allowMixedContent: false,

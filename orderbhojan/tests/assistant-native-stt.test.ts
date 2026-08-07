@@ -89,14 +89,28 @@ describe('native Android STT + voice runtime', () => {
   });
 
   it('conversation prefers native STT then falls back to web capture', () => {
-    const src = readFileSync(
+    const stt = readFileSync(
+      path.resolve(__dirname, '../src/features/assistant/hooks/useVoiceStt.ts'),
+      'utf8',
+    );
+    const conv = readFileSync(
       path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),
       'utf8',
     );
-    assert.match(src, /captureNativeAndroidStt/);
-    assert.match(src, /captureVoiceTranscript/);
-    assert.match(src, /AI_VOICE_PERMISSION_DENIED/);
-    assert.match(src, /nativeSttCancelListening/);
-    assert.match(src, /nextVoiceRuntimeState/);
+    const capture = readFileSync(
+      path.resolve(__dirname, '../src/features/assistant/infrastructure/voiceSpeechCapture.ts'),
+      'utf8',
+    );
+    assert.match(stt, /captureNativeAndroidStt/);
+    assert.match(stt, /captureVoiceTranscript/);
+    assert.match(stt, /settleMicForSpeechCapture/);
+    assert.match(stt, /forceStopSpeechCapture/);
+    assert.match(stt, /AI_VOICE_PERMISSION_DENIED/);
+    assert.match(stt, /nativeSttCancelListening/);
+    assert.match(conv, /useVoiceStt/);
+    assert.match(conv, /agentMode:\s*true/);
+    assert.match(conv, /forceStopSpeechCapture/);
+    assert.match(conv, /sheetOpenRef/);
+    assert.match(capture, /export function forceStopSpeechCapture/);
   });
 });

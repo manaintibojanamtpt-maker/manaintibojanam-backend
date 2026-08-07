@@ -323,6 +323,13 @@ export class MarketplaceApiClient {
     });
   }
 
+  getRestaurantPaymentMethods(slug: string): Promise<{ slug: string; paymentMethods: string[] }> {
+    return this.http.request({
+      path: `${MARKETPLACE_PREFIX}/restaurants/${encodeURIComponent(slug)}/payment-methods`,
+      timeoutMs: 8_000,
+    });
+  }
+
   quote(body: {
     restaurantId: string;
     contextToken: string;

@@ -103,6 +103,8 @@ export interface FoodMenuResponse {
   readonly items: readonly FoodPublic[];
   readonly featuredIds: readonly string[];
   readonly todaysSpecialIds: readonly string[];
+  /** Kitchen-enabled checkout methods when returned by menu API. */
+  readonly paymentMethods?: readonly string[];
 }
 
 export interface FoodCategoriesResponse {

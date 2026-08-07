@@ -8,19 +8,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 describe('checkout direct UPI payment', () => {
-  it('shows UPI when prepare returns upi without razorpay', () => {
+  it('shows UPI alongside other kitchen payment methods', () => {
     const checkout = readFileSync(
       join(root, 'src/presentation/checkout/OrderBhojanCheckoutPage.tsx'),
       'utf8',
     );
 
     assert.match(checkout, /paymentMethods\.includes\('upi'\)/);
-    assert.match(checkout, /showUpiButton = supportsUpi && !supportsRazorpay/);
-    assert.match(checkout, /showRazorpay=\{showRazorpayButton \|\| showUpiButton\}/);
-    assert.match(checkout, /showUpiButton\s*\?\s*'Pay via UPI'\s*:\s*'Pay online'/);
+    assert.match(checkout, /supportsUpi/);
+    assert.match(checkout, /id: 'upi'/);
+    assert.match(checkout, /Pay via UPI/);
     assert.match(checkout, /handlePlaceUpi/);
     assert.match(checkout, /placeUpiOrder/);
     assert.match(checkout, /UpiPaymentPendingView/);
+    assert.match(checkout, /paymentOptions/);
+    // Must show UPI whenever kitchen enables it — never gate on Razorpay absence.
+    assert.match(checkout, /if \(supportsUpi\)/);
+    assert.doesNotMatch(checkout, /supportsUpi\s*&&\s*!supportsRazorpay/);
   });
 
   it('placeUpiOrder keeps payment pending until verification', () => {
@@ -45,7 +49,15 @@ describe('checkout direct UPI payment', () => {
     assert.match(upi, /phonepe:\/\/pay/);
     assert.match(upi, /paytmmp:\/\/pay/);
     assert.match(upi, /buildUpiQrImageUrl/);
+    assert.match(upi, /canonical/);
     assert.doesNotMatch(upi, /window\.location\.href\s*=/);
+
+    const bridge = readFileSync(
+      join(root, 'src/features/checkout/infrastructure/nativeUpiBridge.ts'),
+      'utf8',
+    );
+    assert.match(bridge, /OrderBhojanNativeUpi/);
+    assert.match(bridge, /nativeOpenUpiPayUrl/);
   });
 
   it('pending UPI screen shows app picker on mobile', () => {
@@ -71,4 +83,3 @@ describe('checkout direct UPI payment', () => {
     assert.match(flow, /finalizeUpiPaymentSuccess/);
   });
 });
-

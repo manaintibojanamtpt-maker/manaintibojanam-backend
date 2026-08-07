@@ -4,9 +4,20 @@ import {
   isNativeAndroidSttAvailable,
   nativeSttCancelListening,
 } from '../infrastructure/nativeAndroidSttBridge';
-import { captureVoiceTranscript, isVoiceCaptureAvailable } from '../infrastructure/voiceSpeechCapture';
+import {
+  captureVoiceTranscript,
+  forceStopSpeechCapture,
+  isVoiceCaptureAvailable,
+  settleMicForSpeechCapture,
+} from '../infrastructure/voiceSpeechCapture';
 import { AssistantApiError } from '../types';
 import { useAiNativeSttFeature } from '../hooks/useAiNativeSttFeature';
+
+/** Telugu WebView STT is weak — prefer native Android recognizer when present. */
+function preferNativeSttForLanguage(lang: string): boolean {
+  const normalized = lang.trim().toLowerCase();
+  return normalized === 'te' || normalized.startsWith('te-') || normalized.startsWith('te_');
+}
 
 export function useVoiceStt() {
   const nativeSttEnabled = useAiNativeSttFeature();
@@ -17,19 +28,39 @@ export function useVoiceStt() {
 
   const cancelListening = useCallback(() => {
     voiceAbortRef.current?.abort();
+    voiceAbortRef.current = null;
+    forceStopSpeechCapture();
     void nativeSttCancelListening();
     setListening(false);
   }, []);
 
   const startListening = useCallback(
-    async (options: { lang: string; agentMode: boolean; ac: AbortController }): Promise<string> => {
-      const { lang, agentMode, ac } = options;
-      
-      const canUseNative = nativeSttEnabled && isNativeAndroidSttAvailable();
+    async (options: {
+      lang: string;
+      agentMode: boolean;
+      ac: AbortController;
+      /** When false, must not open the mic (sheet closed / agent stopped). */
+      isVoiceSessionLive?: () => boolean;
+    }): Promise<string> => {
+      const { lang, agentMode, ac, isVoiceSessionLive } = options;
+
+      const sessionLive = () => isVoiceSessionLive?.() !== false && !ac.signal.aborted;
+
+      const canUseNative =
+        isNativeAndroidSttAvailable() &&
+        (nativeSttEnabled || preferNativeSttForLanguage(lang));
       if (!canUseNative && !voiceCaptureAvailable) {
         throw new AssistantApiError({
           code: 'AI_VOICE_UNSUPPORTED',
           message: 'Speech recognition is not available on this device.',
+          retryable: false,
+        });
+      }
+
+      if (!sessionLive()) {
+        throw new AssistantApiError({
+          code: 'AI_VOICE_ABORTED',
+          message: 'Voice capture was aborted.',
           retryable: false,
         });
       }
@@ -73,15 +104,35 @@ export function useVoiceStt() {
               retryable: false,
             });
           }
+          // Cancel leftover TTS / prior recognition before opening the mic.
+          await settleMicForSpeechCapture(agentMode ? 550 : 400);
+          if (!sessionLive()) {
+            forceStopSpeechCapture();
+            throw new AssistantApiError({
+              code: 'AI_VOICE_ABORTED',
+              message: 'Voice capture was aborted.',
+              retryable: false,
+            });
+          }
           const web = await captureVoiceTranscript({
             signal: ac.signal,
             platform: 'web',
             lang,
-            timeoutMs: agentMode ? 14_000 : 10_000,
+            // Live agent: longer window so pause after dish name is OK.
+            timeoutMs: agentMode ? 10_000 : 7_000,
           });
           transcript = web.transcript;
         }
-        
+
+        if (!sessionLive()) {
+          forceStopSpeechCapture();
+          throw new AssistantApiError({
+            code: 'AI_VOICE_ABORTED',
+            message: 'Voice capture was aborted.',
+            retryable: false,
+          });
+        }
+
         return transcript;
       } finally {
         if (voiceAbortRef.current === ac) {

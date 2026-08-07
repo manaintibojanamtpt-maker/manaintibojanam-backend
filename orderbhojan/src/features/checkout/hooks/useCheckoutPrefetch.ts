@@ -79,6 +79,12 @@ export function useCheckoutPrefetch(enabled = true): void {
           ) {
             persistCheckoutPrepareSession(signature, cartSignature, response);
           }
+          if (resolvedRestaurantId && response.paymentMethods?.length) {
+            const { persistKitchenPaymentMethods } = await import(
+              '../infrastructure/kitchenPaymentMethodsCache'
+            );
+            persistKitchenPaymentMethods(resolvedRestaurantId, response.paymentMethods);
+          }
           markPerf('checkout_prepare_end', 'prefetch');
           markPerf('checkout_bill_ready', 'prefetch');
           return next;

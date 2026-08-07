@@ -28,13 +28,20 @@ export function OrderBhojanFloatingCart() {
     [lines],
   );
 
+  const onMenuRoute = /\/restaurant\/[^/]+\/menu(?:\/|$)/.test(pathname);
+
   return (
     <MarketplaceFloatingCartView
       itemCount={count}
       // Subtotal only — delivery/taxes appear on cart/checkout (never imply grand total here).
       totalLabel={`Items ${formatInr(total)}`}
       lines={viewLines}
-      hidden={pathname.startsWith('/checkout') || pathname.startsWith('/cart')}
+      // Kitchen menu owns the View cart stripe; hide the bag FAB there to avoid a double chrome.
+      hidden={
+        pathname.startsWith('/checkout') ||
+        pathname.startsWith('/cart') ||
+        onMenuRoute
+      }
       onUpdateQuantity={(lineId, quantity) => setQuantity(lineId, quantity)}
       onCheckout={() => navigate('/cart')}
     />

@@ -13,6 +13,8 @@ import { ConversationStatus } from '../models/ConversationState.js';
 
 export interface ISessionManager {
   createSession(tenantId: string, customerId?: string): Promise<SessionContext>;
+  /** Load or create a session with a caller-provided id (bridges assist conversationId). */
+  ensureSession(sessionId: string, tenantId: string, customerId?: string): Promise<SessionContext>;
   loadSession(sessionId: string): Promise<SessionContext | null>;
   updateSession(sessionId: string, snapshot: ConversationSnapshot): Promise<void>;
   closeSession(sessionId: string): Promise<void>;
@@ -47,15 +49,25 @@ export class SessionManager implements ISessionManager {
 
   async createSession(tenantId: string, customerId?: string): Promise<SessionContext> {
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    return this.ensureSession(sessionId, tenantId, customerId);
+  }
+
+  async ensureSession(
+    sessionId: string,
+    tenantId: string,
+    customerId?: string,
+  ): Promise<SessionContext> {
+    const existing = await this.loadSession(sessionId);
+    if (existing) return existing;
+
     const now = Date.now();
-    
     const snapshot: ConversationSnapshot = {
       snapshotId: `snap_${now}`,
       timestamp: now,
       recentSteps: [],
       state: {
         sessionId,
-        conversationId: sessionId, // Phase 1: 1-to-1 mapping
+        conversationId: sessionId,
         tenantId,
         customerId,
         currentLanguage: 'en-IN',

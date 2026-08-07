@@ -18,6 +18,18 @@ describe('assistant confirm / voice-agent intents', () => {
     assert.equal(isConfirmCartUserMessage('masala dosa is available'), false);
   });
 
+  it('accepts natural confirm-and-add phrases when a validated plan is waiting', () => {
+    const pending = { status: 'validated', valid: true } as const;
+    assert.equal(isValidatedCartConfirmMessage('confirm and add to cart', pending), true);
+    assert.equal(isValidatedCartConfirmMessage('confirm Andhra add to cart', pending), true);
+    assert.equal(isValidatedCartConfirmMessage('please add it to cart', pending), true);
+    assert.equal(isValidatedCartConfirmMessage('add to cart', pending), true);
+    assert.equal(isValidatedCartConfirmMessage('yes confirm add', pending), true);
+    // New dish order must not steal confirm
+    assert.equal(isValidatedCartConfirmMessage('add 2 chicken biryani', pending), false);
+    assert.equal(isValidatedCartConfirmMessage('masala dosa please', pending), false);
+  });
+
   it('accepts ASR-repeated confirm tokens without falling through to chat', () => {
     assert.equal(isConfirmCartUserMessage('Confirm Confirm'), true);
     assert.equal(isConfirmCartUserMessage('confirm confirm confirm'), true);

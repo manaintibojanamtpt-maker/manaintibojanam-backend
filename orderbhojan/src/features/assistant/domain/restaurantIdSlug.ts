@@ -26,15 +26,17 @@ export function toPendingPlanRestaurantRef(input: {
   readonly planRestaurantId: string;
   readonly activeRestaurantId?: string | null;
   readonly activeRestaurantSlug?: string | null;
+  /** Authoritative slug from marketplace search — never invent from display name. */
+  readonly knownRestaurantSlug?: string | null;
 }): { restaurantId: string; restaurantSlug: string } {
   const restaurantId = input.planRestaurantId.trim();
   const sameAsActive =
     Boolean(input.activeRestaurantId) && restaurantId === input.activeRestaurantId;
-  const restaurantSlug = sameAsActive
-    ? resolveRestaurantSlugForApi({
-        restaurantId,
-        restaurantSlug: input.activeRestaurantSlug,
-      })
-    : resolveRestaurantSlugForApi({ restaurantId });
+  const restaurantSlug = resolveRestaurantSlugForApi({
+    restaurantId,
+    restaurantSlug:
+      input.knownRestaurantSlug?.trim() ||
+      (sameAsActive ? input.activeRestaurantSlug : null),
+  });
   return { restaurantId, restaurantSlug };
 }

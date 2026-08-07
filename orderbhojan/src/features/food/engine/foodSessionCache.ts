@@ -4,8 +4,8 @@ import type { FoodMenuResponse } from '@/types/marketplace-food';
 
 const STORAGE_KEY = 'ob-food-menu-v1';
 const IDB_PREFIX = 'food:';
-const SESSION_TTL_MS = 30 * 60_000;
-const MAX_ENTRIES = 12;
+const SESSION_TTL_MS = 60 * 60_000;
+const MAX_ENTRIES = 24;
 
 export interface FoodSessionContext {
   readonly contextToken: string;
@@ -83,6 +83,21 @@ export function readFoodSessionCache(
     (entry) => entry.slug === slug && coordsMatch(entry.lat, entry.lng, lat, lng),
   );
   return match?.data;
+}
+
+/** Instant kitchen open: any recent menu for this slug (coords may differ slightly). */
+export function readFoodSessionCacheBySlug(slug: string): FoodMenuResponse | undefined {
+  const matches = readAllEntries().filter((entry) => entry.slug === slug);
+  if (matches.length === 0) return undefined;
+  matches.sort((a, b) => b.fetchedAt - a.fetchedAt);
+  return matches[0]?.data;
+}
+
+export function getFoodSessionCacheUpdatedAtBySlug(slug: string): number | undefined {
+  const matches = readAllEntries().filter((entry) => entry.slug === slug);
+  if (matches.length === 0) return undefined;
+  matches.sort((a, b) => b.fetchedAt - a.fetchedAt);
+  return matches[0]?.fetchedAt;
 }
 
 export function getFoodSessionCacheUpdatedAt(

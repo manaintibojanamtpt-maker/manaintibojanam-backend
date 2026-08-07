@@ -14,7 +14,7 @@ export interface AiAssistResponse {
   readonly allowedCapabilities: readonly AssistantCapability[];
   readonly sideEffects: [];
   readonly provider: {
-    readonly name: 'openrouter';
+    readonly name: 'openrouter' | 'conversation_engine';
     readonly model: string;
   };
   readonly meta: {

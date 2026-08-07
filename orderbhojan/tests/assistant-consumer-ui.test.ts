@@ -77,12 +77,12 @@ describe('assistant Phase 14 consumer UI', () => {
 
   it('voice input reuses send() and never auto-applies or uses ordering-turn bypass', () => {
     const conversation = readUi('useAssistantConversation.ts');
-    assert.match(conversation, /captureVoiceTranscript/);
+    assert.match(conversation, /useVoiceStt|startListening/);
     assert.match(conversation, /sendFromVoice/);
     assert.match(conversation, /startVoiceAgent/);
     assert.match(conversation, /correctTranscriptAgainstOrderingVocab/);
     assert.match(conversation, /await send\(corrected\)/);
-    assert.match(conversation, /isValidatedCartConfirmMessage/);
+    assert.match(conversation, /isValidatedCartConfirmMessage|runVoiceCoreTurn/);
     assert.doesNotMatch(conversation, /runVoiceOrderingTurn|askWithVoice/);
   });
 
@@ -91,6 +91,26 @@ describe('assistant Phase 14 consumer UI', () => {
     assert.match(fab, /Voice Agent|waveform|tracking-\[0\.14em\]/);
     assert.doesNotMatch(fab, /MessageSquare/);
     assert.match(fab, /consumer-assistant-fab/);
+  });
+
+  it('home hero mounts HomeVoiceAgentButton next to search', () => {
+    const hero = readFileSync(
+      path.resolve(__dirname, '../src/presentation/discovery/OrderBhojanHomeHero.tsx'),
+      'utf8',
+    );
+    const button = readUi('HomeVoiceAgentButton.tsx');
+    assert.match(hero, /HomeVoiceAgentButton/);
+    assert.match(button, /ob-voice-agent-open/);
+    assert.match(button, /home-voice-agent-button/);
+  });
+
+  it('HomeSearchBar uses live voice agent control instead of disabled mic', () => {
+    const searchBar = readFileSync(
+      path.resolve(__dirname, '../src/features/experience/ui/home/HomeSearchBar.tsx'),
+      'utf8',
+    );
+    assert.match(searchBar, /HomeVoiceAgentButton/);
+    assert.doesNotMatch(searchBar, /Voice search placeholder/);
   });
 
   it('mic button is dual-gated and click-to-speak only', () => {

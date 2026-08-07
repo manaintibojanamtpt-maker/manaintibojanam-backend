@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { ensureAppConfig } from '@/config';
-import { seedDiscoveryQueryCacheFromSession, resolveBootstrapDiscoveryCoords } from '@/features/discovery/engine/discoveryBootstrap';
+import { seedDiscoveryQueryCacheFromSession, resolveBootstrapDiscoveryCoords, warmDefaultDiscoveryHome } from '@/features/discovery/engine/discoveryBootstrap';
 import { hydrateDiscoverySessionCacheFromIdb } from '@/features/discovery/engine/discoverySessionCache';
 import { seedHomeHeroQueryCacheFromSession } from '@/features/experience/data/homeHeroSessionCache';
 import { warmHomeHeroBeforePaint } from '@/features/experience/data/warmHomeHeroBeforePaint';
@@ -13,6 +13,7 @@ import { isFirestorePermissionDenied } from '@/lib/firestoreErrors';
 import { bootstrapCapacitorNative } from '@/lib/capacitorBootstrap';
 import { bootstrapObDebugFromUrl } from '@/lib/obDebug';
 import { isNativePlatform } from '@/lib/nativePlatform';
+import { warmMarketplaceApi } from '@/lib/warmMarketplaceApi';
 import { markPerf, markPerfOnce } from '@/lib/perfMarks';
 import { trackEvent } from '@/telemetry';
 import '@/styles/globals.css';
@@ -70,12 +71,17 @@ async function bootstrap() {
     homeHeroQueryKey(),
   );
 
+  // Wake Render + start kitchen fetch before React mounts (first paint stays sync-seeded).
+  warmMarketplaceApi();
+  warmDefaultDiscoveryHome();
+
   const bootstrapCoords = resolveBootstrapDiscoveryCoords();
   // IDB hydrate is non-critical enrichment — must not block first React paint.
   if (bootstrapCoords) {
     void hydrateDiscoverySessionCacheFromIdb(bootstrapCoords.lat, bootstrapCoords.lng)
       .then(() => {
         seedDiscoveryQueryCacheFromSession();
+        warmDefaultDiscoveryHome();
       })
       .catch(() => {
         /* ignore — localStorage seed already applied */
@@ -83,6 +89,8 @@ async function bootstrap() {
   }
 
   const config = await ensureAppConfig();
+  // Config may refine API base — wake again with the authoritative URL.
+  warmMarketplaceApi();
 
   // Short race only — kitchens must not wait on hero. Defaults/session cache cover first paint.
   await warmHomeHeroBeforePaint(180);
@@ -99,6 +107,15 @@ async function bootstrap() {
   }
 
   trackEvent({ name: 'app_ready' });
+
+  // Warm kitchen/menu route chunks after first paint so open skips Suspense skeleton.
+  window.setTimeout(() => {
+    void import('@/features/food/ui/FoodRoutePage');
+    void import('@/features/restaurant');
+    void import('@/features/checkout/infrastructure/razorpayCheckout').then((m) => {
+      m.prefetchRazorpayCheckoutScript();
+    });
+  }, 900);
 }
 
 bootstrap().catch((error) => {

@@ -14,7 +14,7 @@
   --ob-chrome-bottom: calc(
     var(--ob-floating-cart-offset) + var(--ob-floating-cart-height) + 12px + var(--ob-safe-bottom)
   );
-  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 12px);
+  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + var(--ob-safe-bottom) + 20px);
   /* Menu sticky View cart bar (padding + card + safe). */
   --ob-menu-cart-spacer: calc(7.25rem + var(--ob-safe-bottom));
   --mib-bg: #050403;
@@ -221,7 +221,8 @@ html.ob-native .ob-app-shell {
   max-width: 100%;
   min-width: 0;
   overflow-x: hidden;
-  transform: translateZ(0);
+  /* Do not use transform here — it creates a containing block and traps
+     position:fixed descendants (View cart stripe) at the end of the menu. */
 }
 
 .ob-menu-sticky-chrome {
@@ -393,6 +394,33 @@ html.ob-native-android .ob-fixed-cta-bar {
      Guarantees at least 3.5rem (56px) to safely clear the standard 48dp Android 3-button nav,
      while scaling up if safe-area-inset-bottom or the injected variable is larger. */
   padding-bottom: max(calc(var(--ob-safe-bottom) + 0.75rem), 3.5rem) !important;
+}
+
+html.ob-native-android {
+  --ob-focus-bottom: calc(var(--ob-fixed-cta-height) + max(var(--ob-safe-bottom), 32px) + 28px);
+  --ob-fixed-cta-height: 132px;
+}
+
+/* Razorpay Checkout modal — clear Android system / gesture navigation bar. */
+html.ob-razorpay-open,
+html.ob-razorpay-open body {
+  padding-bottom: var(--ob-razorpay-nav-pad, 72px) !important;
+  box-sizing: border-box !important;
+}
+
+html.ob-razorpay-open .ob-fixed-cta-bar,
+html.ob-razorpay-open .ob-app-shell > nav,
+html.ob-razorpay-open [data-testid='ob-menu-view-cart-stripe'] {
+  display: none !important;
+}
+
+html.ob-razorpay-open .razorpay-container,
+html.ob-razorpay-open .razorpay-checkout-frame,
+html.ob-razorpay-open iframe.razorpay-checkout-frame {
+  top: 0 !important;
+  bottom: var(--ob-razorpay-nav-pad, 72px) !important;
+  height: auto !important;
+  max-height: calc(100% - var(--ob-razorpay-nav-pad, 72px)) !important;
 }
 
 /* Auth — premium sign-in shell (edge-to-edge on native, safe-area aware) */

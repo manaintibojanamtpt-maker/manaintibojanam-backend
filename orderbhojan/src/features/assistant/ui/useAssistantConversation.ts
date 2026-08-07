@@ -8,6 +8,7 @@ import {
   createVoiceSession,
   idleOrderingTask,
   initialConfirmationSnapshot,
+  pendingPlanIdFromValidation,
   runVoiceCoreTurn,
   syncConfirmationFromPending,
   type OrderBhojanVoiceAdapter,
@@ -29,10 +30,9 @@ import {
   classifyPersonalizationIntent,
   isPersonalizationCartIntent,
 } from '../domain/isPersonalizationUserMessage';
-import { parseCartAddUserMessage } from '../domain/isCartAddUserMessage';
+import { parseCartAddUserMessage, normalizeQuantityAsr, parseQuantityOnlyMessage } from '../domain/isCartAddUserMessage';
+import { patchPendingPlanQuantity } from '../domain/patchPendingPlanQuantity';
 import { buildOrderingAssistContext } from '../domain/buildOrderingAssistContext';
-
-
 import {
   isStopVoiceAgentMessage,
 } from '../domain/isConfirmCartUserMessage';
@@ -42,10 +42,13 @@ import {
   enrichCartPlansFromMenuCache,
   matchKitchenFragmentInMessage,
 } from '../domain/matchOrderingVocabulary';
+import { expandIndicOrderingUtterance } from '../domain/orderingTextNormalize';
+import { groundVoiceOrderingContext } from '../domain/resolveKitchenForVoice';
 import { resolveCartPlanRestaurantId } from '../domain/resolveCartPlanRestaurant';
 import { toPendingPlanRestaurantRef } from '../domain/restaurantIdSlug';
 import { recordVoiceTelemetry } from '../domain/voiceOrderingTelemetry';
 import { prefetchKitchenMenuForAssist } from '../application/prefetchKitchenMenuForAssist';
+import { useCheckoutScheduleStore } from '@/features/checkout/store/checkoutScheduleStore';
 import {
   formatCartPlanSummarySpeech,
   summarizePendingCartPlan,
@@ -61,6 +64,7 @@ import { useAssistantApi } from '../hooks/useAssistantApi';
 import { useVoiceStt } from '../hooks/useVoiceStt';
 import { useVoiceTts } from '../hooks/useVoiceTts';
 import { unlockAudioContext } from '../infrastructure/voiceSpeechSynthesis';
+import { forceStopSpeechCapture } from '../infrastructure/voiceSpeechCapture';
 
 /** Best-effort audit; never blocks confirm/discard UX. */
 function reportCartPlanDecisionQuietly(params: {
@@ -157,9 +161,19 @@ export function useAssistantConversation() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [applying, setApplying] = useState(false);
   const [voiceAgentActive, setVoiceAgentActive] = useState(false);
+  /** Explicit UX gate so Thinking/Speaking show before loading/TTS flags flip. */
+  const [voiceTurnPhase, setVoiceTurnPhase] = useState<
+    'idle' | 'listening' | 'thinking' | 'speaking'
+  >('idle');
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
   
   const voiceAgentActiveRef = useRef(false);
+  const voiceTurnPhaseRef = useRef(voiceTurnPhase);
+  voiceTurnPhaseRef.current = voiceTurnPhase;
+  /** After a successful voice cart apply, pause live listen so customers are not left “recording”. */
+  const pauseLiveVoiceAfterTurnRef = useRef(false);
+  /** Sheet visibility — mic must never stay open when this is false. */
+  const sheetOpenRef = useRef(false);
   const pendingValidationRef = useRef<CartPlanValidationResult | null>(null);
   const pendingPlanRestaurantRef = useRef<{
     restaurantId: string;
@@ -251,15 +265,52 @@ export function useAssistantConversation() {
 
   const send = useCallback(
     async (raw: string): Promise<string | undefined> => {
-      const message = raw.trim();
+      const message = normalizeQuantityAsr(raw.trim());
       if (!message || loading) return undefined;
 
       
       const liveAdapter = createLiveVoiceAdapter();
       const planRestaurant = pendingPlanRestaurantRef.current;
       const pending = pendingValidationRef.current;
-      if (pending && planRestaurant) {
-        liveAdapter.hydratePendingFromValidation(pending, planRestaurant);
+
+      // Quantity-only ASR (“to quantity” → 2) while a plan is pending — skip LLM loop.
+      const quantityOnly = parseQuantityOnlyMessage(message);
+      if (quantityOnly != null && pending?.proposedActions?.length) {
+        const patched = patchPendingPlanQuantity(pending, quantityOnly);
+        syncPendingValidation(patched);
+        voiceConfirmationRef.current = syncConfirmationFromPending(patched);
+        liveAdapter.hydratePendingFromValidation(
+          patched,
+          planRestaurant,
+          pendingPlanIdFromValidation(patched),
+        );
+        const dish =
+          typeof patched.proposedActions[0]?.payload?.name === 'string'
+            ? patched.proposedActions[0].payload.name
+            : 'your item';
+        const reply = `Got it — ${quantityOnly}× ${dish}. Say confirm to add to cart.`;
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), role: 'user', text: message },
+          {
+            id: nextId(),
+            role: 'assistant',
+            text: reply,
+            cartActions: patched.proposedActions,
+            validation: patched,
+          },
+        ]);
+        return reply;
+      }
+
+      // Keep confirmation FSM aligned with the UI pending plan every turn.
+      if (pending) {
+        voiceConfirmationRef.current = syncConfirmationFromPending(pending);
+        liveAdapter.hydratePendingFromValidation(
+          pending,
+          planRestaurant,
+          pendingPlanIdFromValidation(pending),
+        );
       }
       
       const session = createVoiceSession({
@@ -311,7 +362,11 @@ export function useAssistantConversation() {
         ]);
         
         if (turn.kind === 'apply_confirmed_change') {
-            notifyToast('Applied item(s) to cart.', 'success');
+          notifyToast('Applied item(s) to cart.', 'success');
+          // Pause live agent after this turn’s spoken reply — stops STT beeps / “still recording” feel.
+          if (turn.applied !== false) {
+            pauseLiveVoiceAfterTurnRef.current = true;
+          }
         }
         
         return turn.spoken;
@@ -489,13 +544,36 @@ const usePostOrderPath =
         });
         const nearbyHints = toNearbyKitchenHints(baseOrderingContext?.nearbyKitchens);
 
+        // Menu Agent: resolve real kitchen slug via marketplace search + prefetch live menu
+        // BEFORE assist/validate. Never invent slugs from display names (causes “Not Found”).
+        const grounded = await groundVoiceOrderingContext({
+          message,
+          lat: coords?.lat,
+          lng: coords?.lng,
+          areaLabel: activeLocation?.displayLabel,
+          activeRestaurantId: restaurantId,
+          activeRestaurantSlug: restaurantSlug,
+          nearbyKitchens: nearbyHints,
+        });
+        const groundedMessage = grounded.expandedMessage || expandIndicOrderingUtterance(message);
+        const groundedNearby = toNearbyKitchenHints(
+          grounded.orderingContext?.nearbyKitchens ??
+            (grounded.kitchen
+              ? [{ id: grounded.kitchen.restaurantId, name: grounded.kitchen.displayName }]
+              : nearbyHints),
+        );
+
         // Kitchen-name only (e.g. "Inti Bhojanam") → open kitchen; dish+kitchen goes to LLM+validate.
         const kitchenOnlyHit =
-          nearbyHints.length > 0 ? matchKitchenFragmentInMessage(message, nearbyHints) : null;
+          groundedNearby.length > 0
+            ? matchKitchenFragmentInMessage(groundedMessage, groundedNearby)
+            : grounded.kitchen
+              ? { id: grounded.kitchen.restaurantId, name: grounded.kitchen.displayName }
+              : null;
         const looksLikeDishRequest =
-          /\b(add|order|get|want|cart|dosa|idli|wada|vada|thali|biryani|meal|curry|rice)\b/i.test(
-            message,
-          );
+          /\b(add|order|get|want|cart|dosa|idli|wada|vada|thali|biryani|meal|curry|rice|rendu|masala|దోశ|దోస|మసాలా|ఇడ్లీ)\b/iu.test(
+            groundedMessage,
+          ) || grounded.menuItemCount > 0;
         if (kitchenOnlyHit && !looksLikeDishRequest) {
           const searchPath = `/search?q=${encodeURIComponent(kitchenOnlyHit.name)}`;
           const reply = `I found kitchen “${kitchenOnlyHit.name}”. Open it to see today’s live menu, then ask me to add a dish (e.g. “add Idli”). Nothing is added until you confirm.`;
@@ -510,56 +588,59 @@ const usePostOrderPath =
           return reply;
         }
 
-        // Ground LLM on the kitchen named in the utterance when we can resolve it.
-        const namedKitchen =
-          kitchenOnlyHit ??
-          (nearbyHints.length
-            ? (() => {
-                const ranked = nearbyHints
-                  .map((k) => ({
-                    k,
-                    hit: message.toLowerCase().replace(/\s/g, '').includes(
-                      k.name.toLowerCase().replace(/\s/g, '').slice(0, 8),
-                    ),
-                  }))
-                  .find((e) => e.hit);
-                return ranked?.k ?? null;
-              })()
-            : null);
         const preferRestaurantId =
-          namedKitchen && 'id' in namedKitchen && namedKitchen.id
-            ? namedKitchen.id
+          grounded.kitchen?.restaurantId ||
+          (kitchenOnlyHit && 'id' in kitchenOnlyHit && kitchenOnlyHit.id
+            ? kitchenOnlyHit.id
             : resolveCartPlanRestaurantId({
                 plan: null,
-                userMessage: message,
-                nearbyKitchens: nearbyHints,
+                userMessage: groundedMessage,
+                nearbyKitchens: groundedNearby,
                 activeRestaurantId: restaurantId,
-              });
+              }));
 
         const orderingContext =
+          grounded.orderingContext ??
           buildOrderingAssistContext({
             restaurantId,
             restaurantSlug,
-            restaurantName: namedKitchen?.name,
+            restaurantName: grounded.kitchen?.displayName ?? kitchenOnlyHit?.name,
             areaLabel: activeLocation?.displayLabel,
             lat: coords?.lat,
             lng: coords?.lng,
             preferRestaurantId,
-            nearbyKitchens: baseOrderingContext?.nearbyKitchens,
-          }) ?? baseOrderingContext;
+            nearbyKitchens: groundedNearby,
+          }) ??
+          baseOrderingContext;
 
         const result = await ask({
-          message,
+          message: groundedMessage,
           preferredLanguage: voiceLanguage,
           ...(conversationId ? { conversationId } : {}),
           ...(orderingContext ? { orderingContext } : {}),
         });
         setConversationId(result.conversationId);
 
+        // Voice schedule metadata → checkout deliveryTimeSlot (no payment mutation).
+        // Clarify/error wins: do not apply a preference when the waiter asks for a clearer time.
+        const scheduleFeedback = result.scheduleVoiceFeedback;
+        if (scheduleFeedback) {
+          useCheckoutScheduleStore.getState().setNotice({
+            kind: scheduleFeedback.kind,
+            message: scheduleFeedback.message || result.reply,
+            reason: scheduleFeedback.reason,
+          });
+        } else {
+          const schedulePref = result.proposedScheduleActions?.[0];
+          if (schedulePref) {
+            useCheckoutScheduleStore.getState().setFromVoice(schedulePref);
+          }
+        }
+
         const hints = result.suggestedHints.filter((h) => h.type !== 'none');
 
         // Hydrate empty/broken LLM cart plans from the utterance (fixes MISSING_ITEM_REFERENCE).
-        const parsedAdd = parseCartAddUserMessage(message);
+        const parsedAdd = parseCartAddUserMessage(groundedMessage);
         const hydratedPlans: CartPlanAction[] =
           result.proposedCartActions.length > 0
             ? result.proposedCartActions.map((plan) => {
@@ -578,6 +659,10 @@ const usePostOrderPath =
                     ...(plan.payload ?? {}),
                     ...(name ? { name } : {}),
                     quantity: qty,
+                    ...(preferRestaurantId ? { restaurantId: preferRestaurantId } : {}),
+                    ...(grounded.kitchen?.restaurantSlug
+                      ? { restaurantSlug: grounded.kitchen.restaurantSlug }
+                      : {}),
                   },
                 };
               })
@@ -591,6 +676,9 @@ const usePostOrderPath =
                       name: parsedAdd.itemName,
                       quantity: parsedAdd.quantity,
                       ...(preferRestaurantId ? { restaurantId: preferRestaurantId } : {}),
+                      ...(grounded.kitchen?.restaurantSlug
+                        ? { restaurantSlug: grounded.kitchen.restaurantSlug }
+                        : {}),
                     },
                     reason: 'client_hydrated_from_utterance',
                   },
@@ -599,15 +687,15 @@ const usePostOrderPath =
 
         const cartActions = enrichCartPlansFromMenuCache(hydratedPlans, {
           activeRestaurantId: preferRestaurantId ?? restaurantId,
-          userMessage: message,
+          userMessage: groundedMessage,
           assistantMessage: result.reply,
-          nearbyKitchens: nearbyHints,
+          nearbyKitchens: groundedNearby,
         });
         const planRestaurantId = resolveCartPlanRestaurantId({
           plan: cartActions[0],
-          userMessage: message,
+          userMessage: groundedMessage,
           assistantMessage: result.reply,
-          nearbyKitchens: nearbyHints,
+          nearbyKitchens: groundedNearby,
           activeRestaurantId: preferRestaurantId ?? restaurantId,
         });
 
@@ -617,9 +705,11 @@ const usePostOrderPath =
             (h) => h.type === 'navigate' && typeof h.target === 'string' && h.target.includes('/'),
           );
           const kitchenOffer =
-            namedKitchen ||
-            matchKitchenFragmentInMessage(result.reply, nearbyHints) ||
-            matchKitchenFragmentInMessage(message, nearbyHints);
+            grounded.kitchen
+              ? { id: grounded.kitchen.restaurantId, name: grounded.kitchen.displayName }
+              : kitchenOnlyHit ||
+                matchKitchenFragmentInMessage(result.reply, groundedNearby) ||
+                matchKitchenFragmentInMessage(groundedMessage, groundedNearby);
           if (
             kitchenOffer &&
             /explore|open|menu|would you like|shall i|nearby kitchen/i.test(result.reply)
@@ -654,12 +744,18 @@ const usePostOrderPath =
             planRestaurantId,
             activeRestaurantId: restaurantId,
             activeRestaurantSlug: restaurantSlug,
+            knownRestaurantSlug:
+              grounded.kitchen?.restaurantId === planRestaurantId
+                ? grounded.kitchen.restaurantSlug
+                : grounded.orderingContext?.restaurantSlug,
           });
           await prefetchKitchenMenuForAssist({
             restaurantId: planRestaurantId,
             restaurantSlug: pendingPlanRestaurantRef.current.restaurantSlug,
+            restaurantName: grounded.kitchen?.displayName,
             lat: coords?.lat,
             lng: coords?.lng,
+            force: true,
           });
           setValidating(true);
           try {
@@ -674,7 +770,10 @@ const usePostOrderPath =
               recordVoiceTelemetry('planValidateFail');
               recordVoiceTelemetry('clarificationLoopCount');
             }
-            const outcome = validationSpeakText(validation);
+            const outcome = validationSpeakText(
+              validation,
+              grounded.kitchen?.displayName ?? kitchenOnlyHit?.name,
+            );
             if (validation.status !== 'validated') {
               displayReply = outcome;
               // Replace optimistic assistant bubble so UI does not contradict validate.
@@ -713,11 +812,15 @@ const usePostOrderPath =
                 : err instanceof Error
                   ? err.message
                   : 'Could not validate cart plan';
+            const friendly =
+              /not\s*found/i.test(msg)
+                ? 'I couldn’t match that dish on this kitchen’s live menu. Try another dish name, or open the kitchen menu.'
+                : `Validation skipped: ${msg}`;
             setMessages((prev) => [
               ...prev,
-              { id: nextId(), role: 'system', text: `Validation skipped: ${msg}` },
+              { id: nextId(), role: 'system', text: friendly },
             ]);
-            return result.reply;
+            return /not\s*found/i.test(msg) ? friendly : result.reply;
           } finally {
             setValidating(false);
           }
@@ -737,11 +840,17 @@ const usePostOrderPath =
 
         return displayReply;
       } catch (err) {
-        if (err instanceof AssistantApiError) {
-          setError(err.message);
-        } else {
-          setError(err instanceof Error ? err.message : 'Assistant request failed');
-        }
+        const raw =
+          err instanceof AssistantApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Assistant request failed';
+        const friendly =
+          /not\s*found/i.test(raw) || /HTTP_404/i.test(raw)
+            ? 'I couldn’t find that kitchen or dish on today’s live menu. Try “Inti Bhojanam” or open a kitchen first.'
+            : raw;
+        setError(friendly);
         return undefined;
       } finally {
         setLoading(false);
@@ -769,16 +878,32 @@ const usePostOrderPath =
     ],
   );
 
-  const cancelVoice = useCallback(() => {
-    cancelListening();
-  }, [cancelListening]);
-
-  const stopVoiceAgent = useCallback(() => {
+  const hardStopVoiceSession = useCallback(() => {
     voiceAgentActiveRef.current = false;
     setVoiceAgentActive(false);
+    setVoiceTurnPhase('idle');
+    voiceAbortRef.current?.abort();
+    voiceAbortRef.current = null;
+    forceStopSpeechCapture();
     cancelListening();
+    setListening(false);
     setSpeaking(false);
-  }, [cancelListening, setSpeaking]);
+    try {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [cancelListening, setListening, setSpeaking, voiceAbortRef]);
+
+  const cancelVoice = useCallback(() => {
+    hardStopVoiceSession();
+  }, [hardStopVoiceSession]);
+
+  const stopVoiceAgent = useCallback(() => {
+    hardStopVoiceSession();
+  }, [hardStopVoiceSession]);
 
   /**
    * One listen → assist → speak turn. Used by tap-mic and the live voice-agent loop.
@@ -792,21 +917,83 @@ const usePostOrderPath =
     }): Promise<'ok' | 'stop' | 'abort' | 'error' | 'timeout'> => {
       if (!voiceEnabled) return 'error';
 
-      // Barge-in: stop any in-flight TTS before opening the mic.
-      cancelListening();
+      // Sheet closed or agent stopped — never open the mic.
+      if (!sheetOpenRef.current) return 'abort';
+      const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
+      if (agentMode && !voiceAgentActiveRef.current) return 'abort';
+
+      // Register abort controller BEFORE any await so Close can always kill this turn.
       const ac = new AbortController();
+      voiceAbortRef.current = ac;
+
+      // Barge-in: stop prior listen / TTS before opening the mic.
+      forceStopSpeechCapture();
+      try {
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+      } catch {
+        /* ignore */
+      }
+      await new Promise((r) => setTimeout(r, 180));
+
+      if (!sheetOpenRef.current || ac.signal.aborted || (agentMode && !voiceAgentActiveRef.current)) {
+        hardStopVoiceSession();
+        return 'abort';
+      }
+
       setSpeaking(false);
       setError(null);
-      const agentMode = options?.agentMode === true || voiceAgentActiveRef.current;
+      setVoiceTurnPhase('listening');
 
-      try {
-        const transcript = await startListening({
+      const listenOnce = () =>
+        startListening({
           lang: voiceLanguage,
           agentMode,
-          ac
+          ac,
+          isVoiceSessionLive: () =>
+            sheetOpenRef.current &&
+            !ac.signal.aborted &&
+            (!agentMode || voiceAgentActiveRef.current),
         });
 
+      try {
+        let transcript: string;
+        try {
+          transcript = await listenOnce();
+        } catch (firstErr) {
+          // Agent mode: one quick soft-retry on empty/timeout before bubbling up.
+          if (
+            agentMode &&
+            firstErr instanceof AssistantApiError &&
+            (firstErr.code === 'AI_VOICE_EMPTY' || firstErr.code === 'AI_VOICE_TIMEOUT') &&
+            sheetOpenRef.current &&
+            voiceAgentActiveRef.current &&
+            !ac.signal.aborted
+          ) {
+            await new Promise((r) => setTimeout(r, 220));
+            if (!sheetOpenRef.current || !voiceAgentActiveRef.current || ac.signal.aborted) {
+              hardStopVoiceSession();
+              return 'abort';
+            }
+            setVoiceTurnPhase('listening');
+            transcript = await listenOnce();
+          } else {
+            throw firstErr;
+          }
+        }
+
+        if (!sheetOpenRef.current || (agentMode && !voiceAgentActiveRef.current)) {
+          hardStopVoiceSession();
+          return 'abort';
+        }
+
+        // Hold Thinking until assist + TTS finish — do not reopen mic mid-turn.
+        setVoiceTurnPhase('thinking');
+
         const coords = activeLocation?.coordinates;
+        // Ground STT against live menu once kitchen context exists; expand Telugu before correct.
+        const preExpanded = normalizeQuantityAsr(expandIndicOrderingUtterance(transcript));
         const orderingContext = buildOrderingAssistContext({
           restaurantId,
           restaurantSlug,
@@ -814,7 +1001,7 @@ const usePostOrderPath =
           lat: coords?.lat,
           lng: coords?.lng,
         });
-        const corrected = correctTranscriptAgainstOrderingVocab(transcript, orderingContext);
+        const corrected = correctTranscriptAgainstOrderingVocab(preExpanded, orderingContext);
 
         if (isStopVoiceAgentMessage(corrected)) {
           const bye = 'Voice agent paused. Tap the AI orb anytime to continue.';
@@ -823,20 +1010,59 @@ const usePostOrderPath =
             { id: nextId(), role: 'user', text: corrected },
             { id: nextId(), role: 'assistant', text: bye },
           ]);
+          setVoiceTurnPhase('speaking');
           await speakReply(bye, ac.signal, true);
+          setVoiceTurnPhase('idle');
           return 'stop';
         }
 
         const reply = await send(corrected);
+        if (!sheetOpenRef.current) {
+          hardStopVoiceSession();
+          return 'abort';
+        }
+        if (!reply?.trim()) {
+          setVoiceTurnPhase('idle');
+          return 'error';
+        }
+        setVoiceTurnPhase('speaking');
         await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current);
+        // Let TTS / cloud audio fully release the mic before the next listen.
+        await new Promise((r) => setTimeout(r, agentMode ? 400 : 280));
+        if (pauseLiveVoiceAfterTurnRef.current) {
+          pauseLiveVoiceAfterTurnRef.current = false;
+          hardStopVoiceSession();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: nextId(),
+              role: 'system',
+              text: 'Voice paused after adding to cart. Tap the AI button anytime to continue — nothing else is being recorded.',
+            },
+          ]);
+          return 'stop';
+        }
+        if (!sheetOpenRef.current || (agentMode && !voiceAgentActiveRef.current)) {
+          setVoiceTurnPhase('idle');
+          return 'abort';
+        }
+        setVoiceTurnPhase('idle');
         return 'ok';
       } catch (err) {
+        setVoiceTurnPhase('idle');
         if (err instanceof AssistantApiError) {
           if (err.code === 'AI_VOICE_ABORTED') return 'abort';
-          // Soft-fail timeouts in live agent — re-listen without a scary red banner.
+          // Soft-fail timeouts / Chrome "aborted" remaps in live agent — re-listen quietly.
           if (err.code === 'AI_VOICE_TIMEOUT' || err.code === 'AI_VOICE_EMPTY') {
             if (agentMode) return 'timeout';
             setError(err.message);
+            return 'timeout';
+          }
+          if (
+            agentMode &&
+            err.code === 'AI_VOICE_ERROR' &&
+            /interrupted|reset|try again/i.test(err.message)
+          ) {
             return 'timeout';
           }
           if (err.code === 'AI_VOICE_PERMISSION_DENIED') {
@@ -859,16 +1085,17 @@ const usePostOrderPath =
     [
       activeLocation?.coordinates,
       activeLocation?.displayLabel,
+      hardStopVoiceSession,
       restaurantId,
       restaurantSlug,
       send,
       speakReply,
       voiceEnabled,
       startListening,
-      cancelListening,
       setSpeaking,
       setError,
       voiceLanguage,
+      voiceAbortRef,
     ],
   );
 
@@ -897,11 +1124,16 @@ const usePostOrderPath =
 
     voiceAgentActiveRef.current = true;
     setVoiceAgentActive(true);
+    sheetOpenRef.current = true;
     setOpen(true);
     setError(null);
 
     const greeting =
-      'OrderBhojan Voice Agent ready. Tell me a kitchen or dish — say confirm to add a validated plan.';
+      voiceLanguage.toLowerCase().startsWith('te')
+        ? 'ఆర్డర్‌భోజన్ వాయిస్ ఏజెంట్ సిద్ధం. కిచెన్ లేదా డిష్ చెప్పండి — జోడించాలంటే confirm అనండి.'
+        : voiceLanguage.toLowerCase().startsWith('hi')
+          ? 'OrderBhojan वॉइस एजेंट तैयार है। किचन या डिश बोलें — जोड़ने के लिए confirm कहें।'
+          : 'OrderBhojan Voice Agent ready. Tell me a kitchen or dish — say confirm to add a validated plan.';
     setMessages((prev) =>
       prev.length === 0
         ? [...prev, { id: nextId(), role: 'assistant', text: greeting }]
@@ -940,12 +1172,18 @@ const usePostOrderPath =
       await speakReply(greeting, greetAc.signal, true);
     } catch {
       /* non-fatal */
+    } finally {
+      if (voiceAbortRef.current === greetAc) {
+        voiceAbortRef.current = null;
+      }
     }
-    // Let TTS fully release the mic before listening (WebView echo guard).
-    await new Promise((r) => setTimeout(r, 400));
+    // Let TTS / cloud audio fully release the mic before listening (Chrome abort guard).
+    await new Promise((r) => setTimeout(r, 500));
 
-    while (voiceAgentActiveRef.current) {
-      if (loading || validating || applying || speaking) {
+    let emptyListenStreak = 0;
+    while (voiceAgentActiveRef.current && sheetOpenRef.current) {
+      if (!sheetOpenRef.current || !voiceAgentActiveRef.current) break;
+      if (loading || validating || applying || speaking || voiceTurnPhaseRef.current === 'thinking' || voiceTurnPhaseRef.current === 'speaking') {
         await new Promise((r) => setTimeout(r, 200));
         continue;
       }
@@ -954,24 +1192,43 @@ const usePostOrderPath =
         break;
       }
       if (outcome === 'timeout') {
-        // Quiet re-listen — no red “Voice capture timed out” spam.
-        await new Promise((r) => setTimeout(r, 350));
-        if (!voiceAgentActiveRef.current) break;
+        emptyListenStreak += 1;
+        if (emptyListenStreak >= 2) {
+          const nudge =
+            voiceLanguage.toLowerCase().startsWith('te')
+              ? 'మీ మాట వినిపించలేదు. మళ్లీ AI బటన్ నొక్కి స్పష్టంగా చెప్పండి.'
+              : voiceLanguage.toLowerCase().startsWith('hi')
+                ? 'आवाज़ साफ़ नहीं सुनाई दी। फिर से AI बटन दबाकर बोलें।'
+                : 'I did not catch that. Tap the AI button and speak clearly when you are ready.';
+          setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: nudge }]);
+          try {
+            const nudgeAc = new AbortController();
+            voiceAbortRef.current = nudgeAc;
+            setVoiceTurnPhase('speaking');
+            await speakReply(nudge, nudgeAc.signal, true);
+          } catch {
+            /* non-fatal */
+          } finally {
+            setVoiceTurnPhase('idle');
+          }
+          break;
+        }
+        // Quiet soft re-listen — no red “No speech” spam.
+        await new Promise((r) => setTimeout(r, 250));
+        if (!voiceAgentActiveRef.current || !sheetOpenRef.current) break;
         continue;
       }
+      emptyListenStreak = 0;
       if (outcome === 'error') {
         await new Promise((r) => setTimeout(r, 600));
-        if (!voiceAgentActiveRef.current) break;
+        if (!voiceAgentActiveRef.current || !sheetOpenRef.current) break;
         continue;
       }
-      await new Promise((r) => setTimeout(r, 320));
+      await new Promise((r) => setTimeout(r, 280));
     }
 
-    voiceAgentActiveRef.current = false;
-    setVoiceAgentActive(false);
-    setListening(false);
-    setSpeaking(false);
-  }, [applying, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled]);
+    hardStopVoiceSession();
+  }, [applying, hardStopVoiceSession, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled, voiceLanguage, voiceCaptureAvailable, activeLocation, restaurantId, restaurantSlug]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {
@@ -982,6 +1239,8 @@ const usePostOrderPath =
       // Human escalation / external links — user tap only.
       if (/^(mailto:|tel:)/i.test(target)) {
         void openExternalUrl(target);
+        sheetOpenRef.current = false;
+        hardStopVoiceSession();
         setOpen(false);
         return;
       }
@@ -991,10 +1250,12 @@ const usePostOrderPath =
       }
       if (target.startsWith('/')) {
         navigate(target);
+        sheetOpenRef.current = false;
+        hardStopVoiceSession();
         setOpen(false);
       }
     },
-    [navigate],
+    [hardStopVoiceSession, navigate],
   );
 
   const confirmApplyPlan = useCallback(async () => {
@@ -1045,6 +1306,18 @@ const usePostOrderPath =
         ]);
         syncPendingValidation(null);
         pendingPlanRestaurantRef.current = null;
+        // Button confirm while live voice is on — stop mic so beeps don't continue.
+        if (voiceAgentActiveRef.current) {
+          hardStopVoiceSession();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: nextId(),
+              role: 'system',
+              text: 'Voice paused after adding to cart. Tap the AI button anytime to continue — nothing else is being recorded.',
+            },
+          ]);
+        }
       } else {
         notifyToast(
           result.skipped[0]?.reason || 'Could not apply cart plan — item details incomplete.',
@@ -1059,7 +1332,7 @@ const usePostOrderPath =
     } finally {
       setApplying(false);
     }
-  }, [activeLocation, addItem, applying, pendingValidation, setQuantity, syncPendingValidation]);
+  }, [activeLocation, addItem, applying, hardStopVoiceSession, pendingValidation, setQuantity, syncPendingValidation]);
 
   const dismissPlan = useCallback(() => {
     const conversationId = pendingValidation?.conversationId;
@@ -1081,17 +1354,29 @@ const usePostOrderPath =
     (value: boolean | ((prev: boolean) => boolean)) => {
       setOpen((prev) => {
         const next = typeof value === 'function' ? value(prev) : value;
+        sheetOpenRef.current = next;
         if (!next) {
+          // Close must kill mic immediately — AbortController alone misses inter-turn gaps.
           voiceAgentActiveRef.current = false;
           setVoiceAgentActive(false);
           voiceAbortRef.current?.abort();
+          voiceAbortRef.current = null;
+          forceStopSpeechCapture();
+          cancelListening();
           setListening(false);
           setSpeaking(false);
+          try {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+              window.speechSynthesis.cancel();
+            }
+          } catch {
+            /* ignore */
+          }
         }
         return next;
       });
     },
-    [],
+    [cancelListening, setListening, setSpeaking, voiceAbortRef],
   );
 
   return {
@@ -1103,6 +1388,7 @@ const usePostOrderPath =
     applying,
     listening,
     speaking,
+    voiceTurnPhase,
     voiceAgentActive,
     error,
     pendingValidation,

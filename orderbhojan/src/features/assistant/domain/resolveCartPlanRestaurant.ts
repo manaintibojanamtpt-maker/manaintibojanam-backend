@@ -1,36 +1,17 @@
 import { getCachedMenuItemsForSearch } from '@/features/search/store/searchMenuCacheStore';
 import type { CartPlanAction } from './cartPlanContract';
-
-const FOOD_TOKEN_ALIASES: Readonly<Record<string, string>> = {
-  idly: 'idli',
-  idlis: 'idli',
-  vada: 'wada',
-  vadai: 'wada',
-  malasa: 'masala',
-  dosai: 'dosa',
-  biriyani: 'biryani',
-  briyani: 'biryani',
-  inti: 'inti',
-  intibojanam: 'inti bhojanam',
-};
+import {
+  canonicalizeOrderingText,
+  normalizeOrderingText,
+} from './orderingTextNormalize';
+import { normalizeKitchenAsr, scoreKitchenHint } from './kitchenAsrNormalize';
 
 function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeOrderingText(value);
 }
 
 function canonicalize(value: string): string {
-  return normalize(value)
-    .replace(/^(?:a|an|the)\s+/i, '')
-    .split(' ')
-    .filter((t) => t !== 'a' && t !== 'an' && t !== 'the')
-    .map((t) => FOOD_TOKEN_ALIASES[t] ?? t)
-    .join(' ');
+  return canonicalizeOrderingText(value);
 }
 
 function levenshtein(a: string, b: string): number {
@@ -90,7 +71,7 @@ function resolveKitchenFromText(
   haystackRaw: string,
   kitchens: readonly NearbyKitchenHint[],
 ): string | null {
-  const haystack = normalize(haystackRaw);
+  const haystack = normalizeKitchenAsr(normalize(haystackRaw));
   if (!haystack || kitchens.length === 0) return null;
 
   let best: { id: string; score: number; nameLen: number } | null = null;
@@ -99,7 +80,7 @@ function resolveKitchenFromText(
     if (!id) continue;
     const name = normalize(kitchen.name);
     if (!name) continue;
-    let score = scoreNames(haystack, kitchen.name);
+    let score = Math.max(scoreNames(haystack, kitchen.name), scoreKitchenHint(haystack, kitchen.name));
     const compactHay = haystack.replace(/\s/g, '');
     const compactName = name.replace(/\s/g, '');
     if (compactName.length >= 6 && compactHay.includes(compactName)) {
@@ -110,6 +91,10 @@ function resolveKitchenFromText(
     const firstToken = name.split(' ')[0] ?? '';
     if (firstToken.length >= 4 && compactHay.includes(firstToken)) {
       score = Math.max(score, 0.84);
+    }
+    // ASR: “money” / “mana” vs Mana Inti
+    if (/mana/i.test(name) && /\b(mana|money|mony|many|mani)\b/i.test(haystack)) {
+      score = Math.max(score, 0.9);
     }
     if (score < 0.78) continue;
     if (!best || score > best.score || (score === best.score && name.length > best.nameLen)) {
@@ -160,23 +145,59 @@ export function resolveCartPlanRestaurantId(input: {
   // Name-match dish against all cached menus — if unique kitchen owns the best hit, use it.
   const dishName = typeof payload.name === 'string' ? payload.name.trim() : '';
   if (dishName) {
-    const scored = getCachedMenuItemsForSearch()
-      .filter((item) => item.type === 'food' && item.restaurant?.restaurantId)
-      .map((item) => ({
-        restaurantId: item.restaurant!.restaurantId,
-        score: scoreNames(dishName, item.label),
-      }))
-      .filter((e) => e.score >= 0.88)
-      .sort((a, b) => b.score - a.score);
-    const top = scored[0];
-    if (top) {
-      const topKitchenHits = scored.filter((e) => e.score >= top.score - 0.05);
-      const uniqueKitchens = new Set(topKitchenHits.map((e) => e.restaurantId));
-      if (uniqueKitchens.size === 1) return top.restaurantId;
-    }
+    const resolvedDishRestaurantId = resolveRestaurantIdByDishName(
+      dishName,
+      input.activeRestaurantId,
+    );
+    if (resolvedDishRestaurantId) return resolvedDishRestaurantId;
   }
 
   return input.activeRestaurantId?.trim() || null;
+}
+
+function resolveRestaurantIdByDishName(
+  dishName: string,
+  activeRestaurantId?: string | null,
+): string | null {
+  const scored = getCachedMenuItemsForSearch()
+    .filter((item) => item.type === 'food' && item.restaurant?.restaurantId)
+    .map((item) => ({
+      restaurantId: item.restaurant!.restaurantId,
+      score: scoreNames(dishName, item.label),
+    }))
+    .filter((item) => item.score >= 0.78);
+
+  if (scored.length === 0) return null;
+
+  const bestScoreByRestaurant = new Map<string, number>();
+  for (const item of scored) {
+    bestScoreByRestaurant.set(
+      item.restaurantId,
+      Math.max(bestScoreByRestaurant.get(item.restaurantId) ?? 0, item.score),
+    );
+  }
+
+  const ranked = [...bestScoreByRestaurant.entries()]
+    .map(([restaurantId, score]) => ({ restaurantId, score }))
+    .sort((a, b) => b.score - a.score);
+
+  const top = ranked[0];
+  if (!top) return null;
+
+  const activeScore =
+    typeof activeRestaurantId === 'string' && activeRestaurantId.trim()
+      ? bestScoreByRestaurant.get(activeRestaurantId.trim()) ?? 0
+      : 0;
+
+  if (top.restaurantId !== activeRestaurantId) {
+    if (top.score >= 0.92 && top.score - activeScore >= 0.06) return top.restaurantId;
+    if (top.score >= 0.88 && activeScore < 0.82 && top.score - activeScore >= 0.06)
+      return top.restaurantId;
+    if (ranked.length === 1 && top.score >= 0.88) return top.restaurantId;
+    return null;
+  }
+
+  return top.score >= 0.78 ? top.restaurantId : null;
 }
 
 export function scoreFoodName(query: string, candidate: string): number {

@@ -59,5 +59,6 @@ export function buildCheckoutPrepareSignature(input: {
   const lat = input.lat?.toFixed(4) ?? '0';
   const lng = input.lng?.toFixed(4) ?? '0';
   const coupon = input.couponCode?.trim().toUpperCase() || 'none';
-  return `${input.restaurantId}:${input.contextToken}:${lat},${lng}:${coupon}:${lineSig}`;
+  // Do NOT include contextToken — menu refetches mint new tokens and would thrash prepare.
+  return `${input.restaurantId}:${lat},${lng}:${coupon}:${lineSig}`;
 }

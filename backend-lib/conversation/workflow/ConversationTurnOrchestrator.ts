@@ -2,9 +2,9 @@
  * Purpose: Pure end-to-end turn orchestration — workflow evaluate + reply map + state projection.
  * Public API: ConversationTurnOrchestrator, ConversationTurnOutput, createDefaultTurnOrchestrator
  * Dependencies: WorkflowEngine, WorkflowResponseMapper, ConversationState
- * Consumers: Future ConversationEngine adapter (not wired yet)
+ * Consumers: ConversationEngine (active path via createDefaultTurnOrchestrator)
  *
- * Non-goals: SessionManager I/O, ConversationEngine mutation, LLM, cart execution.
+ * Non-goals: SessionManager I/O, LLM, cart execution.
  */
 
 import type { ConversationState } from '../models/ConversationState.js';
@@ -118,6 +118,6 @@ export function createDefaultTurnOrchestrator(
 ): ConversationTurnOrchestrator {
   return new ConversationTurnOrchestrator(
     createDefaultWorkflowEngine(options),
-    new WorkflowResponseMapper(),
+    new WorkflowResponseMapper(options.locale ?? 'en-IN'),
   );
 }

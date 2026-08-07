@@ -15,6 +15,7 @@ import { toPostOrderHints } from '../domain/postOrderPolicy';
 import { resolveConsumerAssistChannel } from '../domain/resolveConsumerAssistChannel';
 import { buildAiCanaryRequestAttachment } from '../domain/buildAiCanaryRequestAttachment';
 import { toConsumerHints } from '../domain/readOnlyPolicy';
+import { pickLatestDeliverySchedulePreference, pickScheduleVoiceFeedback } from '../domain/deliveryScheduleFromAssist';
 import {
   AssistantApiError,
   type ConsumerAssistChannel,
@@ -22,6 +23,7 @@ import {
   type ConsumerAssistResult,
 } from '../types';
 // note: proposedCartActions stay non-executable (normalizeCartPlanActions)
+// schedule actions are metadata-only (set_delivery_schedule → checkout slot)
 
 function withCanaryBody<T extends Record<string, unknown>>(
   body: T,
@@ -154,6 +156,13 @@ function mapAssistError(error: unknown): AssistantApiError {
 
 function toConsumerResult(payload: GatewayAssistSuccess, channel: ConsumerAssistChannel): ConsumerAssistResult {
   const proposedCartActions = normalizeCartPlanActions(payload.structured?.proposedActions);
+  const scheduleFeedback = pickScheduleVoiceFeedback(
+    payload.structured?.proposedActions,
+    payload.reply ?? '',
+  );
+  const schedule = scheduleFeedback
+    ? null
+    : pickLatestDeliverySchedulePreference(payload.structured?.proposedActions);
   return {
     schemaVersion: '3.0',
     conversationId: payload.conversationId,
@@ -163,6 +172,8 @@ function toConsumerResult(payload: GatewayAssistSuccess, channel: ConsumerAssist
     safetyBlocked: payload.structured?.safety?.blocked === true,
     suggestedHints: toConsumerHints(payload.structured?.proposedActions),
     proposedCartActions,
+    ...(schedule ? { proposedScheduleActions: [schedule] } : {}),
+    ...(scheduleFeedback ? { scheduleVoiceFeedback: scheduleFeedback } : {}),
     ...(payload.provider?.model ? { providerModel: payload.provider.model } : {}),
     sideEffects: [],
     mutatedState: false,

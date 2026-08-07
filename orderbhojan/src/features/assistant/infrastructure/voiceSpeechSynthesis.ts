@@ -78,10 +78,12 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
 
         const trySpeak = (voices: SpeechSynthesisVoice[]) => {
           if (voices.length > 0) {
-            const langPrefix = utterance.lang.split('-')[0];
-            const matchedVoice = voices.find(v => v.lang === utterance.lang) || 
-                                 voices.find(v => v.lang.startsWith(langPrefix)) ||
-                                 voices.find(v => v.default);
+            const langPrefix = utterance.lang.split('-')[0].toLowerCase();
+            const matchedVoice =
+              voices.find((v) => v.lang.toLowerCase() === utterance.lang.toLowerCase()) ||
+              voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
+            // Never force the English/default voice for regional locales — Chrome
+            // can still synthesize with utterance.lang when no local voice is installed.
             if (matchedVoice) {
               native.voice = matchedVoice;
             }
@@ -232,7 +234,12 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const flags = loadFeatureFlags();
-  const cloudTtsEnabled = isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') && typeof window !== 'undefined';
+  const targetLang = params.lang ?? 'en-IN';
+  const primary = targetLang.split('-')[0].toLowerCase();
+  const preferCloudForLocale = primary !== 'en';
+  const cloudTtsEnabled =
+    (isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') || preferCloudForLocale) &&
+    typeof window !== 'undefined';
 
   if (cloudTtsEnabled) {
     try {
@@ -270,7 +277,6 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const utterance = createUtterance(text.slice(0, 500));
-  const targetLang = params.lang ?? 'en-IN';
   utterance.lang = targetLang;
   utterance.rate = 1;
 

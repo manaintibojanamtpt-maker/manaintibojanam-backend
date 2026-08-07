@@ -11,12 +11,17 @@ import {
   type OrderingTaskSnapshot,
 } from '@bhojan/voice-core';
 import type { CartPlanValidationResult } from '@/features/assistant/domain/cartPlanContract';
+import {
+  formatCartPlanSummarySpeech,
+  summarizePendingCartPlan,
+} from '@/features/assistant/domain/summarizePendingCartPlan';
 
 export function pendingValidationToConfirmation(
   pending: CartPlanValidationResult | null,
   planId = 'pending',
 ): ConfirmationSnapshot {
   if (!pending) return initialConfirmationSnapshot();
+  const summarySpeech = formatCartPlanSummarySpeech(summarizePendingCartPlan(pending));
   return reduceConfirmation(initialConfirmationSnapshot(), {
     type: 'SET_PENDING',
     pending: {
@@ -24,14 +29,23 @@ export function pendingValidationToConfirmation(
       status: pending.status,
       valid: pending.valid,
       clarificationQuestion: pending.clarificationQuestions[0],
+      ...(summarySpeech ? { summarySpeech } : {}),
     },
   });
+}
+
+/** Stable plan id shared by confirmation snapshot + adapter hydrate (must match for apply). */
+export function pendingPlanIdFromValidation(
+  pending: CartPlanValidationResult | null | undefined,
+): string {
+  const id = pending?.conversationId?.trim();
+  return id && id.length > 0 ? id : 'pending';
 }
 
 export function syncConfirmationFromPending(
   pending: CartPlanValidationResult | null,
 ): ConfirmationSnapshot {
-  return pendingValidationToConfirmation(pending, pending?.conversationId ?? 'pending');
+  return pendingValidationToConfirmation(pending, pendingPlanIdFromValidation(pending));
 }
 
 export function clearVoiceConfirmation(): ConfirmationSnapshot {

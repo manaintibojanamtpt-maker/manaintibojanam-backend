@@ -6,8 +6,10 @@ import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurant
 import { useRestaurantContextStore } from '@/features/restaurant/store/restaurantContextStore';
 import {
   getFoodSessionCacheUpdatedAt,
+  getFoodSessionCacheUpdatedAtBySlug,
   hydrateFoodSessionCacheFromIdb,
   readFoodSessionCache,
+  readFoodSessionCacheBySlug,
 } from '../engine/foodSessionCache';
 import { loadFoodMenu, syncMenuRestaurantContext } from '../engine/foodExperienceLayer';
 import { setActiveMenuRouteSlug } from '../engine/foodMenuRouteContext';
@@ -56,6 +58,7 @@ function readCachedMenu(
   return (
     (queryClient.getQueryData(foodKeys.menu(slug, lat, lng)) as FoodMenuResponse | undefined) ??
     readFoodSessionCache(slug, lat, lng) ??
+    readFoodSessionCacheBySlug(slug) ??
     undefined
   );
 }
@@ -115,11 +118,13 @@ export function useFoodMenu(slug: string | undefined) {
     let cancelled = false;
     void hydrateFoodSessionCacheFromIdb(slug, lat, lng).then(() => {
       if (cancelled) return;
-      const cached = readFoodSessionCache(slug, lat, lng);
+      const cached = readFoodSessionCache(slug, lat, lng) ?? readFoodSessionCacheBySlug(slug);
       if (!cached) return;
       syncMenuRestaurantContext(slug, lat, lng, cached);
       queryClient.setQueryData(foodKeys.menu(slug, lat, lng), cached, {
-        updatedAt: getFoodSessionCacheUpdatedAt(slug, lat, lng),
+        updatedAt:
+          getFoodSessionCacheUpdatedAt(slug, lat, lng) ??
+          getFoodSessionCacheUpdatedAtBySlug(slug),
       });
     });
     return () => {
@@ -137,13 +142,28 @@ export function useFoodMenu(slug: string | undefined) {
       }),
     enabled: enabled && Boolean(slug),
     ...liveQuery,
+    // Keep kitchen menus warm longer than live feed GC (2m) so re-open is instant.
+    gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
+    staleTime: Math.max(liveQuery.staleTime, 60_000),
     initialData: () =>
-      slug ? readFoodSessionCache(slug, lat, lng) : undefined,
+      slug
+        ? (queryClient.getQueryData(foodKeys.menu(slug, lat, lng)) as FoodMenuResponse | undefined) ??
+          readFoodSessionCache(slug, lat, lng) ??
+          readFoodSessionCacheBySlug(slug)
+        : undefined,
     initialDataUpdatedAt: () =>
-      slug ? getFoodSessionCacheUpdatedAt(slug, lat, lng) : undefined,
+      slug
+        ? queryClient.getQueryState(foodKeys.menu(slug, lat, lng))?.dataUpdatedAt ??
+          getFoodSessionCacheUpdatedAt(slug, lat, lng) ??
+          getFoodSessionCacheUpdatedAtBySlug(slug)
+        : undefined,
     placeholderData: (previous) =>
       previous ??
-      (slug ? readFoodSessionCache(slug, lat, lng) : undefined),
+      (slug
+        ? (queryClient.getQueryData(foodKeys.menu(slug, lat, lng)) as FoodMenuResponse | undefined) ??
+          readFoodSessionCache(slug, lat, lng) ??
+          readFoodSessionCacheBySlug(slug)
+        : undefined),
     retry: 2,
   });
 

@@ -1,6 +1,7 @@
 import { useDiscoveryHome } from '../hooks/useDiscoveryHome';
+import { formatDiscoveryLoadError } from './formatDiscoveryLoadError';
 import { usePrefetchDiscoveryKitchens } from '../hooks/usePrefetchDiscoveryKitchens';
-import { readDiscoverySessionCache } from '../engine/discoverySessionCache';
+import { readDiscoverySessionCache, readNearestDiscoverySessionCache } from '../engine/discoverySessionCache';
 import { resolveActiveDeliveryLocation } from '@/features/location/domain/activeDeliveryLocation';
 import { obDebugTrustEvent } from '@/lib/obDebug';
 import { useEffect } from 'react';
@@ -61,7 +62,10 @@ export function DiscoveryHomeFeed() {
   const online = useOnlineStatus();
   const filtersActive = hasDiscoveryFilterOverrides(filters);
   const sessionCachedFeed =
-    coords != null ? readDiscoverySessionCache(coords.lat, coords.lng, filters) : undefined;
+    coords != null
+      ? readNearestDiscoverySessionCache(coords.lat, coords.lng, filters) ??
+        readDiscoverySessionCache(coords.lat, coords.lng, filters)
+      : undefined;
   const feedData = query.data ?? sessionCachedFeed;
   const showInitialSkeleton = deliveryLocation != null && query.isPending && !feedData;
   const needsLocationPrompt = locationEnabled && deliveryLocation == null;
@@ -148,13 +152,14 @@ export function DiscoveryHomeFeed() {
   }
 
   if (query.isError && !feedData) {
+    const loadError = formatDiscoveryLoadError(query.error);
     return (
       <div className="space-y-4">
         <DiscoveryFeedControls />
         <OrderBhojanDiscoveryUxState
           variant="error"
-          title="Could not load restaurants"
-          description="Check your connection and try again."
+          title={loadError.title}
+          description={loadError.description}
           primaryLabel="Retry"
           onPrimary={() => void query.refetch()}
         />
@@ -237,7 +242,11 @@ export function DiscoveryHomeFeed() {
         await query.refetch();
       }}
     >
-      <div className={`space-y-3 transition-opacity duration-300 ${query.isPlaceholderData && query.isFetching ? 'opacity-50 pointer-events-none blur-[1px]' : ''}`}>
+      <div
+        className={`space-y-3 transition-opacity duration-200 ${
+          query.isPlaceholderData && query.isFetching ? 'opacity-90' : ''
+        }`}
+      >
         <div className="opacity-90">
           <DiscoveryFeedControls />
         </div>

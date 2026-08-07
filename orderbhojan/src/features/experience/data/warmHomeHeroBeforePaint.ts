@@ -16,6 +16,12 @@ export async function warmHomeHeroBeforePaint(timeoutMs = 400): Promise<void> {
     queryKey: homeHeroQueryKey(),
     queryFn: async (): Promise<HomeHeroConfig> => {
       const config = await getMarketplaceApiClient().homeHero();
+      if (!config?.slides?.some((slide) => Boolean(slide?.id?.trim()))) {
+        if (import.meta.env?.DEV) {
+          console.warn('[home-hero] warm fetch returned empty slides; skipping cache write');
+        }
+        throw new Error('home-hero empty slides');
+      }
       writeHomeHeroSessionCache(config);
       return config;
     },

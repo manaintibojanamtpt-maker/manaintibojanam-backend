@@ -34,18 +34,32 @@ describe('assistant grounded ordering + cart-add intent', () => {
         kitchenHint: 'inti bhojanam',
       },
     );
+    assert.deepEqual(
+      parseCartAddUserMessage('Rendu Masala Dosa antibody'),
+      {
+        quantity: 2,
+        itemName: 'Masala Dosa',
+        kitchenHint: 'inti bhojanam',
+      },
+    );
+    const te = parseCartAddUserMessage('రెండు మసాలా దోశ ఇంటి భోజనం నుండి');
+    assert.ok(te);
+    assert.equal(te?.quantity, 2);
+    assert.match(te?.itemName ?? '', /మసాలా|masala/i);
+    assert.match(te?.kitchenHint ?? '', /inti|ఇంటి/i);
     assert.equal(parseCartAddUserMessage('what is popular?'), null);
   });
 
-  it('conversation sends orderingContext and handles cart-add before LLM', () => {
+  it('conversation grounds kitchen via marketplace before assist', () => {
     const conv = readFileSync(
       join(root, 'src/features/assistant/ui/useAssistantConversation.ts'),
       'utf8',
     );
     assert.match(conv, /buildOrderingAssistContext/);
+    assert.match(conv, /groundVoiceOrderingContext/);
     assert.match(conv, /orderingContext/);
     assert.match(conv, /parseCartAddUserMessage/);
-    assert.match(conv, /user_cart_add_intent/);
+    assert.match(conv, /knownRestaurantSlug/);
   });
 
   it('API client posts orderingContext nested under context', () => {

@@ -59,7 +59,9 @@ export function buildOrderingAssistContext(params: {
 }): OrderingAssistContextPayload | null {
   const preferredId = params.preferRestaurantId?.trim() || undefined;
   const restaurantId = preferredId || params.restaurantId?.trim() || undefined;
-  const restaurantSlug = preferredId ? undefined : params.restaurantSlug?.trim() || undefined;
+  // Keep authoritative marketplace slug even when preferRestaurantId is set —
+  // never drop slug (slugified display names cause foodMenu 404s).
+  const restaurantSlug = params.restaurantSlug?.trim() || undefined;
   const restaurantName = params.restaurantName?.trim() || undefined;
   const areaLabel = params.areaLabel?.trim() || undefined;
   const city = params.city?.trim() || undefined;

@@ -1,6 +1,6 @@
 import { useFeatureFlag } from '@/featureFlags';
 
-/** Native Android STT bridge — OFF by default; falls back to Web Speech. */
+/** Native Android STT bridge — ON via .env.production; Telugu also auto-prefers native when available. */
 export function useAiNativeSttFeature(): boolean {
   return useFeatureFlag('FF_OB_AI_NATIVE_STT');
 }

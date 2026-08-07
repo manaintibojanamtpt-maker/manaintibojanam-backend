@@ -29,14 +29,15 @@ import { OrderBhojanFoodDietaryFilterBar } from './OrderBhojanFoodDietaryFilterB
 import { OrderBhojanFoodFeaturedCard } from './OrderBhojanFoodFeaturedCard';
 import { OrderBhojanFoodFloatingCart } from './OrderBhojanFoodFloatingCart';
 import { OrderBhojanFoodMenuSection } from './OrderBhojanFoodMenuSection';
-import { OrderBhojanFoodMenuSkeleton } from './OrderBhojanFoodMenuSkeleton';
 import { OrderBhojanFoodRestaurantStrip } from './OrderBhojanFoodRestaurantStrip';
+import { MenuItemSkeleton } from '@bhojan/storefront-design-system/skeleton/SkeletonSystem';
 
 function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: string }) {
   const navigate = useNavigate();
   const location = useLocation();
   const online = useOnlineStatus();
   const query = useFoodMenu(restaurantSlug);
+  const navKitchenName = (location.state as { kitchenName?: string } | null)?.kitchenName;
   const [customizeFood, setCustomizeFood] = useState<FoodPublic | null>(null);
   const [dietaryFilter, setDietaryFilter] = useState<MenuDietaryFilter>('all');
   const enterFromRestaurant = Boolean(
@@ -101,8 +102,35 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 
   const restaurantQuery = useRestaurantExperience(restaurantSlug);
   const restaurantData = restaurantQuery.data;
+  const shellName =
+    restaurantData?.experience.displayName ?? navKitchenName ?? restaurantName ?? 'Menu';
 
-  if (query.isPending && !menu) return <OrderBhojanFoodMenuSkeleton />;
+  // Prefer chrome + item shimmer over a blank full-page skeleton (native feel).
+  if (query.isPending && !menu) {
+    return (
+      <div className="ob-menu-page min-h-screen bg-[#030303] text-white">
+        <OrderBhojanFoodRestaurantStrip
+          slug={restaurantSlug}
+          name={shellName}
+          onBack={() => navigate(`/restaurant/${restaurantSlug}`)}
+          onHome={() => navigate('/')}
+        />
+        <div className="ob-menu-sticky-chrome sticky top-0 z-30 border-b border-white/10 bg-[#030303]/95 backdrop-blur-md px-4 py-3">
+          <div className="mb-3 flex gap-2 overflow-hidden">
+            <div className="h-9 w-24 shrink-0 animate-pulse rounded-full bg-white/10" />
+            <div className="h-9 w-28 shrink-0 animate-pulse rounded-full bg-white/10" />
+            <div className="h-9 w-20 shrink-0 animate-pulse rounded-full bg-white/10" />
+          </div>
+        </div>
+        <div className="flex flex-col" aria-busy="true" aria-label="Loading menu">
+          <MenuItemSkeleton />
+          <MenuItemSkeleton />
+          <MenuItemSkeleton />
+          <MenuItemSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   if (query.isError || !menu) {
     return (

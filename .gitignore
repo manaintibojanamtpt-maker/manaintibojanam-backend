@@ -29,3 +29,7 @@ tmp-pune-discovery.json
 scripts/.smoke-ops-health-report.json
 
 .vercel
+
+# Local Firebase credentials from Render export
+.firebase-service-account.json
+

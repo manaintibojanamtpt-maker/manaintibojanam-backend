@@ -29,6 +29,8 @@ export class ConversationPolicyEngine {
         return this.evaluateAddItem(entities);
       case ConversationIntent.RemoveItem:
         return this.evaluateRemoveItem(entities);
+      case ConversationIntent.ScheduleDelivery:
+        return this.evaluateScheduleDelivery(entities);
       case ConversationIntent.Checkout:
         return this.evaluateCheckout(entities, state);
       case ConversationIntent.TrackOrder:
@@ -37,6 +39,49 @@ export class ConversationPolicyEngine {
         // Safe intents (Browse, Greeting, Help, Cancel) are always allowed.
         return { allowed: true };
     }
+  }
+
+  private evaluateScheduleDelivery(
+    entities: readonly ConversationEntity[],
+  ): PolicyEvaluationResult {
+    const delivery = entities.find((e) => e.type === 'DeliveryTime');
+    if (!delivery) {
+      return {
+        allowed: false,
+        reason: 'MissingDeliveryTime',
+        missingEntities: ['DeliveryTime'],
+      };
+    }
+    if (
+      'normalizedValue' in delivery &&
+      delivery.normalizedValue === 'out_of_horizon' &&
+      !('ambiguous' in delivery && delivery.ambiguous)
+    ) {
+      return {
+        allowed: false,
+        reason: 'OutOfHorizonDeliveryTime',
+        missingEntities: ['DeliveryTime'],
+      };
+    }
+    if ('ambiguous' in delivery && delivery.ambiguous) {
+      return {
+        allowed: false,
+        reason: 'AmbiguousDeliveryTime',
+        missingEntities: ['DeliveryTime'],
+      };
+    }
+    if (
+      'mode' in delivery &&
+      delivery.mode === 'scheduled' &&
+      !('deliveryTimeSlot' in delivery && delivery.deliveryTimeSlot)
+    ) {
+      return {
+        allowed: false,
+        reason: 'InvalidDeliveryTime',
+        missingEntities: ['DeliveryTime'],
+      };
+    }
+    return { allowed: true };
   }
 
   private evaluateAddItem(entities: readonly ConversationEntity[]): PolicyEvaluationResult {

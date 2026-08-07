@@ -89,4 +89,72 @@ describe('WorkflowResponseMapper', () => {
     assert.strictEqual(response.decision, 'clarify');
     assert.match(response.systemReply, /delivery address/i);
   });
+
+  it('maps deliver now to set_delivery_schedule ASAP', () => {
+    const turn = engine.evaluateTurn({
+      rawTranscript: 'deliver now',
+      state: baseState(),
+    });
+    const response = mapper.map(turn);
+    assert.strictEqual(response.decision, 'proceed');
+    assert.strictEqual(response.intent, ConversationIntent.ScheduleDelivery);
+    assert.strictEqual(response.proposedActions[0]?.type, 'set_delivery_schedule');
+    assert.strictEqual(response.proposedActions[0]?.payload?.deliveryType, 'asap');
+    assert.match(response.systemReply, /as soon as possible/i);
+  });
+
+  it('maps for 8 pm to scheduled delivery action', () => {
+    const turn = engine.evaluateTurn({
+      rawTranscript: 'for 8 pm',
+      state: baseState(),
+    });
+    const response = mapper.map(turn);
+    assert.strictEqual(response.decision, 'proceed');
+    assert.strictEqual(response.proposedActions[0]?.type, 'set_delivery_schedule');
+    assert.strictEqual(response.proposedActions[0]?.payload?.deliveryType, 'scheduled');
+    assert.match(response.systemReply, /scheduled for/i);
+  });
+
+  it('clarifies ambiguous schedule later', () => {
+    const turn = engine.evaluateTurn({
+      rawTranscript: 'schedule later',
+      state: baseState(),
+    });
+    const response = mapper.map(turn);
+    assert.strictEqual(response.decision, 'clarify');
+    assert.match(response.systemReply, /clear time|when should we deliver/i);
+    assert.strictEqual(response.proposedActions[0]?.type, 'ask_clarification');
+    assert.ok(
+      response.proposedActions[0]?.payload?.reason === 'AmbiguousDeliveryTime' ||
+        response.proposedActions[0]?.payload?.reason === 'MissingDeliveryTime',
+    );
+  });
+
+  it('maps tomorrow 8 pm to set_delivery_schedule with Tomorrow hint', () => {
+    const turn = engine.evaluateTurn({
+      rawTranscript: 'tomorrow 8 pm',
+      state: baseState(),
+    });
+    const response = mapper.map(turn);
+    assert.strictEqual(response.decision, 'proceed');
+    assert.strictEqual(response.proposedActions[0]?.type, 'set_delivery_schedule');
+    assert.strictEqual(response.proposedActions[0]?.payload?.deliveryType, 'scheduled');
+    assert.match(String(response.proposedActions[0]?.payload?.deliveryTimeSlot ?? ''), /Tomorrow/);
+  });
+
+  it('clarifies day after lunch as out of horizon (no set_delivery_schedule)', () => {
+    const turn = engine.evaluateTurn({
+      rawTranscript: 'day after lunch',
+      state: baseState(),
+    });
+    const response = mapper.map(turn);
+    assert.strictEqual(response.decision, 'clarify');
+    assert.match(response.systemReply, /Today or Tomorrow|tomorrow 8 PM/i);
+    assert.strictEqual(response.proposedActions[0]?.type, 'ask_clarification');
+    assert.notEqual(response.proposedActions[0]?.type, 'set_delivery_schedule');
+    assert.ok(
+      response.proposedActions[0]?.payload?.reason === 'OutOfHorizonDeliveryTime' ||
+        turn.reason === 'OutOfHorizonDeliveryTime',
+    );
+  });
 });

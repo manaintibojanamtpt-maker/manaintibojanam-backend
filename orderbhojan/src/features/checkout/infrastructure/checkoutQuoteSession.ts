@@ -45,7 +45,8 @@ export function buildCheckoutCartSignature(input: {
     .sort()
     .join('|');
   const coupon = input.couponCode?.trim().toUpperCase() || 'none';
-  return `${input.restaurantId}:${input.contextToken}:${coupon}:${lineSig}`;
+  // Stable across menu token rotation for the same kitchen + cart.
+  return `${input.restaurantId}:${coupon}:${lineSig}`;
 }
 
 export function readCheckoutPrepareSession(

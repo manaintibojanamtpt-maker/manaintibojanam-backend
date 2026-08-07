@@ -23,12 +23,21 @@ function persistMenuContext(
   slug: string,
   contextToken: string,
   restaurantId: string,
+  paymentMethods?: readonly string[] | null,
 ): void {
   useRestaurantContextStore.getState().setContext({
     restaurantSlug: slug,
     contextToken,
     restaurantId,
   });
+  if (paymentMethods && paymentMethods.length > 0) {
+    useRestaurantContextStore.getState().setPaymentMethods(paymentMethods);
+    void import('@/features/checkout/infrastructure/kitchenPaymentMethodsCache').then(
+      ({ persistKitchenPaymentMethods }) => {
+        persistKitchenPaymentMethods(restaurantId, paymentMethods);
+      },
+    );
+  }
 }
 
 export function menuFallbackRestaurantId(slug: string): string {
@@ -104,9 +113,18 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
       contextToken: envelope.contextToken,
       restaurantId: restaurantIdFromEnvelope(envelope, params.slug),
     };
-    persistMenuContext(params.slug, context.contextToken, context.restaurantId);
+    const paymentMethods = (envelope as { paymentMethods?: readonly string[] }).paymentMethods;
+    persistMenuContext(params.slug, context.contextToken, context.restaurantId, paymentMethods);
     const menu = mapFoodMenuDTOToFoodMenuResponse(envelope);
-    return finalize(enrichWithRecommendations(enrichWithAiBadges(menu)), context);
+    return finalize(
+      enrichWithRecommendations(
+        enrichWithAiBadges({
+          ...menu,
+          ...(paymentMethods?.length ? { paymentMethods } : {}),
+        }),
+      ),
+      context,
+    );
   }
 
   const payload = await getFoodApiClient().fetchMenu(params);
@@ -114,7 +132,12 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
     contextToken: payload.contextToken,
     restaurantId: `obr_${params.slug}`,
   };
-  persistMenuContext(params.slug, context.contextToken, context.restaurantId);
+  persistMenuContext(
+    params.slug,
+    context.contextToken,
+    context.restaurantId,
+    payload.paymentMethods,
+  );
   return finalize(
     enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload))),
     context,
@@ -137,6 +160,7 @@ function stripInternal(payload: FoodMenuApiPayload): FoodMenuResponse {
     items: payload.items,
     featuredIds: payload.featuredIds,
     todaysSpecialIds: payload.todaysSpecialIds,
+    ...(payload.paymentMethods?.length ? { paymentMethods: payload.paymentMethods } : {}),
   };
 }
 

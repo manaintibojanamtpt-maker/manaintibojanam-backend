@@ -22,6 +22,13 @@ export class TranscriptNormalizer {
       ['bill', 'checkout'],
       ['pay', 'checkout'],
       ['payment', 'checkout'],
+
+      // Schedule delivery (canonicalize common ASAP phrases)
+      ['right now', 'asap'],
+      ['deliver now', 'asap'],
+      ['delivery now', 'asap'],
+      ['immediately', 'asap'],
+      ['as soon as possible', 'asap'],
       
       // Cancellation
       ['cancel', 'cancelorder'],

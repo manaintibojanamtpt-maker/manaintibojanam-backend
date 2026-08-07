@@ -42,10 +42,32 @@ export type TriageDecision =
   | { readonly kind: 'continue_llm'; readonly confirmation: ConfirmationSnapshot };
 
 const CART_SUMMARY_RE =
-  /^(?:what(?:'s|\s+is)?\s+in\s+(?:my\s+)?cart|cart\s+summary|show\s+(?:my\s+)?cart|read\s+(?:my\s+)?cart)\b/i;
+  /^(?:what(?:'s|\s+is)?\s+in\s+(?:my\s+)?cart|cart\s+summary|show\s+(?:my\s+)?cart|read\s+(?:my\s+)?cart|items?\s+(?:that\s+)?(?:were\s+|was\s+)?(?:added\s+)?(?:in|to)\s+(?:the\s+|my\s+)?cart|what\s+(?:did|was)\s+(?:i|you)\s+add|pending\s+(?:item|plan|cart)|item\s+that\s+was\s+added)\b/i;
 
 const ADD_RE =
-  /^(?:please\s+)?add\s+(\d+)\s+(.+?)(?:\s+from\s+(.+))?$/i;
+  /^(?:please\s+)?add\s+(\d+|one|won|two|three|tree|four|five|six|seven|eight|nine|ten|a|an)\s+(.+?)(?:\s+from\s+(.+))?$/i;
+
+function parseTriageQuantity(token: string | undefined): number | null {
+  if (!token) return null;
+  if (/^\d+$/.test(token)) return Math.min(20, Math.max(1, Number(token)));
+  const map: Record<string, number> = {
+    a: 1,
+    an: 1,
+    one: 1,
+    won: 1,
+    two: 2,
+    three: 3,
+    tree: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  return map[token.toLowerCase()] ?? null;
+}
 
 export function triageVoiceUtterance(input: {
   readonly message: string;
@@ -135,10 +157,13 @@ export function triageVoiceUtterance(input: {
 
   const addMatch = message.match(ADD_RE);
   if (addMatch) {
-    const quantity = Number(addMatch[1]);
-    const itemName = (addMatch[2] || '').trim();
+    const quantity = parseTriageQuantity(addMatch[1]);
+    const itemName = (addMatch[2] || '')
+      .replace(/\b(?:quantity|qty)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
     const kitchenHint = (addMatch[3] || '').trim() || undefined;
-    if (itemName && Number.isFinite(quantity) && quantity > 0) {
+    if (itemName && quantity != null && quantity > 0) {
       return {
         decision: {
           kind: 'propose_cart_add',

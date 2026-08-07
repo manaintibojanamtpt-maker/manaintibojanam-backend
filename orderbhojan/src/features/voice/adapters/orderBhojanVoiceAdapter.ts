@@ -93,7 +93,10 @@ export function createOrderBhojanVoiceAdapter(
 
     hydratePendingFromValidation(plan, restaurant, planId) {
       pending.plan = plan;
-      pending.planId = planId ?? `${plan.conversationId || 'plan'}_hydrated`;
+      // Must match ConfirmationSnapshot.planId from syncConfirmationFromPending.
+      pending.planId =
+        planId?.trim() ||
+        (plan.conversationId?.trim() ? plan.conversationId.trim() : 'pending');
       pending.restaurant = restaurant;
     },
 
@@ -326,10 +329,36 @@ export function createOrderBhojanVoiceAdapter(
       }));
       const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
       const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-      const spoken =
-        itemCount === 0
-          ? 'Your cart is empty.'
-          : `You have ${itemCount} item${itemCount === 1 ? '' : 's'} in the cart, about ₹${Math.round(subtotal)}.`;
+
+      let spoken: string;
+      const pendingPlan = pending.plan;
+      if (pendingPlan && pendingPlan.status === 'validated' && pendingPlan.valid) {
+        const pendingLines = pendingPlan.proposedActions
+          .filter((a) => a.type === 'cart_add_plan' || a.type === 'cart_update_plan')
+          .map((a) => {
+            const payload = a.payload ?? {};
+            const name =
+              (typeof payload.name === 'string' && payload.name.trim()) ||
+              (typeof payload.itemName === 'string' && payload.itemName.trim()) ||
+              'item';
+            const quantity =
+              typeof payload.quantity === 'number' && payload.quantity > 0 ? payload.quantity : 1;
+            return `${quantity}× ${name}`;
+          });
+        const pendingSpeech =
+          pendingLines.length > 0 ? pendingLines.join('; ') : 'your validated plan';
+        const cartPart =
+          itemCount === 0
+            ? 'Your cart is still empty until you confirm.'
+            : `Your cart already has ${itemCount} item${itemCount === 1 ? '' : 's'}.`;
+        spoken = `Ready to add: ${pendingSpeech}. ${cartPart} Say confirm to add to cart, or discard to cancel.`;
+      } else {
+        spoken =
+          itemCount === 0
+            ? 'Your cart is empty.'
+            : `You have ${itemCount} item${itemCount === 1 ? '' : 's'} in the cart, about ₹${Math.round(subtotal)}.`;
+      }
+
       return {
         ok: true,
         tool: 'getCartSummary',
@@ -337,7 +366,7 @@ export function createOrderBhojanVoiceAdapter(
         data: {
           kitchenName: cart.restaurantSlug || undefined,
           itemCount,
-          subtotal: itemCount ? subtotal : undefined,
+          subtotal,
           lines,
           spoken,
         },

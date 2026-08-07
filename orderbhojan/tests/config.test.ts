@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadAppConfig } from '../src/config/environment';
+import { isNonRoutableDevApiHost, loadAppConfig } from '../src/config/environment';
 import { validateAppConfig } from '../src/config/validation';
 import { ConfigValidationError } from '../src/config/validation';
 import {
@@ -34,6 +34,12 @@ describe('config validation', () => {
         }),
       ConfigValidationError,
     );
+  });
+
+  it('detects loopback API hosts that must not ship in Capacitor APKs', () => {
+    assert.equal(isNonRoutableDevApiHost('http://localhost:8080'), true);
+    assert.equal(isNonRoutableDevApiHost('http://127.0.0.1:8081'), true);
+    assert.equal(isNonRoutableDevApiHost('https://manaintibojanam-backend.onrender.com'), false);
   });
 
   it('aligns Android google-services.json with bhojanos-prod Firebase web Auth', () => {
