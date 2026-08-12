@@ -41,44 +41,38 @@ export function isDeliveryFeeEnabled(config?: DeliveryConfigLike | null): boolea
  */
 export function computeDeliveryFee(distanceKm: number, config?: DeliveryConfigLike | null): number {
   if (!config) {
-    if (distanceKm <= 2) return 30;
-    if (distanceKm <= 5) return 50;
-    if (distanceKm <= 8) return 80;
-    return 100 + Math.ceil((distanceKm - 8) * 12);
+    if (distanceKm <= 2) return 0;
+    if (distanceKm <= 7) return 40;
+    if (distanceKm <= 10) return 70;
+    return -1;
   }
 
-  const freeRadius = Number(config.freeRadius ?? 0);
-  const paidRadius = Number(config.paidRadius ?? config.maxRadius ?? 10);
-  const maxRadius = Number(config.maxRadius ?? paidRadius);
-  const baseFee = Number(config.baseFee ?? 0);
-  const perKmCharge = Number(config.perKmCharge ?? 0);
-  const ownerExplicitFees = config.feesConfigured === true;
+  const maxRadius = Number(config.maxRadius ?? config.maxServiceDistanceKm ?? 10);
+  if (maxRadius > 0 && distanceKm > maxRadius) return -1;
 
-  if (distanceKm > maxRadius) return -1;
-  if (distanceKm <= freeRadius) return 0;
-
-  const ownerSetFees = baseFee > 0 || perKmCharge > 0;
-
-  if (ownerExplicitFees || ownerSetFees) {
-    if (perKmCharge > 0 && baseFee <= 0) {
-      return Math.ceil((distanceKm - freeRadius) * perKmCharge);
-    }
-
-    if (distanceKm <= paidRadius) {
-      return Math.round(baseFee);
-    }
-
+  // Legacy incomplete zone setup
+  if (
+    config.feesConfigured === false &&
+    Number(config.baseFee ?? 0) === 0 &&
+    Number(config.perKmCharge ?? 0) === 0 &&
+    Number(config.freeRadius ?? 0) === 0
+  ) {
+    const paidRadius = Number(config.paidRadius ?? maxRadius ?? 5);
+    if (distanceKm <= paidRadius) return DEFAULT_BASE_DELIVERY_FEE;
     const extraKm = Math.ceil(distanceKm - paidRadius);
-    return Math.round(baseFee + extraKm * perKmCharge);
+    return DEFAULT_BASE_DELIVERY_FEE + extraKm * DEFAULT_PER_KM_BEYOND_PAID;
   }
 
-  // Delivery zones configured but fees left at zero — legacy incomplete setup only
-  if (distanceKm <= paidRadius) {
-    return DEFAULT_BASE_DELIVERY_FEE;
-  }
+  const freeRadius = Number(config.freeRadius ?? (config.baseFee !== undefined ? 0 : 2));
+  const paidRadius = Number(config.paidRadius ?? maxRadius ?? 7);
+  const baseFee = Number(config.baseFee ?? 40);
+  const perKmCharge = Number(config.perKmCharge ?? 10);
+
+  if (distanceKm <= freeRadius) return 0;
+  if (distanceKm <= paidRadius) return Math.round(baseFee);
 
   const extraKm = Math.ceil(distanceKm - paidRadius);
-  return DEFAULT_BASE_DELIVERY_FEE + extraKm * DEFAULT_PER_KM_BEYOND_PAID;
+  return Math.round(baseFee + extraKm * perKmCharge);
 }
 
 export function getDeliveryFee(

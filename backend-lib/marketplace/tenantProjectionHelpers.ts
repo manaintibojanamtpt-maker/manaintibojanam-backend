@@ -301,7 +301,12 @@ export function computeTenantDeliveryFee(
   distanceKm: number,
   config?: TenantDeliveryConfig,
 ): number {
-  if (!config) return -1;
+  if (!config) {
+    if (distanceKm <= 2) return 0;
+    if (distanceKm <= 7) return 40;
+    if (distanceKm <= 10) return 70;
+    return -1;
+  }
 
   if (
     config.pricingMode === 'FIXED_TIER' ||
@@ -315,25 +320,17 @@ export function computeTenantDeliveryFee(
     return -1;
   }
 
-  const maxRadius = Number(config.maxRadius ?? config.paidRadius ?? config.maxServiceDistanceKm ?? 0);
-  const freeRadius = Number(config.freeRadius ?? 0);
-  const paidRadius = Number(config.paidRadius ?? config.maxRadius ?? 0);
-  const baseFee = Number(config.baseFee ?? 0);
-  const perKmCharge = Number(config.perKmCharge ?? 0);
+  const freeRadius = Number(config.freeRadius ?? 2);
+  const paidRadius = Number(config.paidRadius ?? config.maxRadius ?? 7);
+  const maxRadius = Number(config.maxRadius ?? config.maxServiceDistanceKm ?? 10);
+  const baseFee = Number(config.baseFee ?? 40);
+  const perKmCharge = Number(config.perKmCharge ?? 10);
 
   if (maxRadius > 0 && distanceKm > maxRadius) return -1;
   if (distanceKm <= freeRadius) return 0;
 
-  const ownerSetFees =
-    config.feesConfigured === true ||
-    baseFee > 0 ||
-    perKmCharge > 0 ||
-    config.pricingMode !== undefined ||
-    config.tier2to7km !== undefined;
-  if (!ownerSetFees) return -1;
-
-  if (distanceKm <= paidRadius) return baseFee;
-  return baseFee + Math.max(0, distanceKm - paidRadius) * perKmCharge;
+  if (distanceKm <= paidRadius) return Math.round(baseFee);
+  return Math.round(baseFee + Math.max(0, distanceKm - paidRadius) * perKmCharge);
 }
 
 export function resolveDeliveryFeeForDisplay(
