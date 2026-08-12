@@ -757,3 +757,8 @@ export async function placeMarketplaceOrder(
     quote,
   };
 }
+
+export function createCheckoutCorrelationId(prefix: string = 'chk'): string {
+  return `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+}
+

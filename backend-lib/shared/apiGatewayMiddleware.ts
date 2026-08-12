@@ -10,6 +10,60 @@ export interface OwnerGatewayRequest extends Request {
 
 type ExpressMiddleware = (req: Request, res: Response, next: NextFunction) => void;
 
+export function resolveTenantIdFromRequest(req: Request): string {
+  // 1. Check explicit parameters
+  if (req.params?.tenantId && typeof req.params.tenantId === 'string' && req.params.tenantId.trim()) {
+    return req.params.tenantId.trim();
+  }
+  if (req.query?.tenantId && typeof req.query.tenantId === 'string' && req.query.tenantId.trim()) {
+    return req.query.tenantId.trim();
+  }
+  if (req.body?.tenantId && typeof req.body.tenantId === 'string' && req.body.tenantId.trim()) {
+    return req.body.tenantId.trim();
+  }
+  const headerTenant = req.headers['x-tenant-id'];
+  if (typeof headerTenant === 'string' && headerTenant.trim()) {
+    return headerTenant.trim();
+  }
+  const attachedTenant = (req as any).tenantId;
+  if (typeof attachedTenant === 'string' && attachedTenant.trim()) {
+    return attachedTenant.trim();
+  }
+
+  // 2. Extract from URL path (e.g. /api/owner/delivery-integrations/mana-inti or /delivery-integrations/mana-inti)
+  const fullPath = (req.originalUrl || req.url || req.path || '').split('?')[0];
+  const segments = fullPath.split('/').filter(Boolean);
+  
+  const knownPrefixes = [
+    'delivery-integrations',
+    'storefront',
+    'coupons',
+    'orders',
+    'kyc',
+    'onboarding',
+    'ingredients',
+    'recipes',
+    'menu',
+    'categories',
+    'analytics',
+    'subscription'
+  ];
+
+  for (let i = 0; i < segments.length; i++) {
+    if (knownPrefixes.includes(segments[i])) {
+      const candidate = segments[i + 1];
+      if (
+        candidate &&
+        !['capabilities', 'intelligence', 'document', 'items', 'sync-tenants', 'profile', 'provision', 'activate-growth-trial'].includes(candidate)
+      ) {
+        return candidate.trim();
+      }
+    }
+  }
+
+  return '';
+}
+
 /**
  * Ordered owner API gateway chain:
  * 1. rateLimit passthrough hook
@@ -34,12 +88,7 @@ export function createOwnerApiGatewayMiddleware(deps: {
 
   const tenantResolverStub: ExpressMiddleware = (req, _res, next) => {
     const ownerReq = req as OwnerGatewayRequest;
-    const headerTenant = ownerReq.headers['x-tenant-id'];
-    const queryTenant = typeof ownerReq.query?.tenantId === 'string' ? ownerReq.query.tenantId : undefined;
-    const bodyTenant =
-      ownerReq.body && typeof ownerReq.body.tenantId === 'string' ? ownerReq.body.tenantId : undefined;
-
-    ownerReq.tenantId = String(queryTenant || bodyTenant || headerTenant || ownerReq.tenantId || '').trim();
+    ownerReq.tenantId = resolveTenantIdFromRequest(req);
     log('debug', 'owner gateway tenant resolver stub', {
       path: ownerReq.path,
       tenantId: ownerReq.tenantId || null,

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
+import { resolveTenantIdFromRequest } from './shared/apiGatewayMiddleware.js';
 
 export type PlanId = 'starter' | 'growth' | 'pro' | 'enterprise';
 
@@ -74,12 +75,11 @@ export async function assertDeliveryEngineEntitlement(
 }
 
 
-// Middleware factory for enforcing capabilities (legacy - reads tenantId from body/query)
+// Middleware factory for enforcing capabilities (reads tenantId from params/body/query/header/URL path)
 export function requireEntitlement(db: Firestore, featureKey: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // tenantId comes from req.body (POST/PUT) or req.query (GET)
-      const tenantId = (req.body?.tenantId || req.query?.tenantId) as string;
+      const tenantId = resolveTenantIdFromRequest(req);
 
       if (!tenantId) {
         return res.status(400).json({ success: false, error: 'tenantId is required for entitlement check' });
