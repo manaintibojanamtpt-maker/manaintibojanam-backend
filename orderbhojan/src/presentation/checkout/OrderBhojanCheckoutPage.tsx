@@ -32,7 +32,7 @@ import {
 import { markPerf } from '@/lib/perfMarks';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import {
-  ASAP_SLOT,
+  ensureScheduledDeliverySlots,
   formatDeliverySlotLabel,
   isAsapSlot,
 } from '@/features/checkout/domain/deliveryTimeSlots';
@@ -533,12 +533,8 @@ export function OrderBhojanCheckoutPage() {
 
   const deliverySlotView = scheduling
     ? {
-        // Keep the Deliver now / Schedule control visible whenever scheduling exists:
-        // an empty or stale slot list falls back to ASAP instead of hiding the picker.
-        slots:
-          scheduling.deliverySlots && scheduling.deliverySlots.length > 0
-            ? scheduling.deliverySlots
-            : [ASAP_SLOT],
+        // Ensure scheduled delivery slots exist so the Schedule tab is always enabled
+        slots: ensureScheduledDeliverySlots(scheduling.deliverySlots),
         selectedSlot: deliveryTimeSlot,
         selectedIsAsap: isAsapSlot(deliveryTimeSlot),
         selectedSummary: isAsapSlot(deliveryTimeSlot)

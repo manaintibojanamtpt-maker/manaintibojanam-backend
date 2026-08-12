@@ -81,3 +81,48 @@ export function isKitchenClosedForOrdering(scheduling: CheckoutSchedulingContext
   if (!scheduling) return false;
   return !scheduling.isStoreOpen && scheduling.deliverySlots.every((slot) => !isAsapSlot(slot));
 }
+
+export function ensureScheduledDeliverySlots(
+  slots: readonly string[] = [],
+  now: Date = new Date(),
+): string[] {
+  const existing = Array.isArray(slots) ? [...slots] : [];
+  const hasScheduled = existing.some((s) => !isAsapSlot(s));
+  if (hasScheduled) return existing;
+
+  const fallback: string[] = [];
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  if (currentHour < 21 || (currentHour === 21 && currentMinute < 30)) {
+    let startHour = currentMinute >= 30 ? currentHour + 1 : currentHour;
+    let startMin = currentMinute >= 30 ? 0 : 30;
+    if (startHour < 9) {
+      startHour = 9;
+      startMin = 0;
+    }
+    while (startHour < 22) {
+      const endHour = startMin === 30 ? startHour + 1 : startHour;
+      const endMin = startMin === 30 ? 0 : 30;
+      const startStr = `${startHour % 12 || 12}:${startMin === 0 ? '00' : '30'} ${startHour >= 12 ? 'PM' : 'AM'}`;
+      const endStr = `${endHour % 12 || 12}:${endMin === 0 ? '00' : '30'} ${endHour >= 12 ? 'PM' : 'AM'}`;
+      fallback.push(`Today, ${startStr} - ${endStr}`);
+      startHour = endHour;
+      startMin = endMin;
+    }
+  }
+
+  let tomHour = 9;
+  let tomMin = 0;
+  while (tomHour < 22) {
+    const endHour = tomMin === 30 ? tomHour + 1 : tomHour;
+    const endMin = tomMin === 30 ? 0 : 30;
+    const startStr = `${tomHour % 12 || 12}:${tomMin === 0 ? '00' : '30'} ${tomHour >= 12 ? 'PM' : 'AM'}`;
+    const endStr = `${endHour % 12 || 12}:${endMin === 0 ? '00' : '30'} ${endHour >= 12 ? 'PM' : 'AM'}`;
+    fallback.push(`Tomorrow, ${startStr} - ${endStr}`);
+    tomHour = endHour;
+    tomMin = endMin;
+  }
+
+  return existing.length > 0 ? [...existing, ...fallback] : [ASAP_SLOT, ...fallback];
+}
