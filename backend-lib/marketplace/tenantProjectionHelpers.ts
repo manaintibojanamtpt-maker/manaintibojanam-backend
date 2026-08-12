@@ -11,6 +11,11 @@ export interface TenantLocation {
 
 export interface TenantDeliveryConfig {
   readonly enabled?: boolean;
+  readonly pricingMode?: 'FIXED_TIER' | 'DISTANCE_TIER' | 'DISTANCE_LADDER';
+  readonly tier0to2km?: number;
+  readonly tier2to7km?: number;
+  readonly tier7to10km?: number;
+  readonly maxServiceDistanceKm?: number;
   readonly freeRadius?: number;
   readonly paidRadius?: number;
   readonly maxRadius?: number;
@@ -163,13 +168,18 @@ export function readTenantDeliveryConfig(
   const body = deliveryConfig as Record<string, unknown>;
   return {
     enabled: body.enabled === true || body.enabled === undefined,
+    pricingMode: typeof body.pricingMode === 'string' ? (body.pricingMode as any) : undefined,
+    tier0to2km: asNumber(body.tier0to2km),
+    tier2to7km: asNumber(body.tier2to7km),
+    tier7to10km: asNumber(body.tier7to10km),
+    maxServiceDistanceKm: asNumber(body.maxServiceDistanceKm),
     freeRadius: asNumber(body.freeRadius),
     paidRadius: asNumber(body.paidRadius),
     maxRadius: asNumber(body.maxRadius),
     perKmCharge: asNumber(body.perKmCharge),
     baseFee: asNumber(body.baseFee),
     prepTime: asNumber(body.prepTime),
-    feesConfigured: body.feesConfigured === true,
+    feesConfigured: body.feesConfigured === true || body.pricingMode === 'FIXED_TIER' || body.tier2to7km !== undefined,
     freeDeliveryMinOrder: asNumber(body.freeDeliveryMinOrder),
   };
 }
@@ -293,7 +303,19 @@ export function computeTenantDeliveryFee(
 ): number {
   if (!config) return -1;
 
-  const maxRadius = Number(config.maxRadius ?? config.paidRadius ?? 0);
+  if (
+    config.pricingMode === 'FIXED_TIER' ||
+    (config.tier0to2km !== undefined && config.tier2to7km !== undefined)
+  ) {
+    const maxDist = Number(config.maxServiceDistanceKm ?? config.maxRadius ?? 10);
+    if (distanceKm > maxDist) return -1;
+    if (distanceKm <= 2) return Number(config.tier0to2km ?? 0);
+    if (distanceKm <= 7) return Number(config.tier2to7km ?? 40);
+    if (distanceKm <= 10) return Number(config.tier7to10km ?? 70);
+    return -1;
+  }
+
+  const maxRadius = Number(config.maxRadius ?? config.paidRadius ?? config.maxServiceDistanceKm ?? 0);
   const freeRadius = Number(config.freeRadius ?? 0);
   const paidRadius = Number(config.paidRadius ?? config.maxRadius ?? 0);
   const baseFee = Number(config.baseFee ?? 0);
@@ -302,7 +324,12 @@ export function computeTenantDeliveryFee(
   if (maxRadius > 0 && distanceKm > maxRadius) return -1;
   if (distanceKm <= freeRadius) return 0;
 
-  const ownerSetFees = config.feesConfigured === true || baseFee > 0 || perKmCharge > 0;
+  const ownerSetFees =
+    config.feesConfigured === true ||
+    baseFee > 0 ||
+    perKmCharge > 0 ||
+    config.pricingMode !== undefined ||
+    config.tier2to7km !== undefined;
   if (!ownerSetFees) return -1;
 
   if (distanceKm <= paidRadius) return baseFee;
@@ -314,11 +341,17 @@ export function resolveDeliveryFeeForDisplay(
   distanceKm?: number,
 ): number | null | undefined {
   if (!config || config.enabled === false) return undefined;
-  if (config.feesConfigured !== true && (config.baseFee ?? 0) === 0 && (config.perKmCharge ?? 0) === 0) {
+  const isConfigured =
+    config.feesConfigured === true ||
+    config.pricingMode === 'FIXED_TIER' ||
+    config.tier2to7km !== undefined ||
+    (config.baseFee ?? 0) > 0 ||
+    (config.perKmCharge ?? 0) > 0;
+  if (!isConfigured) {
     return undefined;
   }
   if (distanceKm == null) {
-    return config.feesConfigured ? config.baseFee ?? 0 : undefined;
+    return isConfigured ? config.baseFee ?? 0 : undefined;
   }
   const fee = computeTenantDeliveryFee(distanceKm, config);
   if (fee < 0) return null;

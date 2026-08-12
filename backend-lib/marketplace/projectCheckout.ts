@@ -95,7 +95,12 @@ function readGstPercent(tenant: TenantRaw): number {
 
 function isDeliveryFeesConfigured(tenant: TenantRaw): boolean {
   const delivery = (tenant.deliveryConfig ?? {}) as Record<string, unknown>;
-  return delivery.feesConfigured === true || Number(delivery.baseFee ?? 0) > 0;
+  return (
+    delivery.feesConfigured === true ||
+    delivery.pricingMode === 'FIXED_TIER' ||
+    delivery.tier2to7km !== undefined ||
+    Number(delivery.baseFee ?? 0) > 0
+  );
 }
 
 function resolveDeliveryFee(
