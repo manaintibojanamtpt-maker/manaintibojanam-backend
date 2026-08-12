@@ -207,6 +207,6 @@ describe('checkout auth wiring', () => {
     );
     assert.match(transition, /isNativePlatform\(\)/);
     assert.match(transition, /from === '\/cart' && to === '\/checkout'/);
-    assert.match(transition, /mode=\{fastCheckout \? 'sync' : 'wait'\}/);
+    assert.match(transition, /mode=\{(fastCheckout|fastFunnel) \? 'sync' : 'wait'\}/);
   });
 });

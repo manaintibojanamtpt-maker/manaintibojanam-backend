@@ -73,6 +73,13 @@ describe('checkout direct UPI payment', () => {
     assert.match(pending, /Copy payment details/);
     assert.match(pending, /I've paid — notify kitchen/);
     assert.match(pending, /kitchen confirms UPI/i);
+    assert.match(pending, /declined for security reasons/);
+    assert.match(pending, /Pay to UPI ID/);
+    assert.match(pending, /Pay via QR code/);
+    assert.match(pending, /Pay to mobile number/);
+    assert.match(pending, /resolveUpiSecurityPayOptions/);
+    assert.match(pending, /handleCopyUpiId/);
+    assert.match(pending, /Tapping .*Pay via UPI app. again will usually repeat the same decline/i);
     assert.doesNotMatch(pending, /launchUpiIntent\(upiUrl\)/);
   });
 

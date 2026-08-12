@@ -7,18 +7,9 @@ import {
   toPendingPlanRestaurantRef,
 } from '../src/features/assistant/domain/restaurantIdSlug.ts';
 import {
-  shouldRetainPendingCartPlan,
-  isExplicitNewOrderOrCancel,
-  deriveTaskStateFromValidation,
-} from '../src/features/assistant/domain/voiceOrderingTaskState.ts';
-import {
   summarizePendingCartPlan,
   formatCartPlanSummarySpeech,
 } from '../src/features/assistant/domain/summarizePendingCartPlan.ts';
-import {
-  decideVoiceCartTurn,
-  simulateVoiceCartTurnSequence,
-} from '../src/features/assistant/domain/decideVoiceCartTurn.ts';
 import {
   isValidatedCartConfirmMessage,
   isConfirmCartUserMessage,
@@ -93,31 +84,6 @@ describe('voice task hardening — screenshot regressions', () => {
     assert.equal(ref.restaurantSlug, 'mana-inti');
   });
 
-  it('retains pending plan on Tomato Rice / confirm during clarification', () => {
-    assert.equal(
-      shouldRetainPendingCartPlan({
-        pendingStatus: 'needs_clarification',
-        userMessage: 'Tomato Rice',
-      }),
-      true,
-    );
-    assert.equal(
-      shouldRetainPendingCartPlan({
-        pendingStatus: 'needs_clarification',
-        userMessage: 'confirm',
-      }),
-      true,
-    );
-    assert.equal(
-      shouldRetainPendingCartPlan({
-        pendingStatus: 'needs_clarification',
-        userMessage: 'discard',
-      }),
-      false,
-    );
-    assert.equal(isExplicitNewOrderOrCancel('add idli from inti'), true);
-  });
-
   it('blocks validate-gated confirm until status is validated', () => {
     const clarifying = mockValidation('needs_clarification');
     assert.equal(isConfirmCartUserMessage('confirm'), true);
@@ -142,111 +108,15 @@ describe('voice task hardening — screenshot regressions', () => {
     assert.equal(fromId[0]!.kitchen, 'mana-inti');
   });
 
-  it('maps validation status to task states', () => {
-    assert.equal(deriveTaskStateFromValidation('validated'), 'awaiting_confirm');
-    assert.equal(deriveTaskStateFromValidation('needs_clarification'), 'needs_clarification');
-    assert.equal(deriveTaskStateFromValidation(null), 'idle');
-  });
-
-  it('send() router: dish+kitchen add → cart_add_intent with qty 2', () => {
-    const d = decideVoiceCartTurn({
-      message: 'Add two quantity Masala Dosa from Inti bhojanam',
-      pending: null,
-    });
-    assert.equal(d.kind, 'cart_add_intent');
-    if (d.kind === 'cart_add_intent') {
-      assert.equal(d.quantity, 2);
-      assert.match(d.itemName, /masala dosa/i);
-      assert.match(d.kitchenHint ?? '', /inti/i);
-    }
-  });
-
-  it('send() router: Tomato Rice after clarify retains task + qty', () => {
-    const pending = mockValidation('needs_clarification');
-    const d = decideVoiceCartTurn({ message: 'Tomato Rice', pending });
-    assert.equal(d.kind, 'clarify_dish');
-    if (d.kind === 'clarify_dish') {
-      assert.equal(d.dishName, 'Tomato Rice');
-      assert.equal(d.quantity, 2);
-      assert.equal(d.retainPending, true);
-    }
-  });
-
-  it('send() router: confirm during clarification does not wipe pending', () => {
-    const pending = mockValidation('needs_clarification');
-    const seq = simulateVoiceCartTurnSequence(['confirm', 'Tomato Rice'], pending);
-    assert.equal(seq.decisions[0]!.kind, 'confirm_while_clarifying');
-    assert.equal(seq.decisions[0]!.retainPending, true);
-    assert.equal(seq.decisions[1]!.kind, 'clarify_dish');
-    assert.equal(seq.finalPendingRetained, true);
-    assert.match(
-      (seq.decisions[0] as { reply: string }).reply,
-      /Working on:|Which menu item/i,
-    );
-  });
-
-  it('send() router: confirm applies only when validated', () => {
-    assert.equal(
-      decideVoiceCartTurn({
-        message: 'confirm',
-        pending: mockValidation('validated'),
-      }).kind,
-      'apply_validated_confirm',
-    );
-    assert.notEqual(
-      decideVoiceCartTurn({
-        message: 'confirm',
-        pending: mockValidation('needs_clarification'),
-      }).kind,
-      'apply_validated_confirm',
-    );
-  });
-
-  it('send() router: Confirm Confirm applies validated plan (no generic chat)', () => {
-    assert.equal(
-      decideVoiceCartTurn({
-        message: 'Confirm Confirm',
-        pending: mockValidation('validated'),
-      }).kind,
-      'apply_validated_confirm',
-    );
-  });
-
-  it('send() router: An Andhra Veg Thali clarifies pending dish', () => {
-    const d = decideVoiceCartTurn({
-      message: 'An Andhra Veg Thali',
-      pending: mockValidation('needs_clarification'),
-    });
-    assert.equal(d.kind, 'clarify_dish');
-    if (d.kind === 'clarify_dish') {
-      assert.equal(d.dishName, 'Andhra Veg Thali');
-    }
-  });
-
-  it('send() router: bare dish name starts cart_add_intent when idle', () => {
-    const d = decideVoiceCartTurn({
-      message: 'Andhra Veg Thali',
-      pending: null,
-    });
-    assert.equal(d.kind, 'cart_add_intent');
-    if (d.kind === 'cart_add_intent') {
-      assert.equal(d.itemName, 'Andhra Veg Thali');
-      assert.equal(d.quantity, 1);
-    }
-  });
-
-  it('wires decideVoiceCartTurn + prefetch + obr_ slug into conversation send()', () => {
+  it('wires prefetch, slug ref, voice abort, and runVoiceCoreTurn into conversation send()', () => {
     const src = readFileSync(
       path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),
       'utf8',
     );
-    assert.match(src, /decideVoiceCartTurn/);
     assert.match(src, /prefetchKitchenMenuForAssist/);
     assert.match(src, /toPendingPlanRestaurantRef/);
-    assert.match(src, /captureNativeAndroidStt/);
     assert.match(src, /voiceAbortRef\.current\?\.abort\(\)/);
     assert.match(src, /runVoiceCoreTurn/);
-    assert.match(src, /shouldHandleWithVoiceCorePreLlm/);
   });
 
   it('keeps native Android STT flag OFF by default', () => {

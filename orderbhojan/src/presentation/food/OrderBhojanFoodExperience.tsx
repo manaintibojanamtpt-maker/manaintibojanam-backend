@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { UtensilsCrossed } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { SectionHeader } from '@bhojan/storefront-design-system/primitives/SectionHeader';
 import type { FoodPublic } from '@/types/marketplace-food';
@@ -178,12 +179,15 @@ function OrderBhojanFoodContent({ restaurantSlug }: { readonly restaurantSlug: s
 
       {filteredItems.length === 0 ? (
         <section className="ob-menu-section w-full min-w-0 bg-[#030303] py-10">
-          <div className="ob-menu-container text-center">
-            <p className="text-base font-semibold text-white">No dishes match this filter</p>
-            <p className="mt-2 text-sm text-white/60">Try All or switch between Veg and Non-Veg.</p>
+          <div className="ob-menu-container flex flex-col items-center text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#e85d04]/25 bg-[#e85d04]/10">
+              <UtensilsCrossed className="h-5 w-5 text-[#f4a261]" aria-hidden />
+            </div>
+            <p className="mt-3 text-base font-bold text-white">No dishes match this filter</p>
+            <p className="mt-1.5 text-sm text-white/60">Try All or switch between Veg and Non-Veg.</p>
             <button
               type="button"
-              className="mt-4 rounded-full border border-[#FF7A00]/40 px-4 py-2 text-sm font-semibold text-[#FF7A00]"
+              className="mt-4 rounded-full border border-[#e85d04]/40 px-5 py-2.5 text-sm font-bold text-[#e85d04] transition hover:bg-[#e85d04]/10 touch-manipulation"
               onClick={() => setDietaryFilter('all')}
             >
               Show all dishes

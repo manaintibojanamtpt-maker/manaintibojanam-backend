@@ -46,7 +46,7 @@ describe('mapRestaurantPublicToKitchenCard distance', () => {
 
   it('omits delivery fee label when fee is unknown', () => {
     const card = mapRestaurantPublicToKitchenCard(baseRestaurant());
-    assert.equal(card.deliveryFeeLabel, undefined);
+    assert.equal(card.deliveryFeeLabel, 'Fee at checkout');
     const priced = mapRestaurantPublicToKitchenCard(baseRestaurant({ deliveryFee: 25 }));
     assert.equal(priced.deliveryFeeLabel, '₹25');
     const free = mapRestaurantPublicToKitchenCard(baseRestaurant({ deliveryFee: 0 }));

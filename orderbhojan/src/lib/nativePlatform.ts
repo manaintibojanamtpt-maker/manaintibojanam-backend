@@ -1,5 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
+import { logUpiDiag } from './upiDiagnostics';
+
 const EXTERNAL_SCHEME =
   /^(https?:|mailto:|tel:|tez:|gpay:|phonepe:|paytmmp:|upi:|intent:)/i;
 
@@ -53,6 +55,9 @@ export async function openExternalUrl(url: string): Promise<boolean> {
   const trimmed = url.trim();
   if (!trimmed || typeof window === 'undefined') return false;
 
+  const scheme =
+    /^([A-Za-z][A-Za-z0-9+.-]*):/.exec(trimmed)?.[1]?.toLowerCase() ?? 'unknown';
+
   if (isNativePlatform()) {
     // Kitchen UPI VPA: open installed apps via native startActivity (not WebView).
     if (/^(upi:|intent:|tez:|gpay:|phonepe:|paytmmp:)/i.test(trimmed)) {
@@ -61,10 +66,12 @@ export async function openExternalUrl(url: string): Promise<boolean> {
           '@/features/checkout/infrastructure/nativeUpiBridge'
         );
         const opened = await nativeOpenUpiPayUrl(trimmed);
+        logUpiDiag('transport', { path: 'native-plugin', scheme, opened });
         if (opened) return true;
       } catch {
-        // Fall through to location.assign.
+        logUpiDiag('transport', { path: 'native-plugin-error', scheme });
       }
+      logUpiDiag('transport', { path: 'native-location', scheme });
       window.location.assign(trimmed);
       return true;
     }
@@ -76,6 +83,7 @@ export async function openExternalUrl(url: string): Promise<boolean> {
       };
       if (typeof appPlugin.openUrl === 'function') {
         await appPlugin.openUrl({ url: trimmed });
+        logUpiDiag('transport', { path: 'app-openurl', scheme });
         return true;
       }
     } catch {
@@ -86,6 +94,7 @@ export async function openExternalUrl(url: string): Promise<boolean> {
       try {
         const { Browser } = await import('@capacitor/browser');
         await Browser.open({ url: trimmed, presentationStyle: 'popover' });
+        logUpiDiag('transport', { path: 'browser-capacitor', scheme });
         return true;
       } catch {
         // Fall through.
@@ -93,10 +102,12 @@ export async function openExternalUrl(url: string): Promise<boolean> {
     }
 
     if (EXTERNAL_SCHEME.test(trimmed)) {
+      logUpiDiag('transport', { path: 'native-location-external', scheme });
       window.location.assign(trimmed);
       return true;
     }
 
+    logUpiDiag('transport', { path: 'anchor', scheme });
     launchAnchorFallback(trimmed);
     return true;
   }
@@ -104,6 +115,7 @@ export async function openExternalUrl(url: string): Promise<boolean> {
   // On Web/PWA, hidden anchor clicks for deep links are often blocked by Chrome.
   // Use direct location assignment for intent/upi schemes.
   if (/^(intent:|upi:|gpay:|phonepe:|paytmmp:|tez:)/i.test(trimmed)) {
+    logUpiDiag('transport', { path: 'web-location', scheme });
     window.location.assign(trimmed);
     return true;
   }

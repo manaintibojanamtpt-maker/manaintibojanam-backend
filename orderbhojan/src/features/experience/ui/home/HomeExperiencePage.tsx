@@ -126,7 +126,7 @@ export function HomeExperiencePage() {
       ) : null}
 
       <p
-        className="px-4 pt-2.5 text-[11px] leading-snug text-white/40 sm:px-6"
+        className="px-4 pt-2.5 text-xs font-medium leading-snug text-white/60 sm:px-6"
         data-testid="home-pricing-trust-banner"
       >
         ₹0 platform fee · Kitchen prices · No hidden charges

@@ -185,6 +185,7 @@ async function writePwaIcons(sourceBuffer) {
 
   await writeLegacyIcon(path.join(iconsDir, 'icon-512.png'), 512, sourceBuffer);
   await writeLegacyIcon(path.join(iconsDir, 'icon-192.png'), 192, sourceBuffer);
+  await writeLegacyIcon(path.join(iconsDir, 'apple-touch-icon-180x180.png'), 180, sourceBuffer);
 
   await sharp(sourceBuffer).png(PNG_OPTIONS).toFile(path.join(brandDir, 'orderbhojan-logo.png'));
 }
@@ -241,6 +242,7 @@ async function prepareAssets() {
   console.log('Updated PWA icons:');
   console.log('  public/icons/icon-192.png (192x192)');
   console.log('  public/icons/icon-512.png (512x512)');
+  console.log('  public/icons/apple-touch-icon-180x180.png (180x180)');
   console.log(`  public/brand/orderbhojan-logo.png (${sourceMeta.width}x${sourceMeta.height})`);
   console.log('');
   console.log('Next: capacitor-assets (iOS + legacy Android), then --fix-android-adaptive.');

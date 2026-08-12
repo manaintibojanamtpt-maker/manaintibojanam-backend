@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TransactionalPageShell } from '@bhojan/storefront-design-system/cart/TransactionalPageShell';
 import { SoftButton } from '@bhojan/storefront-design-system/primitives/SoftButton';
+import { getUpiPlatform, logUpiDiag, shortIdentifier } from '@/lib/upiDiagnostics';
 import { OrderBhojanOrderTrustPanel } from '@/presentation/checkout/OrderBhojanOrderTrustPanel';
 import {
   buildUpiCopyText,
@@ -8,6 +9,7 @@ import {
   isMobileDevice,
   isAndroidDevice,
   launchUpiAppWithFallback,
+  resolveUpiSecurityPayOptions,
   UPI_APP_CHOICES,
   watchUpiHandoffReturn,
   type UpiAppId,
@@ -63,6 +65,7 @@ export function UpiPaymentPendingView({
   onBrowse,
 }: UpiPaymentPendingViewProps) {
   const mobile = isMobileDevice();
+  const platform = getUpiPlatform();
   const expiryLabel = formatExpiry(expiresAt);
   const [qrFailed, setQrFailed] = useState(false);
   const [showQr, setShowQr] = useState(!mobile);
@@ -75,6 +78,12 @@ export function UpiPaymentPendingView({
   const [hasAutoLaunched, setHasAutoLaunched] = useState(false);
   const [autoLaunching, setAutoLaunching] = useState(false);
 
+  const securityPayOptions = useMemo(() => resolveUpiSecurityPayOptions(upiUrl), [upiUrl]);
+  const upiId = securityPayOptions?.upiId;
+  const mobileNumber = securityPayOptions?.mobileNumber;
+  const [showDeclineHelp, setShowDeclineHelp] = useState(false);
+  const [upiIdCopied, setUpiIdCopied] = useState(false);
+
   const handoffCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -83,6 +92,11 @@ export function UpiPaymentPendingView({
       handoffCleanupRef.current = null;
     };
   }, []);
+
+  // Payment frame is pending for this identifier while this view is mounted.
+  useEffect(() => {
+    logUpiDiag('view', { state: 'pending', platform, orderShortId: shortIdentifier(orderId) });
+  }, [platform, orderId]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -99,6 +113,7 @@ export function UpiPaymentPendingView({
     if (isAndroidDevice() && mobile && !hasAutoLaunched) {
       setHasAutoLaunched(true);
       setAutoLaunching(true);
+      logUpiDiag('auto-launch', { platform });
       
       launchUpiAppWithFallback('other', upiUrl, { amount, orderId, orderNumber }).then((result) => {
         if (result.outcome === 'failed' || result.outcome === 'fallback_required') {
@@ -115,8 +130,12 @@ export function UpiPaymentPendingView({
         handoffCleanupRef.current = watchUpiHandoffReturn({
           timeoutMs: isAndroidDevice() ? 10000 : undefined,
           onLikelyFailed: () => {
+            logUpiDiag('handoff-return', { platform });
             setShowQr(true);
-            setLaunchMessage('UPI app did not open cleanly. Scan the QR or copy payment details into GPay / PhonePe / Paytm.');
+            setShowDeclineHelp(true);
+            setLaunchMessage(
+              'Your payment was declined for security reasons. Please try using mobile number, UPI ID or QR code.',
+            );
             setAutoLaunching(false);
           },
         });
@@ -125,12 +144,14 @@ export function UpiPaymentPendingView({
   }, [hasAutoLaunched, mobile, upiUrl]);
 
   const revealFallback = (message: string) => {
+    logUpiDiag('qr-fallback', { platform });
     setShowQr(true);
     setLaunchMessage(message);
     setAutoLaunching(false);
   };
 
   const handleOpenApp = async (appId: UpiAppId) => {
+    logUpiDiag('manual-select', { appId, platform });
     handoffCleanupRef.current?.();
     handoffCleanupRef.current = null;
     setLaunchMessage(null);
@@ -152,8 +173,10 @@ export function UpiPaymentPendingView({
     handoffCleanupRef.current = watchUpiHandoffReturn({
       timeoutMs: isAndroidDevice() ? 10000 : undefined,
       onLikelyFailed: () => {
+        logUpiDiag('handoff-return', { platform });
+        setShowDeclineHelp(true);
         revealFallback(
-          'UPI app did not open cleanly. Scan the QR or copy payment details into GPay / PhonePe / Paytm.',
+          'Your payment was declined for security reasons. Please try using mobile number, UPI ID or QR code.',
         );
       },
     });
@@ -166,6 +189,17 @@ export function UpiPaymentPendingView({
       setCopyMessage('Payment details copied. Paste them in your UPI app if needed.');
     } catch {
       setCopyMessage('Copy failed. Long-press the UPI ID in the QR section to copy manually.');
+    }
+  };
+
+  const handleCopyUpiId = async () => {
+    if (!upiId) return;
+    setUpiIdCopied(false);
+    try {
+      await navigator.clipboard.writeText(upiId);
+      setUpiIdCopied(true);
+    } catch {
+      setUpiIdCopied(false);
     }
   };
 
@@ -216,6 +250,73 @@ export function UpiPaymentPendingView({
             <p className="mt-1 text-xs text-amber-200/90">Complete payment by {expiryLabel} or the order expires.</p>
           ) : null}
         </div>
+
+        {showDeclineHelp ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-400/40 bg-red-950/50 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold leading-snug text-red-100">
+                Payment declined for security reasons?
+              </p>
+              <SoftButton tone="ghost" size="compact" onClick={() => setShowDeclineHelp(false)}>
+                Dismiss
+              </SoftButton>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-white/65">
+              Your payment was declined for security reasons. Please try using your mobile number,
+              UPI ID or QR code instead of retrying the same app link.
+            </p>
+
+            <ol className="mt-3 space-y-2.5">
+              <li className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs font-semibold text-white/90">1 · Pay to UPI ID</p>
+                {upiId ? (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <code className="min-w-0 flex-1 break-all text-sm font-bold text-white">
+                      {upiId}
+                    </code>
+                    <SoftButton tone="secondary" size="compact" onClick={() => void handleCopyUpiId()}>
+                      Copy UPI ID
+                    </SoftButton>
+                  </div>
+                ) : null}
+                {upiId && upiIdCopied ? (
+                  <p className="mt-1.5 text-[11px] text-emerald-200/90">
+                    UPI ID copied — open any UPI app and paste it as the payee address.
+                  </p>
+                ) : null}
+              </li>
+
+              <li className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs font-semibold text-white/90">2 · Pay via QR code</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">
+                  Tap the QR code below and scan it in any UPI app — no automatic opening needed.
+                </p>
+              </li>
+
+              <li className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs font-semibold text-white/90">3 · Pay to mobile number</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">
+                  {mobileNumber
+                    ? 'This UPI is registered on a phone number. In your UPI app choose "Pay to phone number" and enter:'
+                    : 'If the kitchen UPI is registered to a mobile number, use the "Pay to phone number" option in your UPI app.'}
+                </p>
+                {mobileNumber ? (
+                  <code className="mt-1.5 block break-all text-sm font-bold text-white">
+                    {mobileNumber}
+                  </code>
+                ) : null}
+              </li>
+            </ol>
+
+            <p className="mt-3 text-[11px] leading-relaxed text-white/45">
+              Tapping "Pay via UPI app" again will usually repeat the same decline. If it keeps
+              failing, contact the kitchen — they can confirm your order another way.
+            </p>
+          </div>
+        ) : null}
 
         {autoLaunching ? (
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-white/5 bg-[#120d0c]/40 p-6 backdrop-blur-sm">

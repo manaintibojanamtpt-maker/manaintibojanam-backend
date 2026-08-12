@@ -35,7 +35,7 @@ export function OrderBhojanFoodDietaryFilterBar({
 
   return (
     <div
-      className="ob-menu-container min-w-0 max-w-full pb-3"
+      className="ob-menu-container min-w-0 max-w-full pb-2"
       role="group"
       aria-label="Filter menu by dietary preference"
     >

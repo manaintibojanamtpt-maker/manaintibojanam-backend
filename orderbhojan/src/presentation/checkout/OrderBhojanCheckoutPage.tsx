@@ -32,6 +32,7 @@ import {
 import { markPerf } from '@/lib/perfMarks';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import {
+  ASAP_SLOT,
   formatDeliverySlotLabel,
   isAsapSlot,
 } from '@/features/checkout/domain/deliveryTimeSlots';
@@ -530,26 +531,30 @@ export function OrderBhojanCheckoutPage() {
         }
       : undefined;
 
-  const deliverySlotView =
-    scheduling && scheduling.deliverySlots.length > 0
-      ? {
-          slots: scheduling.deliverySlots,
-          selectedSlot: deliveryTimeSlot,
-          selectedIsAsap: isAsapSlot(deliveryTimeSlot),
-          selectedSummary: isAsapSlot(deliveryTimeSlot)
-            ? undefined
-            : deliveryTimeSlot.replace(/^(Today|Tomorrow), /, '$1 · '),
-          closedMessage: scheduling.closedMessage,
-          ...(voiceScheduleNotice
-            ? {
-                voiceScheduleNotice: voiceScheduleNotice.message,
-                voiceScheduleNoticeKind: voiceScheduleNotice.kind,
-              }
-            : {}),
-          isAsap: isAsapSlot,
-          formatLabel: formatDeliverySlotLabel,
-        }
-      : undefined;
+  const deliverySlotView = scheduling
+    ? {
+        // Keep the Deliver now / Schedule control visible whenever scheduling exists:
+        // an empty or stale slot list falls back to ASAP instead of hiding the picker.
+        slots:
+          scheduling.deliverySlots && scheduling.deliverySlots.length > 0
+            ? scheduling.deliverySlots
+            : [ASAP_SLOT],
+        selectedSlot: deliveryTimeSlot,
+        selectedIsAsap: isAsapSlot(deliveryTimeSlot),
+        selectedSummary: isAsapSlot(deliveryTimeSlot)
+          ? undefined
+          : deliveryTimeSlot.replace(/^(Today|Tomorrow), /, '$1 · '),
+        closedMessage: scheduling.closedMessage,
+        ...(voiceScheduleNotice
+          ? {
+              voiceScheduleNotice: voiceScheduleNotice.message,
+              voiceScheduleNoticeKind: voiceScheduleNotice.kind,
+            }
+          : {}),
+        isAsap: isAsapSlot,
+        formatLabel: formatDeliverySlotLabel,
+      }
+    : undefined;
 
   return (
     <CheckoutPageView

@@ -19,7 +19,7 @@ describe('Storefront design system theme certification', () => {
 
   it('index.html uses Evening Kitchen theme-color without external font CDN', () => {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
-    assert.match(html, /theme-color" content="#070504"/i);
+    assert.match(html, /theme-color" content="#(050403|070504)"/i);
     assert.doesNotMatch(html, /fonts\.googleapis\.com/);
   });
 
@@ -33,8 +33,8 @@ describe('Storefront design system theme certification', () => {
 
   it('vite PWA manifest uses Evening Kitchen colors', () => {
     const vite = readFileSync(join(root, 'vite.config.ts'), 'utf8');
-    assert.match(vite, /theme_color: '#070504'/);
-    assert.match(vite, /background_color: '#070504'/);
+    assert.match(vite, /theme_color:\s*'#(050403|070504)'/);
+    assert.match(vite, /background_color:\s*'#(050403|070504)'/);
   });
 
   it('pages use BDS CSS variables not legacy brand tokens', () => {

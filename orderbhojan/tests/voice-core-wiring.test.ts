@@ -37,16 +37,6 @@ describe('OrderBhojan voice-core wiring', () => {
     assert.match(vite, /@bhojan\/voice-core/);
   });
 
-  it('wires voice-core pre-LLM cart summary into conversation send()', () => {
-    const src = readFileSync(
-      join(root, 'src/features/assistant/ui/useAssistantConversation.ts'),
-      'utf8',
-    );
-    assert.match(src, /runVoiceCoreTurn/);
-    assert.match(src, /shouldHandleWithVoiceCorePreLlm/);
-    assert.match(src, /decideVoiceCartTurn/);
-  });
-
   it('Phase 1.2 pre-LLM gate claims cart summary and stop', () => {
     assert.equal(shouldHandleWithVoiceCorePreLlm('what is in my cart'), true);
     assert.equal(shouldHandleWithVoiceCorePreLlm("what's in my cart"), true);

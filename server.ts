@@ -3245,7 +3245,6 @@ registerPlatformHomeHeroRoutes(app, db, requireSuperadmin, FieldValue);
 // Entitlement-gated owner routes
 app.use('/api/owner/ingredients', requireEntitlement(db, 'inventory'));
 app.use('/api/owner/recipes/intelligence', requireEntitlement(db, 'aiCore'));
-app.use('/api/owner/delivery-integrations', requireEntitlement(db, 'deliveryEngine'));
 
 registerOwnerRecipesRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);
 registerOwnerIngredientsRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue);

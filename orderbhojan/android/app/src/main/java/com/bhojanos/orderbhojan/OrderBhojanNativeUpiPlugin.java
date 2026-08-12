@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
+import android.util.Log;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -20,6 +21,8 @@ import java.util.List;
 @CapacitorPlugin(name = "OrderBhojanNativeUpi")
 public class OrderBhojanNativeUpiPlugin extends Plugin {
 
+    private static final String TAG = "OrderBhojanUpiDiag";
+
     @PluginMethod
     public void openPayUrl(PluginCall call) {
         String url = call.getString("url", "");
@@ -28,11 +31,13 @@ public class OrderBhojanNativeUpiPlugin extends Plugin {
             return;
         }
         String trimmed = url.trim();
+        boolean intentScheme = trimmed.toLowerCase().startsWith("intent:");
+        Log.i(TAG, "openPayUrl mode=" + (intentScheme ? "intent" : "view"));
 
         getActivity().runOnUiThread(() -> {
             try {
                 Intent intent;
-                if (trimmed.toLowerCase().startsWith("intent:")) {
+                if (intentScheme) {
                     intent = Intent.parseUri(trimmed, Intent.URI_INTENT_SCHEME);
                 } else {
                     intent = new Intent(Intent.ACTION_VIEW, Uri.parse(trimmed));
@@ -44,6 +49,7 @@ public class OrderBhojanNativeUpiPlugin extends Plugin {
                 List<ResolveInfo> handlers =
                         pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
                 if (handlers == null || handlers.isEmpty()) {
+                    Log.i(TAG, "openPayUrl result=no_handler");
                     JSObject ret = new JSObject();
                     ret.put("opened", false);
                     ret.put("reason", "no_handler");
@@ -52,6 +58,7 @@ public class OrderBhojanNativeUpiPlugin extends Plugin {
                 }
 
                 // Let the user pick among GPay / PhonePe / Paytm when multiple apps handle upi://
+                Log.i(TAG, "openPayUrl action=chooser_launch");
                 Intent chooser = Intent.createChooser(intent, "Pay with UPI");
                 chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getContext().startActivity(chooser);
@@ -61,12 +68,15 @@ public class OrderBhojanNativeUpiPlugin extends Plugin {
                 ret.put("reason", "chooser");
                 call.resolve(ret);
             } catch (ActivityNotFoundException e) {
+                Log.i(TAG, "openPayUrl result=not_found");
                 JSObject ret = new JSObject();
                 ret.put("opened", false);
                 ret.put("reason", "not_found");
                 call.resolve(ret);
             } catch (Exception e) {
-                call.reject("Failed to open UPI app: " + e.getMessage(), e);
+                Log.e(TAG, "openPayUrl result=exception");
+                // Deliberately omit e.getMessage() — it may embed the raw payment URI.
+                call.reject("Failed to open UPI app");
             }
         });
     }

@@ -37,6 +37,7 @@ import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { resolveCheckoutRestaurantId } from '@/lib/sanitizeLiveRestaurantContext';
 import { markPerf } from '@/lib/perfMarks';
 import { obDebugTrustEvent } from '@/lib/obDebug';
+import { getUpiPlatform, logUpiDiag, shortIdentifier, upiErrorCategory } from '@/lib/upiDiagnostics';
 import { MarketplaceApiError } from '@/marketplace-api/errors';
 import {
   checkoutKeys,
@@ -702,6 +703,14 @@ export function useCheckoutFlow(): CheckoutFlowState {
       const controller = new AbortController();
       upiPollAbortRef.current = controller;
       setUpiVerifying(true);
+      const platform = getUpiPlatform();
+      const orderShortId = shortIdentifier(session.orderId);
+      let pollAttempts = 0;
+      logUpiDiag('verification-start', {
+        platform,
+        orderShortId,
+        immediate: options?.immediate === true,
+      });
       setPlaceError(null);
       setUpiPollMessage(
         options?.immediate
@@ -715,6 +724,11 @@ export function useCheckoutFlow(): CheckoutFlowState {
             orderId: session.orderId,
             phone: session.phone,
             isAuthenticated: Boolean(sessionUser?.uid),
+          });
+          logUpiDiag('snapshot', {
+            immediate: true,
+            orderShortId,
+            paymentState: snapshot.paymentStatus,
           });
           if (['success', 'verified', 'paid'].includes(snapshot.paymentStatus.toLowerCase())) {
             finalizeUpiPaymentSuccess({
@@ -733,9 +747,22 @@ export function useCheckoutFlow(): CheckoutFlowState {
           phone: session.phone,
           isAuthenticated: Boolean(sessionUser?.uid),
           signal: controller.signal,
-          onTick: () => {
+          onTick: (snapshot) => {
+            pollAttempts += 1;
             setUpiPollMessage('Waiting for payment confirmation…');
+            logUpiDiag('verify-attempt', {
+              attempts: pollAttempts,
+              orderShortId,
+              paymentState: snapshot.paymentStatus,
+            });
           },
+        });
+
+        logUpiDiag('verify-result', {
+          platform,
+          orderShortId,
+          attempts: pollAttempts,
+          result,
         });
 
         if (result === 'verified') {
@@ -755,6 +782,12 @@ export function useCheckoutFlow(): CheckoutFlowState {
         );
       } catch (err) {
         if (controller.signal.aborted) return;
+        logUpiDiag('verify-error', {
+          platform,
+          orderShortId,
+          attempts: pollAttempts,
+          category: upiErrorCategory(err),
+        });
         setPlaceError(err instanceof Error ? err.message : 'Unable to verify UPI payment');
         setUpiPollMessage(null);
       } finally {

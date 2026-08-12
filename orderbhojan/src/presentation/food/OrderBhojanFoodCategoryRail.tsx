@@ -1,7 +1,7 @@
 import type { FoodCategoryPublic } from '@/types/marketplace-food';
 
 const chipClass = (active: boolean) =>
-  `shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+  `shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
     active
       ? 'border-[#e85d04]/55 bg-[#e85d04]/18 text-[#fff8f0] shadow-[0_0_0_1px_rgba(232,93,4,0.12)]'
       : 'border-white/10 bg-[#120d0c]/60 text-[#c4b5a5] hover:border-[#e85d04]/30 hover:text-[#fff8f0]'
@@ -22,7 +22,7 @@ export function OrderBhojanFoodCategoryRail({
 }: OrderBhojanFoodCategoryRailProps) {
   return (
     <nav
-      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/[0.08] bg-[#050403]/95 backdrop-blur-md'} min-w-0 max-w-full py-3 ob-menu-container`}
+      className={`${embedded ? '' : 'sticky top-0 z-30 border-b border-white/[0.08] bg-[#050403]/95 backdrop-blur-md'} min-w-0 max-w-full py-2 ob-menu-container`}
       aria-label="Menu categories"
     >
       <div className="ob-menu-rail-bleed">

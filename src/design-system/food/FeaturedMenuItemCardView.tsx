@@ -59,7 +59,7 @@ export function FeaturedMenuItemCardView({
           </div>
           <h3 className="line-clamp-2 text-sm font-bold text-white">{item.name}</h3>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-extrabold text-[#FF7A00]">{item.priceLabel}</span>
+            <span className="text-sm font-extrabold text-[#f4a261]">{item.priceLabel}</span>
             {item.ratingLabel ? (
               <span className="inline-flex items-center gap-0.5 text-[10px] text-white/60">
                 {item.ratingLabel}

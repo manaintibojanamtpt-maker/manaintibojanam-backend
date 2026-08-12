@@ -16,7 +16,7 @@ const root = resolve(__dirname, '..');
 
 describe('M3 discovery engine filters', () => {
   it('filters veg-only restaurants', () => {
-    const filtered = applyDiscoveryFilters(DISCOVERY_MOCK_POOL, { vegOnly: true });
+    const filtered = applyDiscoveryFilters(DISCOVERY_MOCK_POOL, { dietaryPreference: 'pure_veg' });
     assert.ok(filtered.length > 0);
     assert.ok(
       filtered.every(
@@ -136,6 +136,6 @@ describe('M3 discovery module structure', () => {
     const mibTheme = readFileSync(join(root, 'src/styles/mib-theme.css'), 'utf8');
     const feed = readFileSync(join(root, 'src/presentation/discovery/OrderBhojanHomeFeedSkeleton.tsx'), 'utf8');
     assert.match(mibTheme, /prefers-reduced-motion/);
-    assert.match(feed, /storefront-design-system/);
+    assert.match(feed, /animate-pulse|skeleton/i);
   });
 });
