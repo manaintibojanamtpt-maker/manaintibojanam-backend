@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from 'express';
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
+import { assertDeliveryEngineEntitlement } from '../entitlements.ts';
 import {
   completeConnection,
   getTenantProviderConnection,
@@ -17,6 +18,11 @@ import {
   type DeliveryProviderId,
 } from '../delivery/providerCapabilityMatrix.js';
 import { evaluateProviderReadiness } from '../delivery/deliveryProviderReadiness.js';
+import {
+  buildOwnerDeliveryConfigFirestoreUpdates,
+  readOwnerDeliveryConfig,
+  validateOwnerDeliveryConfig,
+} from '../delivery/ownerDeliveryConfiguration.js';
 
 type OwnerAccessFn = (
   userId: string,
@@ -49,13 +55,31 @@ export function registerOwnerDeliveryIntegrationRoutes(
   app.get(
     '/api/owner/delivery-integrations/capabilities',
     verifyFirebaseToken,
-    (_req, res) => {
-      res.json({
-        success: true,
-        providers: DELIVERY_PROVIDER_CAPABILITY_MATRIX,
-        securityNote:
-          'Raw provider passwords/secrets are never stored in the browser or on the public tenant document. Credentials are encrypted server-side only.',
-      });
+    async (req: any, res: Response) => {
+      try {
+        if (req.query?.tenantId) {
+          const tenantId = await assertOwnerTenantAccess(
+            req.user.uid,
+            String(req.query.tenantId),
+            req.user.email,
+          );
+          await assertDeliveryEngineEntitlement(db, tenantId);
+        }
+        res.json({
+          success: true,
+          providers: DELIVERY_PROVIDER_CAPABILITY_MATRIX,
+          securityNote:
+            'Raw provider passwords/secrets are never stored in the browser or on the public tenant document. Credentials are encrypted server-side only.',
+        });
+      } catch (error: unknown) {
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
+        res.status(status).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load delivery capabilities',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
+        });
+      }
     },
   );
 
@@ -69,6 +93,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connections = await listTenantProviderConnections(deps, tenantId);
         const readiness = DELIVERY_PROVIDER_CAPABILITY_MATRIX.map((row) =>
           evaluateProviderReadiness(
@@ -86,10 +111,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
             'Raw credentials are never returned. Client only sees connection status and non-secret metadata.',
         });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to load delivery integrations',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -107,6 +134,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connection = await startConnection(deps, {
           tenantId,
           provider,
@@ -114,10 +142,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
         });
         res.json({ success: true, connection });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to start connection',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -135,6 +165,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const body = req.body ?? {};
         const credentials =
           body.credentials && typeof body.credentials === 'object'
@@ -154,10 +185,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
         });
         res.json({ success: true, connection });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to complete connection',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -175,6 +208,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connection = await validateConnection(deps, {
           tenantId,
           provider,
@@ -183,10 +217,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
         const readiness = evaluateProviderReadiness(provider, connection);
         res.json({ success: true, connection, readiness });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to validate connection',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -204,6 +240,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connection = await getTenantProviderConnection(deps, tenantId, provider);
         const readiness = evaluateProviderReadiness(provider, connection);
         res.json({
@@ -220,10 +257,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
             : null,
         });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to load readiness',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -241,6 +280,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connection = await revokeConnection(deps, {
           tenantId,
           provider,
@@ -248,10 +288,12 @@ export function registerOwnerDeliveryIntegrationRoutes(
         });
         res.json({ success: true, connection });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to revoke connection',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -269,13 +311,16 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const connection = await getTenantProviderConnection(deps, tenantId, provider);
         res.json({ success: true, connection });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to load connection',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },
@@ -292,6 +337,7 @@ export function registerOwnerDeliveryIntegrationRoutes(
           String(req.params.tenantId),
           req.user.email,
         );
+        await assertDeliveryEngineEntitlement(db, tenantId);
         const body = req.body ?? {};
         const partnerLabel = String(body.deliveryPartner || body.provider || 'Rapido');
         const provider =
@@ -313,10 +359,86 @@ export function registerOwnerDeliveryIntegrationRoutes(
         });
         res.json({ success: true, ...result });
       } catch (error: unknown) {
-        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
         res.status(status).json({
           success: false,
           error: error instanceof Error ? error.message : 'Dispatch orchestration failed',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
+        });
+      }
+    },
+  );
+
+  app.get(
+    '/api/owner/delivery-config/:tenantId',
+    verifyFirebaseToken,
+    async (req: any, res: Response) => {
+      try {
+        const tenantId = await assertOwnerTenantAccess(
+          req.user.uid,
+          String(req.params.tenantId),
+          req.user.email,
+        );
+        await assertDeliveryEngineEntitlement(db, tenantId);
+        const doc = await db.collection('tenants').doc(tenantId).get();
+        if (!doc.exists) {
+          return res.status(404).json({ success: false, error: 'Kitchen not found' });
+        }
+        const raw = doc.data() as Record<string, unknown>;
+        const config = readOwnerDeliveryConfig(raw);
+        res.json({ success: true, tenantId, config });
+      } catch (error: unknown) {
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
+        res.status(status).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load delivery configuration',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
+        });
+      }
+    },
+  );
+
+  const registerPutRoute = (path: string, ...handlers: any[]) => {
+    if (typeof app.put === 'function') {
+      app.put(path, ...handlers);
+    } else if (typeof app.post === 'function') {
+      app.post(path, ...handlers);
+    }
+  };
+
+  registerPutRoute(
+    '/api/owner/delivery-config/:tenantId',
+    verifyFirebaseToken,
+    async (req: any, res: Response) => {
+      try {
+        const tenantId = await assertOwnerTenantAccess(
+          req.user.uid,
+          String(req.params.tenantId),
+          req.user.email,
+        );
+        await assertDeliveryEngineEntitlement(db, tenantId);
+        const validation = validateOwnerDeliveryConfig(req.body);
+        if (!validation.ok) {
+          return res.status(400).json({ success: false, error: validation.error });
+        }
+        const updates = buildOwnerDeliveryConfigFirestoreUpdates(validation.data);
+        await db.collection('tenants').doc(tenantId).set(
+          {
+            ...updates,
+            updatedAt: fieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+        res.json({ success: true, tenantId, config: validation.data });
+      } catch (error: unknown) {
+        const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
+        const status = err.statusCode ?? 500;
+        res.status(status).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to save delivery configuration',
+          ...(err.requiresUpgrade ? { requiresUpgrade: true } : {}),
         });
       }
     },

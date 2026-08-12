@@ -27,6 +27,11 @@ import {
   assertCouponBelongsToTenant,
   couponBelongsToTenant,
 } from './projectPublicCoupons.js';
+import {
+  resolveAuthoritativeDeliveryDecision,
+  createCheckoutOrderDeliveryArtifacts,
+} from '../delivery/deliveryCheckoutIntegration.js';
+import type { DeliveryDecision } from '../delivery/deliveryIntelligenceTypes.js';
 
 export interface MarketplaceQuoteLine {
   itemId: string;
@@ -58,6 +63,9 @@ export interface BillQuote {
   grandTotal: number;
   taxLabel: string;
   lineItems: { label: string; amount: number }[];
+  deliveryDecision?: DeliveryDecision;
+  freeDeliveryApplied?: boolean;
+  tenantSubsidy?: number | null;
 }
 
 export interface CheckoutSchedulingContext {
@@ -198,8 +206,10 @@ function readCouponDiscountValue(coupon: Record<string, unknown>): number {
 }
 
 function isCouponExpired(coupon: Record<string, unknown>): boolean {
-  if (!coupon.expiryDate) return false;
-  return new Date(String(coupon.expiryDate)).setHours(23, 59, 59, 999) < Date.now();
+  if (!coupon.validUntil && !coupon.expiresAt) return false;
+  const dateStr = String(coupon.validUntil ?? coupon.expiresAt);
+  const parsed = Date.parse(dateStr);
+  return Number.isFinite(parsed) && parsed < Date.now();
 }
 
 async function resolveMarketplaceCouponDiscount(
@@ -208,43 +218,52 @@ async function resolveMarketplaceCouponDiscount(
   tenantSlug: string | undefined,
   couponCode: string | undefined,
   subtotal: number,
-  options?: { strict?: boolean },
+  options: { strict?: boolean } = {},
 ): Promise<ResolvedCouponDiscount | null> {
   const normalized = couponCode?.trim().toUpperCase();
   if (!normalized) return null;
 
-  const couponSnap = await db
+  const couponsSnap = await db
     .collection('coupons')
     .where('code', '==', normalized)
-    .where('isActive', '==', true)
-    .limit(15)
+    .where('tenantId', '==', tenantId)
+    .limit(1)
     .get();
-
-  const matchedDoc = couponSnap.docs.find((doc) =>
-    couponBelongsToTenant(doc.data() as Record<string, unknown>, tenantId, tenantSlug),
-  );
-
-  if (!matchedDoc) {
-    if (options?.strict) {
-      throw Object.assign(new Error('This promo code is not valid for this kitchen'), { statusCode: 400 });
+  if (couponsSnap.empty) {
+    if (options.strict) {
+      throw Object.assign(new Error(`Coupon ${normalized} is not valid for this kitchen`), { statusCode: 400 });
     }
     return { code: normalized, discountAmount: 0 };
   }
 
-  const coupon = matchedDoc.data() as Record<string, unknown>;
-  assertCouponBelongsToTenant(coupon, tenantId, tenantSlug);
-  if (isCouponExpired(coupon)) {
-    if (options?.strict) {
-      throw Object.assign(new Error('This promo code has expired'), { statusCode: 400 });
+  let coupon: Record<string, unknown> | null = null;
+  for (const doc of couponsSnap.docs) {
+    const candidate = doc.data() as Record<string, unknown>;
+    if (couponBelongsToTenant(candidate, tenantId, tenantSlug)) {
+      coupon = candidate;
+      break;
+    }
+  }
+
+  if (!coupon) {
+    if (options.strict) {
+      throw Object.assign(new Error(`Coupon ${normalized} is not valid for this kitchen`), { statusCode: 400 });
     }
     return { code: normalized, discountAmount: 0 };
   }
 
-  const minOrder = Number(coupon.minOrder ?? 0);
-  if (subtotal < minOrder) {
-    if (options?.strict) {
+  if (coupon.isActive === false || isCouponExpired(coupon)) {
+    if (options.strict) {
+      throw Object.assign(new Error(`Coupon ${normalized} is expired or inactive`), { statusCode: 400 });
+    }
+    return { code: normalized, discountAmount: 0 };
+  }
+
+  const minOrderValue = Number(coupon.minOrderValue ?? coupon.minimumOrderValue ?? 0);
+  if (subtotal < minOrderValue) {
+    if (options.strict) {
       throw Object.assign(
-        new Error(`Minimum order ₹${minOrder} required for promo code ${normalized}`),
+        new Error(`Coupon ${normalized} requires a minimum subtotal of ₹${minOrderValue}`),
         { statusCode: 400 },
       );
     }
@@ -272,6 +291,7 @@ interface MarketplaceQuoteContext {
   quote: BillQuote;
   menuPrices: MenuPriceMap;
   etaMinutes: { min: number; max: number };
+  deliveryDecision: DeliveryDecision;
 }
 
 function resolveDeliveryDistanceKm(
@@ -329,11 +349,19 @@ async function buildMarketplaceQuoteContext(
   const gstPercent = readGstPercent(loaded.raw);
   const packagingFee = readPackagingFee(loaded.raw);
   const gstAmount = Math.round((subtotal * gstPercent) / 100);
-  const { fee: deliveryFee, pending: deliveryPending } = resolveDeliveryFee(
-    loaded.raw,
-    request.orderType ?? 'delivery',
-    request.deliveryAddress,
-  );
+
+  // Server-authoritative Delivery Decision (Phase 5 Step 11)
+  const deliveryResult = await resolveAuthoritativeDeliveryDecision({
+    tenantId: loaded.id,
+    tenantRaw: loaded.raw,
+    orderSubtotal: subtotal,
+    orderType: request.orderType ?? 'delivery',
+    deliveryAddress: request.deliveryAddress,
+  });
+
+  const deliveryFee = deliveryResult.customerDeliveryFee;
+  const deliveryPending = deliveryResult.deliveryPending;
+  const deliveryDecision = deliveryResult.decision;
 
   let discountAmount = 0;
   let discountLabel = 'Discount';
@@ -360,16 +388,16 @@ async function buildMarketplaceQuoteContext(
   if (packagingFee > 0) lineItems.push({ label: 'Packaging', amount: packagingFee });
   if (deliveryFee > 0) lineItems.push({ label: 'Delivery', amount: deliveryFee });
 
-  const delivery = (loaded.raw.deliveryConfig ?? {}) as Record<string, unknown>;
-  const prepTime = Number(delivery.prepTime ?? DEFAULT_PREP_TIME_MINUTES);
-  const distanceKm = resolveDeliveryDistanceKm(loaded.raw, request.deliveryAddress);
-  const etaMinutes = estimateDeliveryEtaMinutes(prepTime, distanceKm);
+  const minEta = deliveryDecision.eta.minMinutes ?? 30;
+  const maxEta = deliveryDecision.eta.maxMinutes ?? 45;
+  const etaMinutes = { min: minEta, max: maxEta };
 
   return {
     tenantId: loaded.id,
     tenantRaw: loaded.raw,
     menuPrices,
     etaMinutes,
+    deliveryDecision,
     quote: {
       subtotal: Math.round(subtotal),
       gstAmount,
@@ -381,6 +409,9 @@ async function buildMarketplaceQuoteContext(
       grandTotal,
       taxLabel: formatTaxLabel(gstPercent, packagingFee),
       lineItems,
+      deliveryDecision,
+      freeDeliveryApplied: deliveryDecision.freeDelivery.isFreeDelivery,
+      tenantSubsidy: deliveryDecision.subsidy.tenantSubsidy,
     },
   };
 }
@@ -520,6 +551,8 @@ function buildOrderPayload(
   orderNumber: number,
   etaMinutes: { min: number; max: number },
   schedule: { deliveryType: 'asap' | 'scheduled'; scheduledFor: string | null; deliveryTimeSlot: string },
+  deliveryDecision: DeliveryDecision,
+  docId: string,
 ) {
   const { address, deliveryAddress } = normalizeDeliveryAddressFields(
     request.deliveryAddress as Record<string, unknown> | undefined,
@@ -529,6 +562,12 @@ function buildOrderPayload(
     (typeof request.notificationEmail === 'string' && request.notificationEmail.trim()) ||
     (typeof request.userEmail === 'string' && request.userEmail.trim()) ||
     null;
+
+  // Generate Step 10 Snapshot, Runtime, and Legacy Mirrors
+  const { snapshot, runtime, legacyMirrors } = createCheckoutOrderDeliveryArtifacts(deliveryDecision, {
+    tenantId,
+    orderId: docId,
+  });
 
   return {
     tenantId,
@@ -560,8 +599,13 @@ function buildOrderPayload(
     scheduledFor: schedule.scheduledFor,
     scheduledTime: schedule.scheduledFor,
     prepAlertSent: isAsap ? null : false,
-    eta: etaMinutes.min,
-    etaMinutes,
+    eta: legacyMirrors.eta,
+    etaMinutes: legacyMirrors.etaMinutes,
+    deliveryPartner: legacyMirrors.deliveryPartner,
+    trackingUrl: legacyMirrors.trackingUrl,
+    deliveryAssignedAt: legacyMirrors.deliveryAssignedAt,
+    delivery: snapshot,
+    deliveryRuntime: runtime,
     source: 'marketplace_checkout_v1',
     contextToken: request.contextToken ?? null,
   };
@@ -582,15 +626,14 @@ export async function placeMarketplaceOrder(
       : request.paymentMethod === 'upi'
         ? 'upi'
         : 'cod';
-  const [{ tenantId, quote, menuPrices, etaMinutes }] = await Promise.all([
-    buildMarketplaceQuoteContext(db, request),
-  ]);
+
+  const { tenantId, quote, menuPrices, etaMinutes, deliveryDecision } = await buildMarketplaceQuoteContext(db, request);
 
   const docId =
     paymentMethod === 'razorpay'
       ? db.collection('order_drafts').doc().id
       : db.collection('orders').doc().id;
-      
+
   const orderNumber = Number(formatOrderNumberLabel(undefined, docId));
 
   const tenantDoc = await db.collection('tenants').doc(tenantId).get();
@@ -610,6 +653,8 @@ export async function placeMarketplaceOrder(
     orderNumber,
     etaMinutes,
     schedule,
+    deliveryDecision,
+    docId,
   );
 
   if (paymentMethod === 'upi') {
@@ -650,7 +695,7 @@ export async function placeMarketplaceOrder(
         });
       }
     }
-    await batch.commit().catch(() => undefined);
+    await batch.commit();
 
     return {
       kind: 'upi',
@@ -665,26 +710,21 @@ export async function placeMarketplaceOrder(
   }
 
   if (paymentMethod === 'razorpay') {
-    const draftRef = db.collection('order_drafts').doc(docId);
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-    await draftRef.set({
-      id: draftRef.id,
-      tenantId,
-      orderPayload,
-      subscriptionPayload: null,
-      status: 'pending_payment',
-      source: 'marketplace_checkout_v1',
+    const amountInPaise = quote.grandTotal * 100;
+    await db.collection('order_drafts').doc(docId).set({
+      ...orderPayload,
+      amountInPaise,
       createdAt: fieldValue.serverTimestamp(),
-      expiresAt: expiresAt.toISOString(),
+      updatedAt: fieldValue.serverTimestamp(),
     });
 
     return {
       kind: 'razorpay',
-      draftId: draftRef.id,
+      draftId: docId,
       orderNumber,
       tenantId,
       quote,
-      amountInPaise: Math.round(quote.grandTotal * 100),
+      amountInPaise,
     };
   }
 
@@ -702,11 +742,13 @@ export async function placeMarketplaceOrder(
       });
     }
   }
-  await batch.commit().catch(() => undefined);
+  await batch.commit();
 
-  return { kind: 'cod', orderId: docId, orderNumber, tenantId, quote };
-}
-
-export function createCheckoutCorrelationId(): string {
-  return randomUUID();
+  return {
+    kind: 'cod',
+    orderId: docId,
+    orderNumber,
+    tenantId,
+    quote,
+  };
 }
