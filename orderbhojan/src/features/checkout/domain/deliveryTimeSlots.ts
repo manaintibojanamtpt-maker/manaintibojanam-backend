@@ -19,6 +19,45 @@ export function isAsapSlot(slot: string): boolean {
   return slot === ASAP_SLOT || slot === 'ASAP';
 }
 
+/**
+ * Extracts India-local calendar/time components from an absolute Date instant.
+ * Does NOT modify the original Date's underlying timestamp.
+ * Uses Intl.DateTimeFormat with Asia/Kolkata timezone.
+ */
+export function getISTDateParts(date: Date = new Date()): Readonly<{
+  readonly year: number;
+  readonly month: number; // 1-12
+  readonly day: number;   // 1-31
+  readonly hour: number;  // 0-23
+  readonly minute: number; // 0-59
+}> {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+
+  const parts = formatter.formatToParts(date);
+  const get = (type: string): number => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+  };
+}
+
+/**
+ * Converts an India-local wall-clock scheduling slot into an absolute UTC instant (ISO string).
+ * The slot format is expected to be: "Today, 9:00 AM - 9:30 AM" or "Tomorrow, 2:30 PM - 3:00 PM"
+ * Returns null for ASAP slots (no scheduledFor needed).
+ */
 export function getScheduledForTimestamp(slot: string, now: Date = new Date()): string | null {
   if (isAsapSlot(slot)) return null;
 
@@ -29,31 +68,44 @@ export function getScheduledForTimestamp(slot: string, now: Date = new Date()): 
   const timeRange = parts[1];
   const startTimeStr = timeRange.split(' - ')[0];
 
-  const scheduled = new Date(now);
-  if (dayStr === 'Tomorrow') {
-    scheduled.setDate(scheduled.getDate() + 1);
-  }
+  // Get current IST date components for Today/Tomorrow resolution
+  const istNow = getISTDateParts(now);
 
+  // Parse the time component (e.g., "9:00 AM" or "2:30 PM")
   const timeMatch = startTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (timeMatch) {
-    let hour = parseInt(timeMatch[1], 10);
-    const minute = parseInt(timeMatch[2], 10);
-    const ampm = timeMatch[3].toUpperCase();
-    if (ampm === 'PM' && hour < 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-    scheduled.setHours(hour, minute, 0, 0);
+  if (!timeMatch) return now.toISOString();
+
+  let hour = parseInt(timeMatch[1], 10);
+  const minute = parseInt(timeMatch[2], 10);
+  const ampm = timeMatch[3].toUpperCase();
+
+  if (ampm === 'PM' && hour < 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+
+  // Build the scheduled date in IST
+  let scheduledYear = istNow.year;
+  let scheduledMonth = istNow.month - 1; // 0-indexed for Date.UTC
+  let scheduledDay = istNow.day;
+
+  if (dayStr === 'Tomorrow') {
+    // Create a Date at midnight IST tomorrow to handle month/year rollover correctly
+    const tomorrowBase = new Date(Date.UTC(istNow.year, istNow.month - 1, istNow.day + 1, 0, 0, 0));
+    // Get IST components of tomorrow
+    const istTomorrow = getISTDateParts(tomorrowBase);
+    scheduledYear = istTomorrow.year;
+    scheduledMonth = istTomorrow.month - 1;
+    scheduledDay = istTomorrow.day;
   }
 
-  return scheduled.toISOString();
+  // Construct absolute UTC instant: IST wall-clock → subtract 5h30m
+  const scheduledUTC = Date.UTC(scheduledYear, scheduledMonth, scheduledDay, hour - 5, minute - 30, 0);
+
+  return new Date(scheduledUTC).toISOString();
 }
 
 export function formatDeliverySlotLabel(slot: string): string {
   if (isAsapSlot(slot)) return 'ASAP';
   return slot.replace(/^(Today|Tomorrow), /, '');
-}
-
-export function resolveDefaultDeliverySlot(slots: readonly string[]): string {
-  return slots[0] ?? ASAP_SLOT;
 }
 
 export function buildScheduleFields(deliveryTimeSlot: string): {
@@ -82,47 +134,23 @@ export function isKitchenClosedForOrdering(scheduling: CheckoutSchedulingContext
   return !scheduling.isStoreOpen && scheduling.deliverySlots.every((slot) => !isAsapSlot(slot));
 }
 
+/**
+ * Normalizes delivery slots from the backend.
+ * - If backend provides real scheduled slots, returns them as-is (authoritative).
+ * - If backend returns only ASAP or empty array, does NOT fabricate scheduled slots.
+ *   Returns only what the backend actually provides.
+ * - This prevents customers from selecting slots the kitchen doesn't actually support.
+ */
 export function ensureScheduledDeliverySlots(
   slots: readonly string[] = [],
-  now: Date = new Date(),
 ): string[] {
   const existing = Array.isArray(slots) ? [...slots] : [];
   const hasScheduled = existing.some((s) => !isAsapSlot(s));
+
+  // If backend provides real scheduled slots, return them (authoritative)
   if (hasScheduled) return existing;
 
-  const fallback: string[] = [];
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-
-  if (currentHour < 21 || (currentHour === 21 && currentMinute < 30)) {
-    let startHour = currentMinute >= 30 ? currentHour + 1 : currentHour;
-    let startMin = currentMinute >= 30 ? 0 : 30;
-    if (startHour < 9) {
-      startHour = 9;
-      startMin = 0;
-    }
-    while (startHour < 22) {
-      const endHour = startMin === 30 ? startHour + 1 : startHour;
-      const endMin = startMin === 30 ? 0 : 30;
-      const startStr = `${startHour % 12 || 12}:${startMin === 0 ? '00' : '30'} ${startHour >= 12 ? 'PM' : 'AM'}`;
-      const endStr = `${endHour % 12 || 12}:${endMin === 0 ? '00' : '30'} ${endHour >= 12 ? 'PM' : 'AM'}`;
-      fallback.push(`Today, ${startStr} - ${endStr}`);
-      startHour = endHour;
-      startMin = endMin;
-    }
-  }
-
-  let tomHour = 9;
-  let tomMin = 0;
-  while (tomHour < 22) {
-    const endHour = tomMin === 30 ? tomHour + 1 : tomHour;
-    const endMin = tomMin === 30 ? 0 : 30;
-    const startStr = `${tomHour % 12 || 12}:${tomMin === 0 ? '00' : '30'} ${tomHour >= 12 ? 'PM' : 'AM'}`;
-    const endStr = `${endHour % 12 || 12}:${endMin === 0 ? '00' : '30'} ${endHour >= 12 ? 'PM' : 'AM'}`;
-    fallback.push(`Tomorrow, ${startStr} - ${endStr}`);
-    tomHour = endHour;
-    tomMin = endMin;
-  }
-
-  return existing.length > 0 ? [...existing, ...fallback] : [ASAP_SLOT, ...fallback];
+  // Backend returned only ASAP or empty - do NOT fabricate scheduled slots.
+  // Return exactly what backend provided.
+  return existing;
 }

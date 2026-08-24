@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan.nativehost
+package com.bhojanos.customer.nativehost
 
 /**
  * Route ID `track` → `/orders/:orderId/track`

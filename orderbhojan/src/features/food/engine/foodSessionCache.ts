@@ -10,6 +10,8 @@ const MAX_ENTRIES = 24;
 export interface FoodSessionContext {
   readonly contextToken: string;
   readonly restaurantId: string;
+  readonly restaurantLat?: number | null;
+  readonly restaurantLng?: number | null;
 }
 
 interface FoodSessionEntry {
@@ -20,6 +22,8 @@ interface FoodSessionEntry {
   readonly fetchedAt: number;
   readonly contextToken?: string;
   readonly restaurantId?: string;
+  readonly restaurantLat?: number | null;
+  readonly restaurantLng?: number | null;
 }
 
 function coordsMatch(aLat: number, aLng: number, bLat: number, bLng: number): boolean {
@@ -120,7 +124,12 @@ export function readFoodSessionContext(
     (entry) => entry.slug === slug && coordsMatch(entry.lat, entry.lng, lat, lng),
   );
   if (!match?.contextToken || !match.restaurantId) return undefined;
-  return { contextToken: match.contextToken, restaurantId: match.restaurantId };
+  return {
+    contextToken: match.contextToken,
+    restaurantId: match.restaurantId,
+    restaurantLat: match.restaurantLat ?? null,
+    restaurantLng: match.restaurantLng ?? null,
+  };
 }
 
 export function writeFoodSessionCache(
@@ -138,6 +147,8 @@ export function writeFoodSessionCache(
     fetchedAt: Date.now(),
     contextToken: context?.contextToken,
     restaurantId: context?.restaurantId,
+    restaurantLat: context?.restaurantLat ?? null,
+    restaurantLng: context?.restaurantLng ?? null,
   };
   upsertLocalEntry(entry);
 

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">OrderBhojan</string>
     <string name="title_activity_main">OrderBhojan</string>
-    <string name="package_name">com.bhojanos.orderbhojan</string>
+    <string name="package_name">com.bhojanos.customer</string>
     <string name="custom_url_scheme">orderbhojan</string>
     <string name="default_notification_channel_id">order_updates</string>
 </resources>

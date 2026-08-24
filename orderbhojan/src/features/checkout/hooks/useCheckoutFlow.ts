@@ -28,7 +28,14 @@ import {
 import { formatCustomerOrderLabel } from '../domain/orderDisplay';
 import { buildCheckoutPayload, buildCheckoutPrepareSignature } from '../domain/checkoutPayload';
 import {
-  resolveDefaultDeliverySlot,
+  estimateLocalDeliveryFee,
+  invalidateDeliveryFeeCache,
+  getCachedDeliveryFeeEstimate,
+} from '../domain/deliveryFeeEstimator';
+import {
+  ASAP_SLOT,
+  isAsapSlot,
+  ensureScheduledDeliverySlots,
 } from '../domain/deliveryTimeSlots';
 import { tryResolveSlotFromScheduleAction } from '../domain/resolveVoiceScheduleSlot';
 import { useCheckoutScheduleStore } from '../store/checkoutScheduleStore';
@@ -46,6 +53,27 @@ import {
   CHECKOUT_PREPARE_TIMEOUT_MS,
 } from './checkoutQueryKeys';
 import type { BillQuote, CheckoutSchedulingContext } from '@/types/marketplace';
+
+/** Delivery slot status for explicit state management */
+export type DeliverySlotStatus = 'loading' | 'available' | 'unavailable' | 'error';
+
+/** Validates selected slot against current authoritative slots */
+function validateSelectedSlot(
+  selectedSlot: string,
+  slots: readonly string[],
+  isAsapSlotFn: (slot: string) => boolean
+): string {
+  // ASAP is always valid if it's in slots or slots is empty (ASAP default)
+  if (isAsapSlotFn(selectedSlot)) {
+    return slots.includes(ASAP_SLOT) ? ASAP_SLOT : ASAP_SLOT;
+  }
+  // Scheduled slot must exist in current slots
+  if (slots.includes(selectedSlot)) {
+    return selectedSlot;
+  }
+  // Selected slot no longer valid - return ASAP as safe fallback
+  return ASAP_SLOT;
+}
 
 export interface CheckoutPlaceResponse {
   readonly orderId?: string;
@@ -117,6 +145,10 @@ export interface CheckoutFlowState {
     readonly message: string;
     readonly reason?: string;
   } | null;
+  /** Immediate local delivery fee estimate from persisted restaurant context (before server quote arrives). */
+  readonly localDeliveryFeeEstimate: number | null;
+  /** Delivery slot status for explicit UI state management. */
+  readonly deliverySlotStatus: DeliverySlotStatus;
   setDeliveryTimeSlot: (slot: string) => void;
   refreshQuote: () => Promise<void>;
   prepareCheckout: () => Promise<void>;
@@ -148,12 +180,82 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const contextToken = useRestaurantContextStore((s) => s.contextToken);
   const appliedCouponCode = useRestaurantContextStore((s) => s.appliedCouponCode);
   const storePaymentMethods = useRestaurantContextStore((s) => s.paymentMethods);
+  const storeDeliveryFee = useRestaurantContextStore((s) => s.deliveryFee);
+  const storeDeliveryFeeKnown = useRestaurantContextStore((s) => s.deliveryFeeKnown);
+  const restaurantLat = useRestaurantContextStore((s) => s.restaurantLat);
+  const restaurantLng = useRestaurantContextStore((s) => s.restaurantLng);
   const setAppliedCouponCode = useRestaurantContextStore((s) => s.setAppliedCouponCode);
   const activeLocation = useActiveLocation();
   const { sessionUser, status: authStatus } = useAuth();
 
   const resolvedRestaurantId = resolveCheckoutRestaurantId(restaurantId, restaurantSlug);
   const coords = activeLocation?.coordinates;
+
+  // Immediate local delivery fee estimate from restaurant context (persisted from menu load).
+  // Falls back to quote.deliveryFee once server responds.
+  const storeDeliveryFeeEstimate = storeDeliveryFeeKnown ? storeDeliveryFee : null;
+
+  // State for computed local delivery fee estimate (from distance/zone/serviceability)
+  const [computedDeliveryFee, setComputedDeliveryFee] = useState<{ fee: number | null; known: boolean } | null>(null);
+
+  // Compute local delivery fee estimate when we have coords and restaurant context
+  useEffect(() => {
+    if (!resolvedRestaurantId || !coords) {
+      setComputedDeliveryFee(null);
+      return;
+    }
+
+    // Capture coordinates at effect creation time to avoid TS18048 in async callbacks
+    const capturedCoords = coords;
+
+    // Get restaurant coordinates from experience (if available)
+    // We need to fetch them or use cached values
+    // For now, we'll trigger the async estimation
+    let cancelled = false;
+
+    async function computeFee() {
+      try {
+        // First check cache for instant result
+        const cached = getCachedDeliveryFeeEstimate(
+          resolvedRestaurantId,
+          capturedCoords.lat,
+          capturedCoords.lng,
+          restaurantLat ?? 0,
+          restaurantLng ?? 0
+        );
+        if (cached && !cancelled) {
+          setComputedDeliveryFee(cached);
+          return;
+        }
+
+        // Use the delivery fee estimator with restaurant coordinates
+        const result = await estimateLocalDeliveryFee(
+          resolvedRestaurantId,
+          capturedCoords.lat,
+          capturedCoords.lng,
+          restaurantLat ?? 0,
+          restaurantLng ?? 0,
+          null // We don't have the full experience here, but we'll pass null and let it fall back to zone-based calculation
+        );
+        if (!cancelled) {
+          setComputedDeliveryFee({ fee: result.fee, known: result.known });
+        }
+      } catch {
+        if (!cancelled) {
+          setComputedDeliveryFee({ fee: storeDeliveryFeeEstimate, known: storeDeliveryFeeKnown });
+        }
+      }
+    }
+
+    computeFee();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedRestaurantId, coords, restaurantLat, restaurantLng, storeDeliveryFeeEstimate, storeDeliveryFeeKnown]);
+
+  // Final local delivery fee estimate: prefer computed, fall back to store
+  const localDeliveryFeeEstimate = computedDeliveryFee?.fee ?? storeDeliveryFeeEstimate;
 
   const [placeStatus, setPlaceStatus] = useState<
     'idle' | 'placing' | 'awaiting_payment' | 'success' | 'error'
@@ -166,6 +268,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
   const [upiPollMessage, setUpiPollMessage] = useState<string | null>(null);
   const [placingMethod, setPlacingMethod] = useState<'cod' | 'razorpay' | 'upi' | null>(null);
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('ASAP');
+  const [deliverySlotStatus, setDeliverySlotStatus] = useState<DeliverySlotStatus>('loading');
   const voiceSchedulePref = useCheckoutScheduleStore((s) => s.preference);
   const voiceScheduleUpdatedAt = useCheckoutScheduleStore((s) => s.updatedAt);
   const voiceScheduleNotice = useCheckoutScheduleStore((s) => s.notice);
@@ -223,6 +326,13 @@ export function useCheckoutFlow(): CheckoutFlowState {
     if (!isCheckoutPrepareSessionCompatible(cached, appliedCouponCode)) return null;
     return cached;
   }, [appliedCouponCode, cartSignature, prepareSignature]);
+
+  // Invalidate delivery fee cache when restaurant context changes
+  useEffect(() => {
+    if (resolvedRestaurantId) {
+      invalidateDeliveryFeeCache(resolvedRestaurantId);
+    }
+  }, [resolvedRestaurantId]);
 
   useEffect(() => {
     if (!prepareSignature || !cartSignature) return;
@@ -429,7 +539,18 @@ export function useCheckoutFlow(): CheckoutFlowState {
       : null;
 
   useEffect(() => {
-    if (!scheduling?.deliverySlots?.length) return;
+    if (!scheduling) {
+      setDeliverySlotStatus('loading');
+      return;
+    }
+
+    // Use the same slot normalization as the UI (ensureScheduledDeliverySlots)
+    // This ensures the hook and UI are consistent about what slots exist.
+    const normalizedSlots = ensureScheduledDeliverySlots(scheduling.deliverySlots);
+    // Check for authoritative scheduled slots (excluding ASAP)
+    const hasScheduledSlots = normalizedSlots.some((s) => !isAsapSlot(s));
+    const hasAnySlots = normalizedSlots.length > 0;
+
     // Voice set_delivery_schedule wins when present — strict match onto kitchen slots.
     if (voiceSchedulePref) {
       const resolved = tryResolveSlotFromScheduleAction(
@@ -439,18 +560,35 @@ export function useCheckoutFlow(): CheckoutFlowState {
       );
       if (resolved.ok) {
         setDeliveryTimeSlot(resolved.slot);
+        setDeliverySlotStatus('available');
       } else {
         useCheckoutScheduleStore.getState().setNotice({
           kind: 'error',
           message: resolved.message,
           reason: resolved.reason,
         });
+        setDeliverySlotStatus('error');
       }
       return;
     }
+
+    // Determine status based on AUTHORITATIVE scheduled slots (matching UI state machine)
+    // ASAP is NOT a scheduled slot - it's a separate delivery mode
+    if (!hasScheduledSlots) {
+      setDeliverySlotStatus('unavailable');
+      setDeliveryTimeSlot(ASAP_SLOT);
+      return;
+    }
+
+    // We have authoritative scheduled slots available
+    setDeliverySlotStatus('available');
+
+    // Validate and set delivery slot against normalized slots
     setDeliveryTimeSlot((current) => {
-      if (scheduling.deliverySlots.includes(current)) return current;
-      return resolveDefaultDeliverySlot(scheduling.deliverySlots);
+      if (hasAnySlots) {
+        return validateSelectedSlot(current, normalizedSlots, isAsapSlot);
+      }
+      return ASAP_SLOT;
     });
   }, [scheduling, voiceSchedulePref, voiceScheduleUpdatedAt]);
 
@@ -936,6 +1074,7 @@ export function useCheckoutFlow(): CheckoutFlowState {
     setUpiVerifying(false);
     setUpiPollMessage(null);
     setDeliveryTimeSlot('ASAP');
+    setDeliverySlotStatus('loading');
     useCheckoutScheduleStore.getState().clear();
     if (prepareSignature) {
       void queryClient.removeQueries({ queryKey: checkoutKeys.prepare(prepareSignature) });
@@ -964,6 +1103,8 @@ export function useCheckoutFlow(): CheckoutFlowState {
     appliedCouponCode,
     setAppliedCouponCode,
     voiceScheduleNotice,
+    localDeliveryFeeEstimate,
+    deliverySlotStatus,
     setDeliveryTimeSlot: applyDeliveryTimeSlot,
     refreshQuote,
     prepareCheckout,

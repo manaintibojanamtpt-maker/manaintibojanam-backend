@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
 
-  appId: 'com.bhojanos.orderbhojan',
+  appId: 'com.bhojanos.customer',
 
   appName: 'OrderBhojan',
 

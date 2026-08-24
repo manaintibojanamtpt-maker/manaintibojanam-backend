@@ -1,5 +1,6 @@
 import { getRestaurantApiClient } from '../infrastructure/restaurantApiClient';
 import { syncPromoContextFromExperience } from '../domain/promoOffers';
+import { persistRestaurantContextFromApiPayload } from '../domain/restaurantContextPersistence';
 import { useRestaurantContextStore } from '../store/restaurantContextStore';
 import type {
   RestaurantExperienceApiPayload,
@@ -32,6 +33,13 @@ export async function loadRestaurantExperience(
   const response = enrichWithLoyalty(enrichWithAiSummary(toPublicResponse(payload)));
   const promoContext = syncPromoContextFromExperience(response.experience);
   useRestaurantContextStore.getState().setPromoContext(promoContext);
+  if (typeof response.experience.deliveryFee === 'number') {
+    useRestaurantContextStore.getState().setDeliveryFee(response.experience.deliveryFee, true);
+  } else if (response.experience.deliveryFeeKnown === false) {
+    useRestaurantContextStore.getState().setDeliveryFee(null, false);
+  }
+  // Persist restaurant context from internal API payload (keeps internal token out of UI-facing layer)
+  persistRestaurantContextFromApiPayload(payload, response);
   return response;
 }
 

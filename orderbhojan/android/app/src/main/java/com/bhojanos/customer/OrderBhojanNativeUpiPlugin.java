@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan;
+package com.bhojanos.customer;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;

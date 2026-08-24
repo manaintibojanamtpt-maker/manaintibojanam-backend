@@ -22,6 +22,8 @@ export function useReorderFromTracking() {
         restaurantId: payload.restaurantId,
         restaurantSlug: payload.restaurantSlug,
         contextToken: experience.contextToken,
+        restaurantLat: experience.experience.restaurantLat ?? null,
+        restaurantLng: experience.experience.restaurantLng ?? null,
       });
 
       const lines = payload.items.map((item) => ({

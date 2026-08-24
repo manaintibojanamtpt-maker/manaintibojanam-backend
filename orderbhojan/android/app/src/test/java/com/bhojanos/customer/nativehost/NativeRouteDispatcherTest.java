@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan.nativehost;
+package com.bhojanos.customer.nativehost;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

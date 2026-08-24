@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan.track
+package com.bhojanos.customer.track
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bhojanos.orderbhojan.nativehost.NativeFeatureFlags
-import com.bhojanos.orderbhojan.nativehost.NativeSessionManager
+import com.bhojanos.customer.nativehost.NativeFeatureFlags
+import com.bhojanos.customer.nativehost.NativeSessionManager
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan;
+package com.bhojanos.customer;
 
 import android.os.Bundle;
 import androidx.core.view.WindowCompat;

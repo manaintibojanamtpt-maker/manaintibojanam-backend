@@ -38,11 +38,13 @@ export async function ensureRestaurantContextForCartPlan(params: {
       restaurantId,
       restaurantSlug,
       contextToken: experience.contextToken,
+      restaurantLat: experience.experience.restaurantLat ?? null,
+      restaurantLng: experience.experience.restaurantLng ?? null,
     });
   } catch (err) {
     if (err instanceof MarketplaceApiError && (err.status === 404 || err.code === 'NOT_FOUND')) {
       throw new Error(
-        `I couldn’t open that kitchen menu yet. Try naming the kitchen again (e.g. “Inti Bhojanam”).`,
+        `I couldn't open that kitchen menu yet. Try naming the kitchen again (e.g. "Inti Bhojanam").`,
       );
     }
     throw err;

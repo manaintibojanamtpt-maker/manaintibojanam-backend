@@ -31,10 +31,13 @@ interface CartState {
   readonly lines: readonly CartLine[];
   readonly restaurantSlug: string | null;
   readonly visible: boolean;
+  /** True once zustand persist has finished rehydrating from storage. */
+  _hasHydrated: boolean;
   setRestaurant: (slug: string) => void;
   addItem: (line: CartLineInput, quantity?: number) => void;
   setQuantity: (lineId: string, quantity: number) => void;
   clear: () => void;
+  _setHasHydrated: (value: boolean) => void;
 }
 
 const CROSS_RESTAURANT_TOAST =
@@ -76,20 +79,62 @@ function notifyCrossRestaurantSwitch(): void {
   notifyToast(CROSS_RESTAURANT_TOAST, 'warning');
 }
 
+/**
+ * Determines if a cross-restaurant clear should be allowed.
+ * Returns true ONLY if both cart and restaurant context stores are hydrated
+ * AND there is a confirmed restaurant mismatch.
+ *
+ * UNKNOWN context (null/undefined during hydration) MUST NOT trigger a clear.
+ */
+function canClearForRestaurantMismatch(
+  currentSlug: string | null,
+  newSlug: string,
+  hasItems: boolean
+): boolean {
+  // Check hydration state
+  // UNKNOWN hydration (persist middleware not initialized OR hasHydrated returns false)
+  // MUST NOT trigger a destructive clear.
+  // If persist middleware is unavailable (Node tests without localStorage), infer
+  // hydration from CONFIRMED state: non-null restaurantSlug/contextToken for context,
+  // and non-null restaurantSlug or non-empty lines for cart.
+  // Use || not ?? because hasHydrated() can return FALSE (boolean), not just null/undefined.
+  const contextHydrated =
+    useRestaurantContextStore.persist?.hasHydrated?.() ||
+    (useRestaurantContextStore.getState().restaurantSlug !== null &&
+      useRestaurantContextStore.getState().contextToken !== null);
+  const cartHydrated =
+    useCartStore.persist?.hasHydrated?.() ||
+    (useCartStore.getState().restaurantSlug !== null || useCartStore.getState().lines.length > 0);
+
+  if (!contextHydrated || !cartHydrated) {
+    return false; // Don't clear during hydration race / unknown state
+  }
+
+  // Only clear if there's a CONFIRMED mismatch
+  return hasItems && Boolean(currentSlug && currentSlug !== newSlug);
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       lines: [],
       restaurantSlug: null,
       visible: false,
+      _hasHydrated: false,
+
+      _setHasHydrated: (value) => set({ _hasHydrated: value }),
 
       setRestaurant: (slug) => {
         const prev = get();
         if (prev.restaurantSlug !== slug) {
-          if (prev.lines.length > 0 && prev.restaurantSlug && prev.restaurantSlug !== slug) {
+          // Only clear cart if BOTH stores are hydrated AND there's a confirmed mismatch
+          if (canClearForRestaurantMismatch(prev.restaurantSlug, slug, prev.lines.length > 0)) {
             notifyCrossRestaurantSwitch();
+            set({ restaurantSlug: slug, lines: [], visible: false });
+          } else {
+            // Just update the slug, keep existing cart items
+            set({ restaurantSlug: slug });
           }
-          set({ restaurantSlug: slug, lines: [], visible: false });
         }
       },
 
@@ -101,9 +146,11 @@ export const useCartStore = create<CartState>()(
         }
 
         let current = get().lines;
+        // Only clear for mismatch if both stores are hydrated and confirmed mismatch
         if (
           current.length > 0 &&
-          current[0].restaurantSlug !== ctx.restaurantSlug
+          current[0].restaurantSlug !== ctx.restaurantSlug &&
+          canClearForRestaurantMismatch(current[0].restaurantSlug, ctx.restaurantSlug, true)
         ) {
           notifyCrossRestaurantSwitch();
           current = [];
@@ -158,8 +205,11 @@ export const useCartStore = create<CartState>()(
     }),
     { name: 'ob-cart-m7',
       onRehydrateStorage: () => (state) => {
-        if (state && state.lines.length > 0) {
-          useCartStore.setState({ visible: true });
+        if (state) {
+          state._hasHydrated = true;
+          if (state.lines.length > 0) {
+            useCartStore.setState({ visible: true });
+          }
         }
       },
     },

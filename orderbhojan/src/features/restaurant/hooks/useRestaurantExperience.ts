@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
 import { useActiveLocation } from '@/features/location';
 import {
@@ -33,30 +32,25 @@ export function useRestaurantExperience(slug: string | undefined) {
     ...liveQuery,
     gcTime: Math.max(liveQuery.gcTime, 15 * 60_000),
     staleTime: Math.max(liveQuery.staleTime, 60_000),
-    initialData: () =>
-      slug
-        ? queryClient.getQueryData(restaurantKeys.experience(slug, lat, lng))
-        : undefined,
-    initialDataUpdatedAt: () =>
-      slug
-        ? queryClient.getQueryState(restaurantKeys.experience(slug, lat, lng))?.dataUpdatedAt
-        : undefined,
+    // Show cached data immediately, then revalidate in background
     placeholderData: (previous) =>
       previous ??
       (slug ? queryClient.getQueryData(restaurantKeys.experience(slug, lat, lng)) : undefined),
+    // Don't invalidate on window focus - keep cached data visible
+    refetchOnWindowFocus: false,
     retry: 2,
   });
 }
 
+/**
+ * Location change should NOT invalidate restaurant queries.
+ * Restaurant data (name, description, hours, etc.) is independent of customer location.
+ * Only delivery fee/slots depend on location, which are handled in checkout.
+ *
+ * This function is kept for compatibility but does nothing.
+ * @deprecated Restaurant queries should not be invalidated by location changes
+ */
 export function useRestaurantLocationInvalidation() {
-  const queryClient = useQueryClient();
-  const activeLocation = useActiveLocation();
-  const enabled = useRestaurantFeatureEnabled();
-  const lat = activeLocation?.coordinates.lat;
-  const lng = activeLocation?.coordinates.lng;
-
-  useEffect(() => {
-    if (!enabled || lat == null || lng == null) return;
-    void queryClient.invalidateQueries({ queryKey: restaurantKeys.all });
-  }, [enabled, lat, lng, queryClient]);
+  // Intentionally empty - location changes should not cause restaurant skeleton flash
+  // Restaurant experience data is stable across customer location changes
 }

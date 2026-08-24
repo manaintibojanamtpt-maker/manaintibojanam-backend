@@ -93,24 +93,25 @@ describe('assistant Phase 14 consumer UI', () => {
     assert.match(fab, /consumer-assistant-fab/);
   });
 
-  it('home hero mounts HomeVoiceAgentButton next to search', () => {
+  it('home hero no longer mounts HomeVoiceAgentButton (single canonical FAB)', () => {
     const hero = readFileSync(
       path.resolve(__dirname, '../src/presentation/discovery/OrderBhojanHomeHero.tsx'),
       'utf8',
     );
-    const button = readUi('HomeVoiceAgentButton.tsx');
-    assert.match(hero, /HomeVoiceAgentButton/);
-    assert.match(button, /ob-voice-agent-open/);
-    assert.match(button, /home-voice-agent-button/);
+    assert.doesNotMatch(hero, /HomeVoiceAgentButton/);
   });
 
-  it('HomeSearchBar uses live voice agent control instead of disabled mic', () => {
+  it('HomeSearchBar no longer mounts HomeVoiceAgentButton (single canonical FAB)', () => {
     const searchBar = readFileSync(
       path.resolve(__dirname, '../src/features/experience/ui/home/HomeSearchBar.tsx'),
       'utf8',
     );
-    assert.match(searchBar, /HomeVoiceAgentButton/);
-    assert.doesNotMatch(searchBar, /Voice search placeholder/);
+    assert.doesNotMatch(searchBar, /HomeVoiceAgentButton/);
+  });
+
+  it('ConsumerAssistantShell renders ConsumerAssistantFab as single canonical entry', () => {
+    const shell = readUi('ConsumerAssistantShell.tsx');
+    assert.match(shell, /ConsumerAssistantFab/);
   });
 
   it('mic button is dual-gated and click-to-speak only', () => {

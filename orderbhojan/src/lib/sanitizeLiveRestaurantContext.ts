@@ -35,16 +35,44 @@ export function sanitizeLiveRestaurantContext(): void {
 /**
  * Clears persisted restaurant context and cart when the user opens a different
  * restaurant than the one stored locally. Always warns before clearing.
+ *
+ * CRITICAL: Only clears if BOTH cart and context are confirmed/hydrated.
+ * UNKNOWN context (null/undefined during hydration) MUST NOT trigger a clear.
  */
 export function sanitizeRestaurantSlugContext(routeSlug: string): void {
   if (!routeSlug) return;
 
   const ctx = useRestaurantContextStore.getState();
   const cart = useCartStore.getState();
+
+  // Check if stores are hydrated - if not, DO NOT clear (hydration race)
+  // UNKNOWN hydration (persist middleware not initialized) MUST NOT trigger a destructive clear.
+  // If persist middleware is initialized but hasHydrated() returns false (e.g. test env with unavailable storage),
+  // fall back to CONFIRMED state: non-null restaurantSlug + contextToken for context,
+  // non-null restaurantSlug or non-empty lines for cart.
+  // Use || not ?? because hasHydrated() can return FALSE (boolean), not just null/undefined.
+  const contextHasHydrated = useRestaurantContextStore.persist?.hasHydrated;
+  const cartHasHydrated = useCartStore.persist?.hasHydrated;
+
+  const contextHydrated = contextHasHydrated
+    ? (contextHasHydrated() || (ctx.restaurantSlug !== null && ctx.contextToken !== null))
+    : (ctx.restaurantSlug !== null && ctx.contextToken !== null);
+  const cartHydrated = cartHasHydrated
+    ? (cartHasHydrated() || (cart.restaurantSlug !== null || cart.lines.length > 0))
+    : (cart.restaurantSlug !== null || cart.lines.length > 0);
+
+  // Context mismatch: stored context exists AND differs from route
+  // Requires CONFIRMED non-null restaurantSlug — impossible if truly unhydrated
   const contextMismatch = Boolean(ctx.restaurantSlug && ctx.restaurantSlug !== routeSlug);
+  // Cart mismatch: cart has items AND its restaurant differs from route
+  // Requires CONFIRMED non-null restaurantSlug AND non-empty lines — impossible if truly unhydrated
   const cartMismatch = Boolean(
     cart.restaurantSlug && cart.restaurantSlug !== routeSlug && cart.lines.length > 0,
   );
+
+  // If there's a mismatch but the corresponding store isn't hydrated, defer
+  if (contextMismatch && !contextHydrated) return;
+  if (cartMismatch && !cartHydrated) return;
 
   if (!contextMismatch && !cartMismatch) return;
 

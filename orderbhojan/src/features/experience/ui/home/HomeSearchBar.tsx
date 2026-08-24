@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { useScrollChrome } from '../../hooks/useScrollChrome';
 import { POPULAR_SEARCHES } from '../../data/mockCatalog';
-import { HomeVoiceAgentButton } from '@/features/assistant/ui/HomeVoiceAgentButton';
 
 export function HomeSearchBar() {
   const pinned = useScrollChrome(120);
@@ -21,7 +20,6 @@ export function HomeSearchBar() {
           onFocus={(event) => event.currentTarget.blur()}
         />
         <div className="ob-home-search__actions">
-          <HomeVoiceAgentButton />
           <Link to="/search" aria-label="Open search page" className="ob-icon-btn">
             <Search className="h-5 w-5" aria-hidden />
           </Link>

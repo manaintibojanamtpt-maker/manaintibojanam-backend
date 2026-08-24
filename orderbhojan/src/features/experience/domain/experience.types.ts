@@ -54,6 +54,9 @@ export interface MockFoodItem {
   readonly categoryIds: readonly FoodCategoryId[];
   readonly restaurantSlug: string;
   readonly restaurantId?: string;
+  /** Restaurant coordinates for delivery fee estimation. */
+  readonly restaurantLat?: number | null;
+  readonly restaurantLng?: number | null;
 }
 
 export interface MockSearchTerm {

@@ -76,6 +76,9 @@ export interface RestaurantExperiencePublic {
   readonly promoCodes?: readonly PublicPromoCoupon[];
   readonly badges: readonly string[];
   readonly subscriptionEnabled?: boolean;
+  /** Restaurant coordinates for local delivery fee estimation. */
+  readonly restaurantLat?: number;
+  readonly restaurantLng?: number;
 }
 
 export interface RestaurantExperienceResponse {

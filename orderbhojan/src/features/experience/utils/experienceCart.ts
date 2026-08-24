@@ -11,6 +11,8 @@ export function addExperienceFoodToCart(item: MockFoodItem): void {
     restaurantSlug: item.restaurantSlug,
     restaurantId,
     contextToken: `mock_${item.restaurantSlug}`,
+    restaurantLat: item.restaurantLat ?? null,
+    restaurantLng: item.restaurantLng ?? null,
   });
   useCartStore.getState().addItem({
     foodId: item.id,

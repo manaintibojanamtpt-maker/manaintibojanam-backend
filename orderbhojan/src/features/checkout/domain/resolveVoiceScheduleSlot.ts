@@ -7,7 +7,6 @@ import {
   ASAP_SLOT,
   formatDeliverySlotLabel,
   isAsapSlot,
-  resolveDefaultDeliverySlot,
   type CheckoutSchedulingContext,
 } from './deliveryTimeSlots';
 
@@ -105,6 +104,10 @@ export function tryResolveSlotFromScheduleAction(
 /**
  * Best-effort resolve for non-strict callers (keeps prior helper behavior for tests).
  */
+function resolveDefaultDeliverySlot(slots: readonly string[]): string {
+  return slots[0] ?? ASAP_SLOT;
+}
+
 export function resolveSlotFromScheduleAction(
   payload: {
     readonly deliveryType?: string;

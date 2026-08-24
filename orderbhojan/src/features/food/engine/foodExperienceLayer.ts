@@ -24,11 +24,15 @@ function persistMenuContext(
   contextToken: string,
   restaurantId: string,
   paymentMethods?: readonly string[] | null,
+  restaurantLat?: number | null,
+  restaurantLng?: number | null,
 ): void {
   useRestaurantContextStore.getState().setContext({
     restaurantSlug: slug,
     contextToken,
     restaurantId,
+    restaurantLat: restaurantLat ?? undefined,
+    restaurantLng: restaurantLng ?? undefined,
   });
   if (paymentMethods && paymentMethods.length > 0) {
     useRestaurantContextStore.getState().setPaymentMethods(paymentMethods);
@@ -76,7 +80,14 @@ export function syncRestaurantContextFromMenuCache(
 
   const cachedContext = readFoodSessionContext(slug, lat, lng);
   if (cachedContext) {
-    persistMenuContext(slug, cachedContext.contextToken, cachedContext.restaurantId);
+    persistMenuContext(
+      slug,
+      cachedContext.contextToken,
+      cachedContext.restaurantId,
+      undefined, // paymentMethods not stored in session cache
+      cachedContext.restaurantLat ?? null,
+      cachedContext.restaurantLng ?? null
+    );
     return true;
   }
 
@@ -114,7 +125,10 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
       restaurantId: restaurantIdFromEnvelope(envelope, params.slug),
     };
     const paymentMethods = (envelope as { paymentMethods?: readonly string[] }).paymentMethods;
-    persistMenuContext(params.slug, context.contextToken, context.restaurantId, paymentMethods);
+    // Try to get restaurant coordinates from experience (if available in the envelope)
+    const restaurantLat = (envelope as { restaurantLat?: number }).restaurantLat ?? null;
+    const restaurantLng = (envelope as { restaurantLng?: number }).restaurantLng ?? null;
+    persistMenuContext(params.slug, context.contextToken, context.restaurantId, paymentMethods, restaurantLat, restaurantLng);
     const menu = mapFoodMenuDTOToFoodMenuResponse(envelope);
     return finalize(
       enrichWithRecommendations(
@@ -137,6 +151,8 @@ export async function loadFoodMenu(params: FoodMenuQueryParams): Promise<FoodMen
     context.contextToken,
     context.restaurantId,
     payload.paymentMethods,
+    null, // restaurantLat not available from legacy API
+    null  // restaurantLng not available from legacy API
   );
   return finalize(
     enrichWithRecommendations(enrichWithAiBadges(stripInternal(payload))),

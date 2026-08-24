@@ -53,6 +53,8 @@ export interface CheckoutContactViewModel {
   readonly emailError?: string;
 }
 
+export type DeliverySlotStatus = 'loading' | 'available' | 'unavailable' | 'error';
+
 export interface CheckoutDeliverySlotViewModel {
   readonly slots: readonly string[];
   readonly selectedSlot: string;
@@ -64,6 +66,8 @@ export interface CheckoutDeliverySlotViewModel {
   readonly voiceScheduleNoticeKind?: 'clarify' | 'error' | 'applied';
   readonly isAsap: (slot: string) => boolean;
   readonly formatLabel: (slot: string) => string;
+  /** Explicit delivery slot status for proper UI state management. */
+  readonly status?: DeliverySlotStatus;
 }
 
 export interface CheckoutPromoChipViewModel {

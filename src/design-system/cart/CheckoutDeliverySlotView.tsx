@@ -1,5 +1,5 @@
-import { Clock } from 'lucide-react';
-import type { CheckoutDeliverySlotViewModel } from './types';
+import { Clock, AlertCircle, Loader2 } from 'lucide-react';
+import type { CheckoutDeliverySlotViewModel, DeliverySlotStatus } from './types';
 
 export interface CheckoutDeliverySlotViewProps {
   readonly slot: CheckoutDeliverySlotViewModel;
@@ -31,6 +31,79 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
       if (first) onSelectSlot(first);
     }
   };
+
+  // Default status to 'available' for backwards compatibility
+  const status: DeliverySlotStatus = slot.status ?? 'available';
+
+  // Show loading skeleton
+  if (status === 'loading') {
+    return (
+      <section
+        className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+        aria-labelledby="checkout-delivery-time"
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-[#f4a261]" aria-hidden />
+            <h2 id="checkout-delivery-time" className="text-sm font-semibold text-white">
+              Delivery time
+            </h2>
+          </div>
+          <Loader2 className="h-4 w-4 animate-spin text-[#f4a261]" aria-hidden />
+        </div>
+        <div className="space-y-3" aria-busy="true" aria-label="Loading delivery slots">
+          <div className="h-12 rounded-xl border border-white/10 bg-black/20 animate-pulse" />
+          <div className="h-12 rounded-xl border border-white/10 bg-black/20 animate-pulse" />
+        </div>
+      </section>
+    );
+  }
+
+  // Show unavailable state
+  if (status === 'unavailable') {
+    return (
+      <section
+        className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+        aria-labelledby="checkout-delivery-time"
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-[#f4a261]" aria-hidden />
+            <h2 id="checkout-delivery-time" className="text-sm font-semibold text-white">
+              Delivery time
+            </h2>
+          </div>
+          <AlertCircle className="h-4 w-4 text-amber-400" aria-hidden />
+        </div>
+        <p className="text-xs text-white/65">
+          No delivery slots available from this kitchen right now.
+        </p>
+      </section>
+    );
+  }
+
+  // Show error state
+  if (status === 'error') {
+    return (
+      <section
+        className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4"
+        aria-labelledby="checkout-delivery-time"
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-rose-400" aria-hidden />
+            <h2 id="checkout-delivery-time" className="text-sm font-semibold text-white">
+              Delivery time
+            </h2>
+          </div>
+          <AlertCircle className="h-4 w-4 text-rose-400" aria-hidden />
+        </div>
+        <p className="text-xs text-rose-100">
+          Unable to load delivery slots. Please refresh or try again later.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section

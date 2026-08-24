@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan.nativehost
+package com.bhojanos.customer.nativehost
 
 import android.content.Context
 

@@ -77,6 +77,8 @@ export function OrderBhojanCheckoutPage() {
     cartSyncMessages,
     appliedCouponCode,
     setAppliedCouponCode,
+    localDeliveryFeeEstimate,
+    deliverySlotStatus,
     upiSession,
     upiVerifying,
     upiPollMessage,
@@ -120,6 +122,7 @@ export function OrderBhojanCheckoutPage() {
   const checkoutAuthGate = resolveCheckoutAuthGate({ status: authStatus, sessionUser });
 
   const lines = useCartStore((s) => s.lines);
+  const cartHydrated = useCartStore((s) => s._hasHydrated);
   const estimatedSubtotal = cartSubtotal(lines);
 
   const sessionPhone = normalizePhoneFromSession(sessionUser?.phoneNumber);
@@ -276,7 +279,8 @@ export function OrderBhojanCheckoutPage() {
     if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
       return 'Retry checkout';
     }
-    const total = quote ? `₹${quote.grandTotal}` : `₹${estimatedSubtotal}`;
+    const estimatedTotal = estimatedSubtotal + (localDeliveryFeeEstimate ?? 0);
+    const total = quote ? `₹${quote.grandTotal}` : `₹${estimatedTotal}`;
     if (!quoteReady && estimatedSubtotal > 0) {
       if (selectedPaymentMethod === 'upi') return `Pay ~${total} via UPI`;
       if (selectedPaymentMethod === 'razorpay') return `Pay ~${total} online`;
@@ -288,7 +292,7 @@ export function OrderBhojanCheckoutPage() {
     if (selectedPaymentMethod === 'razorpay') return `Pay ${total} online`;
     if (selectedPaymentMethod === 'cod') return `Place order · ${total}`;
     return `Continue · ${total}`;
-  }, [error, estimatedSubtotal, quote, quoteReady, selectedPaymentMethod]);
+  }, [error, estimatedSubtotal, localDeliveryFeeEstimate, quote, quoteReady, selectedPaymentMethod]);
 
   const handlePlaceOrder = () => {
     if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
@@ -362,6 +366,19 @@ export function OrderBhojanCheckoutPage() {
         onTrack={() => navigate(`/orders/${orderId}/track`)}
         onBrowse={() => navigate('/')}
       />
+    );
+  }
+
+  // Wait for cart hydration before showing "Nothing to checkout" to avoid race on first load.
+  if (!cartHydrated) {
+    return (
+      <TransactionalPageShell title="Checkout" subtitle="" embedded>
+        <MarketplaceUxStateView
+          loading
+          loadingMessage="Restoring your cart…"
+          title="Restoring your cart"
+        />
+      </TransactionalPageShell>
     );
   }
 
@@ -461,6 +478,9 @@ export function OrderBhojanCheckoutPage() {
       ? {
           lines: [
             { label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` },
+            ...(localDeliveryFeeEstimate != null
+              ? [{ label: 'Delivery fee (estimated)', amountLabel: `₹${localDeliveryFeeEstimate}` }]
+              : []),
             ...(appliedCouponCode
               ? [
                   {
@@ -471,11 +491,13 @@ export function OrderBhojanCheckoutPage() {
               : []),
             ...(billDeliveryLine ? [billDeliveryLine] : []),
           ],
-          totalLabel: `₹${estimatedSubtotal}`,
+          totalLabel: `₹${estimatedSubtotal + (localDeliveryFeeEstimate ?? 0)}`,
           deliveryPendingNote:
             isPreparing || discountQuoteLoading
               ? 'Updating taxes and delivery…'
-              : 'Estimated — final total updates when ready',
+              : localDeliveryFeeEstimate != null
+              ? 'Estimated — final total updates when ready'
+              : 'Estimated — delivery fee will be confirmed',
         }
       : undefined;
 
@@ -533,7 +555,7 @@ export function OrderBhojanCheckoutPage() {
 
   const deliverySlotView = scheduling
     ? {
-        // Ensure scheduled delivery slots exist so the Schedule tab is always enabled
+        // Pass authoritative slots only (no fabrication). UI renders based on deliverySlotStatus.
         slots: ensureScheduledDeliverySlots(scheduling.deliverySlots),
         selectedSlot: deliveryTimeSlot,
         selectedIsAsap: isAsapSlot(deliveryTimeSlot),
@@ -549,6 +571,8 @@ export function OrderBhojanCheckoutPage() {
           : {}),
         isAsap: isAsapSlot,
         formatLabel: formatDeliverySlotLabel,
+        // Explicit delivery slot status for proper UI state management
+        status: deliverySlotStatus,
       }
     : undefined;
 

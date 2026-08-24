@@ -1,10 +1,10 @@
-package com.bhojanos.orderbhojan
+package com.bhojanos.customer
 
 import android.content.Intent
-import com.bhojanos.orderbhojan.nativehost.NativeFeatureFlags
-import com.bhojanos.orderbhojan.nativehost.NativeTrackCohort
-import com.bhojanos.orderbhojan.nativehost.NativeSessionManager
-import com.bhojanos.orderbhojan.track.TrackActivity
+import com.bhojanos.customer.nativehost.NativeFeatureFlags
+import com.bhojanos.customer.nativehost.NativeTrackCohort
+import com.bhojanos.customer.nativehost.NativeSessionManager
+import com.bhojanos.customer.track.TrackActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall

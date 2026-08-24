@@ -7,6 +7,43 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:170989397954:android:778d70f13fd0be5760185b",
+        "android_client_info": {
+          "package_name": "com.bhojanos.customer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "170989397954-75ipvl86u985upiai7r6vj3ec1dkcutf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhojanos.customer",
+            "certificate_hash": "7c354e6a10752121ca2ac29a221af46c5f70a082"
+          }
+        },
+        {
+          "client_id": "170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZhzodbZi304o30J_VRIr5LRWNU6jn_as"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "170989397954-6mimml7p7gft6vg71essvpt74bat4kbc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:170989397954:android:c72d024605511a5060185b",
         "android_client_info": {
           "package_name": "com.bhojanos.orderbhojan"
@@ -19,6 +56,14 @@
           "android_info": {
             "package_name": "com.bhojanos.orderbhojan",
             "certificate_hash": "9a0ee4a5845d72b58d71e382be0e7ea4791b305f"
+          }
+        },
+        {
+          "client_id": "170989397954-vdoht1isjafcrdblfp62n68t1fd2qqb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhojanos.orderbhojan",
+            "certificate_hash": "7c354e6a10752121ca2ac29a221af46c5f70a082"
           }
         },
         {

@@ -6,15 +6,23 @@ interface RestaurantContextState {
   readonly restaurantId: string | null;
   readonly contextToken: string | null;
   readonly restaurantSlug: string | null;
+  /** Restaurant coordinates from experience load — used for local delivery fee estimation. */
+  readonly restaurantLat: number | null;
+  readonly restaurantLng: number | null;
   readonly availableOffers: readonly RestaurantOffer[];
   readonly availablePromoCodes: readonly PublicPromoCoupon[];
   readonly appliedCouponCode: string | null;
   /** Kitchen-enabled methods from menu/prepare — used for instant checkout Pay using. */
   readonly paymentMethods: readonly string[] | null;
+  /** Delivery fee from restaurant experience (may be null if not yet known). */
+  readonly deliveryFee: number | null;
+  readonly deliveryFeeKnown: boolean;
   setContext: (ctx: {
     readonly restaurantId: string;
     readonly contextToken: string;
     readonly restaurantSlug: string;
+    readonly restaurantLat?: number | null;
+    readonly restaurantLng?: number | null;
   }) => void;
   setPaymentMethods: (methods: readonly string[] | null) => void;
   setPromoContext: (ctx: {
@@ -22,6 +30,7 @@ interface RestaurantContextState {
     readonly promoCodes?: readonly PublicPromoCoupon[];
   }) => void;
   setAppliedCouponCode: (code: string | null) => void;
+  setDeliveryFee: (fee: number | null, known: boolean) => void;
   clear: () => void;
 }
 
@@ -36,10 +45,14 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
       restaurantId: null,
       contextToken: null,
       restaurantSlug: null,
+      restaurantLat: null,
+      restaurantLng: null,
       availableOffers: [],
       availablePromoCodes: [],
       appliedCouponCode: null,
       paymentMethods: null,
+      deliveryFee: null,
+      deliveryFeeKnown: false,
 
       setContext: (ctx) =>
         set((state) => {
@@ -50,6 +63,8 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
               restaurantId: ctx.restaurantId,
               contextToken: ctx.contextToken,
               restaurantSlug: ctx.restaurantSlug,
+              restaurantLat: ctx.restaurantLat ?? null,
+              restaurantLng: ctx.restaurantLng ?? null,
               availableOffers: [],
               availablePromoCodes: [],
               appliedCouponCode: null,
@@ -70,6 +85,8 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
             ...state,
             restaurantSlug: ctx.restaurantSlug || state.restaurantSlug,
             restaurantId: ctx.restaurantId || state.restaurantId,
+            restaurantLat: ctx.restaurantLat ?? state.restaurantLat,
+            restaurantLng: ctx.restaurantLng ?? state.restaurantLng,
             contextToken: nextToken,
           };
         }),
@@ -91,15 +108,22 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
       setAppliedCouponCode: (code) =>
         set({ appliedCouponCode: code?.trim().toUpperCase() || null }),
 
+      setDeliveryFee: (fee, known) =>
+        set({ deliveryFee: fee, deliveryFeeKnown: known }),
+
       clear: () =>
         set({
           restaurantId: null,
           contextToken: null,
           restaurantSlug: null,
+          restaurantLat: null,
+          restaurantLng: null,
           availableOffers: [],
           availablePromoCodes: [],
           appliedCouponCode: null,
           paymentMethods: null,
+          deliveryFee: null,
+          deliveryFeeKnown: false,
         }),
     }),
     {
@@ -108,10 +132,14 @@ export const useRestaurantContextStore = create<RestaurantContextState>()(
         restaurantId: state.restaurantId,
         contextToken: state.contextToken,
         restaurantSlug: state.restaurantSlug,
+        restaurantLat: state.restaurantLat,
+        restaurantLng: state.restaurantLng,
         availableOffers: state.availableOffers,
         availablePromoCodes: state.availablePromoCodes,
         appliedCouponCode: state.appliedCouponCode,
         paymentMethods: state.paymentMethods,
+        deliveryFee: state.deliveryFee,
+        deliveryFeeKnown: state.deliveryFeeKnown,
       }),
     },
   ),

@@ -2,4 +2,16 @@ include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 
+include ':core:common'
+include ':core:design'
+include ':core:model'
+include ':core:network'
+include ':core:auth'
+include ':core:biometric'
+include ':core:storage'
+include ':core:database'
+
+include ':customer'
+include ':owner'
+
 apply from: 'capacitor.settings.gradle'

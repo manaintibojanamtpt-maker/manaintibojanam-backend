@@ -1,4 +1,4 @@
-package com.bhojanos.orderbhojan.track
+package com.bhojanos.customer.track
 
 data class TrackTimelineEvent(
     val status: String,
