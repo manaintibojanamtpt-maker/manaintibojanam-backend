@@ -8,13 +8,8 @@ describe('Owner Authentication Independence & Resiliency Suite', () => {
   it('1 & 4. Subscription failure cannot block Owner authentication', async () => {
     // Simulate auth error when subscription API or storage is down
     const authError = { code: 'auth/invalid-credential', message: 'Invalid credentials' };
-    
-    // Fake hanging auth instance to test timeout resilience
-    const hangingAuth: any = {
-      currentUser: null,
-    };
 
-    const resolvedMessage = await resolveOwnerLoginError(authError, 'test@example.com', { configReady: true }, hangingAuth);
+    const resolvedMessage = await resolveOwnerLoginError(authError, 'test@example.com', { configReady: true });
     
     assert.ok(resolvedMessage.length > 0);
     assert.match(resolvedMessage, /Invalid email or password|Incorrect password|No BhojanOS owner account/);

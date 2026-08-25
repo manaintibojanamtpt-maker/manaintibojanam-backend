@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSubscriptionStore, selectSubscriptionStatus, selectSubscriptionLoading, selectSubscriptionError, selectSubscriptionHydrated } from '../lib/subscriptionStore';
-import { subscriptionKeys, useSubscriptionStatus, subscriptionHooks } from '../lib/subscriptionQueries';
+import { subscriptionKeys, useSubscriptionStatus, subscriptionHooks, fetchSubscriptionStatus } from '../lib/subscriptionQueries';
 import type { SubscriptionStatusResponse } from '../lib/subscriptionQueries';
 import type { TenantPlanSnapshot } from '../lib/planStatus';
 
@@ -92,7 +92,7 @@ export function useSubscriptionSync(tenantId: string | null | undefined, options
           // Fetch fresh data
           await queryClient.prefetchQuery({
             queryKey: subscriptionKeys.status(tenantId),
-            queryFn: () => subscriptionHooks.useSubscriptionStatus(tenantId!).queryFn!(),
+            queryFn: () => fetchSubscriptionStatus(tenantId!),
             staleTime: 10000,
           });
           const freshData = queryClient.getQueryData<SubscriptionStatusResponse>(subscriptionKeys.status(tenantId));
