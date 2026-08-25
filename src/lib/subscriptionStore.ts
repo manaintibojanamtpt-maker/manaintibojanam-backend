@@ -440,7 +440,21 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       }),
       {
         name: 'bhojanos-subscription-store',
-        storage: createJSONStorage(() => localStorage),
+        storage: createJSONStorage(() => {
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              return localStorage;
+            }
+          } catch {
+            // Memory storage fallback when localStorage is blocked or unavailable
+          }
+          const memoryStore = new Map<string, string>();
+          return {
+            getItem: (name: string) => memoryStore.get(name) ?? null,
+            setItem: (name: string, value: string) => memoryStore.set(name, value),
+            removeItem: (name: string) => memoryStore.delete(name),
+          };
+        }),
         partialize: (state) => ({
           tenantId: state.tenantId,
           planId: state.planId,

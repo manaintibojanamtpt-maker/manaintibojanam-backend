@@ -135,7 +135,13 @@ export async function resolveOwnerLoginError(
     authInstance
   ) {
     try {
-      const methods = await fetchSignInMethodsForEmail(authInstance, trimmedEmail);
+      const fetchPromise = fetchSignInMethodsForEmail(authInstance, trimmedEmail).catch(
+        () => [] as string[],
+      );
+      const timeoutPromise = new Promise<string[]>((resolve) =>
+        window.setTimeout(() => resolve([]), 3_000),
+      );
+      const methods = await Promise.race([fetchPromise, timeoutPromise]);
       if (methods.length === 0) {
         return ownerNoAccountMessage();
       }

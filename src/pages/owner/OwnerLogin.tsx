@@ -61,7 +61,11 @@ const OwnerLogin = () => {
     try {
       const user = auth.currentUser;
       if (user) {
-        const ids = await resolveOwnerTenantIds(user.uid, user.email);
+        const resolvePromise = resolveOwnerTenantIds(user.uid, user.email);
+        const timeoutPromise = new Promise<string[]>((resolve) =>
+          window.setTimeout(() => resolve([]), 4_000),
+        );
+        const ids = await Promise.race([resolvePromise, timeoutPromise]);
         if (ids.length > 0) {
           cacheOwnerTenantIds(ids);
         } else if (isFounderOwnerEmail(user.email)) {
@@ -74,8 +78,9 @@ const OwnerLogin = () => {
       if (user && isFounderOwnerEmail(user.email)) {
         cacheOwnerTenantIds([FOUNDER_TENANT_ID]);
       }
+    } finally {
+      redirectToOwnerDashboard();
     }
-    redirectToOwnerDashboard();
   }, []);
 
   useEffect(() => {
@@ -174,12 +179,25 @@ const OwnerLogin = () => {
     }
     setLoginError(null);
     setLoading(true);
+    let navStarted = false;
+
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      const authPromise = signInWithEmailAndPassword(auth, email.trim(), password);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(() => {
+          const err = new Error('Sign-in request timed out. Please check your internet connection.');
+          (err as any).code = 'auth/network-request-failed';
+          reject(err);
+        }, 15_000);
+      });
+
+      await Promise.race([authPromise, timeoutPromise]);
       clearAuthNetworkRecoveryFlag();
       toast.success('Welcome back!');
+      navStarted = true;
       await afterSignIn();
     } catch (error: unknown) {
+      navStarted = false;
       if (await recoverAuthNetworkFailure(error)) {
         toast.error('Connection glitch — refreshing to clear a stale app cache…');
         return;
@@ -192,9 +210,12 @@ const OwnerLogin = () => {
       const message = await resolveOwnerLoginError(error, email, { configReady: isFirebaseClientConfigReady() }, auth);
       setLoginError(message);
       toast.error(message);
+    } finally {
       setLoading(false);
-      setRedirecting(false);
-      redirectHandled.current = false;
+      if (!navStarted) {
+        setRedirecting(false);
+        redirectHandled.current = false;
+      }
     }
   };
 
@@ -210,13 +231,17 @@ const OwnerLogin = () => {
     setLoginError(null);
     setLoading(true);
     setRedirecting(true);
+    let navStarted = false;
+
     try {
       const user = await signInWithGoogleAccount(auth);
       if (!user) return;
+      navStarted = true;
       clearAuthNetworkRecoveryFlag();
       toast.success('Welcome back!');
       await afterSignIn();
     } catch (error: unknown) {
+      navStarted = false;
       if (!isBenignOwnerAuthDismiss(error)) {
         if (await recoverAuthNetworkFailure(error)) {
           toast.error('Connection glitch — refreshing to clear a stale app cache…');
@@ -230,9 +255,12 @@ const OwnerLogin = () => {
         setLoginError(message);
         toast.error(message);
       }
+    } finally {
       setLoading(false);
-      setRedirecting(false);
-      redirectHandled.current = false;
+      if (!navStarted && !isGoogleRedirectPending()) {
+        setRedirecting(false);
+        redirectHandled.current = false;
+      }
     }
   };
 

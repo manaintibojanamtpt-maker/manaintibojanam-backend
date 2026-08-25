@@ -8,15 +8,19 @@ export const EnvironmentConfig = {
   // --- Environment State ---
   
   isProduction(): boolean {
-    return import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
+    return Boolean(import.meta?.env?.PROD || import.meta?.env?.VITE_APP_ENV === 'production');
   },
 
   isPreview(): boolean {
-    return import.meta.env.VITE_APP_ENV === 'preview';
+    return Boolean(import.meta?.env?.VITE_APP_ENV === 'preview');
   },
 
   isDevelopment(): boolean {
-    return import.meta.env.DEV || import.meta.env.VITE_APP_ENV === 'development' || (!import.meta.env.PROD && !import.meta.env.VITE_APP_ENV);
+    return Boolean(
+      import.meta?.env?.DEV ||
+        import.meta?.env?.VITE_APP_ENV === 'development' ||
+        (!import.meta?.env?.PROD && !import.meta?.env?.VITE_APP_ENV),
+    );
   },
 
   isBhojanOSRoot(): boolean {
@@ -67,8 +71,9 @@ export const EnvironmentConfig = {
    * Returns the backend API URL.
    */
   getApiUrl(): string {
-    if (import.meta.env.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+    const customUrl = import.meta?.env?.VITE_API_URL;
+    if (customUrl) {
+      return customUrl.replace(/\/$/, '');
     }
 
     if (typeof window !== 'undefined') {
@@ -94,11 +99,11 @@ export const EnvironmentConfig = {
 
   /** OrderBhojan consumer marketplace (Firebase hosting). */
   getOrderBhojanBaseUrl(): string {
-    const fromPublicEnv = import.meta.env.VITE_ORDERBHOJAN_PUBLIC_URL;
+    const fromPublicEnv = import.meta?.env?.VITE_ORDERBHOJAN_PUBLIC_URL;
     if (typeof fromPublicEnv === 'string' && fromPublicEnv.trim()) {
       return fromPublicEnv.trim().replace(/\/$/, '');
     }
-    const fromEnv = import.meta.env.VITE_ORDERBHOJAN_URL;
+    const fromEnv = import.meta?.env?.VITE_ORDERBHOJAN_URL;
     if (typeof fromEnv === 'string' && fromEnv.trim()) {
       return fromEnv.trim().replace(/\/$/, '');
     }
