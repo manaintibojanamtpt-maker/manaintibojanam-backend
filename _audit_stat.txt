@@ -1,0 +1,26 @@
+﻿ .../orderbhojan/OrderBhojanNativeUpiPlugin.java    |  14 ++-
+ orderbhojan/index.html                             |   4 +-
+ orderbhojan/scripts/generate-app-icons.mjs         |   2 +
+ .../src/features/checkout/hooks/useCheckoutFlow.ts |  35 +++++-
+ .../checkout/infrastructure/nativeUpiBridge.ts     |   6 +
+ .../checkout/infrastructure/upiCheckout.ts         | 124 +++++++++++++++----
+ .../experience/ui/home/HomeExperiencePage.tsx      |   2 +-
+ orderbhojan/src/lib/nativePlatform.ts              |  14 ++-
+ .../checkout/OrderBhojanCheckoutPage.tsx           |  45 +++----
+ .../checkout/OrderBhojanOrderTrustPanel.tsx        |   4 +-
+ .../checkout/UpiPaymentPendingView.tsx             | 107 ++++++++++++++++-
+ .../discovery/OrderBhojanHomeTrustStrip.tsx        |  17 +--
+ .../food/OrderBhojanFoodCategoryRail.tsx           |   4 +-
+ .../food/OrderBhojanFoodDietaryFilterBar.tsx       |   2 +-
+ .../food/OrderBhojanFoodExperience.tsx             |  12 +-
+ .../tests/assistant-voice-task-hardening.test.ts   | 132 +--------------------
+ orderbhojan/tests/checkout-upi-payment.test.ts     |   7 ++
+ orderbhojan/tests/upi-app-deeplinks.test.ts        |  86 ++++++++++++++
+ .../tests/voice-core-dual-run-telemetry.test.ts    |  15 ---
+ .../tests/voice-core-phase13b-parity.test.ts       |  89 +-------------
+ orderbhojan/tests/voice-core-wiring.test.ts        |  10 --
+ orderbhojan/vite.config.ts                         |   2 +-
+ src/components/ImageWithPlaceholder.tsx            | Bin 2050 -> 2054 bytes
+ src/design-system/cart/CheckoutPageView.tsx        |   7 +-
+ .../food/FeaturedMenuItemCardView.tsx              |   2 +-
+ 25 files changed, 426 insertions(+), 316 deletions(-)

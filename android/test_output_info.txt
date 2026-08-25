@@ -1,0 +1,1667 @@
+Initialized native services in: C:\Users\USER\.gradle\native
+Initialized jansi services in: C:\Users\USER\.gradle\native
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Starting process 'Gradle build daemon'. Working directory: C:\Users\USER\.gradle\daemon\8.14.3 Command: C:\Program Files\Microsoft\jdk-21.0.12.8-hotspot\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -Xmx1536m -Dfile.encoding=UTF-8 -Duser.country=IN -Duser.language=en -Duser.variant -cp C:\Users\USER\.gradle\wrapper\dists\gradle-8.14.3-all\10utluxaxniiv4wxiphsi49nj\gradle-8.14.3\lib\gradle-daemon-main-8.14.3.jar -javaagent:C:\Users\USER\.gradle\wrapper\dists\gradle-8.14.3-all\10utluxaxniiv4wxiphsi49nj\gradle-8.14.3\lib\agents\gradle-instrumentation-agent-8.14.3.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14.3
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 2.257 secs.
+The client will now receive all logging from the daemon (pid: 17268). The daemon log file: C:\Users\USER\.gradle\daemon\8.14.3\daemon-17268.out.log
+Daemon will be stopped at the end of the build 
+Using 8 worker leases.
+Received JVM installation metadata from 'C:\Program Files\Microsoft\jdk-21.0.12.8-hotspot': {JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.12.8-hotspot, JAVA_VERSION=21.0.12, JAVA_VENDOR=Microsoft, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.12+8-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.12+8-LTS, VM_VENDOR=Microsoft, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [F:\Manaintibojanam_final2\manaintibojanam-backend\android] as hierarchies to watch
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\settings.gradle'.
+Projects loaded. Root project using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\build.gradle'.
+Included projects: [root project 'android', project ':app', project ':capacitor-android', project ':capacitor-app', project ':capacitor-browser', project ':capacitor-cordova-android-plugins', project ':capacitor-haptics', project ':capacitor-native-biometric', project ':capacitor-preferences', project ':capacitor-splash-screen', project ':capacitor-status-bar', project ':core', project ':customer', project ':owner', project ':core:auth', project ':core:biometric', project ':core:common', project ':core:database', project ':core:design', project ':core:model', project ':core:network', project ':core:storage']
+
+> Configure project :
+Evaluating root project 'android' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\build.gradle'.
+
+> Configure project :app
+Evaluating project ':app' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\app\build.gradle'.
+Using default execution profile
+google-services.json not found, google-services plugin not applied. Push Notifications won't work
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-android
+Evaluating project ':capacitor-android' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\android\capacitor\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-app
+Evaluating project ':capacitor-app' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\app\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-browser
+Evaluating project ':capacitor-browser' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\browser\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-cordova-android-plugins
+Evaluating project ':capacitor-cordova-android-plugins' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\capacitor-cordova-android-plugins\build.gradle'.
+Using default execution profile
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-haptics
+Evaluating project ':capacitor-haptics' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\haptics\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-native-biometric
+Evaluating project ':capacitor-native-biometric' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\capacitor-native-biometric\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-preferences
+Evaluating project ':capacitor-preferences' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\preferences\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-splash-screen
+Evaluating project ':capacitor-splash-screen' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\splash-screen\android\build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-status-bar
+Evaluating project ':capacitor-status-bar' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\node_modules\@capacitor\status-bar\android\build.gradle'.
+Using default execution profile
+
+> Configure project :core
+Evaluating project ':core' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\build.gradle'.
+
+> Configure project :customer
+Evaluating project ':customer' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build.gradle'.
+Resolved plugin [id: 'com.android.application']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'com.google.dagger.hilt.android']
+Resolved plugin [id: 'kotlin-kapt']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :owner
+Evaluating project ':owner' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\owner\build.gradle'.
+Resolved plugin [id: 'com.android.application']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'com.google.dagger.hilt.android']
+Resolved plugin [id: 'kotlin-kapt']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:auth
+Evaluating project ':core:auth' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\auth\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:biometric
+Evaluating project ':core:biometric' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\biometric\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:common
+Evaluating project ':core:common' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\common\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:database
+Evaluating project ':core:database' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'kotlin-kapt']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:design
+Evaluating project ':core:design' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\design\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:model
+Evaluating project ':core:model' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\model\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:network
+Evaluating project ':core:network' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\network\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:storage
+Evaluating project ':core:storage' using build file 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\storage\build.gradle'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+All projects evaluated.
+Task path ':customer:testDebugUnitTest' matched project ':customer'
+Task name matched 'testDebugUnitTest'
+Selected primary task 'testDebugUnitTest' from project :customer
+Tasks to be executed: [task ':customer:preBuild', task ':customer:preDebugBuild', task ':customer:checkKotlinGradlePluginConfigurationErrors', task ':core:auth:preBuild', task ':core:auth:preDebugBuild', task ':core:auth:writeDebugAarMetadata', task ':core:biometric:preBuild', task ':core:biometric:preDebugBuild', task ':core:biometric:writeDebugAarMetadata', task ':core:common:preBuild', task ':core:common:preDebugBuild', task ':core:common:writeDebugAarMetadata', task ':core:database:preBuild', task ':core:database:preDebugBuild', task ':core:database:writeDebugAarMetadata', task ':core:design:preBuild', task ':core:design:preDebugBuild', task ':core:design:writeDebugAarMetadata', task ':core:model:preBuild', task ':core:model:preDebugBuild', task ':core:model:writeDebugAarMetadata', task ':core:network:preBuild', task ':core:network:preDebugBuild', task ':core:network:writeDebugAarMetadata', task ':core:storage:preBuild', task ':core:storage:preDebugBuild', task ':core:storage:writeDebugAarMetadata', task ':customer:checkDebugAarMetadata', task ':core:auth:processDebugNavigationResources', task ':core:biometric:processDebugNavigationResources', task ':core:common:processDebugNavigationResources', task ':core:database:processDebugNavigationResources', task ':core:design:processDebugNavigationResources', task ':core:model:processDebugNavigationResources', task ':core:network:processDebugNavigationResources', task ':core:storage:processDebugNavigationResources', task ':customer:processDebugNavigationResources', task ':customer:compileDebugNavigationResources', task ':customer:generateDebugResValues', task ':core:auth:generateDebugResValues', task ':core:auth:generateDebugResources', task ':core:auth:packageDebugResources', task ':core:biometric:generateDebugResValues', task ':core:biometric:generateDebugResources', task ':core:biometric:packageDebugResources', task ':core:common:generateDebugResValues', task ':core:common:generateDebugResources', task ':core:common:packageDebugResources', task ':core:database:generateDebugResValues', task ':core:database:generateDebugResources', task ':core:database:packageDebugResources', task ':core:design:generateDebugResValues', task ':core:design:generateDebugResources', task ':core:design:packageDebugResources', task ':core:model:generateDebugResValues', task ':core:model:generateDebugResources', task ':core:model:packageDebugResources', task ':core:network:generateDebugResValues', task ':core:network:generateDebugResources', task ':core:network:packageDebugResources', task ':core:storage:generateDebugResValues', task ':core:storage:generateDebugResources', task ':core:storage:packageDebugResources', task ':customer:mapDebugSourceSetPaths', task ':customer:generateDebugResources', task ':customer:mergeDebugResources', task ':customer:packageDebugResources', task ':customer:parseDebugLocalResources', task ':customer:createDebugCompatibleScreenManifests', task ':customer:extractDeepLinksDebug', task ':core:auth:extractDeepLinksDebug', task ':core:auth:processDebugManifest', task ':core:biometric:extractDeepLinksDebug', task ':core:biometric:processDebugManifest', task ':core:common:extractDeepLinksDebug', task ':core:common:processDebugManifest', task ':core:database:extractDeepLinksDebug', task ':core:database:processDebugManifest', task ':core:design:extractDeepLinksDebug', task ':core:design:processDebugManifest', task ':core:model:extractDeepLinksDebug', task ':core:model:processDebugManifest', task ':core:network:extractDeepLinksDebug', task ':core:network:processDebugManifest', task ':core:storage:extractDeepLinksDebug', task ':core:storage:processDebugManifest', task ':customer:processDebugMainManifest', task ':customer:processDebugManifest', task ':customer:processDebugManifestForPackage', task ':core:auth:compileDebugLibraryResources', task ':core:auth:parseDebugLocalResources', task ':core:auth:generateDebugRFile', task ':core:biometric:compileDebugLibraryResources', task ':core:biometric:parseDebugLocalResources', task ':core:biometric:generateDebugRFile', task ':core:common:compileDebugLibraryResources', task ':core:common:parseDebugLocalResources', task ':core:common:generateDebugRFile', task ':core:database:compileDebugLibraryResources', task ':core:database:parseDebugLocalResources', task ':core:database:generateDebugRFile', task ':core:design:compileDebugLibraryResources', task ':core:design:parseDebugLocalResources', task ':core:design:generateDebugRFile', task ':core:model:compileDebugLibraryResources', task ':core:model:parseDebugLocalResources', task ':core:model:generateDebugRFile', task ':core:network:compileDebugLibraryResources', task ':core:network:parseDebugLocalResources', task ':core:network:generateDebugRFile', task ':core:storage:compileDebugLibraryResources', task ':core:storage:parseDebugLocalResources', task ':core:storage:generateDebugRFile', task ':customer:processDebugResources', task ':core:auth:checkKotlinGradlePluginConfigurationErrors', task ':core:common:checkKotlinGradlePluginConfigurationErrors', task ':core:common:compileDebugKotlin', task ':core:common:javaPreCompileDebug', task ':core:common:compileDebugJavaWithJavac', task ':core:common:bundleLibCompileToJarDebug', task ':core:model:checkKotlinGradlePluginConfigurationErrors', task ':core:model:compileDebugKotlin', task ':core:model:javaPreCompileDebug', task ':core:model:compileDebugJavaWithJavac', task ':core:model:bundleLibCompileToJarDebug', task ':core:storage:checkKotlinGradlePluginConfigurationErrors', task ':core:storage:compileDebugKotlin', task ':core:storage:javaPreCompileDebug', task ':core:storage:compileDebugJavaWithJavac', task ':core:storage:bundleLibCompileToJarDebug', task ':core:auth:compileDebugKotlin', task ':core:auth:javaPreCompileDebug', task ':core:auth:compileDebugJavaWithJavac', task ':core:auth:bundleLibCompileToJarDebug', task ':core:biometric:checkKotlinGradlePluginConfigurationErrors', task ':core:biometric:compileDebugKotlin', task ':core:biometric:javaPreCompileDebug', task ':core:biometric:compileDebugJavaWithJavac', task ':core:biometric:bundleLibCompileToJarDebug', task ':core:database:checkKotlinGradlePluginConfigurationErrors', task ':core:database:kaptGenerateStubsDebugKotlin', task ':core:database:kaptDebugKotlin', task ':core:database:compileDebugKotlin', task ':core:database:javaPreCompileDebug', task ':core:database:compileDebugJavaWithJavac', task ':core:database:bundleLibCompileToJarDebug', task ':core:design:checkKotlinGradlePluginConfigurationErrors', task ':core:design:compileDebugKotlin', task ':core:design:javaPreCompileDebug', task ':core:design:compileDebugJavaWithJavac', task ':core:design:bundleLibCompileToJarDebug', task ':core:network:checkKotlinGradlePluginConfigurationErrors', task ':core:network:compileDebugKotlin', task ':core:network:javaPreCompileDebug', task ':core:network:compileDebugJavaWithJavac', task ':core:network:bundleLibCompileToJarDebug', task ':customer:kaptGenerateStubsDebugKotlin', task ':customer:kaptDebugKotlin', task ':customer:compileDebugKotlin', task ':customer:javaPreCompileDebug', task ':customer:compileDebugJavaWithJavac', task ':core:network:bundleLibRuntimeToJarDebug', task ':core:auth:bundleLibRuntimeToJarDebug', task ':core:storage:bundleLibRuntimeToJarDebug', task ':core:database:bundleLibRuntimeToJarDebug', task ':core:model:bundleLibRuntimeToJarDebug', task ':core:design:bundleLibRuntimeToJarDebug', task ':core:biometric:bundleLibRuntimeToJarDebug', task ':core:common:bundleLibRuntimeToJarDebug', task ':customer:hiltAggregateDepsDebug', task ':customer:hiltJavaCompileDebug', task ':customer:transformDebugClassesWithAsm', task ':customer:bundleDebugClassesToRuntimeJar', task ':customer:preDebugUnitTestBuild', task ':customer:processDebugJavaRes', task ':customer:bundleDebugClassesToCompileJar', task ':customer:kaptGenerateStubsDebugUnitTestKotlin', task ':customer:kaptDebugUnitTestKotlin', task ':customer:compileDebugUnitTestKotlin', task ':customer:javaPreCompileDebugUnitTest', task ':customer:compileDebugUnitTestJavaWithJavac', task ':customer:hiltAggregateDepsDebugUnitTest', task ':customer:hiltJavaCompileDebugUnitTest', task ':customer:processDebugUnitTestJavaRes', task ':customer:transformDebugUnitTestClassesWithAsm', task ':core:auth:processDebugJavaRes', task ':core:biometric:processDebugJavaRes', task ':core:common:processDebugJavaRes', task ':core:database:processDebugJavaRes', task ':core:design:processDebugJavaRes', task ':core:model:processDebugJavaRes', task ':core:network:processDebugJavaRes', task ':core:storage:processDebugJavaRes', task ':customer:testDebugUnitTest']
+Tasks that were excluded: []
+work action Parameters of IdentityTransform (Thread[#147,Execution worker Thread 3,5,main]) started.
+work action Parameters of CopyTransform (Thread[#147,Execution worker Thread 3,5,main]) started.
+work action Parameters of AggregatedPackagesTransform (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :customer:preBuild (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:preBuild (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:preBuild UP-TO-DATE
+Skipping task ':customer:preBuild' as it has no actions.
+Resolve mutations for :customer:preDebugBuild (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:preDebugBuild (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:preDebugBuild UP-TO-DATE
+Skipping task ':customer:preDebugBuild' as it has no actions.
+Resolve mutations for :customer:checkKotlinGradlePluginConfigurationErrors (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:checkKotlinGradlePluginConfigurationErrors (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :customer:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':customer:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':customer:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:auth:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:auth:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:auth:preBuild UP-TO-DATE
+Skipping task ':core:auth:preBuild' as it has no actions.
+Resolve mutations for :core:auth:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:auth:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:auth:preDebugBuild UP-TO-DATE
+Skipping task ':core:auth:preDebugBuild' as it has no actions.
+Resolve mutations for :core:auth:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:auth:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:auth:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:auth:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:auth:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:auth) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:biometric:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:preBuild UP-TO-DATE
+Skipping task ':core:biometric:preBuild' as it has no actions.
+Resolve mutations for :core:biometric:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:preDebugBuild UP-TO-DATE
+Skipping task ':core:biometric:preDebugBuild' as it has no actions.
+Resolve mutations for :core:biometric:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:biometric:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:biometric:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:biometric) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:common:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:preBuild UP-TO-DATE
+Skipping task ':core:common:preBuild' as it has no actions.
+Resolve mutations for :core:common:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:preDebugBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:preDebugBuild UP-TO-DATE
+Skipping task ':core:common:preDebugBuild' as it has no actions.
+Resolve mutations for :core:common:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:writeDebugAarMetadata (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:common:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:common:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:common) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:database:preBuild (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:database:preBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:database:preBuild UP-TO-DATE
+Skipping task ':core:database:preBuild' as it has no actions.
+Resolve mutations for :core:database:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+:core:database:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:database:preDebugBuild UP-TO-DATE
+Skipping task ':core:database:preDebugBuild' as it has no actions.
+Resolve mutations for :core:database:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:core:database:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:database:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:database:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:database:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:database) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:design:preBuild (Thread[#145,Execution worker,5,main]) started.
+:core:design:preBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:design:preBuild UP-TO-DATE
+Skipping task ':core:design:preBuild' as it has no actions.
+Resolve mutations for :core:design:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+:core:design:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:design:preDebugBuild UP-TO-DATE
+Skipping task ':core:design:preDebugBuild' as it has no actions.
+Resolve mutations for :core:design:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:core:design:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:design:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:design:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:design:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:design) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:model:preBuild (Thread[#145,Execution worker,5,main]) started.
+:core:model:preBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:preBuild UP-TO-DATE
+Skipping task ':core:model:preBuild' as it has no actions.
+Resolve mutations for :core:model:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+:core:model:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:preDebugBuild UP-TO-DATE
+Skipping task ':core:model:preDebugBuild' as it has no actions.
+Resolve mutations for :core:model:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:core:model:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:model:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:model:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:model) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:network:preBuild (Thread[#145,Execution worker,5,main]) started.
+:core:network:preBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:network:preBuild UP-TO-DATE
+Skipping task ':core:network:preBuild' as it has no actions.
+Resolve mutations for :core:network:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+:core:network:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:network:preDebugBuild UP-TO-DATE
+Skipping task ':core:network:preDebugBuild' as it has no actions.
+Resolve mutations for :core:network:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:core:network:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:network:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:network:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:network:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:network) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:storage:preBuild (Thread[#145,Execution worker,5,main]) started.
+:core:storage:preBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:storage:preBuild UP-TO-DATE
+Skipping task ':core:storage:preBuild' as it has no actions.
+Resolve mutations for :core:storage:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+:core:storage:preDebugBuild (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:storage:preDebugBuild UP-TO-DATE
+Skipping task ':core:storage:preDebugBuild' as it has no actions.
+Resolve mutations for :core:storage:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:core:storage:writeDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:storage:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:storage:writeDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:storage:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:storage) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :customer:checkDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+:customer:checkDebugAarMetadata (Thread[#145,Execution worker,5,main]) started.
+
+> Task :customer:checkDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':customer:checkDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':customer:checkDebugAarMetadata' as it is up-to-date.
+Resolve mutations for :core:auth:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:auth:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:auth:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:auth:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:auth) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:biometric:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:biometric:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:biometric:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:biometric) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:common:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:common:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:common:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:common:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:common) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:database:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:database:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:database:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:database) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:design:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:design:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:design:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:design) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:model:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:model:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:model:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:model:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:model:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:model) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:network:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:network:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:network:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:network) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:storage:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:storage:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:storage:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':core:storage:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':core:storage:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:storage) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :customer:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:processDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':customer:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':customer:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :customer:compileDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:compileDebugNavigationResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:compileDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':customer:compileDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':customer:compileDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :customer:generateDebugResValues (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:generateDebugResValues (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':customer:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':customer:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:auth:generateDebugResValues (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:auth:generateDebugResValues (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:auth:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:auth:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:auth:generateDebugResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:auth:generateDebugResources (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:auth:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:auth:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:auth:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:auth:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:auth:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:auth:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:auth) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:biometric:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:biometric:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:biometric:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:biometric:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:biometric:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:biometric:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:biometric:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:biometric:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:biometric:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:biometric:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:biometric:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:biometric:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:biometric:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:biometric:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:biometric:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:biometric) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:common:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:common:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:common:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:common:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:common:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:common:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:common:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:common:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:common:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:common:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:common:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:common:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:common) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:database:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:database:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:database:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:database:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:database:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:database:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:database:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:database:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:database:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:database:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:database:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:database:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:database:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:database:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:database:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:database) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:design:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:design:generateDebugResValues (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:design:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:design:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:design:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:design:generateDebugResources (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:design:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:design:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:design:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:design:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:design:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:design:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:design:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:design:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:design:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:design) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:model:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:model:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:model:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:model:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:model:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:model:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:model:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:model:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:model:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:model:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:model:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:model:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:model:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:model:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:model:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:model) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:network:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:network:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:network:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:network:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:network:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:network:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:network:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:network:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:network:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:network:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:network:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:network:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:network:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:network:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:network:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:network) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:storage:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:storage:generateDebugResValues (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:storage:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':core:storage:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':core:storage:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:storage:generateDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:storage:generateDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:storage:generateDebugResources UP-TO-DATE
+Caching disabled for task ':core:storage:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:storage:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:storage:packageDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:storage:packageDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:storage:packageDebugResources UP-TO-DATE
+Caching disabled for task ':core:storage:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':core:storage:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :core:storage) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :customer:mapDebugSourceSetPaths (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:mapDebugSourceSetPaths (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :customer:mapDebugSourceSetPaths UP-TO-DATE
+Caching disabled for task ':customer:mapDebugSourceSetPaths' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':customer:mapDebugSourceSetPaths' as it is up-to-date.
+Resolve mutations for :customer:generateDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:generateDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :customer:generateDebugResources UP-TO-DATE
+Caching disabled for task ':customer:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':customer:generateDebugResources' as it is up-to-date.
+Resolve mutations for :customer:mergeDebugResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:mergeDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:mergeDebugResources UP-TO-DATE
+Caching disabled for task ':customer:mergeDebugResources' because:
+  Build cache is disabled
+Skipping task ':customer:mergeDebugResources' as it is up-to-date.
+Resolve mutations for :customer:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:customer:packageDebugResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:packageDebugResources UP-TO-DATE
+Caching disabled for task ':customer:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':customer:packageDebugResources' as it is up-to-date.
+Resolve mutations for :customer:parseDebugLocalResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:customer:parseDebugLocalResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':customer:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':customer:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :customer:createDebugCompatibleScreenManifests (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:createDebugCompatibleScreenManifests (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :customer:createDebugCompatibleScreenManifests UP-TO-DATE
+Caching disabled for task ':customer:createDebugCompatibleScreenManifests' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':customer:createDebugCompatibleScreenManifests' as it is up-to-date.
+Resolve mutations for :customer:extractDeepLinksDebug (Thread[#151,Execution worker Thread 7,5,main]) started.
+:customer:extractDeepLinksDebug (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :customer:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':customer:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':customer:extractDeepLinksDebug' as it is up-to-date.
+Resolve mutations for :core:auth:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:auth:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:auth:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:auth:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:auth) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:auth:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:auth:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:auth:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:auth:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:auth) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:biometric:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:biometric:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:biometric:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:biometric:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:biometric:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:biometric) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:biometric:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:biometric:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:biometric:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:biometric:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:biometric:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:biometric) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:common:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:common:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:common:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:common:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:common) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:common:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:common:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:common:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:common:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:common) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:database:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:database:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:database:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:database:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:database:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:database) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:database:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:database:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:database:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:database:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:database:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:database) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:design:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:design:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:design:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:design:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:design:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:design) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:design:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:design:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:design:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:design:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:design:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:design) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:model:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:model:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:model:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:model:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:model:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:model) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:model:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:model:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:model:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:model:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:model:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:model) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:network:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:network:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:network:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:network:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:network:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:network) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:network:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:network:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:network:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:network:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:network:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:network) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:storage:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:storage:extractDeepLinksDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:storage:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':core:storage:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':core:storage:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:storage) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:storage:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:storage:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:storage:processDebugManifest UP-TO-DATE
+Caching disabled for task ':core:storage:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':core:storage:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :core:storage) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :customer:processDebugMainManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:customer:processDebugMainManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:processDebugMainManifest UP-TO-DATE
+Caching disabled for task ':customer:processDebugMainManifest' because:
+  Build cache is disabled
+Skipping task ':customer:processDebugMainManifest' as it is up-to-date.
+Resolve mutations for :customer:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+:customer:processDebugManifest (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:processDebugManifest UP-TO-DATE
+Caching disabled for task ':customer:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':customer:processDebugManifest' as it is up-to-date.
+Resolve mutations for :customer:processDebugManifestForPackage (Thread[#148,Execution worker Thread 4,5,main]) started.
+:customer:processDebugManifestForPackage (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :customer:processDebugManifestForPackage UP-TO-DATE
+Custom actions are attached to task ':customer:processDebugManifestForPackage'.
+Caching disabled for task ':customer:processDebugManifestForPackage' because:
+  Build cache is disabled
+Skipping task ':customer:processDebugManifestForPackage' as it is up-to-date.
+Resolve mutations for :core:auth:compileDebugLibraryResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:compileDebugLibraryResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:auth:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:auth:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:auth:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:auth) (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:auth:parseDebugLocalResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:parseDebugLocalResources (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:auth:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:auth:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:auth:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:auth:generateDebugRFile (Thread[#148,Execution worker Thread 4,5,main]) started.
+:core:auth:generateDebugRFile (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:auth:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:auth:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:auth:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:auth) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:biometric:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:biometric:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:biometric:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:biometric) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:biometric:parseDebugLocalResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:parseDebugLocalResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:biometric:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:biometric:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:biometric:generateDebugRFile (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:biometric:generateDebugRFile (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:biometric:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:biometric:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:biometric:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:biometric) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:common:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:common:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:common:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:common) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:common:parseDebugLocalResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:parseDebugLocalResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:common:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:common:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:common:generateDebugRFile (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:common:generateDebugRFile (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:common:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:common:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:common:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:common) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:database:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:database:compileDebugLibraryResources (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:database:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:database:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:database:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:database) (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:database:parseDebugLocalResources (Thread[#145,Execution worker,5,main]) started.
+:core:database:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:database:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:database:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:database:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:database:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+:core:database:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+
+> Task :core:database:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:database:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:database:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:database) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:design:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+:core:design:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:design:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:design:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:design:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:design) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:design:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+:core:design:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:design:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:design:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:design:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:design:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+:core:design:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+
+> Task :core:design:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:design:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:design:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:design) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:model:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+:core:model:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:model:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:model:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:model:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:model) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:model:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+:core:model:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:model:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:model:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:model:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:model:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+:core:model:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+
+> Task :core:model:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:model:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:model:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:model) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:network:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+:core:network:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:network:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:network:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:network:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:network) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:network:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+:core:network:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:network:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:network:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:network:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:network:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+:core:network:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+
+> Task :core:network:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:network:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:network:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:network) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:storage:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+:core:storage:compileDebugLibraryResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:storage:compileDebugLibraryResources UP-TO-DATE
+Caching disabled for task ':core:storage:compileDebugLibraryResources' because:
+  Build cache is disabled
+Skipping task ':core:storage:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:storage) (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:storage:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+:core:storage:parseDebugLocalResources (Thread[#144,included builds,5,main]) started.
+
+> Task :core:storage:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':core:storage:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':core:storage:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:storage:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+:core:storage:generateDebugRFile (Thread[#144,included builds,5,main]) started.
+
+> Task :core:storage:generateDebugRFile UP-TO-DATE
+Caching disabled for task ':core:storage:generateDebugRFile' because:
+  Build cache is disabled
+Skipping task ':core:storage:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:storage) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :customer:processDebugResources (Thread[#145,Execution worker,5,main]) started.
+:customer:processDebugResources (Thread[#145,Execution worker,5,main]) started.
+
+> Task :customer:processDebugResources UP-TO-DATE
+Caching disabled for task ':customer:processDebugResources' because:
+  Build cache is disabled
+Skipping task ':customer:processDebugResources' as it is up-to-date.
+Resolve mutations for :core:auth:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+:core:auth:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:auth:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:auth:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:auth:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:common:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+:core:common:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:common:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:common:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:common:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:common:compileDebugKotlin (Thread[#145,Execution worker,5,main]) started.
+:core:common:compileDebugKotlin (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:common:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:common:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:common:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:common:javaPreCompileDebug (Thread[#145,Execution worker,5,main]) started.
+:core:common:javaPreCompileDebug (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:common:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:common:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:common:compileDebugJavaWithJavac (Thread[#145,Execution worker,5,main]) started.
+:core:common:compileDebugJavaWithJavac (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:common:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:common:bundleLibCompileToJarDebug (Thread[#145,Execution worker,5,main]) started.
+:core:common:bundleLibCompileToJarDebug (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:common:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:common:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:common) (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:model:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+:core:model:checkKotlinGradlePluginConfigurationErrors (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:model:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:model:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:model:compileDebugKotlin (Thread[#145,Execution worker,5,main]) started.
+:core:model:compileDebugKotlin (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:model:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:model:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:model:javaPreCompileDebug (Thread[#145,Execution worker,5,main]) started.
+:core:model:javaPreCompileDebug (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:model:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:model:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:model:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:model:compileDebugJavaWithJavac (Thread[#145,Execution worker,5,main]) started.
+:core:model:compileDebugJavaWithJavac (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:model:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:model:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:model:bundleLibCompileToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:model:bundleLibCompileToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:model:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:model:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:model:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:model) (Thread[#150,Execution worker Thread 6,5,main]) started.
+Resolve mutations for :core:storage:checkKotlinGradlePluginConfigurationErrors (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:storage:checkKotlinGradlePluginConfigurationErrors (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:storage:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:storage:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:storage:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:storage:compileDebugKotlin (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:storage:compileDebugKotlin (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:storage:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:storage:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:storage:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:storage:javaPreCompileDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:storage:javaPreCompileDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:storage:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:storage:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:storage:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:storage:compileDebugJavaWithJavac (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:storage:compileDebugJavaWithJavac (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:storage:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:storage:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:storage:bundleLibCompileToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:storage:bundleLibCompileToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:storage:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:storage:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:storage:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:storage) (Thread[#150,Execution worker Thread 6,5,main]) started.
+Resolve mutations for :core:auth:compileDebugKotlin (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:auth:compileDebugKotlin (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:auth:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:auth:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:auth:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:auth:javaPreCompileDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:auth:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:auth:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:auth:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:auth:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:auth:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:auth:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:auth:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:auth:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:auth:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:auth:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:auth:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:auth) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:biometric:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:biometric:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:biometric:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:biometric:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:biometric:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:biometric:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:biometric:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:biometric:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:biometric:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:biometric:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:biometric:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:biometric:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:biometric:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:biometric:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:biometric:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:biometric:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:biometric) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:database:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:database:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:database:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:database:kaptGenerateStubsDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:kaptGenerateStubsDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:database:kaptGenerateStubsDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:database:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:database:kaptDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:kaptDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:kaptDebugKotlin UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\java', not found
+Caching disabled for task ':core:database:kaptDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:database:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:database:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:database:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:database:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:database:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:database:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:database:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:database:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':core:database:compileDebugJavaWithJavac'.
+Caching disabled for task ':core:database:compileDebugJavaWithJavac' because:
+  Build cache is disabled
+Skipping task ':core:database:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :core:database:compileDebugJavaWithJavac
+Resolve mutations for :core:database:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:database:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:database:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:database:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:database:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:database) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:design:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:design:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:design:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:design:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:design:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:design:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:design:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:design:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:design:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:design:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:design:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:design:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:design:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:design:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:design:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:design:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:design) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:network:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:checkKotlinGradlePluginConfigurationErrors (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:network:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':core:network:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:network:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':core:network:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':core:network:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:network:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:javaPreCompileDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':core:network:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':core:network:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:network:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:compileDebugJavaWithJavac (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:network:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:network:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+:core:network:bundleLibCompileToJarDebug (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :core:network:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:network:bundleLibCompileToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:network:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:network) (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :customer:kaptGenerateStubsDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:kaptGenerateStubsDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Caching disabled for task ':customer:kaptGenerateStubsDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':customer:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :customer:kaptDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:kaptDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+
+> Task :customer:kaptDebugKotlin UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+Caching disabled for task ':customer:kaptDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':customer:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :customer:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+:customer:compileDebugKotlin (Thread[#147,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :customer:javaPreCompileDebug (Thread[#146,Execution worker Thread 2,5,main]) started.
+:customer:javaPreCompileDebug (Thread[#146,Execution worker Thread 2,5,main]) started.
+
+> Task :customer:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':customer:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':customer:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:network:bundleLibRuntimeToJarDebug (Thread[#146,Execution worker Thread 2,5,main]) started.
+:core:network:bundleLibRuntimeToJarDebug (Thread[#146,Execution worker Thread 2,5,main]) started.
+
+> Task :core:network:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:network:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:network:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:network) (Thread[#146,Execution worker Thread 2,5,main]) started.
+IdentityTransform (Thread[#146,Execution worker Thread 2,5,main]) started.
+Resolve mutations for :core:auth:bundleLibRuntimeToJarDebug (Thread[#151,Execution worker Thread 7,5,main]) started.
+:core:auth:bundleLibRuntimeToJarDebug (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:auth:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:auth:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:auth:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:auth) (Thread[#151,Execution worker Thread 7,5,main]) started.
+IdentityTransform (Thread[#151,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:storage:bundleLibRuntimeToJarDebug (Thread[#145,Execution worker,5,main]) started.
+:core:storage:bundleLibRuntimeToJarDebug (Thread[#145,Execution worker,5,main]) started.
+
+> Task :core:storage:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:storage:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:storage:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:storage) (Thread[#145,Execution worker,5,main]) started.
+IdentityTransform (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :core:database:bundleLibRuntimeToJarDebug (Thread[#144,included builds,5,main]) started.
+:core:database:bundleLibRuntimeToJarDebug (Thread[#144,included builds,5,main]) started.
+CopyTransform (Thread[#146,Execution worker Thread 2,5,main]) started.
+CopyTransform (Thread[#145,Execution worker,5,main]) started.
+CopyTransform (Thread[#151,Execution worker Thread 7,5,main]) started.
+
+> Task :core:database:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:database:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:database:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:database) (Thread[#144,included builds,5,main]) started.
+IdentityTransform (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:model:bundleLibRuntimeToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:model:bundleLibRuntimeToJarDebug (Thread[#150,Execution worker Thread 6,5,main]) started.
+CopyTransform (Thread[#144,included builds,5,main]) started.
+
+> Task :core:model:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:model:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:model:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:model) (Thread[#150,Execution worker Thread 6,5,main]) started.
+IdentityTransform (Thread[#150,Execution worker Thread 6,5,main]) started.
+Resolve mutations for :core:design:bundleLibRuntimeToJarDebug (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:design:bundleLibRuntimeToJarDebug (Thread[#149,Execution worker Thread 5,5,main]) started.
+CopyTransform (Thread[#150,Execution worker Thread 6,5,main]) started.
+
+> Task :core:design:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:design:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:design:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:design) (Thread[#149,Execution worker Thread 5,5,main]) started.
+IdentityTransform (Thread[#144,included builds,5,main]) started.
+Resolve mutations for :core:biometric:bundleLibRuntimeToJarDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+AggregatedPackagesTransform (Thread[#150,Execution worker Thread 6,5,main]) started.
+:core:biometric:bundleLibRuntimeToJarDebug (Thread[#148,Execution worker Thread 4,5,main]) started.
+AggregatedPackagesTransform (Thread[#146,Execution worker Thread 2,5,main]) started.
+AggregatedPackagesTransform (Thread[#149,Execution worker Thread 5,5,main]) started.
+AggregatedPackagesTransform (Thread[#145,Execution worker,5,main]) started.
+AggregatedPackagesTransform (Thread[#151,Execution worker Thread 7,5,main]) started.
+CopyTransform (Thread[#144,included builds,5,main]) started.
+
+> Task :core:biometric:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:biometric:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:biometric:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:biometric) (Thread[#148,Execution worker Thread 4,5,main]) started.
+IdentityTransform (Thread[#148,Execution worker Thread 4,5,main]) started.
+Resolve mutations for :core:common:bundleLibRuntimeToJarDebug (Thread[#145,Execution worker,5,main]) started.
+:core:common:bundleLibRuntimeToJarDebug (Thread[#145,Execution worker,5,main]) started.
+AggregatedPackagesTransform (Thread[#144,included builds,5,main]) started.
+CopyTransform (Thread[#148,Execution worker Thread 4,5,main]) started.
+
+> Task :core:common:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:common:bundleLibRuntimeToJarDebug' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':core:common:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:common) (Thread[#145,Execution worker,5,main]) started.
+IdentityTransform (Thread[#145,Execution worker,5,main]) started.
+Resolve mutations for :customer:preDebugUnitTestBuild (Thread[#149,Execution worker Thread 5,5,main]) started.
+:customer:preDebugUnitTestBuild (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :customer:preDebugUnitTestBuild UP-TO-DATE
+Skipping task ':customer:preDebugUnitTestBuild' as it has no actions.
+Resolve mutations for :customer:javaPreCompileDebugUnitTest (Thread[#149,Execution worker Thread 5,5,main]) started.
+:customer:javaPreCompileDebugUnitTest (Thread[#149,Execution worker Thread 5,5,main]) started.
+AggregatedPackagesTransform (Thread[#148,Execution worker Thread 4,5,main]) started.
+CopyTransform (Thread[#145,Execution worker,5,main]) started.
+AggregatedPackagesTransform (Thread[#145,Execution worker,5,main]) started.
+
+> Task :customer:javaPreCompileDebugUnitTest UP-TO-DATE
+Caching disabled for task ':customer:javaPreCompileDebugUnitTest' because:
+  Build cache is disabled
+Skipping task ':customer:javaPreCompileDebugUnitTest' as it is up-to-date.
+Resolve mutations for :core:auth:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:auth:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:auth:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\auth\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\auth\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\auth\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\auth\src\debug\resources', not found
+Caching disabled for task ':core:auth:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:auth:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:auth) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:biometric:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:biometric:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:biometric:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\biometric\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\biometric\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\biometric\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\biometric\src\debug\resources', not found
+Caching disabled for task ':core:biometric:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:biometric:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:biometric) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:common:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:common:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:common:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\common\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\common\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\common\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\common\src\debug\resources', not found
+Caching disabled for task ':core:common:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:common:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:common) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:database:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:database:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:database:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\database\src\debug\resources', not found
+Caching disabled for task ':core:database:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:database:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:database) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:design:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:design:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:design:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\design\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\design\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\design\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\design\src\debug\resources', not found
+Caching disabled for task ':core:design:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:design:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:design) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:model:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:model:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:model:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\model\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\model\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\model\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\model\src\debug\resources', not found
+Caching disabled for task ':core:model:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:model:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:model) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:network:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:network:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:network:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\network\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\network\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\network\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\network\src\debug\resources', not found
+Caching disabled for task ':core:network:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:network:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:network) (Thread[#149,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :core:storage:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+:core:storage:processDebugJavaRes (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :core:storage:processDebugJavaRes UP-TO-DATE
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\storage\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\storage\src\debug\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\storage\src\main\resources', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\core\storage\src\debug\resources', not found
+Caching disabled for task ':core:storage:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':core:storage:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :core:storage) (Thread[#149,Execution worker Thread 5,5,main]) started.
+
+> Task :customer:compileDebugKotlin
+Caching disabled for task ':customer:compileDebugKotlin' because:
+  Build cache is disabled
+Task ':customer:compileDebugKotlin' is not up-to-date because:
+  Input property 'javaSources' file F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_Factory.java has been added.
+  Input property 'javaSources' file F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules.java has been added.
+  Input property 'javaSources' file F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules_KeyModule_ProvideFactory.java has been added.
+  and more...
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\kotlin', not found
+file or directory 'F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\debug\java', not found
+Kotlin source files: F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\CustomerApp.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\CustomerMainActivity.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\data\cart\CartRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\data\checkout\CheckoutQuoteMapper.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\data\checkout\CheckoutRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\data\payment\PaymentRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\data\tracking\TrackingRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\address\GeocodingRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\cart\CartModels.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\checkout\CheckoutModels.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\discovery\DiscoveryModels.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\discovery\DiscoveryRepository.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\location\NativeLocationEngine.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\payment\PaymentStateMachine.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\domain\tracking\TrackingModels.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\cart\CartScreen.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\checkout\CheckoutScreen.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanCheckoutSection.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanPaymentMethodCard.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanPriceBreakdown.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanQuoteExpiryBanner.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanShimmer.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\components\BhojanStateCards.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\discovery\OrderBhojanHomeScreen.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\payment\PaymentScreen.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\tracking\components\BhojanOrderTimeline.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\tracking\components\BhojanOrderTrackingMap.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\tracking\OrderTrackingScreen.kt
+Java source files: F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\CustomerApp_GeneratedInjector.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\CustomerMainActivity_GeneratedInjector.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\data\tracking\TrackingRepository_Factory.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\Hilt_CustomerMainActivity.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_Factory.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules_KeyModule_ProvideFactory.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\dagger\hilt\internal\aggregatedroot\codegen\_com_bhojanos_customer_CustomerApp.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_CustomerApp_GeneratedInjector.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_CustomerMainActivity_GeneratedInjector.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_presentation_discovery_DiscoveryViewModel_HiltModules_BindsModule.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_presentation_discovery_DiscoveryViewModel_HiltModules_KeyModule.java
+Script source files: 
+Script file extensions: 
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: null
+i: found daemon on port 17748 (494214 ms old), trying to connect
+i: connected to the daemon
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), areFileChangesKnown=true, modifiedFiles=[F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\discovery\OrderBhojanHomeScreen.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\src\main\java\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel.kt, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_Factory.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\com\bhojanos\customer\presentation\discovery\DiscoveryViewModel_HiltModules_KeyModule_ProvideFactory.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_presentation_discovery_DiscoveryViewModel_HiltModules_BindsModule.java, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\generated\source\kapt\debug\hilt_aggregated_deps\_com_bhojanos_customer_presentation_discovery_DiscoveryViewModel_HiltModules_KeyModule.java], deletedFiles=[], classpathChanges=NoChanges, workingDir=F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\kotlin\compileDebugKotlin\cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\kotlin\compileDebugKotlin\local-state\build-history.bin, useModuleDetection=true), usePreciseJavaTracking=true, outputFiles=[F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\tmp\kotlin-classes\debug, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\kotlin\compileDebugKotlin\cacheable, F:\Manaintibojanam_final2\manaintibojanam-backend\android\customer\build\kotlin\compileDebugKotlin\local-state])
+Restoring task outputs to pre-compilation state
+
+> Task :customer:compileDebugKotlin FAILED
+
+[Incubating] Problems report is available at: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+152 actionable tasks: 10 executed, 142 up-to-date
+Watched directory hierarchies: [F:\Manaintibojanam_final2\manaintibojanam-backend\android]

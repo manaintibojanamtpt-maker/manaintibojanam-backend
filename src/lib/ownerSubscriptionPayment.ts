@@ -46,7 +46,7 @@ export async function runOwnerSubscriptionPayment(params: {
   });
   const checkoutData = await checkoutRes.json();
 
-  if (!checkoutRes.ok || !checkoutData.order?.id) {
+  if (!checkoutRes.ok || (!checkoutData.subscription?.id && !checkoutData.order?.id)) {
     throw new Error(checkoutData.error || 'Failed to create payment session');
   }
 
@@ -57,7 +57,7 @@ export async function runOwnerSubscriptionPayment(params: {
       body: JSON.stringify({
         tenantId: params.tenantId,
         planId: params.planId,
-        razorpay_order_id: checkoutData.order.id,
+        razorpay_subscription_id: checkoutData.subscription?.id || checkoutData.order?.id,
         razorpay_payment_id: `mock_payment_${Date.now()}`,
         razorpay_signature: 'mock_signature',
         isMock: true,
@@ -77,7 +77,8 @@ export async function runOwnerSubscriptionPayment(params: {
   await ensureRazorpayLoaded();
 
   const paymentResponse = await new Promise<{
-    razorpay_order_id: string;
+    razorpay_subscription_id?: string;
+    razorpay_order_id?: string;
     razorpay_payment_id: string;
     razorpay_signature: string;
   }>((resolve, reject) => {
@@ -87,28 +88,34 @@ export async function runOwnerSubscriptionPayment(params: {
       return;
     }
 
-    const rzp = new Razorpay({
+    const options: any = {
       key: checkoutData.key,
-      amount: checkoutData.order.amount,
-      currency: checkoutData.order.currency || 'INR',
       name: 'BhojanOS',
       description: `${plan.name} plan — ${plan.priceLabel}${plan.period}`,
-      order_id: checkoutData.order.id,
       prefill: {
         name: params.customerName || '',
         email: (params.customerEmail || '').toLowerCase(),
         contact: (params.customerPhone || '').replace(/\D/g, '').slice(-10),
       },
       theme: { color: '#E65100' },
-      handler: (response: {
-        razorpay_order_id: string;
-        razorpay_payment_id: string;
-        razorpay_signature: string;
-      }) => resolve(response),
+      handler: (response: any) => resolve(response),
       modal: {
         ondismiss: () => reject(new Error('Payment cancelled')),
       },
-    });
+    };
+
+    if (checkoutData.subscription?.id) {
+      options.subscription_id = checkoutData.subscription.id;
+    } else if (checkoutData.order?.id) {
+      options.order_id = checkoutData.order.id;
+      options.amount = checkoutData.order.amount;
+      options.currency = checkoutData.order.currency || 'INR';
+    } else {
+      reject(new Error('Invalid checkout session response'));
+      return;
+    }
+
+    const rzp = new Razorpay(options);
     rzp.open();
   });
 

@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.bhojanos.core.auth'
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation project(':core:common')
+    implementation project(':core:model')
+    implementation project(':core:storage')
+
+    implementation platform("com.google.firebase:firebase-bom:${rootProject.ext.firebaseBomVersion}")
+    implementation "com.google.firebase:firebase-auth-ktx"
+    implementation "androidx.credentials:credentials:${rootProject.ext.credentialManagerVersion}"
+    implementation "androidx.credentials:credentials-play-services-auth:${rootProject.ext.credentialManagerVersion}"
+
+    testImplementation "junit:junit:$junitVersion"
+}

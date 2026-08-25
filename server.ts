@@ -116,6 +116,9 @@ import {
 } from "./backend-lib/firebase/FirebaseAdminProvider";
 import { mountOwnerApiGateway } from "./backend-lib/shared/apiGatewayMiddleware.js";
 import { computePlatformSuperadminMetrics } from "./src/lib/platformSuperadminMetrics";
+import { createIdempotencyMiddleware, cleanupExpiredIdempotencyKeys } from "./backend-lib/shared/idempotency.js";
+import { createRazorpayWebhookVerificationMiddleware, verifySubscriptionWebhookSignature } from "./backend-lib/shared/razorpayVerification.js";
+import { subscriptionRateLimiters, cleanupExpiredRateLimitCounters } from "./backend-lib/shared/subscriptionRateLimiting.js";
 
 // ================= LOGGING SETUP =================
 const logger = winston.createLogger({
@@ -606,6 +609,9 @@ const globalLimiter = rateLimit({
 });
 app.use("/api/", globalLimiter);
 
+// Idempotency middleware for mutating endpoints (after CORS, before auth)
+app.use("/api/", createIdempotencyMiddleware(db, FieldValue));
+
 /** Authenticated owner routes — separate bucket so dashboard polling does not exhaust public limits. */
 const ownerApiLimiter = rateLimit({
   windowMs: ownerRateLimitWindowMs,
@@ -972,43 +978,36 @@ const expireUnpaidPayments = async (): Promise<{ draftsExpired: number; ordersEx
 };
 
 // Webhook Scaffold (Must be before bodyParser.json)
-app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), async (req, res) => {
-  const correlationId = req.headers["x-correlation-id"] || "webhook-" + Date.now();
-  const signature = req.headers["x-razorpay-signature"];
-  const eventId = req.headers["x-razorpay-event-id"] || "unknown";
+// Use enhanced verification middleware with webhook secret
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+const webhookVerificationMiddleware = createRazorpayWebhookVerificationMiddleware(RAZORPAY_WEBHOOK_SECRET);
 
-  try {
-    if (!signature || !isRazorpayConfigured) {
-      return res.status(400).send("Invalid signature or configuration");
-    }
+// Apply rate limiting to webhooks
+const webhookRateLimiter = subscriptionRateLimiters.admin; // Reuse admin limiter for webhooks
 
-    const hmac = createHmac("sha256", RAZORPAY_KEY_SECRET);
-    hmac.update(req.body); // req.body is a Buffer here
-    const generatedSignature = hmac.digest("hex");
+app.post("/api/webhooks/razorpay",
+  express.raw({ type: "application/json" }),
+  webhookRateLimiter,
+  webhookVerificationMiddleware,
+  async (req, res) => {
+    const correlationId = req.headers["x-correlation-id"] || "webhook-" + Date.now();
+    const eventId = req.headers["x-razorpay-event-id"] || "unknown";
 
-    if (generatedSignature !== signature) {
-      logger.error({ message: "Webhook signature mismatch", eventId, correlationId });
-      return res.status(400).send("Signature mismatch");
-    }
+    try {
+      // Signature already verified by middleware
+      // req.body is now parsed JSON
+      const payload = req.body;
 
-    const payload = JSON.parse(req.body.toString());
-    
-    // DETECT-ONLY MODE Logging
-    logger.info({ message: "Razorpay Webhook Received", eventId, type: payload.event, correlationId });
-    await writeSystemIncident("WEBHOOK_RECEIVED", "DETECTED", {
-      event: payload.event,
-      eventId,
-      payload: payload.payload
-    }, correlationId as string, "webhook");
+      // DETECT-ONLY MODE Logging
+      logger.info({ message: "Razorpay Webhook Received", eventId, type: payload.event, correlationId });
+      await writeSystemIncident("WEBHOOK_RECEIVED", "DETECTED", {
+        event: payload.event,
+        eventId,
+        payload: payload.payload
+      }, correlationId as string, "webhook");
 
-    // BATCH 2: RECONCILIATION PROMOTION & SAAS BILLING
-    if (payload.event === 'payment.captured' || payload.event === 'order.paid') {
-      const paymentEntity = payload.payload?.payment?.entity;
-      const notesType = paymentEntity?.notes?.type;
-      const draftId = paymentEntity?.notes?.draftId;
-      
+      // Idempotency: check if event already processed
       if (eventId && eventId !== 'unknown' && _db) {
-        // Top-level deduplication for webhook events not handled inside transactions
         const eventRef = _db.collection('webhook_events').doc(eventId);
         const eventDoc = await eventRef.get();
         if (eventDoc.exists) {
@@ -1017,13 +1016,24 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
         }
       }
 
-      if (notesType === 'owner_saas' && _db) {
-        const tenantId = paymentEntity?.notes?.tenantId;
-        const planId = paymentEntity?.notes?.planId;
-        if (tenantId && planId) {
+    const paymentEntity = payload.payload?.payment?.entity;
+    const subscriptionEntity = payload.payload?.subscription?.entity;
+    const invoiceEntity = payload.payload?.invoice?.entity;
+    const notesType = paymentEntity?.notes?.type;
+    const draftId = paymentEntity?.notes?.draftId;
+    const tenantId = paymentEntity?.notes?.tenantId || subscriptionEntity?.notes?.tenantId;
+    const planId = paymentEntity?.notes?.planId || subscriptionEntity?.notes?.planId;
+
+    // Handle different event types
+    switch (payload.event) {
+      case 'payment.captured':
+      case 'order.paid': {
+        // Existing SaaS subscription promotion logic
+        if (notesType === 'owner_saas' && _db && tenantId && planId) {
           try {
             const tenantRef = _db.collection('tenants').doc(tenantId);
             const now = new Date().toISOString();
+            const { start, end } = computeNextBillingPeriod(new Date());
             await tenantRef.set({
               status: 'active',
               storeStatus: 'active',
@@ -1032,51 +1042,339 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
                 status: 'active',
                 trialUsed: true,
                 paidActivatedAt: now,
+                currentPeriodStart: start,
+                currentPeriodEnd: end,
+                cancelAtPeriodEnd: false,
                 razorpayOrderId: paymentEntity.order_id,
                 razorpayPaymentId: paymentEntity.id,
               },
               updatedAt: FieldValue.serverTimestamp(),
             }, { merge: true });
-            
-            if (eventId && eventId !== 'unknown') {
-              await _db.collection('webhook_events').doc(eventId).set({
-                createdAt: FieldValue.serverTimestamp(),
-                type: payload.event,
-                tenantId,
-              });
-            }
+
+            await recordWebhookEvent(eventId, payload.event, tenantId, planId);
             logger.info({ message: "SaaS Subscription Webhook Promotion Success", tenantId, planId, eventId });
           } catch (saasErr: any) {
             logger.error({ message: "SaaS Subscription Webhook Promotion Failed", tenantId, eventId, err: saasErr.message });
           }
-        }
-      } else if (draftId && _db && razorpay) {
-        try {
-          const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
-          if (!draftDoc.exists) {
-            logger.warn({ message: "Webhook draft not found", draftId, eventId });
-          } else {
-            const draftData = draftDoc.data() || {};
-            const razorpayOrder = await razorpay.orders.fetch(paymentEntity.order_id);
-            assertDraftRazorpayAmountIntegrity(
-              draftData as Record<string, unknown>,
-              razorpayOrder.amount,
-              paymentEntity.amount,
-            );
-            await promoteDraftTransaction(
-              draftId,
-              { 
-                razorpayOrderId: paymentEntity.order_id, 
-                razorpayPaymentId: paymentEntity.id 
-              },
-              'webhook_recovery',
-              eventId as string
-            );
+        } else if (draftId && _db && razorpay) {
+          // Order payment reconciliation
+          try {
+            const draftDoc = await _db.collection('order_drafts').doc(draftId).get();
+            if (!draftDoc.exists) {
+              logger.warn({ message: "Webhook draft not found", draftId, eventId });
+            } else {
+              const draftData = draftDoc.data() || {};
+              const razorpayOrder = await razorpay.orders.fetch(paymentEntity.order_id);
+              assertDraftRazorpayAmountIntegrity(
+                draftData as Record<string, unknown>,
+                razorpayOrder.amount,
+                paymentEntity.amount,
+              );
+              await promoteDraftTransaction(
+                draftId,
+                {
+                  razorpayOrderId: paymentEntity.order_id,
+                  razorpayPaymentId: paymentEntity.id
+                },
+                'webhook_recovery',
+                eventId as string
+              );
+            }
+          } catch (promoErr: any) {
+            logger.error({ message: "Webhook Promotion Failed", draftId, eventId, err: promoErr.message });
           }
-        } catch (promoErr: any) {
-          logger.error({ message: "Webhook Promotion Failed", draftId, eventId, err: promoErr.message });
         }
+        break;
       }
+
+      case 'subscription.authenticated': {
+        // Subscription first payment successful - activate subscription
+        if (_db && subscriptionEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const now = new Date().toISOString();
+            const { start, end } = computeNextBillingPeriod(new Date(subscriptionEntity.current_period_end * 1000));
+
+            const tenantDoc = await tenantRef.get();
+            if (tenantDoc.exists) {
+              const tenantData = tenantDoc.data()!;
+              const currentState = computeSubscriptionState(tenantData);
+
+              // Activate subscription
+              await tenantRef.set({
+                status: 'active',
+                storeStatus: 'active',
+                subscription: {
+                  ...tenantData.subscription,
+                  planId: planId || subscriptionEntity.notes?.planId || currentState.planId,
+                  status: 'active',
+                  trialUsed: true,
+                  paidActivatedAt: now,
+                  currentPeriodStart: start,
+                  currentPeriodEnd: end,
+                  cancelAtPeriodEnd: false,
+                  failedPaymentAttempts: 0,
+                  lastInvoiceAttemptAt: now,
+                  razorpaySubscriptionId: subscriptionEntity.id,
+                  razorpayPaymentId: paymentEntity?.id,
+                },
+                updatedAt: FieldValue.serverTimestamp(),
+              }, { merge: true });
+
+              await recordWebhookEvent(eventId, payload.event, tenantId, planId);
+              logger.info({ message: "Subscription Activated via Webhook", tenantId, subscriptionId: subscriptionEntity.id, eventId });
+            }
+          } catch (err: any) {
+            logger.error({ message: "Subscription Authenticated Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+
+      case 'subscription.charged': {
+        // Recurring subscription payment - renew subscription
+        if (_db && subscriptionEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const now = new Date().toISOString();
+            const { start, end } = computeNextBillingPeriod(new Date(subscriptionEntity.current_period_end * 1000));
+
+            // Get current tenant to check status
+            const tenantDoc = await tenantRef.get();
+            if (tenantDoc.exists) {
+              const tenantData = tenantDoc.data()!;
+              const currentState = computeSubscriptionState(tenantData);
+
+              // Only renew if in billable state
+              if (isBillableStatus(currentState.status) && !currentState.cancelAtPeriodEnd) {
+                await tenantRef.set({
+                  status: 'active',
+                  storeStatus: 'active',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'active',
+                    currentPeriodStart: start,
+                    currentPeriodEnd: end,
+                    cancelAtPeriodEnd: false,
+                    failedPaymentAttempts: 0,
+                    lastInvoiceAttemptAt: now,
+                    razorpaySubscriptionId: subscriptionEntity.id,
+                    razorpayPaymentId: paymentEntity?.id,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                await recordWebhookEvent(eventId, payload.event, tenantId, currentState.planId);
+                logger.info({ message: "Subscription Renewed via Webhook", tenantId, subscriptionId: subscriptionEntity.id, eventId });
+              } else if (currentState.cancelAtPeriodEnd) {
+                // Subscription was canceled - don't renew, mark as canceled
+                await tenantRef.set({
+                  status: 'canceled',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'canceled',
+                    cancelAtPeriodEnd: false,
+                    currentPeriodEnd: now,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                logger.info({ message: "Subscription Not Renewed - Canceled at Period End", tenantId, eventId });
+              }
+            }
+          } catch (err: any) {
+            logger.error({ message: "Subscription Charged Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        // Invoice payment failed - handle past_due logic for subscriptions
+        if (_db && invoiceEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const tenantDoc = await tenantRef.get();
+            if (tenantDoc.exists) {
+              const tenantData = tenantDoc.data()!;
+              const currentState = computeSubscriptionState(tenantData);
+              const attemptNumber = (currentState.failedPaymentAttempts || 0) + 1;
+
+              if (attemptNumber >= BILLING_CYCLE.MAX_FAILED_ATTEMPTS) {
+                // Max attempts reached - cancel subscription
+                const now = new Date().toISOString();
+                await tenantRef.set({
+                  status: 'canceled',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'canceled',
+                    failedPaymentAttempts: attemptNumber,
+                    lastInvoiceAttemptAt: now,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                logger.info({ message: "Subscription Canceled - Max Failed Invoice Attempts", tenantId, invoiceId: invoiceEntity.id, eventId });
+              } else {
+                // Schedule next retry
+                const nextRetryHours = BILLING_CYCLE.RETRY_INTERVALS_HOURS[attemptNumber - 1] || 24;
+                const nextRetryAt = new Date(Date.now() + nextRetryHours * 60 * 60 * 1000).toISOString();
+                const now = new Date().toISOString();
+
+                await tenantRef.set({
+                  status: 'past_due',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'past_due',
+                    failedPaymentAttempts: attemptNumber,
+                    lastInvoiceAttemptAt: now,
+                    nextBillingAttemptAt,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                logger.info({ message: "Invoice Payment Failed - Scheduled Retry", tenantId, attemptNumber, nextRetryAt, eventId });
+              }
+
+              await recordWebhookEvent(eventId, payload.event, tenantId);
+            }
+          } catch (err: any) {
+            logger.error({ message: "Invoice Payment Failed Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+
+      case 'invoice.paid': {
+        // Invoice payment successful - could be for subscription renewal or one-time
+        if (_db && invoiceEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const tenantDoc = await tenantRef.get();
+            if (tenantDoc.exists) {
+              const tenantData = tenantDoc.data()!;
+              const currentState = computeSubscriptionState(tenantData);
+
+              // If past_due, move to active
+              if (currentState.status === 'past_due') {
+                const now = new Date().toISOString();
+                const { start, end } = computeNextBillingPeriod(new Date());
+
+                await tenantRef.set({
+                  status: 'active',
+                  storeStatus: 'active',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'active',
+                    currentPeriodStart: start,
+                    currentPeriodEnd: end,
+                    failedPaymentAttempts: 0,
+                    lastInvoiceAttemptAt: now,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                await recordWebhookEvent(eventId, payload.event, tenantId, currentState.planId);
+                logger.info({ message: "Invoice Paid - Subscription Restored", tenantId, invoiceId: invoiceEntity.id, eventId });
+              }
+            }
+          } catch (err: any) {
+            logger.error({ message: "Invoice Paid Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+
+      case 'subscription.cancelled': {
+        // Subscription cancelled in Razorpay
+        if (_db && subscriptionEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const now = new Date().toISOString();
+            await tenantRef.set({
+              status: 'canceled',
+              subscription: {
+                status: 'canceled',
+                cancelAtPeriodEnd: false,
+                currentPeriodEnd: now,
+              },
+              updatedAt: FieldValue.serverTimestamp(),
+            }, { merge: true });
+
+            await recordWebhookEvent(eventId, payload.event, tenantId);
+            logger.info({ message: "Subscription Cancelled via Webhook", tenantId, subscriptionId: subscriptionEntity.id, eventId });
+          } catch (err: any) {
+            logger.error({ message: "Subscription Cancelled Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+
+      case 'payment.failed': {
+        // Payment failed - handle past_due logic
+        if (_db && paymentEntity && tenantId) {
+          try {
+            const tenantRef = _db.collection('tenants').doc(tenantId);
+            const tenantDoc = await tenantRef.get();
+            if (tenantDoc.exists) {
+              const tenantData = tenantDoc.data()!;
+              const currentState = computeSubscriptionState(tenantData);
+              const attemptNumber = (currentState.failedPaymentAttempts || 0) + 1;
+
+              if (attemptNumber >= BILLING_CYCLE.MAX_FAILED_ATTEMPTS) {
+                // Max attempts reached - cancel subscription
+                const now = new Date().toISOString();
+                await tenantRef.set({
+                  status: 'canceled',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'canceled',
+                    failedPaymentAttempts: attemptNumber,
+                    lastInvoiceAttemptAt: now,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                logger.info({ message: "Subscription Canceled - Max Failed Attempts", tenantId, eventId });
+              } else {
+                // Schedule next retry
+                const nextRetryHours = BILLING_CYCLE.RETRY_INTERVALS_HOURS[attemptNumber - 1] || 24;
+                const nextRetryAt = new Date(Date.now() + nextRetryHours * 60 * 60 * 1000).toISOString();
+                const now = new Date().toISOString();
+
+                await tenantRef.set({
+                  status: 'past_due',
+                  subscription: {
+                    ...tenantData.subscription,
+                    status: 'past_due',
+                    failedPaymentAttempts: attemptNumber,
+                    lastInvoiceAttemptAt: now,
+                    nextBillingAttemptAt,
+                  },
+                  updatedAt: FieldValue.serverTimestamp(),
+                }, { merge: true });
+
+                logger.info({ message: "Payment Failed - Scheduled Retry", tenantId, attemptNumber, nextRetryAt, eventId });
+              }
+
+              await recordWebhookEvent(eventId, payload.event, tenantId);
+            }
+          } catch (err: any) {
+            logger.error({ message: "Payment Failed Webhook Failed", tenantId, eventId, err: err.message });
+          }
+        }
+        break;
+      }
+    }
+
+    // Record event as processed
+    if (eventId && eventId !== 'unknown' && _db) {
+      await _db.collection('webhook_events').doc(eventId).set({
+        createdAt: FieldValue.serverTimestamp(),
+        type: payload.event,
+        tenantId,
+        planId,
+      });
     }
 
     res.status(200).json({ status: "ok" });
@@ -1085,6 +1383,17 @@ app.post("/api/webhooks/razorpay", express.raw({ type: "application/json" }), as
     res.status(500).send("Webhook error");
   }
 });
+
+// Helper function to record webhook events
+async function recordWebhookEvent(eventId: string, eventType: string, tenantId: string, planId?: string) {
+  if (!_db || !eventId || eventId === 'unknown') return;
+  await _db.collection('webhook_events').doc(eventId).set({
+    createdAt: FieldValue.serverTimestamp(),
+    type: eventType,
+    tenantId,
+    planId,
+  });
+}
 
 // KYC inline upload — small JSON body; bypasses Firebase Storage (avoids storage-rules hangs)
 app.post(
@@ -5615,9 +5924,9 @@ const initializeMonitoringJobs = () => {
         .where('subscription.status', '==', 'trialing')
         .where('subscription.trialExpiresAt', '<=', cutoff)
         .get();
-        
+
       if (expiredSnapshot.empty) return;
-      
+
       const batch = _db.batch();
       let count = 0;
       for (const doc of expiredSnapshot.docs) {
@@ -5629,13 +5938,59 @@ const initializeMonitoringJobs = () => {
         count++;
         if (count >= 500) break; // batch limit
       }
-      
+
       if (count > 0) {
         await batch.commit();
         logger.info({ message: "Processed expired trials", count });
       }
     } catch (err: any) {
       logger.error({ message: "Trial Expiry Sweep Failed", err: err.message });
+    }
+  }));
+
+  // Daily Subscription Renewal Sweep (12:15 AM) - Check for subscriptions that need renewal
+  cron.schedule("15 0 * * *", withCronHealth("Subscription Renewal Sweep", async () => {
+    if (!_db) return;
+    try {
+      const now = new Date().toISOString();
+      const snapshot = await _db.collection('tenants')
+        .where('subscription.status', 'in', ['active', 'past_due'])
+        .where('subscription.currentPeriodEnd', '<=', now)
+        .where('subscription.cancelAtPeriodEnd', '==', false)
+        .where('subscription.razorpaySubscriptionId', '!=', null)
+        .get();
+
+      if (snapshot.empty) return;
+
+      let processed = 0;
+      for (const doc of snapshot.docs) {
+        const tenant = doc.data();
+        const currentState = computeSubscriptionState(tenant);
+
+        // Only process if in billable state and has Razorpay subscription
+        if (isBillableStatus(currentState.status) && currentState.razorpaySubscriptionId) {
+          // The webhook will handle the actual renewal when payment succeeds
+          // This sweep just ensures we don't miss any that webhooks might have missed
+          // We can mark as past_due if it's been past the period for a while
+          const periodEnd = new Date(currentState.currentPeriodEnd || 0).getTime();
+          const hoursPastDue = (Date.now() - periodEnd) / (1000 * 60 * 60);
+
+          if (hoursPastDue > 24 && currentState.status === 'active') {
+            // Mark as past_due after 24 hours past period end
+            await doc.ref.update({
+              'subscription.status': 'past_due',
+              'updatedAt': FieldValue.serverTimestamp()
+            });
+            processed++;
+          }
+        }
+      }
+
+      if (processed > 0) {
+        logger.info({ message: "Processed subscription renewals", processed });
+      }
+    } catch (err: any) {
+      logger.error({ message: "Subscription Renewal Sweep Failed", err: err.message });
     }
   }));
   } else {

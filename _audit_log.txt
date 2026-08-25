@@ -1,0 +1,8 @@
+﻿84f2c45 feat: delivery-time scheduling, native UPi/stitch, voice ASR + checkout scheduling
+074536a sync local changes from old laptop before migration
+088f7eb fix: resolve React error 310 (Rendered more hooks than during previous render) in FoodRoutePage
+0e89884 fix: increase checkout prepare timeout to prevent fetch abortion on slow mobile connections
+51715d6 fix(tts): fallback to Cloud TTS if native TTS lacks the required language voice
+7411079 fix(tts): wait for voices to load asynchronously to prevent silent failure on desktop
+3302003 fix(tts): correct typings for SpeechSynthesisLike and fallback logic
+5028457 fix(tts): explicitly set voice to match selected language for native fallback

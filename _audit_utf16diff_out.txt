@@ -1,0 +1,6 @@
+﻿HEAD lines: 47, WORK lines: 47
+L26 HEAD: [      {!loaded && <div className=\]
+L26 WORK: [      {!loaded && <div className={`]
+L31 HEAD: [z-0\ />}]
+L31 WORK: [z-0`} />}]
+Total differing lines: 2

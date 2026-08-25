@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
 import axios from "axios";
-import { 
-  LayoutDashboard, 
-  ShoppingBag, 
-  Utensils, 
-  Settings, 
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Utensils,
+  Settings,
   ShieldCheck,
-  LogOut, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Check, 
+  LogOut,
+  Plus,
+  Trash2,
+  Edit2,
+  Check,
   X,
   Star,
   Home,
@@ -29,7 +29,13 @@ import {
   Volume2,
   VolumeX,
   Maximize,
-  Minimize
+  Minimize,
+  CreditCard,
+  Users,
+  Activity,
+  History,
+  ArrowUpRight,
+  ArrowDownLeft
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { m, AnimatePresence } from 'framer-motion';
@@ -99,6 +105,7 @@ export default function AdminPanel() {
   const [categories, setCategories] = useState<any[]>([]);
   const [supportTickets, setSupportTickets] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [tenantSubscriptions, setTenantSubscriptions] = useState<any[]>([]);
   const [categoryForm, setCategoryForm] = useState({ name: "", image: "", priority: 0, isActive: true, showOnHome: true });
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [settings, setSettings] = useState({ 
@@ -297,12 +304,22 @@ export default function AdminPanel() {
       }
     });
 
-    // Subscriptions Listener
+    // Subscriptions Listener (Customer meal subscriptions)
     const subscriptionsQuery = query(collection(getDb(), "subscriptions"), orderBy("createdAt", "desc"), limit(100));
     const unsubscribeSubscriptions = onSnapshot(subscriptionsQuery, (snapshot) => {
       setSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => {
       console.error("Subscriptions Listener Error:", err);
+    });
+
+    // Tenant Subscriptions Listener (SaaS plan subscriptions)
+    const tenantSubscriptionsQuery = query(collection(getDb(), "tenants"), orderBy("updatedAt", "desc"), limit(100));
+    const unsubscribeTenantSubscriptions = onSnapshot(tenantSubscriptionsQuery, (snapshot) => {
+      const tenants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Filter to only those with subscription data
+      setTenantSubscriptions(tenants.filter(t => t.subscription && (t.subscription.planId || t.subscription.status)));
+    }, (err) => {
+      console.error("Tenant Subscriptions Listener Error:", err);
     });
 
     // Categories Listener
@@ -352,6 +369,7 @@ export default function AdminPanel() {
       if (unsubscribeCategories) unsubscribeCategories();
       if (unsubscribeSupport) unsubscribeSupport();
       if (unsubscribeSubscriptions) unsubscribeSubscriptions();
+      if (unsubscribeTenantSubscriptions) unsubscribeTenantSubscriptions();
     };
   }, [userProfile, authLoading]);
 
@@ -894,6 +912,7 @@ export default function AdminPanel() {
               <SidebarLink icon={<FileText size={20}/>} label="Categories" active={tab === "categories"} onClick={() => setTab("categories")} />
               <SidebarLink icon={<Zap size={20}/>} label="Coupons" active={tab === "coupons"} onClick={() => setTab("coupons")} />
               <SidebarLink icon={<Package size={20}/>} label="Subscriptions" active={tab === "subscriptions"} onClick={() => setTab("subscriptions")} />
+              <SidebarLink icon={<CreditCard size={20}/>} label="Tenant Plans" active={tab === "tenantSubscriptions"} onClick={() => setTab("tenantSubscriptions")} />
               <SidebarLink icon={<Bell size={20}/>} label="Reviews" active={tab === "reviews"} onClick={() => setTab("reviews")} />
               <SidebarLink icon={<Package size={20}/>} label="Banners" active={tab === "banners"} onClick={() => setTab("banners")} />
               <SidebarLink icon={<MessageSquare size={20}/>} label="Support" active={tab === "support"} onClick={() => setTab("support")} />
@@ -2003,6 +2022,168 @@ export default function AdminPanel() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </m.div>
+          )}
+
+          {tab === "tenantSubscriptions" && (
+            <m.div key="tenantSubscriptions" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 md:mb-12 gap-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">Tenant SaaS Plans</h2>
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-900 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Active Tenants</span>
+                    <span className="text-lg font-black text-gray-900 dark:text-white">{tenantSubscriptions.filter(t => t.subscription?.status === 'active' || t.subscription?.status === 'trialing').length}</span>
+                  </div>
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Past Due</span>
+                    <span className="text-lg font-black text-gray-900 dark:text-white">{tenantSubscriptions.filter(t => t.subscription?.status === 'past_due').length}</span>
+                  </div>
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Canceled</span>
+                    <span className="text-lg font-black text-gray-900 dark:text-white">{tenantSubscriptions.filter(t => t.subscription?.status === 'canceled').length}</span>
+                  </div>
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Trialing</span>
+                    <span className="text-lg font-black text-gray-900 dark:text-white">{tenantSubscriptions.filter(t => t.subscription?.status === 'trialing').length}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-800/50">
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Tenant</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Plan</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Status</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Billing Cycle</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Period End</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Trial</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Failed Payments</th>
+                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {tenantSubscriptions.map(tenant => {
+                        const sub = tenant.subscription || {};
+                        const planId = sub.planId || 'starter';
+                        const status = sub.status || 'none';
+                        const trialExpiresAt = sub.trialExpiresAt;
+                        const isTrialing = status === 'trialing';
+                        const trialDaysLeft = trialExpiresAt ? Math.max(0, Math.ceil((new Date(trialExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null;
+
+                        const planColors: Record<string, string> = {
+                          starter: 'bg-gray-100 text-gray-600',
+                          growth: 'bg-emerald-100 text-emerald-600',
+                          pro: 'bg-blue-100 text-blue-600',
+                          enterprise: 'bg-purple-100 text-purple-600',
+                        };
+
+                        const statusColors: Record<string, string> = {
+                          active: 'bg-green-100 text-green-600',
+                          trialing: 'bg-amber-100 text-amber-600',
+                          past_due: 'bg-rose-100 text-rose-600',
+                          canceled: 'bg-gray-100 text-gray-500',
+                          paused: 'bg-blue-100 text-blue-600',
+                          expired: 'bg-red-100 text-red-600',
+                          none: 'bg-gray-100 text-gray-400',
+                        };
+
+                        return (
+                          <tr key={tenant.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td className="p-4">
+                              <div className="font-bold text-gray-900 dark:text-white block">{tenant.name || tenant.slug || tenant.id}</div>
+                              <span className="text-xs text-gray-500">{tenant.slug || tenant.id}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${planColors[planId] || planColors.starter}`}>
+                                {planId.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${statusColors[status] || statusColors.none}`}>
+                                {status.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {sub.currentPeriodEnd ? 'Monthly' : (planId === 'enterprise' ? 'N/A' : '—')}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {sub.currentPeriodEnd
+                                  ? new Date(sub.currentPeriodEnd).toLocaleDateString('en-IN')
+                                  : '—'}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {isTrialing && trialDaysLeft !== null ? (
+                                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                                  {trialDaysLeft} day(s) left
+                                </span>
+                              ) : sub.trialUsed ? (
+                                <span className="text-sm text-gray-500">Used</span>
+                              ) : (
+                                <span className="text-sm text-gray-400">Available</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span className={`text-sm font-bold ${(sub.failedPaymentAttempts || 0) > 0 ? 'text-rose-600' : 'text-gray-900 dark:text-white'}`}>
+                                {sub.failedPaymentAttempts || 0}
+                              </span>
+                              {sub.nextBillingAttemptAt && (
+                                <div className="text-[10px] text-amber-500">
+                                  Retry: {new Date(sub.nextBillingAttemptAt).toLocaleString('en-IN')}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                                  onClick={() => window.open(`/admin/tenant/${tenant.id}`, '_blank')}
+                                >
+                                  View
+                                </button>
+                                {(status === 'past_due' || status === 'canceled') && (
+                                  <button
+                                    className="text-xs text-emerald-600 hover:text-emerald-500 font-medium"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch('/api/platform/tenant-subscription/' + tenant.id + '/billing-retry', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                        });
+                                        const data = await response.json();
+                                        if (data.success) {
+                                          toast.success('Billing retry triggered');
+                                        } else {
+                                          toast.error(data.error || 'Failed to trigger retry');
+                                        }
+                                      } catch {
+                                        toast.error('Failed to trigger retry');
+                                      }
+                                    }}
+                                  >
+                                    Retry
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {tenantSubscriptions.length === 0 && (
+                  <div className="p-8 text-center text-gray-500">
+                    No tenant subscriptions found.
+                  </div>
+                )}
               </div>
             </m.div>
           )}

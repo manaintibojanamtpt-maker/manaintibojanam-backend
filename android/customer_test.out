@@ -1,0 +1,214 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-cordova-android-plugins
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Task :customer:preBuild UP-TO-DATE
+> Task :customer:preDebugBuild UP-TO-DATE
+> Task :customer:checkKotlinGradlePluginConfigurationErrors
+> Task :core:auth:preBuild UP-TO-DATE
+> Task :core:auth:preDebugBuild UP-TO-DATE
+> Task :core:auth:writeDebugAarMetadata UP-TO-DATE
+> Task :core:biometric:preBuild UP-TO-DATE
+> Task :core:biometric:preDebugBuild UP-TO-DATE
+> Task :core:biometric:writeDebugAarMetadata UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:writeDebugAarMetadata UP-TO-DATE
+> Task :core:database:preBuild UP-TO-DATE
+> Task :core:database:preDebugBuild UP-TO-DATE
+> Task :core:database:writeDebugAarMetadata UP-TO-DATE
+> Task :core:design:preBuild UP-TO-DATE
+> Task :core:design:preDebugBuild UP-TO-DATE
+> Task :core:design:writeDebugAarMetadata UP-TO-DATE
+> Task :core:model:preBuild UP-TO-DATE
+> Task :core:model:preDebugBuild UP-TO-DATE
+> Task :core:model:writeDebugAarMetadata UP-TO-DATE
+> Task :core:network:preBuild UP-TO-DATE
+> Task :core:network:preDebugBuild UP-TO-DATE
+> Task :core:network:writeDebugAarMetadata UP-TO-DATE
+> Task :core:storage:preBuild UP-TO-DATE
+> Task :core:storage:preDebugBuild UP-TO-DATE
+> Task :core:storage:writeDebugAarMetadata UP-TO-DATE
+> Task :customer:checkDebugAarMetadata UP-TO-DATE
+> Task :core:auth:processDebugNavigationResources UP-TO-DATE
+> Task :core:biometric:processDebugNavigationResources UP-TO-DATE
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+> Task :core:database:processDebugNavigationResources UP-TO-DATE
+> Task :core:design:processDebugNavigationResources UP-TO-DATE
+> Task :core:model:processDebugNavigationResources UP-TO-DATE
+> Task :core:network:processDebugNavigationResources UP-TO-DATE
+> Task :core:storage:processDebugNavigationResources UP-TO-DATE
+> Task :customer:processDebugNavigationResources UP-TO-DATE
+> Task :customer:compileDebugNavigationResources UP-TO-DATE
+> Task :customer:generateDebugResValues UP-TO-DATE
+> Task :core:auth:generateDebugResValues UP-TO-DATE
+> Task :core:auth:generateDebugResources UP-TO-DATE
+> Task :core:auth:packageDebugResources UP-TO-DATE
+> Task :core:biometric:generateDebugResValues UP-TO-DATE
+> Task :core:biometric:generateDebugResources UP-TO-DATE
+> Task :core:biometric:packageDebugResources UP-TO-DATE
+> Task :core:common:generateDebugResValues UP-TO-DATE
+> Task :core:common:generateDebugResources UP-TO-DATE
+> Task :core:common:packageDebugResources UP-TO-DATE
+> Task :core:database:generateDebugResValues UP-TO-DATE
+> Task :core:database:generateDebugResources UP-TO-DATE
+> Task :core:database:packageDebugResources UP-TO-DATE
+> Task :core:design:generateDebugResValues UP-TO-DATE
+> Task :core:design:generateDebugResources UP-TO-DATE
+> Task :core:design:packageDebugResources UP-TO-DATE
+> Task :core:model:generateDebugResValues UP-TO-DATE
+> Task :core:model:generateDebugResources UP-TO-DATE
+> Task :core:model:packageDebugResources UP-TO-DATE
+> Task :core:network:generateDebugResValues UP-TO-DATE
+> Task :core:network:generateDebugResources UP-TO-DATE
+> Task :core:network:packageDebugResources UP-TO-DATE
+> Task :core:storage:generateDebugResValues UP-TO-DATE
+> Task :core:storage:generateDebugResources UP-TO-DATE
+> Task :core:storage:packageDebugResources UP-TO-DATE
+> Task :customer:mapDebugSourceSetPaths UP-TO-DATE
+> Task :customer:generateDebugResources UP-TO-DATE
+> Task :customer:mergeDebugResources UP-TO-DATE
+> Task :customer:packageDebugResources UP-TO-DATE
+> Task :customer:parseDebugLocalResources UP-TO-DATE
+> Task :customer:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :customer:extractDeepLinksDebug UP-TO-DATE
+> Task :core:auth:extractDeepLinksDebug UP-TO-DATE
+> Task :core:auth:processDebugManifest UP-TO-DATE
+> Task :core:biometric:extractDeepLinksDebug UP-TO-DATE
+> Task :core:biometric:processDebugManifest UP-TO-DATE
+> Task :core:common:extractDeepLinksDebug UP-TO-DATE
+> Task :core:common:processDebugManifest UP-TO-DATE
+> Task :core:database:extractDeepLinksDebug UP-TO-DATE
+> Task :core:database:processDebugManifest UP-TO-DATE
+> Task :core:design:extractDeepLinksDebug UP-TO-DATE
+> Task :core:design:processDebugManifest UP-TO-DATE
+> Task :core:model:extractDeepLinksDebug UP-TO-DATE
+> Task :core:model:processDebugManifest UP-TO-DATE
+> Task :core:network:extractDeepLinksDebug UP-TO-DATE
+> Task :core:network:processDebugManifest UP-TO-DATE
+> Task :core:storage:extractDeepLinksDebug UP-TO-DATE
+> Task :core:storage:processDebugManifest UP-TO-DATE
+> Task :customer:processDebugMainManifest UP-TO-DATE
+> Task :customer:processDebugManifest UP-TO-DATE
+> Task :customer:processDebugManifestForPackage UP-TO-DATE
+> Task :core:auth:compileDebugLibraryResources UP-TO-DATE
+> Task :core:auth:parseDebugLocalResources UP-TO-DATE
+> Task :core:auth:generateDebugRFile UP-TO-DATE
+> Task :core:biometric:compileDebugLibraryResources UP-TO-DATE
+> Task :core:biometric:parseDebugLocalResources UP-TO-DATE
+> Task :core:biometric:generateDebugRFile UP-TO-DATE
+> Task :core:common:compileDebugLibraryResources UP-TO-DATE
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+> Task :core:common:generateDebugRFile UP-TO-DATE
+> Task :core:database:compileDebugLibraryResources UP-TO-DATE
+> Task :core:database:parseDebugLocalResources UP-TO-DATE
+> Task :core:database:generateDebugRFile UP-TO-DATE
+> Task :core:design:compileDebugLibraryResources UP-TO-DATE
+> Task :core:design:parseDebugLocalResources UP-TO-DATE
+> Task :core:design:generateDebugRFile UP-TO-DATE
+> Task :core:model:compileDebugLibraryResources UP-TO-DATE
+> Task :core:model:parseDebugLocalResources UP-TO-DATE
+> Task :core:model:generateDebugRFile UP-TO-DATE
+> Task :core:network:compileDebugLibraryResources UP-TO-DATE
+> Task :core:network:parseDebugLocalResources UP-TO-DATE
+> Task :core:network:generateDebugRFile UP-TO-DATE
+> Task :core:storage:compileDebugLibraryResources UP-TO-DATE
+> Task :core:storage:parseDebugLocalResources UP-TO-DATE
+> Task :core:storage:generateDebugRFile UP-TO-DATE
+> Task :customer:processDebugResources UP-TO-DATE
+> Task :core:auth:checkKotlinGradlePluginConfigurationErrors
+> Task :core:common:checkKotlinGradlePluginConfigurationErrors
+> Task :core:common:compileDebugKotlin UP-TO-DATE
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:model:checkKotlinGradlePluginConfigurationErrors
+> Task :core:model:compileDebugKotlin UP-TO-DATE
+> Task :core:model:javaPreCompileDebug UP-TO-DATE
+> Task :core:model:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:model:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:storage:checkKotlinGradlePluginConfigurationErrors
+> Task :core:storage:compileDebugKotlin UP-TO-DATE
+> Task :core:storage:javaPreCompileDebug UP-TO-DATE
+> Task :core:storage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:storage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:auth:compileDebugKotlin UP-TO-DATE
+> Task :core:auth:javaPreCompileDebug UP-TO-DATE
+> Task :core:auth:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:auth:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:biometric:checkKotlinGradlePluginConfigurationErrors
+> Task :core:biometric:compileDebugKotlin UP-TO-DATE
+> Task :core:biometric:javaPreCompileDebug UP-TO-DATE
+> Task :core:biometric:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:biometric:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:database:checkKotlinGradlePluginConfigurationErrors
+> Task :core:database:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :core:database:kaptDebugKotlin UP-TO-DATE
+> Task :core:database:compileDebugKotlin UP-TO-DATE
+> Task :core:database:javaPreCompileDebug UP-TO-DATE
+> Task :core:database:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:database:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:design:checkKotlinGradlePluginConfigurationErrors
+> Task :core:design:compileDebugKotlin UP-TO-DATE
+> Task :core:design:javaPreCompileDebug UP-TO-DATE
+> Task :core:design:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:design:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:network:checkKotlinGradlePluginConfigurationErrors
+> Task :core:network:compileDebugKotlin UP-TO-DATE
+> Task :core:network:javaPreCompileDebug UP-TO-DATE
+> Task :core:network:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:network:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :customer:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :customer:kaptDebugKotlin UP-TO-DATE
+> Task :customer:compileDebugKotlin UP-TO-DATE
+> Task :customer:javaPreCompileDebug UP-TO-DATE
+> Task :customer:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:network:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:auth:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:storage:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:database:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:model:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:design:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:biometric:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:common:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :customer:preDebugUnitTestBuild UP-TO-DATE
+> Task :customer:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :customer:hiltAggregateDepsDebug UP-TO-DATE
+> Task :customer:hiltJavaCompileDebug UP-TO-DATE
+> Task :customer:transformDebugClassesWithAsm UP-TO-DATE
+> Task :customer:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :customer:processDebugJavaRes UP-TO-DATE
+> Task :customer:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :customer:kaptGenerateStubsDebugUnitTestKotlin UP-TO-DATE
+> Task :customer:kaptDebugUnitTestKotlin UP-TO-DATE
+> Task :customer:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :customer:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :customer:hiltAggregateDepsDebugUnitTest UP-TO-DATE
+> Task :customer:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :customer:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :customer:transformDebugUnitTestClassesWithAsm UP-TO-DATE
+> Task :core:auth:processDebugJavaRes UP-TO-DATE
+> Task :core:biometric:processDebugJavaRes UP-TO-DATE
+> Task :core:common:processDebugJavaRes UP-TO-DATE
+> Task :core:database:processDebugJavaRes UP-TO-DATE
+> Task :core:design:processDebugJavaRes UP-TO-DATE
+> Task :core:model:processDebugJavaRes UP-TO-DATE
+> Task :core:network:processDebugJavaRes UP-TO-DATE
+> Task :core:storage:processDebugJavaRes UP-TO-DATE
+> Task :customer:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 27s
+166 actionable tasks: 10 executed, 156 up-to-date

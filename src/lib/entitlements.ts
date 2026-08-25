@@ -1,20 +1,28 @@
-export type PlanId = 'starter' | 'growth' | 'pro' | 'enterprise';
+/**
+ * Frontend Entitlement Utilities
+ * Re-exports canonical entitlements for frontend use.
+ * DO NOT MODIFY THE MATRIX HERE — it is defined in backend-lib/canonicalEntitlements.ts
+ */
 
-export const ENTITLEMENT_MATRIX: Record<PlanId, string[]> = {
-  starter: ['storefront', 'directOrders', 'basicAnalytics'],
-  growth: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore'],
-  pro: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore', 'aiFull', 'deliveryEngine', 'customerMemory'],
-  enterprise: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore', 'aiFull', 'deliveryEngine', 'customerMemory', 'customIntegrations'],
-};
+import {
+  CANONICAL_ENTITLEMENT_MATRIX,
+  PLAN_HIERARCHY,
+  type PlanId,
+  type FeatureKey,
+  hasEntitlement as canonicalHasEntitlement,
+} from '../../backend-lib/canonicalEntitlements.js';
 
-export function hasEntitlement(planId: string | undefined | null, featureKey: string): boolean {
-  if (!planId) planId = 'starter';
-  
-  let effectivePlanId: PlanId = 'starter';
-  if (Object.keys(ENTITLEMENT_MATRIX).includes(planId)) {
-    effectivePlanId = planId as PlanId;
-  }
-  
-  const allowedFeatures = ENTITLEMENT_MATRIX[effectivePlanId] || [];
-  return allowedFeatures.includes(featureKey);
+// Re-export for frontend compatibility
+export type { PlanId, FeatureKey };
+export { CANONICAL_ENTITLEMENT_MATRIX as ENTITLEMENT_MATRIX, PLAN_HIERARCHY };
+
+/**
+ * Check if a plan has a feature entitlement (non-throwing, for UI logic).
+ * This is the frontend version - does not throw, returns boolean.
+ */
+export function hasEntitlement(
+  planId: string | undefined | null,
+  featureKey: FeatureKey
+): boolean {
+  return canonicalHasEntitlement(planId, featureKey);
 }

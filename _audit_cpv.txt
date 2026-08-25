@@ -1,0 +1,32 @@
+﻿diff --git a/src/design-system/cart/CheckoutPageView.tsx b/src/design-system/cart/CheckoutPageView.tsx
+index f9a9e64..303dd64 100644
+--- a/src/design-system/cart/CheckoutPageView.tsx
++++ b/src/design-system/cart/CheckoutPageView.tsx
+@@ -234,6 +234,8 @@ export function CheckoutPageView({
+           )}
+         </Card>
+ 
++        {hint ? <p className="px-0.5 text-xs leading-relaxed text-[#c4b5a5]">{hint}</p> : null}
++
+         {promo && onPromoChange && onPromoApply && onPromoSelectChip ? (
+           <Card>
+             <CheckoutPromoView
+@@ -260,8 +262,6 @@ export function CheckoutPageView({
+           </p>
+         ) : null}
+ 
+-        {hint ? <p className="px-0.5 text-xs leading-relaxed text-[#c4b5a5]">{hint}</p> : null}
+-
+         <SoftButton type="button" tone="ghost" size="compact" onClick={onBack}>
+           {backLabel}
+         </SoftButton>
+@@ -269,6 +269,9 @@ export function CheckoutPageView({
+ 
+       <div className="ob-fixed-cta-bar">
+         <div className="mx-auto flex max-w-lg flex-col gap-2">
++          <p className="px-0.5 text-[10px] font-semibold tracking-wide text-[#f4a261]/90">
++            Γé╣0 platform fee ┬╖ No hidden charges
++          </p>
+           {bill?.totalLabel ? (
+             <div className="flex items-center justify-between px-0.5 text-sm">
+               <span className="font-medium text-white/60">Total</span>

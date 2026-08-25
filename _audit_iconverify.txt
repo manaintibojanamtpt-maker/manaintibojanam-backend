@@ -1,0 +1,123 @@
+=== ICON INVESTIGATION - TEXT-ONLY VERIFICATION REPORT (2026-08-11) ===
+
+Scope : orderbhojan PWA apple-touch-icon (180x180) generation + wiring.
+Method: text-only verification (NO image input) - PNG IHDR/chunk parsing,
+        zlib+filter pixel decode, git diff review.
+
+----------------------------------------------------------------------
+1) APPLIED CHANGES (monorepo manaintibojanam-backend, uncommitted WIP)
+   All three match the planned diffs in _audit_icons.txt / _audit_iconwiring.txt.
+
+   a) orderbhojan/scripts/generate-app-icons.mjs
+        writePwaIcons() now also emits:
+          await writeLegacyIcon(path.join(iconsDir,
+            'apple-touch-icon-180x180.png'), 180, sourceBuffer);
+        prepareAssets() log updated (+1 line).
+        writeLegacyIcon -> composeScaledSquare(scale=0.9, bg=#070504 opaque).
+
+   b) orderbhojan/index.html  (lines 6-7)
+        - <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        - <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-512.png" />
+        + <link rel="apple-touch-icon" sizes="180x180"
+            href="/icons/apple-touch-icon-180x180.png" />
+        + <link rel="apple-touch-icon-precomposed" sizes="180x180"
+            href="/icons/apple-touch-icon-180x180.png" />
+
+   c) orderbhojan/vite.config.ts
+        includeAssets: ['favicon.svg', 'icons/icon-192.png',
+          'icons/icon-512.png', 'icons/apple-touch-icon-180x180.png']
+
+----------------------------------------------------------------------
+2) TEXT-ONLY ARTIFACT VERIFICATION (orderbhojan/public/icons/apple-touch-icon-180x180.png)
+
+   - Valid PNG signature 89504E470D0A1A0A
+   - IHDR: 180x180, bitDepth 8, colorType 3 (palette)
+   - Chunk list: IHDR, PLTE, pHYs, IDAT x4, IEND
+   - PLTE: 253 distinct entries used => real artwork, not a placeholder
+   - No tRNS chunk => FULLY OPAQUE (iOS apple-touch-icon requirement)
+   - Pixel decode (zlib inflate + filter reconstruction + PLTE mapping):
+       corners (0,0)(179,0)(0,179)(179,179)  -> #060404 (bg #070504 quantized)
+       edge midpoints                        -> #060404 (margin present)
+       center cross (90,90)(81,90)(99,90)    -> #1A1A1C #080200 #1C0C02
+                       (90,81)(90,99)           #221E1A #62462A  (logo artwork)
+       => 90%-fill composite on near-black opaque background rendered correctly.
+
+   - Sibling icons follow the same pipeline and are valid:
+       icon-192.png (192x192, palette, no tRNS)
+       icon-512.png (512x512, palette, no tRNS)
+
+----------------------------------------------------------------------
+3) FINDINGS / FOLLOW-UPS
+
+   [x] Generator codifies apple-touch-icon-180x180.png emission (180px).
+   [x] index.html + vite.config.ts wiring correct (no more wrong-size links).
+   [x] File verified: valid 180x180, opaque, real artwork, correct composite.
+   [ ] apple-touch-icon-180x180.png is UNTRACKED (git status ??) - must be
+       git-add'ed; the three source files are modified-but-uncommitted.
+   [ ] Standalone clone F:\Manaintibojanam_final2\orderbhojan still has the
+       OLD index.html / generator / vite.config.ts and NO
+       apple-touch-icon-180x180.png (sync lag vs monorepo).
+   [ ] verifyOutputs() does not include an apple-touch-icon dims check
+       (optional improvement).
+   [ ] Out of scope (separate surface): manaintibojanam-backend/index.html
+       (BhojanOS storefront) points apple-touch-icon at bhojan-os-icon.png /
+       icon-v20-*.png with sizes=152/180/167; those are not true 180px renders
+       (iOS rescales them).
+   [ ] orderbhojan/dist exists (older build output) - next build regenerates;
+       no action required.
+
+----------------------------------------------------------------------
+4) CONCLUSION
+
+   apple-touch-icon-180x180.png is correctly generated (90% fill on opaque
+   #070504 background, exactly 180x180), correctly wired into index.html and
+   vite.config.ts, and codified in scripts/generate-app-icons.mjs.
+   Remaining work is git hygiene (git add the new PNG, commit the three
+   source-file changes) plus the optional follow-ups above.
+
+----------------------------------------------------------------------
+5) RE-VERIFICATION PASS (text-only, post-resumption 2026-08-11)
+   Re-run of the binary verification against the CURRENT working tree.
+   No image input used — PNG chunk parsing + zlib inflate + filter
+   reconstruction + PLTE mapping only. Temp scripts removed afterwards.
+
+   a) apple-touch-icon-180x180.png (F:\...\manaintibojanam-backend\
+      orderbhojan\public\icons\apple-touch-icon-180x180.png, 33476 bytes)
+        - signature 89504E470D0A1A0A valid
+        - chunks: IHDR(13) PLTE(759) pHYs(9) IDAT x4 (8192,8192,8192,8015) IEND(0)
+        - IHDR: 180x180, bitDepth 8, colorType 3 (palette), interlace 0
+        - no tRNS => FULLY OPAQUE (iOS apple-touch-icon requirement met)
+        - PLTE 253 entries, all 253 indices actually used (real artwork)
+        - corners (0,0)(179,0)(0,179)(179,179) = #060404 (opaque #070504 bg,
+          quantized); center cross = logo tones #1A1A1C #080200 #1C0C02
+          #221E1A #62462A  [byte-for-byte identical to pass 1]
+        - margin-boundary scan (row 90 / col 90): 9px outer ring is a SINGLE
+          color #060404; logo content starts exactly at inset 9 =>
+          composeScaledSquare(scale=0.9) math verified: inset=9, inner=162.
+      b) siblings re-verified: icon-192.png 192x192 opaque 255 colors;
+         icon-512.png 512x512 opaque 255 colors (same legacy pipeline).
+      c) generator constants re-confirmed (generate-app-icons.mjs):
+         L27 iconBackgroundColor='#070504'; L29 legacyIconScale=0.9;
+         L139-165 composeScaledSquare(inset=(size*(1-scale))/2, opaque bg);
+         L176-178 writeLegacyIcon -> composeScaledSquare(..0.9, #070504);
+         L188 writePwaIcons emits apple-touch-icon-180x180.png (180px).
+      d) wiring re-confirmed against current files:
+         index.html L6-7: apple-touch-icon + apple-touch-icon-precomposed
+           sizes="180x180" -> /icons/apple-touch-icon-180x180.png (no more
+           icon-192/icon-512 wrong-size links).
+         vite.config.ts L56: includeAssets lists
+           icons/apple-touch-icon-180x180.png.
+      e) git status (current): M index.html, M vite.config.ts,
+         M scripts/generate-app-icons.mjs, ?? public/icons/apple-touch-icon-
+         180x180.png (still untracked -> git add required before commit).
+      f) standalone clone F:\Manaintibojanam_final2\orderbhojan still OLD:
+         index.html still links icon-192/icon-512, includeAssets has no 180
+         entry, generator has no 180 emission, and no apple-touch-icon-
+         180x180.png exists in public/icons (sync lag, documented only).
+
+   CONCLUSION (unchanged): correctly generated + correctly wired + codified.
+   Open items remain non-blocking: (1) git add the untracked PNG and commit
+   the three source changes; (2) optional verifyOutputs() 180x180 dims check
+   (L266-272 currently lists only android/iOS/resources checks); (3) sync the
+   standalone clone when ready; (4) BhojanOS storefront index.html apple-
+   touch-icon links remain a separate, out-of-scope surface.

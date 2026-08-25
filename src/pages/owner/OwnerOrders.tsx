@@ -27,6 +27,7 @@ import {
   splitOwnerOrdersBySchedule,
 } from '../../lib/ownerOrderQueue';
 import { isAwaitingOwnerUpiVerification, isOwnerActionablePlacedOrder } from '../../lib/ownerUpiPayment';
+import { getEffectiveEntitlement } from '../../lib/effectiveEntitlement';
 
 interface Order extends OwnerOrder {}
 
@@ -696,12 +697,13 @@ const OwnerOrders: React.FC = () => {
     );
   };
 
+  const entitlement = getEffectiveEntitlement(tenantInfo);
   const trialEndsAt = parseTrialDate(
     tenantInfo?.subscription?.trialExpiresAt || tenantInfo?.trialEndsAt
   );
-  const isTrialExpired = trialEndsAt && trialEndsAt < new Date();
+  const isTrialExpired = entitlement.isExpired;
   const trialDaysRemaining = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
-  const isSuspended = tenantInfo?.status === 'suspended' || isTrialExpired;
+  const isSuspended = entitlement.isSuspended;
 
   return (
     <div className="min-h-full pb-[calc(2rem+env(safe-area-inset-bottom))]">

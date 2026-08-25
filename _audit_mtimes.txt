@@ -1,0 +1,40 @@
+﻿ImageWithPlaceholder.tsx  2026-08-11 16:05:09  2054B
+pricingEngine.ts  2026-08-11 16:25:32  30847B
+pricingEngine.test.ts  2026-08-11 14:47:44  25936B
+CheckoutPageView.tsx  2026-08-10 23:32:08  11958B
+generate-app-icons.mjs  2026-08-09 20:52:43  11642B
+vite.config.ts  2026-08-09 20:52:43  7528B
+tsc-check.txt  2026-08-11 11:21:34  622B
+_pe_out.txt  2026-08-11 15:17:36  5486B
+_re_out.txt  2026-08-11 15:17:36  5348B
+_tsc.txt  2026-08-11 15:27:28  622B
+_tsc2.txt  2026-08-11 15:34:43  642B
+
+=== tsc-check.txt head ===
+src/components/ImageWithPlaceholder.tsx(26,34): error TS1127: Invalid character.
+src/components/ImageWithPlaceholder.tsx(31,7): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/ImageWithPlaceholder.tsx(31,8): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+=== _pe_out.txt head ===
+Γû╢ PricingEngine ΓÇö Step 6
+  Γ£ö 1. FIXED_TIER parity: 2 km ΓåÆ Γé╣0 with unknown projected cost (1.7626ms)
+  Γ£ö 2. FIXED_TIER parity: 7 km ΓåÆ Γé╣40 (0.168ms)
+  Γ£ö 3. FIXED_TIER parity: 10 km ΓåÆ Γé╣70 (per-km only beyond paid radius) (0.9406ms)
+  Γ£ö 4. FIXED_TIER parity: 16 km ΓåÆ unavailable (pricing-level, never a fake fee) (0.2021ms)
+
+=== _re_out.txt head ===
+Γû╢ RouteEngine ΓÇö request modes & Haversine semantics
+  Γ£ö STRAIGHT_LINE mode returns a labelled informational route with no duration (1.0583ms)
+  Γ£ö Haversine wrapper has NO arbitrary multiplier ΓÇö exact parity with the legacy helper (0.2673ms)
+  Γ£ö default engine with no ROAD provider configured returns UNAVAILABLE in ROAD mode ΓÇö Haversine never masquerades as ROAD (0.29ms)
+  Γ£ö ROAD_OR_STRAIGHT_LINE fallback is labelled STRAIGHT_LINE and REJECTED by assertRoadRoute (0.4053ms)
+
+=== _tsc.txt head ===
+src/components/ImageWithPlaceholder.tsx(26,34): error TS1127: Invalid character.
+src/components/ImageWithPlaceholder.tsx(31,7): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/ImageWithPlaceholder.tsx(31,8): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+=== _tsc2.txt head ===
+src/components/ImageWithPlaceholder.tsx(26,34): error TS1145: '{' or JSX element expected.
+src/components/ImageWithPlaceholder.tsx(31,7): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/ImageWithPlaceholder.tsx(31,8): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?

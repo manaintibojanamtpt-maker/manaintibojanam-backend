@@ -1,0 +1,11 @@
+﻿=== as-casts in pricingEngine.ts ===
+as-casts: 4
+any: 0
+as unknown/never/const: 1
+=== raw cast lines if any ===
+24: *     STRAIGHT_LINE and UNAVAILABLE routes are rejected as authoritative pricing
+40: * quotes into this same contract). The engine accepts a ProviderQuoteResult as an
+74: export const PRICING_ENGINE_ID = 'PricingEngine/v1' as const;
+301: /** Both sides must be supplied to compare; a missing side is not treated as a mismatch. */
+=== deliveryIntelligenceTypes: providerQuote field ===
+  readonly providerQuote: ProviderQuoteResult | null;

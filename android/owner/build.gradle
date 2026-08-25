@@ -1,0 +1,87 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.dagger.hilt.android'
+    id 'kotlin-kapt'
+}
+
+android {
+    namespace 'com.bhojanos.owner'
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.bhojanos.owner"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0-native"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        compose true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion rootProject.ext.composeCompilerVersion
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // ---- Release signing (safe, credential-free structure) ----
+    // Credentials are NEVER embedded. Supply them at build time via env vars:
+    //   BHOJAN_KEYSTORE_PATH / BHOJAN_KEYSTORE_PASSWORD / BHOJAN_KEY_ALIAS / BHOJAN_KEY_PASSWORD
+    // When the keystore path is absent the release buildType remains UNSIGNED
+    // (assembleable for validation) until a legitimate keystore is provided.
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv('BHOJAN_KEYSTORE_PATH')
+            storeFile = keystorePath ? file(keystorePath) : null
+            storePassword = System.getenv('BHOJAN_KEYSTORE_PASSWORD')
+            keyAlias = System.getenv('BHOJAN_KEY_ALIAS')
+            keyPassword = System.getenv('BHOJAN_KEY_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        debug {
+            // Default debug signing; no secrets.
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig = System.getenv('BHOJAN_KEYSTORE_PATH') ? signingConfigs.release : null
+        }
+    }
+}
+
+dependencies {
+    implementation project(':core:common')
+    implementation project(':core:model')
+    implementation project(':core:design')
+    implementation project(':core:network')
+    implementation project(':core:auth')
+    implementation project(':core:biometric')
+    implementation project(':core:storage')
+    implementation project(':core:database')
+
+    implementation platform("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.activity:activity-compose:${rootProject.ext.androidxActivityVersion}"
+    implementation "androidx.navigation:navigation-compose:2.8.1"
+
+    implementation "com.google.dagger:hilt-android:${rootProject.ext.hiltVersion}"
+    kapt "com.google.dagger:hilt-compiler:${rootProject.ext.hiltVersion}"
+
+    testImplementation "junit:junit:$junitVersion"
+}

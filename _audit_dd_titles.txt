@@ -1,0 +1,26 @@
+﻿  it('1. produces a valid AVAILABLE decision for a fully-supported FIXED_TIER request', () => {
+  it('2. returns PENDING and identifies exactly what is missing', () => {
+  it('3. returns UNAVAILABLE with a meaningful reason for hard blockers', () => {
+  it('4. missing route stays PENDING (FIXED_TIER) and never becomes AVAILABLE', () => {
+  it('5. missing pricing stays PENDING and lists PRICING', () => {
+  it('6. missing ETA stays PENDING and lists ETA', () => {
+  it('7. invalid/missing locations are UNAVAILABLE with the right reason', () => {
+  it('8. FIXED_TIER with unknown projected cost is AVAILABLE and keeps subsidy null', () => {
+  it('9. free delivery with known projected cost yields tenantSubsidy = cost', () => {
+  it('10. free delivery with unknown projected cost keeps tenantSubsidy null', () => {
+  it('11. STRAIGHT_LINE can never satisfy a ROAD-only consumer', () => {
+  it('12. ETA status is preserved (ESTIMATE_ONLY and AUTHORITATIVE)', () => {
+  it('13. ETA confidence is preserved and feeds the decision confidence', () => {
+  it('14. engine version and decision identity are preserved', () => {
+  it('PROVIDER_QUOTE without ROAD evidence is UNAVAILABLE with ROUTE_UNAVAILABLE', () => {
+  it('PROVIDER_QUOTE with unknown projected cost is UNAVAILABLE (PROVIDER_UNAVAILABLE)', () => {
+  it('MARKET_BENCHMARK with unknown projected cost is UNAVAILABLE (PRICING_UNAVAILABLE)', () => {
+  it('MARKET_BENCHMARK with unavailable ETA is UNAVAILABLE (ETA_UNAVAILABLE)', () => {
+  it('PROVIDER_QUOTE awaiting the provider quote is PENDING with PROVIDER_QUOTE listed', () => {
+  it('free delivery with a non-zero fee is a contract violation', () => {
+  it('rejects missing decision identity/engine version', () => {
+  it('pickup requests are trivially AVAILABLE (no delivery computation)', () => {
+  it('missing serviceability keeps the decision PENDING (never AVAILABLE)', () => {
+  it('the decision input exposes no client-distance field at all', () => {
+  it('ROAD route satisfies a ROAD-only consumer', () => {
+  it('STRAIGHT_LINE is rejected at compile time by a ROAD-only consumer', () => {

@@ -1,20 +1,38 @@
+/**
+ * Server-Side Entitlement Enforcement
+ * Re-exports canonical entitlements and provides middleware.
+ * DO NOT MODIFY THE MATRIX HERE — it is defined in canonicalEntitlements.ts
+ */
+
 import type { Request, Response, NextFunction } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { resolveTenantIdFromRequest } from './shared/apiGatewayMiddleware.js';
+import {
+  CANONICAL_ENTITLEMENT_MATRIX,
+  PLAN_HIERARCHY,
+  type PlanId,
+  type FeatureKey,
+  type SubscriptionStatus,
+  type SubscriptionState,
+  type TrialState,
+  assertEntitlement as canonicalAssertEntitlement,
+  hasEntitlement as canonicalHasEntitlement,
+  computeSubscriptionState,
+  computeTrialState,
+  requireEntitlement as canonicalRequireEntitlement,
+  validateSuperAdminOverride,
+  TRIAL_RULES,
+} from './canonicalEntitlements.js';
 
-export type PlanId = 'starter' | 'growth' | 'pro' | 'enterprise';
-
-export const ENTITLEMENT_MATRIX: Record<PlanId, string[]> = {
-  starter: ['storefront', 'directOrders', 'basicAnalytics'],
-  growth: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore'],
-  pro: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore', 'aiFull', 'deliveryEngine', 'customerMemory'],
-  enterprise: ['storefront', 'directOrders', 'basicAnalytics', 'advancedAnalytics', 'inventory', 'marketingTools', 'aiCore', 'aiFull', 'deliveryEngine', 'customerMemory', 'customIntegrations'],
-};
+// Re-export canonical types and constants
+export type { PlanId, FeatureKey, SubscriptionStatus, SubscriptionState, TrialState };
+export { CANONICAL_ENTITLEMENT_MATRIX as ENTITLEMENT_MATRIX, PLAN_HIERARCHY, TRIAL_RULES };
+export { canonicalHasEntitlement as hasEntitlement, canonicalAssertEntitlement as assertPlanEntitlement, computeSubscriptionState, computeTrialState, validateSuperAdminOverride };
 
 /**
  * Check if a tenant has a specific feature entitlement.
  * Returns the tenant's effective plan ID if entitled, throws an error with statusCode if not.
- * 
+ *
  * @param db - Firestore instance
  * @param tenantId - The tenant ID to check (must be resolved/authoritative, not from query/body)
  * @param featureKey - The feature key to check (e.g., 'deliveryEngine')
@@ -25,7 +43,7 @@ export const ENTITLEMENT_MATRIX: Record<PlanId, string[]> = {
 export async function assertEntitlement(
   db: Firestore,
   tenantId: string,
-  featureKey: string
+  featureKey: FeatureKey
 ): Promise<PlanId> {
   const tenantDoc = await db.collection('tenants').doc(tenantId).get();
   if (!tenantDoc.exists) {
@@ -34,33 +52,10 @@ export async function assertEntitlement(
     throw err;
   }
 
-  const tenantData = tenantDoc.data();
-  const subscription = tenantData?.subscription || {};
+  const tenantData = tenantDoc.data()!;
+  const subscriptionState = computeSubscriptionState(tenantData);
 
-  // Determine effective plan
-  let effectivePlanId: PlanId = 'starter';
-  if (subscription.planId && Object.keys(ENTITLEMENT_MATRIX).includes(subscription.planId)) {
-    effectivePlanId = subscription.planId as PlanId;
-  }
-
-  // Grace period checking: if past_due, downgrade effective capabilities or block?
-  // For now, if status is canceled, fallback to starter capabilities
-  if (subscription.status === 'canceled') {
-    effectivePlanId = 'starter';
-  }
-
-  // Check if plan grants feature
-  const allowedFeatures = ENTITLEMENT_MATRIX[effectivePlanId] || [];
-  if (!allowedFeatures.includes(featureKey)) {
-    const err: any = new Error(
-      `Your current plan (${effectivePlanId}) does not support ${featureKey}. Please upgrade to access this feature.`
-    );
-    err.statusCode = 403;
-    err.requiresUpgrade = true;
-    throw err;
-  }
-
-  return effectivePlanId;
+  return canonicalAssertEntitlement(subscriptionState.planId, featureKey);
 }
 
 /**
@@ -74,30 +69,7 @@ export async function assertDeliveryEngineEntitlement(
   return assertEntitlement(db, tenantId, 'deliveryEngine');
 }
 
-
 // Middleware factory for enforcing capabilities (reads tenantId from params/body/query/header/URL path)
-export function requireEntitlement(db: Firestore, featureKey: string) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const tenantId = resolveTenantIdFromRequest(req);
-
-      if (!tenantId) {
-        return res.status(400).json({ success: false, error: 'tenantId is required for entitlement check' });
-      }
-
-      await assertEntitlement(db, tenantId, featureKey);
-      next();
-    } catch (error) {
-      const err = error as { statusCode?: number; requiresUpgrade?: boolean; message?: string };
-      if (err.statusCode) {
-        return res.status(err.statusCode).json({
-          success: false,
-          error: err.message || 'Entitlement check failed',
-          requiresUpgrade: err.requiresUpgrade,
-        });
-      }
-      console.error('requireEntitlement error:', error);
-      res.status(500).json({ success: false, error: 'Internal server error checking entitlements' });
-    }
-  };
+export function requireEntitlement(db: Firestore, featureKey: FeatureKey) {
+  return canonicalRequireEntitlement(db, featureKey);
 }

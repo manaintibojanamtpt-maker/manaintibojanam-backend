@@ -1,0 +1,34 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+}
+
+android {
+    namespace 'com.bhojanos.core.database'
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation project(':core:common')
+    implementation project(':core:model')
+
+    api "androidx.room:room-runtime:${rootProject.ext.roomVersion}"
+    api "androidx.room:room-ktx:${rootProject.ext.roomVersion}"
+    kapt "androidx.room:room-compiler:${rootProject.ext.roomVersion}"
+
+    testImplementation "junit:junit:$junitVersion"
+}

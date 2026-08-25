@@ -1,0 +1,62 @@
+STEP 7 — Free Delivery + Tenant Subsidy Policy: IMPLEMENTATION AUDIT
+====================================================================
+Date: 2026-08-11   Scope: backend-lib/delivery only (no Step-7+ UI wiring)
+
+1. WHAT CHANGED
+   - backend-lib/delivery/deliveryIntelligenceTypes.ts
+       * FreeDeliveryDecision extended ADDITIVELY: optional fields
+         minimumOrderValue / orderValue / basis / payer / eligible; reason union
+         extended with 'THRESHOLD_MET' + 'NO_ORDER_VALUE' (ABOVE_THRESHOLD kept).
+       * New canonical types: FreeDeliveryBasis = 'SUBTOTAL',
+         FreeDeliveryPayer = 'TENANT'.
+   - backend-lib/delivery/pricingEngine.ts
+       * buildFreeDeliveryDecision: full policy evaluation (canonical config wins;
+         legacy freeDeliveryMinOrder stays the threshold fallback but never
+         auto-enables; enabled must be explicitly true).
+       * applyFreeDeliveryPolicy: ONE central point. PRICED + eligible → ONLY
+         customerDeliveryFee = 0 and tenantSubsidy = projectedDeliveryCost
+         (null when cost unknown). Everything else is untouched.
+       * New request input: freeDelivery?: FreeDeliveryPolicyConfig.
+       * FreeDeliveryReadiness kept as a deprecated type alias (compat only).
+   - backend-lib/delivery/decisionEngine.ts
+       * Disabled-default freeDelivery decision now carries the canonical fields
+         (additive; Step-3 fixtures untouched).
+   - backend-lib/delivery/__tests__/freeDeliveryPolicy.test.ts (NEW)
+       * 31 tests covering the full 27-item matrix + edge/safety cases.
+
+2. DELIVERY SUITE RESULT
+   - Full delivery suite: tests 148 / pass 148 / fail 0
+     (benchmarkModel, deliveryConnectionLifecycle, deliveryDecisionContract,
+      freeDeliveryPolicy, pricingEngine, routeEngine, uberPorterReadiness).
+   - Baseline before Step 7 was 117 tests (101 core + 16 lifecycle/readiness);
+     Step-7 suite added 31 tests.
+
+3. TYPECHECK
+   - Full-repo `tsc --noEmit`: 0 errors in backend-lib/delivery
+     (includes pricingEngine.ts, decisionEngine.ts, deliveryIntelligenceTypes.ts,
+      freeDeliveryPolicy.test.ts).
+   - Full-repo total = 596 PRE-EXISTING errors, all in unrelated WIP
+     (conversation engine, projectSearch, checkoutBranchFacade,
+      tenantCheckoutConfig tests, mapDiscoveryToMarketplace, PricingContext,
+      src/pages/Checkout.tsx, ...). None touch backend-lib/delivery.
+     This is the documented full-repo typecheck discrepancy — delivery is clean.
+   - Test 26's 4 @ts-expect-error guards validated: the PricingEngineRequest type
+     rejects freeDeliveryApplied / customerDeliveryFee / tenantSubsidy / grandTotal
+     (no client-authoritative fee input, no discount/tax leak into threshold).
+
+4. CORE FINANCIAL PROOF (test 27)
+   - Same benchmark request priced paid vs free: projectedDeliveryCost, source,
+     distanceKm, durationMinutes, routeSource, benchmark, benchmarkCalculation,
+     confidence, pricingStep all bit-for-bit identical; ONLY customerDeliveryFee
+     (50→0), tenantSubsidy (71→121) and freeDelivery.applied differ.
+
+5. NO MAGIC NUMBERS
+   - ₹109 exists only in the test fixture (BENCHMARK_109 / quote cost) — the
+     pricing-engine source contains no '109' (tests 8-9, 20-21, 23, 25, 27, 31).
+   - ₹599 is tenant configuration only — pricing-engine source has no bare 599
+     literal (test 24); thresholds are read from request config.
+
+6. MARKET_BENCHMARK NOT PREMATURELY ACTIVATED
+   - Runtime free delivery requires freeDelivery.enabled === true. Legacy
+     freeDeliveryMinOrder alone keeps enabled=false (Step-6 parity preserved,
+     test 29). No checkout/owner UI activates the policy in this session.

@@ -1,0 +1,1359 @@
+﻿backend-lib/conversation/__tests__/ConfirmationRule.test.ts(34,43): error TS2339: Property 'booleanValue' does not exist on type 'BaseEntity | ConfirmationEntity'.
+  Property 'booleanValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/ConfirmationRule.test.ts(45,43): error TS2339: Property 'booleanValue' does not exist on type 'BaseEntity | ConfirmationEntity'.
+  Property 'booleanValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/ConfirmationRule.test.ts(63,43): error TS2339: Property 'booleanValue' does not exist on type 'ConversationEntity'.
+  Property 'booleanValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/IntentPipeline.test.ts(31,43): error TS2339: Property 'menuItemId' does not exist on type 'BaseEntity | FoodItemEntity'.
+  Property 'menuItemId' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/IntentPipeline.test.ts(36,43): error TS2339: Property 'numericValue' does not exist on type 'BaseEntity | QuantityEntity'.
+  Property 'numericValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/IntentResolverPipeline.test.ts(45,43): error TS2339: Property 'booleanValue' does not exist on type 'ConversationEntity'.
+  Property 'booleanValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/MenuFoodItemExtractor.test.ts(68,63): error TS2339: Property 'numericValue' does not exist on type 'BaseEntity | QuantityEntity'.
+  Property 'numericValue' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/MenuFoodItemExtractor.test.ts(69,63): error TS2339: Property 'menuItemId' does not exist on type 'BaseEntity | FoodItemEntity'.
+  Property 'menuItemId' does not exist on type 'BaseEntity'.
+backend-lib/conversation/__tests__/ScheduleDeliveryRule.test.ts(18,43): error TS2353: Object literal may only specify known properties, and 'entities' does not exist in type 'IntentResolutionContext'.
+backend-lib/conversation/__tests__/ScheduleDeliveryRule.test.ts(31,53): error TS2353: Object literal may only specify known properties, and 'entities' does not exist in type 'IntentResolutionContext'.
+backend-lib/conversation/__tests__/ScheduleDeliveryRule.test.ts(44,54): error TS2353: Object literal may only specify known properties, and 'entities' does not exist in type 'IntentResolutionContext'.
+backend-lib/conversation/engine/ConversationEngine.ts(34,29): error TS2367: This comparison appears to be unintentional because the types 'ConversationIntent.Greeting | ConversationIntent.AddItem | ConversationIntent.RemoveItem | ConversationIntent.ModifyItem | ConversationIntent.ScheduleDelivery | ConversationIntent.Checkout | ConversationIntent.Cancel | ConversationIntent.Confirmation' and 'ConversationIntent.Unknown' have no overlap.
+backend-lib/conversation/workflow/intent/rules/ScheduleDeliveryRule.ts(26,35): error TS2339: Property 'entities' does not exist on type 'IntentResolutionContext'.
+backend-lib/firebase/FirebaseAdminProvider.ts(78,30): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type 'ServiceAccount & { project_id: string; client_email: string; }' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'ServiceAccount & { project_id: string; client_email: string; }'.
+backend-lib/kycStorage.ts(12,30): error TS2345: Argument of type '{ options?: { storageBucket?: string; }; }' is not assignable to parameter of type 'App'.
+  Property 'name' is missing in type '{ options?: { storageBucket?: string; }; }' but required in type 'App'.
+backend-lib/marketplace/__tests__/ownerPaymentVerification.test.ts(8,8): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+backend-lib/marketplace/__tests__/projectSearch.test.ts(14,7): error TS2741: Property 'kitchenFormat' is missing in type '{ restaurantId: string; restaurantSlug: string; displayName: string; cuisines: string[]; isOpen: true; badges: ("veg" | "offer")[]; rating: number; ratingCount: number; distanceKm: number; deliveryFee: number; }' but required in type 'RestaurantPublic'.
+backend-lib/marketplace/ownerOrdersRoutes.ts(89,41): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/ownerOrdersRoutes.ts(89,72): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/ownerPaymentVerification.ts(6,8): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+backend-lib/marketplace/ownerPaymentVerification.ts(7,42): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+backend-lib/marketplace/projectDiscovery.ts(480,53): error TS2345: Argument of type '"non_veg"' is not assignable to parameter of type 'RestaurantBadge'.
+backend-lib/marketplace/projectSearch.ts(362,25): error TS2540: Cannot assign to 'cuisines' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(363,59): error TS2540: Cannot assign to 'vegOnly' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(364,62): error TS2540: Cannot assign to 'nonVegOnly' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(365,68): error TS2540: Cannot assign to 'cloudKitchenOnly' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(366,63): error TS2540: Cannot assign to 'openNowOnly' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(367,62): error TS2540: Cannot assign to 'offersOnly' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(369,26): error TS2540: Cannot assign to 'minRating' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(371,30): error TS2540: Cannot assign to 'maxDistanceKm' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(373,30): error TS2540: Cannot assign to 'maxEtaMinutes' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(375,31): error TS2540: Cannot assign to 'maxDeliveryFee' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(378,13): error TS2540: Cannot assign to 'priceRange' because it is a read-only property.
+backend-lib/marketplace/projectSearch.ts(381,21): error TS2540: Cannot assign to 'sort' because it is a read-only property.
+backend-lib/marketplace/recipeConsumptionService.ts(124,26): error TS2339: Property 'name' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(125,26): error TS2339: Property 'unit' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(126,33): error TS2339: Property 'costPerUnit' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(127,32): error TS2339: Property 'gstPercent' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(134,48): error TS2339: Property 'ingredients' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(134,71): error TS2339: Property 'ingredients' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(135,38): error TS2339: Property 'menuItemId' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(140,48): error TS2339: Property 'menuItemId' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(141,44): error TS2339: Property 'ingredients' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/recipeConsumptionService.ts(142,39): error TS2339: Property 'ingredients' does not exist on type '{ id: string; }'.
+backend-lib/marketplace/tenantProjectionHelpers.ts(209,20): error TS2339: Property 'timezone' does not exist on type '{ isStoreOpen?: boolean; businessHoursEnabled?: boolean; openTime?: string; closeTime?: string; offlineMessage?: string; }'.
+backend-lib/marketplace/tenantProjectionHelpers.ts(209,49): error TS2339: Property 'timezone' does not exist on type '{ isStoreOpen?: boolean; businessHoursEnabled?: boolean; openTime?: string; closeTime?: string; offlineMessage?: string; }'.
+backend-lib/marketplace/tenantProjectionHelpers.ts(210,17): error TS2339: Property 'timezone' does not exist on type '{ isStoreOpen?: boolean; businessHoursEnabled?: boolean; openTime?: string; closeTime?: string; offlineMessage?: string; }'.
+backend-lib/shared/__tests__/apiGatewayMiddleware.test.ts(36,7): error TS2322: Type '(_req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, _res: Response<any, Record<string, any>, number>, next: NextFunction) => void' is not assignable to type 'RateLimitRequestHandler'.
+  Type '(_req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, _res: Response<any, Record<string, any>, number>, next: NextFunction) => void' is not assignable to type '{ resetKey: (key: string) => void; getKey: (key: string) => ClientRateLimitInfo | Promise<ClientRateLimitInfo>; }'.
+backend-lib/shared/__tests__/orderNotificationCopy.test.ts(1,38): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+packages/location-core/__tests__/readiness.test.ts(7,8): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+packages/location-core/__tests__/readiness.test.ts(8,38): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+server.ts(1012,63): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+server.ts(1042,58): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+server.ts(1063,15): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'number'.
+  Type 'string' is not assignable to type 'number'.
+server.ts(1733,7): error TS2741: Property '__promisify__' is missing in type '(hostname: any, options: any, callback: any) => void' but required in type 'typeof lookup'.
+server.ts(1797,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'host' does not exist in type 'TransportOptions | Transport<unknown, TransportOptions>'.
+server.ts(2690,22): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+server.ts(3231,3): error TS2322: Type '(to: string, subject: string, body: string, options?: { fromLabel?: string; replyTo?: string; fromOutbox?: boolean; }) => Promise<EmailSendResult>' is not assignable to type 'SendEmailFn'.
+  Type 'Promise<EmailSendResult>' is not assignable to type 'Promise<void>'.
+    Type 'EmailSendResult' is not assignable to type 'void'.
+server.ts(3236,3): error TS2322: Type 'Razorpay' is not assignable to type '{ orders: { create: (options: Record<string, unknown>) => Promise<{ id: string; amount: number; currency: string; }>; }; }'.
+  The types of 'orders.create' are incompatible between these types.
+    Type '{ (params: RazorpayOrderCreateRequestBody | RazorpayTransferCreateRequestBody | RazorpayAuthorizationCreateRequestBody): Promise<...>; (params: RazorpayOrderCreateRequestBody | ... 1 more ... | RazorpayAuthorizationCreateRequestBody, callback: (err: INormalizeError, data: RazorpayOrder) => void): void; }' is not assignable to type '(options: Record<string, unknown>) => Promise<{ id: string; amount: number; currency: string; }>'.
+      Types of parameters 'params' and 'options' are incompatible.
+        Type 'Record<string, unknown>' is not assignable to type 'RazorpayOrderCreateRequestBody | RazorpayTransferCreateRequestBody | RazorpayAuthorizationCreateRequestBody'.
+          Type 'Record<string, unknown>' is missing the following properties from type 'RazorpayOrderCreateRequestBody': amount, currency
+server.ts(3781,9): error TS2345: Argument of type 'Razorpay' is not assignable to parameter of type '{ orders: { fetch: (orderId: string) => Promise<{ amount: number; }>; }; payments: { fetch: (paymentId: string) => Promise<{ amount: number; }>; }; }'.
+  The types returned by 'orders.fetch(...)' are incompatible between these types.
+    Type 'Promise<RazorpayOrder>' is not assignable to type 'Promise<{ amount: number; }>'.
+      Type 'RazorpayOrder' is not assignable to type '{ amount: number; }'.
+        Types of property 'amount' are incompatible.
+          Type 'string | number' is not assignable to type 'number'.
+            Type 'string' is not assignable to type 'number'.
+server.ts(4116,29): error TS2304: Cannot find name 'getFirestore'.
+server.ts(4119,29): error TS2304: Cannot find name 'getFirestore'.
+server.ts(4123,27): error TS2304: Cannot find name 'getFirestore'.
+server.ts(4419,65): error TS2339: Property 'status' does not exist on type '{ id: string; }'.
+server.ts(5884,25): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+server.ts(5885,25): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+server.ts(5892,25): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+server.ts(5893,25): error TS2339: Property 'createdAt' does not exist on type '{ id: string; }'.
+server.ts(5991,10): error TS2304: Cannot find name 'getFirestore'.
+src/components/owner/DashboardProductionMetrics.tsx(189,37): error TS2339: Property 'total' does not exist on type 'Order'.
+src/components/owner/OwnerLayout.tsx(148,11): error TS18048: 'window' is possibly 'undefined'.
+src/components/owner/recipes/RecipeAnalyticsCards.tsx(3,48): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/config/__tests__/firebaseClientConfig.test.ts(32,5): error TS2739: Type '{ apiKey: "AIzaSyC6kCJwsEWuwLVPGmJsVDDxTyWlayp2yLQ"; projectId: "bhojanos-prod"; }' is missing the following properties from type 'FirebaseClientConfig': authDomain, storageBucket, messagingSenderId, appId
+src/design-system/location/AutoLocationForm.tsx(145,35): error TS2339: Property 'code' does not exist on type 'GeolocationResult'.
+  Property 'code' does not exist on type 'GeolocationSuccess'.
+src/design-system/location/AutoLocationForm.tsx(145,45): error TS2339: Property 'message' does not exist on type 'GeolocationResult'.
+  Property 'message' does not exist on type 'GeolocationSuccess'.
+src/design-system/location/AutoLocationForm.tsx(147,13): error TS2339: Property 'code' does not exist on type 'GeolocationResult'.
+  Property 'code' does not exist on type 'GeolocationSuccess'.
+src/design-system/location/AutoLocationForm.tsx(149,17): error TS2339: Property 'code' does not exist on type 'GeolocationResult'.
+  Property 'code' does not exist on type 'GeolocationSuccess'.
+src/domain/events/projection/ProjectionIdentity.ts(5,41): error TS2307: Cannot find module '../shared/ProjectionIdentityTypes' or its corresponding type declarations.
+src/domain/events/projection/ProjectionRebuildPolicy.ts(12,8): error TS2307: Cannot find module '../shared/ProjectionIdentityTypes' or its corresponding type declarations.
+src/domain/events/projection/ProjectionRetryPolicy.ts(5,40): error TS2307: Cannot find module '../shared/ProjectionTypes' or its corresponding type declarations.
+src/domain/events/projections/order/__tests__/orderProjectionDomain.test.ts(79,7): error TS2345: Argument of type '{ orderId: string; tenantId: string; status: string; totalAmount: number; payloadVersion: string; }' is not assignable to parameter of type 'OrderUpdatedPayload'.
+  Property 'updatedFields' is missing in type '{ orderId: string; tenantId: string; status: string; totalAmount: number; payloadVersion: string; }' but required in type 'OrderUpdatedPayload'.
+src/domain/menu/certification/MenuProjectionReadinessRules.ts(152,5): error TS2367: This comparison appears to be unintentional because the types '"GREEN" | "AMBER"' and '"RED"' have no overlap.
+src/domain/order/certification/ProjectionReadinessRules.ts(143,5): error TS2367: This comparison appears to be unintentional because the types '"GREEN" | "AMBER"' and '"RED"' have no overlap.
+src/domain/pricing/certification/PricingProjectionReadinessRules.ts(155,5): error TS2367: This comparison appears to be unintentional because the types '"GREEN" | "AMBER"' and '"RED"' have no overlap.
+src/features/location-v2/useUnifiedLocation.ts(44,35): error TS2339: Property 'code' does not exist on type 'GeolocationResult'.
+  Property 'code' does not exist on type 'GeolocationSuccess'.
+src/features/location-v2/useUnifiedLocation.ts(44,45): error TS2339: Property 'message' does not exist on type 'GeolocationResult'.
+  Property 'message' does not exist on type 'GeolocationSuccess'.
+src/features/location-v2/useUnifiedLocation.ts(46,20): error TS2339: Property 'message' does not exist on type 'GeolocationResult'.
+  Property 'message' does not exist on type 'GeolocationSuccess'.
+src/hooks/ownerBranchManagementTypes.ts(5,78): error TS2307: Cannot find module '../../sdk/branch/dto' or its corresponding type declarations.
+src/hooks/ownerBranchManagementTypes.ts(6,54): error TS2307: Cannot find module '../../sdk/branch/dto/operations' or its corresponding type declarations.
+src/hooks/ownerBranchManagementTypes.ts(7,36): error TS2307: Cannot find module '../../sdk/branch/dto/branch' or its corresponding type declarations.
+src/hooks/ownerBranchManagementTypes.ts(8,31): error TS2307: Cannot find module '../../sdk/branch/types/branded' or its corresponding type declarations.
+src/hooks/useOwnerBranchManagement.ts(92,36): error TS2339: Property 'error' does not exist on type 'OwnerBranchOperationalAvailabilityOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly availability: BranchOperationsAvailabilityDto; }'.
+src/hooks/useOwnerBranchManagement.ts(95,34): error TS2339: Property 'error' does not exist on type 'OwnerBranchValidateOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly validation: BranchValidationResult; }'.
+src/hooks/useOwnerBranchManagement.ts(98,27): error TS2339: Property 'error' does not exist on type 'OwnerBranchEtaOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly estimate: BranchETAEstimate; }'.
+src/hooks/useOwnerBranchManagement.ts(123,26): error TS2339: Property 'error' does not exist on type 'OwnerBranchGetOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly branch: BranchDetail; }'.
+src/hooks/useOwnerBranchManagement.ts(173,26): error TS2339: Property 'error' does not exist on type 'OwnerBranchListOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly branches: readonly BranchSummary[]; }'.
+src/hooks/useOwnerBranchManagement.ts(218,24): error TS2339: Property 'error' does not exist on type 'OwnerBranchListOutcome | OwnerBranchGetOutcome | OwnerBranchOperationalAvailabilityOutcome | OwnerBranchValidateOutcome | OwnerBranchEtaOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly branches: readonly BranchSummary[]; }'.
+src/lib/__tests__/checkoutBranchFacade.test.ts(86,3): error TS2322: Type '() => Promise<SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; };...' is not assignable to type '(query: BranchSelectionQuery) => SdkAsyncResult<BranchAssignment>'.
+  Type 'Promise<SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assig...' is not assignable to type 'SdkAsyncResult<BranchAssignment>'.
+    Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkResult<BranchAssignment>'.
+      Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkSuccess<BranchAssignment>'.
+        Type '{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: number; over...' is not assignable to type 'BranchAssignment'.
+          Types of property 'score' are incompatible.
+            Type '{ total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }' is missing the following properties from type 'BranchScore': branchId, factors
+src/lib/__tests__/checkoutBranchFacade.test.ts(197,13): error TS2322: Type '(query: BranchSelectionQuery) => Promise<SdkSuccess<{ assignmentId: never; branchId: BranchId; branchName: string; reason: "default_branch"; eligibility: { branchId: BranchId; ... 4 more ...; reasons: any[]; }; tenantId: TenantId; score: { ...; }; assignedAt: number; overrideApplied: boolean; }>>' is not assignable to type '(query: BranchSelectionQuery) => SdkAsyncResult<BranchAssignment>'.
+  Type 'Promise<SdkSuccess<{ assignmentId: never; branchId: BranchId; branchName: string; reason: "default_branch"; eligibility: { branchId: BranchId; isEligible: boolean; status: "serviceable"; distanceKm: number; maxRadiusKm: number; reasons: any[]; }; tenantId: TenantId; score: { ...; }; assignedAt: number; overrideAppli...' is not assignable to type 'SdkAsyncResult<BranchAssignment>'.
+    Type 'SdkSuccess<{ assignmentId: never; branchId: BranchId; branchName: string; reason: "default_branch"; eligibility: { branchId: BranchId; isEligible: boolean; status: "serviceable"; distanceKm: number; maxRadiusKm: number; reasons: any[]; }; tenantId: TenantId; score: { ...; }; assignedAt: number; overrideApplied: bool...' is not assignable to type 'SdkResult<BranchAssignment>'.
+      Type 'SdkSuccess<{ assignmentId: never; branchId: BranchId; branchName: string; reason: "default_branch"; eligibility: { branchId: BranchId; isEligible: boolean; status: "serviceable"; distanceKm: number; maxRadiusKm: number; reasons: any[]; }; tenantId: TenantId; score: { ...; }; assignedAt: number; overrideApplied: bool...' is not assignable to type 'SdkSuccess<BranchAssignment>'.
+        Type '{ assignmentId: never; branchId: BranchId; branchName: string; reason: "default_branch"; eligibility: { branchId: BranchId; isEligible: boolean; status: "serviceable"; distanceKm: number; maxRadiusKm: number; reasons: any[]; }; tenantId: TenantId; score: { ...; }; assignedAt: number; overrideApplied: boolean; }' is not assignable to type 'BranchAssignment'.
+          Types of property 'score' are incompatible.
+            Type '{ total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }' is missing the following properties from type 'BranchScore': branchId, factors
+src/lib/__tests__/checkoutBranchFacade.test.ts(240,7): error TS2322: Type '() => Promise<SdkFailure | SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; ... 5 more ...; openStatus: number; }; eligibility: { ...; }; assignedAt: number; overrideApplied: boolean; }>>' is not assignable to type '(query: BranchSelectionQuery) => SdkAsyncResult<BranchAssignment>'.
+  Type 'Promise<SdkFailure | SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; ... 5 more ...; openStatus: number; }; eligibility: { ...; }; assignedAt: number; overrideApplied: boolean; }>>' is not assignable to type 'SdkAsyncResult<BranchAssignment>'.
+    Type 'SdkFailure | SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; ... 5 more ...; openStatus: number; }; eligibility: { ...; }; assignedAt: number; overrideApplied: boolean; }>' is not assignable to type 'SdkResult<BranchAssignment>'.
+      Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkResult<BranchAssignment>'.
+        Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkSuccess<BranchAssignment>'.
+          Type '{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: number; over...' is not assignable to type 'BranchAssignment'.
+            Types of property 'score' are incompatible.
+              Type '{ total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }' is missing the following properties from type 'BranchScore': branchId, factors
+src/lib/__tests__/checkoutBranchFacade.test.ts(314,13): error TS2322: Type '() => Promise<SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; };...' is not assignable to type '(query: BranchSelectionQuery) => SdkAsyncResult<BranchAssignment>'.
+  Type 'Promise<SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assig...' is not assignable to type 'SdkAsyncResult<BranchAssignment>'.
+    Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkResult<BranchAssignment>'.
+      Type 'SdkSuccess<{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: n...' is not assignable to type 'SdkSuccess<BranchAssignment>'.
+        Type '{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: number; over...' is not assignable to type 'BranchAssignment'.
+          Types of property 'score' are incompatible.
+            Type '{ total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }' is missing the following properties from type 'BranchScore': branchId, factors
+src/lib/__tests__/marketplaceHomeFacade.test.ts(57,52): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/lib/__tests__/menuFacade.test.ts(53,5): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/lib/__tests__/menuFacade.test.ts(56,3): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/lib/__tests__/menuFacade.test.ts(281,7): error TS2322: Type '"UNKNOWN"' is not assignable to type 'SdkErrorCode'.
+src/lib/__tests__/menuItemOptions.test.ts(7,8): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+src/lib/__tests__/orderBranchPersistence.test.ts(59,3): error TS2345: Argument of type '{ assignmentId: never; tenantId: TenantId; branchId: BranchId; branchName: string; reason: "nearest_serviceable"; score: { total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }; eligibility: { ...; }; assignedAt: number; over...' is not assignable to parameter of type 'BranchAssignment'.
+  Types of property 'score' are incompatible.
+    Type '{ total: number; distance: number; eta: number; deliveryFee: number; capacityHeadroom: number; inventoryAvailability: number; openStatus: number; }' is missing the following properties from type 'BranchScore': branchId, factors
+src/lib/__tests__/ownerDashboardStatus.test.ts(32,32): error TS2352: Conversion of type '{ paymentConfig: { defaultProvider: string; providers: { cod: { enabled: boolean; }; }; }; }' to type 'TenantInfo' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ paymentConfig: { defaultProvider: string; providers: { cod: { enabled: boolean; }; }; }; }' is missing the following properties from type 'TenantInfo': id, slug, name, status
+src/lib/__tests__/ownerDashboardStatus.test.ts(45,35): error TS2352: Conversion of type '{ paymentConfig: { defaultProvider: string; providers: { upi: { enabled: boolean; upiId: string; }; }; }; }' to type 'TenantInfo' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ paymentConfig: { defaultProvider: string; providers: { upi: { enabled: boolean; upiId: string; }; }; }; }' is missing the following properties from type 'TenantInfo': id, slug, name, status
+src/lib/__tests__/ownerDashboardStatus.test.ts(51,35): error TS2352: Conversion of type '{ paymentConfig: { defaultProvider: string; providers: { razorpay: { enabled: boolean; }; }; }; }' to type 'TenantInfo' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ paymentConfig: { defaultProvider: string; providers: { razorpay: { enabled: boolean; }; }; }; }' is missing the following properties from type 'TenantInfo': id, slug, name, status
+src/lib/__tests__/ownerOrderQueue.test.ts(89,9): error TS2353: Object literal may only specify known properties, and 'totalAmount' does not exist in type 'OwnerQueueOrder'.
+src/lib/__tests__/ownerUpiPayment.test.ts(3,78): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+src/lib/__tests__/pricingFacade.test.ts(287,7): error TS2322: Type '"UNKNOWN"' is not assignable to type 'SdkErrorCode'.
+src/lib/__tests__/searchFacade.test.ts(286,31): error TS2322: Type 'Promise<SdkSuccess<unknown>>' is not assignable to type 'SdkAsyncResult<SearchResult>'.
+  Type 'SdkSuccess<unknown>' is not assignable to type 'SdkResult<SearchResult>'.
+    Type 'SdkSuccess<unknown>' is not assignable to type 'SdkSuccess<SearchResult>'.
+      Type '{}' is missing the following properties from type 'SearchResult': restaurants, totalMatches, totalDiscoveryCandidates, query, and 2 more.
+src/lib/__tests__/tenantCheckoutConfig.test.ts(192,40): error TS2345: Argument of type '{ enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' is not assignable to parameter of type 'DeliveryConfigLike'.
+  Property 'prepTime' is missing in type '{ enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' but required in type '{ enabled?: boolean; freeRadius: number; paidRadius: number; maxRadius: number; perKmCharge: number; baseFee: number; prepTime: number; feesConfigured?: boolean; freeDeliveryMinOrder?: number; }'.
+src/lib/__tests__/tenantCheckoutConfig.test.ts(197,29): error TS2345: Argument of type '{ baseFee: number; perKmCharge: number; feesConfigured: true; enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; }' is not assignable to parameter of type 'DeliveryConfigLike'.
+  Property 'prepTime' is missing in type '{ baseFee: number; perKmCharge: number; feesConfigured: true; enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; }' but required in type '{ enabled?: boolean; freeRadius: number; paidRadius: number; maxRadius: number; perKmCharge: number; baseFee: number; prepTime: number; feesConfigured?: boolean; freeDeliveryMinOrder?: number; }'.
+src/lib/__tests__/tenantCheckoutConfig.test.ts(209,29): error TS2345: Argument of type '{ enabled: true; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: false; }' is not assignable to parameter of type 'DeliveryConfigLike'.
+  Property 'prepTime' is missing in type '{ enabled: true; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: false; }' but required in type '{ enabled?: boolean; freeRadius: number; paidRadius: number; maxRadius: number; perKmCharge: number; baseFee: number; prepTime: number; feesConfigured?: boolean; freeDeliveryMinOrder?: number; }'.
+src/lib/__tests__/tenantCheckoutConfig.test.ts(223,41): error TS2345: Argument of type '{ enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' is not assignable to parameter of type 'DeliveryConfigLike'.
+  Property 'prepTime' is missing in type '{ enabled: boolean; freeRadius: number; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' but required in type '{ enabled?: boolean; freeRadius: number; paidRadius: number; maxRadius: number; perKmCharge: number; baseFee: number; prepTime: number; feesConfigured?: boolean; freeDeliveryMinOrder?: number; }'.
+src/lib/__tests__/tenantCheckoutConfig.test.ts(228,29): error TS2345: Argument of type '{ freeRadius: number; enabled: boolean; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' is not assignable to parameter of type 'DeliveryConfigLike'.
+  Property 'prepTime' is missing in type '{ freeRadius: number; enabled: boolean; paidRadius: number; maxRadius: number; baseFee: number; perKmCharge: number; feesConfigured: boolean; }' but required in type '{ enabled?: boolean; freeRadius: number; paidRadius: number; maxRadius: number; perKmCharge: number; baseFee: number; prepTime: number; feesConfigured?: boolean; freeDeliveryMinOrder?: number; }'.
+src/lib/branch/BranchContext.ts(88,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchEligibilityContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchEligibilityContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltBranchEligibilityContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltBranchEligibilityContext': query, meta
+src/lib/branch/BranchContext.ts(120,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchValidationContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchValidationContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltBranchValidationContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltBranchValidationContext': input, meta
+src/lib/branch/BranchContext.ts(152,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchEtaContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchEtaContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltBranchEtaContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltBranchEtaContext': input, meta
+src/lib/branch/BranchContext.ts(179,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchSelectionContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltBranchSelectionContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltBranchSelectionContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltBranchSelectionContext': query, meta
+src/lib/branch/BranchContext.ts(182,3): error TS2322: Type 'SdkSuccess<{ query: { tenantId: TenantId; customerPoint: { lat: number; lng: number; }; customerGeohash: string; orderType: BranchOrderType; cartItemIds: readonly string[]; preferredBranchId: BranchId; excludeBranchIds: readonly BranchId[]; correlationId: string; }; meta: { ...; }; }>' is not assignable to type 'SdkResult<BuiltBranchSelectionContext>'.
+  Type 'SdkSuccess<{ query: { tenantId: TenantId; customerPoint: { lat: number; lng: number; }; customerGeohash: string; orderType: BranchOrderType; cartItemIds: readonly string[]; preferredBranchId: BranchId; excludeBranchIds: readonly BranchId[]; correlationId: string; }; meta: { ...; }; }>' is not assignable to type 'SdkSuccess<BuiltBranchSelectionContext>'.
+    Type '{ query: { tenantId: TenantId; customerPoint: { lat: number; lng: number; }; customerGeohash: string; orderType: BranchOrderType; cartItemIds: readonly string[]; preferredBranchId: BranchId; excludeBranchIds: readonly BranchId[]; correlationId: string; }; meta: { ...; }; }' is not assignable to type 'BuiltBranchSelectionContext'.
+      The types of 'query.customerGeohash' are incompatible between these types.
+        Type 'string' is not assignable to type 'Geohash'.
+          Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/lib/branch/BranchFacade.ts(466,22): error TS2740: Type '{}' is missing the following properties from type 'BranchOperationsAvailabilityDto': branchId, enabled, isOperationallyAvailable, blockers, and 5 more.
+src/lib/branch/types.ts(43,22): error TS2304: Cannot find name 'TenantId'.
+src/lib/branch/types.ts(54,22): error TS2304: Cannot find name 'TenantId'.
+src/lib/branch/types.ts(65,22): error TS2304: Cannot find name 'TenantId'.
+src/lib/branch/types.ts(76,22): error TS2304: Cannot find name 'TenantId'.
+src/lib/branch/types.ts(86,22): error TS2304: Cannot find name 'TenantId'.
+src/lib/branch/types.ts(100,23): error TS2304: Cannot find name 'TenantId'.
+src/lib/checkout/CheckoutBranchFacade.ts(168,64): error TS2339: Property 'error' does not exist on type 'BranchAssignmentFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly assignment: BranchAssignment; }'.
+src/lib/clearFirebaseProjectCache.ts(3,5): error TS2717: Subsequent property declarations must have the same type.  Property '__BH_FIREBASE_CONFIG__' must be of type 'FirebaseClientConfig', but here has type '{ projectId?: string; }'.
+src/lib/customerLocation/mapGeocodedToCustomerCanonical.ts(29,17): error TS2352: Conversion of type 'IsoDateTime' to type 'number' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/discovery/DiscoveryContext.ts(33,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltDiscoveryContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltDiscoveryContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltDiscoveryContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltDiscoveryContext': query, meta
+src/lib/discovery/DiscoveryFacade.ts(51,7): error TS2353: Object literal may only specify known properties, and 'firestoreTenantReadPort' does not exist in type 'CreateDiscoverySDKOptions'.
+src/lib/marketplace/mapDiscoveryToMarketplace.ts(33,19): error TS2322: Type '"pure_veg"' is not assignable to type '"offer" | "closed" | "closest" | "fast_delivery" | "highly_rated" | "within_delivery_radius" | "kitchen_format"'.
+src/lib/marketplace/mapDiscoveryToMarketplace.ts(35,19): error TS2322: Type '"non_veg"' is not assignable to type '"offer" | "closed" | "closest" | "fast_delivery" | "highly_rated" | "within_delivery_radius" | "kitchen_format"'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(295,15): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(295,96): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(305,24): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(306,28): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(399,46): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(404,24): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/marketplace/MarketplaceSearchFacade.ts(405,28): error TS2339: Property 'error' does not exist on type 'SearchFacadeOutcome'.
+  Property 'error' does not exist on type 'SearchFacadeSuccess'.
+src/lib/orders/OrderBranchPersistence.ts(178,55): error TS2339: Property 'fields' does not exist on type 'OrderBranchPersistenceSuccess | OrderBranchPersistenceSkipped'.
+  Property 'fields' does not exist on type 'OrderBranchPersistenceSkipped'.
+src/lib/orders/OrderBranchPersistence.ts(196,3): error TS2552: Cannot find name 'getOrderBranchTelemetrySnapshot'. Did you mean 'setOrderBranchTelemetryHook'?
+src/lib/owner-branches/OwnerBranchFacade.ts(130,55): error TS2339: Property 'error' does not exist on type 'BranchListFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly branches: readonly BranchSummary[]; }'.
+src/lib/owner-branches/OwnerBranchFacade.ts(167,55): error TS2339: Property 'error' does not exist on type 'BranchGetFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly branch: BranchDetail; }'.
+src/lib/owner-branches/OwnerBranchFacade.ts(202,55): error TS2339: Property 'error' does not exist on type 'BranchOperationsAvailabilityFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly availability: BranchOperationsAvailabilityDto; }'.
+src/lib/owner-branches/OwnerBranchFacade.ts(237,55): error TS2339: Property 'error' does not exist on type 'BranchValidateFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly validation: BranchValidationResult; }'.
+src/lib/owner-branches/OwnerBranchFacade.ts(269,55): error TS2339: Property 'error' does not exist on type 'BranchEtaFacadeOutcome'.
+  Property 'error' does not exist on type '{ readonly ok: true; readonly estimate: BranchETAEstimate; }'.
+src/lib/ownerOrderAnalytics.ts(55,37): error TS2339: Property 'total' does not exist on type 'Order'.
+src/lib/ownerOrderAnalytics.ts(59,47): error TS2551: Property 'customerPhone' does not exist on type 'Order'. Did you mean 'customerName'?
+src/lib/ownerOrderReadModelMapper.ts(163,39): error TS2339: Property 'customerUpiReference' does not exist on type 'Partial<ApiOrderRecord>'.
+src/lib/ownerOrderReadModelMapper.ts(164,32): error TS2339: Property 'customerPaymentClaimed' does not exist on type 'Partial<ApiOrderRecord>'.
+src/lib/ownerStorefrontApi.ts(51,5): error TS2345: Argument of type 'OwnerStorefrontPayload' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'OwnerStorefrontPayload'.
+src/lib/pricing/PricingContext.ts(150,83): error TS2322: Type '{ itemId: MenuItemId; quantity: number; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'GetPriceQuery'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/pricing/PricingContext.ts(156,101): error TS2322: Type '{ itemId: MenuItemId; quantity: number; modifierAmount: Money; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'CalculatePriceQuery'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/pricing/PricingContext.ts(165,29): error TS2322: Type '{ lines: { itemId: MenuItemId; quantity: number; unitPrice: Money; }[]; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'ValidatePricingInput'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/pricing/PricingContext.ts(174,92): error TS2322: Type '{ couponCode: CouponCode; subtotal: Money; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'ApplyCouponQuery'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/pricing/PricingContext.ts(182,34): error TS2322: Type '{ orderSubtotal: Money; distanceKm: number; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'CalculateDeliveryFeeQuery'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/pricing/PricingContext.ts(190,35): error TS2322: Type '{ orderSubtotal: Money; itemCount: number; tenantId: TenantId; branchId: string; regionCode: string; priceListId: PriceListId | undefined; }' is not assignable to type 'CalculatePackagingFeeQuery'.
+  Types of property 'branchId' are incompatible.
+    Type 'string' is not assignable to type 'BranchId'.
+      Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/lib/search/SearchContext.ts(63,5): error TS2322: Type 'SdkResult<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltSearchContext>'.
+  Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkResult<BuiltSearchContext>'.
+    Type 'SdkSuccess<{ lat: number; lng: number; }>' is not assignable to type 'SdkSuccess<BuiltSearchContext>'.
+      Type '{ lat: number; lng: number; }' is missing the following properties from type 'BuiltSearchContext': query, meta
+src/lib/search/SearchContext.ts(79,41): error TS2339: Property 'validation' does not exist on type 'QueryNormalizationOutcome'.
+  Property 'validation' does not exist on type 'QueryNormalizationResult'.
+src/marketing-main.tsx(14,5): error TS18048: 'window' is possibly 'undefined'.
+src/MarketingApp.tsx(42,5): error TS18048: 'window' is possibly 'undefined'.
+src/pages/BhojanOSSuperAdmin.tsx(266,9): error TS2322: Type '"TENANT_SUBSCRIPTION_OVERRIDE"' is not assignable to type 'AuditEventAction'.
+src/pages/Checkout.tsx(93,17): error TS2339: Property 'Razorpay' does not exist on type 'Window & typeof globalThis'.
+src/pages/Checkout.tsx(98,15): error TS2339: Property 'deliveryError' does not exist on type '{ cart: CartItem[]; total: number; clearCart: () => void; updateQuantity: (id: string, quantity: number) => void; removeFromCart: (id: string) => void; addToCart: (item: MenuItem, selectedAddons?: Addon[]) => void; ... 43 more ...; taxLabel: string; }'.
+src/pages/Checkout.tsx(99,13): error TS2339: Property 'setDeliveryError' does not exist on type '{ cart: CartItem[]; total: number; clearCart: () => void; updateQuantity: (id: string, quantity: number) => void; removeFromCart: (id: string) => void; addToCart: (item: MenuItem, selectedAddons?: Addon[]) => void; ... 43 more ...; taxLabel: string; }'.
+src/pages/Checkout.tsx(101,34): error TS2339: Property 'deliveryError' does not exist on type '{ cart: CartItem[]; total: number; clearCart: () => void; updateQuantity: (id: string, quantity: number) => void; removeFromCart: (id: string) => void; addToCart: (item: MenuItem, selectedAddons?: Addon[]) => void; ... 43 more ...; taxLabel: string; }'.
+src/pages/Checkout.tsx(208,46): error TS2339: Property 'timezone' does not exist on type '{ isStoreOpen?: boolean; businessHoursEnabled?: boolean; openTime?: string; closeTime?: string; offlineMessage?: string; updatedAt?: any; }'.
+src/pages/Checkout.tsx(1241,19): error TS2345: Argument of type '{ isStoreOpen: boolean; storeTiming: { openTime: string; closeTime: string; isManualOverride: boolean; businessHoursEnabled: boolean; }; }' is not assignable to parameter of type 'ResolvedStoreSettings'.
+  Property 'timezone' is missing in type '{ isStoreOpen: boolean; storeTiming: { openTime: string; closeTime: string; isManualOverride: boolean; businessHoursEnabled: boolean; }; }' but required in type 'ResolvedStoreSettings'.
+src/pages/marketing/ContactPage.tsx(10,8): error TS2552: Cannot find name 'EnterpriseSchema'. Did you mean 'EnterpriseHeader'?
+src/pages/OrderSuccess.tsx(55,22): error TS2352: Conversion of type '{ id: string; orderNumber: string; }' to type 'Order' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: string; orderNumber: string; }' is missing the following properties from type 'Order': tenantId, userId, customerName, phone, and 13 more.
+src/pages/owner/OwnerDashboard.tsx(74,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/pages/owner/OwnerDashboard.tsx(76,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/pages/owner/OwnerDashboard.tsx(87,14): error TS2352: Conversion of type 'Record<string, unknown>' to type 'ReleaseNote' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'Record<string, unknown>' is missing the following properties from type 'ReleaseNote': id, version, title, summary, and 5 more.
+src/pages/owner/OwnerDashboard.tsx(209,86): error TS2345: Argument of type 'OwnerOrderSnapshot[]' is not assignable to parameter of type 'Order[]'.
+  Type 'OwnerOrderSnapshot' is missing the following properties from type 'Order': userId, subtotal, gst, packingFee, and 3 more.
+src/pages/owner/OwnerFeedback.tsx(33,35): error TS2345: Argument of type 'TenantInfo' is not assignable to parameter of type 'Tenant'.
+  Type 'TenantInfo' is missing the following properties from type 'Tenant': ownerId, createdAt
+src/pages/owner/OwnerOrders.tsx(250,26): error TS2352: Conversion of type 'Order' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'OwnerOrderSnapshot'.
+src/pages/owner/OwnerOrders.tsx(447,36): error TS2322: Type 'Order' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'OwnerOrderSnapshot'.
+src/pages/owner/OwnerOrders.tsx(700,61): error TS2339: Property 'trialEndsAt' does not exist on type 'TenantInfo'.
+src/pages/owner/OwnerSettings.tsx(156,9): error TS2353: Object literal may only specify known properties, and 'dietaryPreference' does not exist in type 'OwnerStorefrontPayload'.
+src/pages/owner/OwnerSubscription.tsx(122,59): error TS2339: Property 'contact' does not exist on type 'TenantInfo'.
+src/pages/owner/OwnerSubscription.tsx(123,69): error TS2339: Property 'contact' does not exist on type 'TenantInfo'.
+src/pages/owner/OwnerSubscription.tsx(156,61): error TS2339: Property 'contact' does not exist on type 'TenantInfo'.
+src/pages/owner/OwnerSubscription.tsx(157,71): error TS2339: Property 'contact' does not exist on type 'TenantInfo'.
+src/pages/SubscriptionPage.tsx(113,35): error TS2339: Property 'message' does not exist on type '{ ok: true; value: ApplyReferralResult; } | { ok: false; message: string; }'.
+  Property 'message' does not exist on type '{ ok: true; value: ApplyReferralResult; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(19,3): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(20,3): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(24,3): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(104,23): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(104,47): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(105,23): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryEligibility.test.ts(105,48): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(126,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(147,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(202,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(230,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(263,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(294,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryGeoIndexRepository.test.ts(326,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryPipeline.test.ts(234,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryPipeline.test.ts(256,7): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryPipeline.test.ts(257,7): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryPipeline.test.ts(261,7): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(27,3): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(28,3): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(32,3): error TS2322: Type 'string' is not assignable to type 'Geohash'.
+  Type 'string' is not assignable to type '{ readonly __brand: "Geohash"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(60,23): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(60,48): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(64,9): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(65,9): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(85,9): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(86,9): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(93,9): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(94,9): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(108,23): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(108,45): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(111,23): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(111,45): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(126,36): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(126,58): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(127,36): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(127,58): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(138,39): error TS2322: Type 'string' is not assignable to type 'TenantId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "TenantId"; }'.
+src/sdk/__tests__/discoveryRanking.test.ts(138,66): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/__tests__/eventSdkFoundation.test.ts(165,7): error TS2741: Property 'listPending' is missing in type 'OutboxRepositoryPort' but required in type 'ExtendedOutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkFoundation.test.ts(166,7): error TS2739: Type 'EventStorePort' is missing the following properties from type 'ExtendedEventStorePort': readByAggregate, readByType
+src/sdk/__tests__/eventSdkFoundation.test.ts(184,7): error TS2741: Property 'listPending' is missing in type 'OutboxRepositoryPort' but required in type 'ExtendedOutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkFoundation.test.ts(185,7): error TS2739: Type 'EventStorePort' is missing the following properties from type 'ExtendedEventStorePort': readByAggregate, readByType
+src/sdk/__tests__/eventSdkInfrastructure.test.ts(144,11): error TS2322: Type 'string' is not assignable to type 'string & { readonly __brand: "EventTypeName"; }'.
+  Type 'string' is not assignable to type '{ readonly __brand: "EventTypeName"; }'.
+src/sdk/__tests__/eventSdkInfrastructure.test.ts(147,11): error TS2322: Type 'string' is not assignable to type 'string & { readonly __brand: "AggregateId"; }'.
+  Type 'string' is not assignable to type '{ readonly __brand: "AggregateId"; }'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(104,59): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(111,34): error TS2339: Property 'fetchPending' does not exist on type 'ExtendedOutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(121,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(136,34): error TS2339: Property 'fetchPending' does not exist on type 'ExtendedOutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(152,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(177,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(195,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkOrderShadow.test.ts(215,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/__tests__/eventSdkPersistence.test.ts(57,5): error TS2322: Type 'CorrelationId' is not assignable to type 'CausationId'.
+  Type 'CorrelationId' is not assignable to type '{ readonly __brand: "CausationId"; }'.
+    Types of property '__brand' are incompatible.
+      Type '"CorrelationId"' is not assignable to type '"CausationId"'.
+src/sdk/__tests__/eventSdkPersistence.test.ts(252,41): error TS2339: Property 'fetchPending' does not exist on type 'ExtendedOutboxRepositoryPort'.
+src/sdk/__tests__/locationBrowserProvider.test.ts(30,44): error TS2339: Property 'value' does not exist on type 'SdkResult<boolean>'.
+  Property 'value' does not exist on type 'SdkFailure'.
+src/sdk/__tests__/locationBrowserProvider.test.ts(34,46): error TS2339: Property 'value' does not exist on type 'SdkResult<boolean>'.
+  Property 'value' does not exist on type 'SdkFailure'.
+src/sdk/__tests__/menuProjectionFoundation.test.ts(192,7): error TS2322: Type '{ saveExecution: () => Promise<SdkFailure>; getExecution: () => Promise<{ ok: boolean; value: any; }>; listExecutions: () => Promise<{ ok: boolean; value: any[]; }>; }' is not assignable to type 'MenuProjectionRepositoryPort'.
+  The types returned by 'getExecution(...)' are incompatible between these types.
+    Type 'Promise<{ ok: boolean; value: any; }>' is not assignable to type 'SdkAsyncResult<MenuProjectionExecutionRecord>'.
+      Type '{ ok: boolean; value: any; }' is not assignable to type 'SdkResult<MenuProjectionExecutionRecord>'.
+        Type '{ ok: boolean; value: any; }' is not assignable to type 'SdkSuccess<MenuProjectionExecutionRecord>'.
+          Types of property 'ok' are incompatible.
+            Type 'boolean' is not assignable to type 'true'.
+src/sdk/__tests__/menuReadAdapter.test.ts(38,5): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/__tests__/menuReadAdapter.test.ts(41,3): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/__tests__/menuSdkOrchestration.test.ts(48,5): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/__tests__/menuSdkOrchestration.test.ts(51,3): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/__tests__/pricingProjectionFoundation.test.ts(200,7): error TS2322: Type '{ saveExecution: () => Promise<SdkFailure>; getExecution: () => Promise<{ ok: boolean; value: any; }>; listExecutions: () => Promise<{ ok: boolean; value: any[]; }>; }' is not assignable to type 'PricingProjectionRepositoryPort'.
+  The types returned by 'getExecution(...)' are incompatible between these types.
+    Type 'Promise<{ ok: boolean; value: any; }>' is not assignable to type 'SdkAsyncResult<PricingProjectionExecutionRecord>'.
+      Type '{ ok: boolean; value: any; }' is not assignable to type 'SdkResult<PricingProjectionExecutionRecord>'.
+        Type '{ ok: boolean; value: any; }' is not assignable to type 'SdkSuccess<PricingProjectionExecutionRecord>'.
+          Types of property 'ok' are incompatible.
+            Type 'boolean' is not assignable to type 'true'.
+src/sdk/__tests__/pricingRepositoryFoundation.test.ts(219,31): error TS2339: Property 'name' does not exist on type 'unknown'.
+src/sdk/__tests__/pricingRepositoryFoundation.test.ts(220,31): error TS2339: Property 'prices' does not exist on type 'unknown'.
+src/sdk/__tests__/pricingRepositoryFoundation.test.ts(229,20): error TS2339: Property 'prices' does not exist on type 'unknown'.
+src/sdk/__tests__/pricingRepositoryFoundation.test.ts(387,62): error TS2339: Property 'error' does not exist on type 'SdkResult<unknown>'.
+  Property 'error' does not exist on type 'SdkSuccess<unknown>'.
+src/sdk/__tests__/realtimeProvider.test.ts(45,73): error TS2322: Type '{ getOrderById: (orderId: OrderId, context?: OrderAccessContext) => SdkAsyncResult<OrderReadModel>; listOrdersForUser: (filter: OrderListFilter, context: OrderAccessContext) => SdkAsyncResult<...>; listOrdersForTenant?: (filter: OrderTenantListFilter, context: OrderAccessContext) => SdkAsyncResult<...>; requestGuest...' is not assignable to type 'OrderSDK'.
+  Property 'listOrdersForTenant' is optional in type '{ getOrderById: (orderId: OrderId, context?: OrderAccessContext) => SdkAsyncResult<OrderReadModel>; listOrdersForUser: (filter: OrderListFilter, context: OrderAccessContext) => SdkAsyncResult<...>; listOrdersForTenant?: (filter: OrderTenantListFilter, context: OrderAccessContext) => SdkAsyncResult<...>; requestGuest...' but required in type 'OrderSDK'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(5,15): error TS2305: Module '"../../core/result"' has no exported member 'SdkErrorCode'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(27,69): error TS2339: Property 'error' does not exist on type 'BranchDomainResult<T>'.
+  Property 'error' does not exist on type 'BranchDomainOutcome<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(37,19): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(38,16): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(39,16): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(42,21): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(42,40): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(43,17): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchErrorMapper.ts(45,24): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/branch/adapters/BranchSdkOrchestrator.ts(364,30): error TS2304: Cannot find name 'BRANCH_ERROR_MESSAGES'.
+src/sdk/branch/adapters/DefaultBranchAdapter.ts(79,7): error TS2322: Type 'SdkResult<BranchAssignmentResult>' is not assignable to type 'SdkResult<BranchAssignment>'.
+  Type 'SdkSuccess<BranchAssignmentResult>' is not assignable to type 'SdkResult<BranchAssignment>'.
+    Type 'SdkSuccess<BranchAssignmentResult>' is not assignable to type 'SdkSuccess<BranchAssignment>'.
+      Type 'BranchAssignmentResult' is missing the following properties from type 'BranchAssignment': assignmentId, tenantId, branchId, branchName, and 4 more.
+src/sdk/branch/assignment/DefaultBranchAssignmentEngine.ts(247,11): error TS2739: Type 'SdkSuccess<{ assignment: BranchAssignment; score: BranchScore; candidatesEvaluated: number; eligibleCount: number; rankedBranchIds: BranchId[]; }>' is missing the following properties from type 'Promise<SdkResult<BranchAssignmentResult>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/assignment/DefaultBranchAssignmentEngine.ts(265,7): error TS2739: Type 'SdkFailure' is missing the following properties from type 'Promise<SdkResult<BranchAssignmentResult>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/assignment/DefaultBranchAssignmentEngine.ts(281,7): error TS2739: Type 'SdkFailure' is missing the following properties from type 'Promise<SdkResult<BranchAssignmentResult>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/assignment/DefaultBranchAssignmentEngine.ts(299,7): error TS2739: Type 'SdkFailure' is missing the following properties from type 'Promise<SdkResult<BranchAssignmentResult>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/assignment/DefaultBranchAssignmentEngine.ts(341,5): error TS2739: Type 'SdkSuccess<{ assignment: BranchAssignment; score: BranchScore; candidatesEvaluated: number; eligibleCount: number; rankedBranchIds: BranchId[]; }>' is missing the following properties from type 'Promise<SdkResult<BranchAssignmentResult>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/createBranchSDK.ts(54,7): error TS2322: Type 'BranchTelemetryHook' is not assignable to type 'BranchAssignmentTelemetryHook'.
+  Types of parameters 'event' and 'event' are incompatible.
+    Property 'method' is missing in type 'BranchAssignmentTelemetryEvent' but required in type 'BranchTelemetryEvent'.
+src/sdk/branch/operations-sdk/BranchOperationsDomainMapper.ts(69,3): error TS2322: Type 'string' is not assignable to type 'BranchId'.
+  Type 'string' is not assignable to type '{ readonly __brand: "BranchId"; }'.
+src/sdk/branch/operations-sdk/BranchOperationsDomainMapper.ts(142,41): error TS2345: Argument of type 'BranchAvailabilitySummary | BranchAvailabilitySummaryDisabled' is not assignable to parameter of type 'BranchAvailabilitySummaryDisabled'.
+  Property 'enabled' is missing in type 'BranchAvailabilitySummary' but required in type 'BranchAvailabilitySummaryDisabled'.
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(51,5): error TS2739: Type 'SdkFailure' is missing the following properties from type 'Promise<SdkResult<BranchOperationsAvailabilityQuery>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(54,3): error TS2739: Type 'SdkSuccess<BranchOperationsAvailabilityQuery>' is missing the following properties from type 'Promise<SdkResult<BranchOperationsAvailabilityQuery>>': then, catch, finally, [Symbol.toStringTag]
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(107,21): error TS2345: Argument of type 'SdkAsyncResult<BranchOperationsAvailabilityQuery>' is not assignable to parameter of type 'SdkResult<unknown>'.
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(108,33): error TS2339: Property 'error' does not exist on type 'SdkAsyncResult<BranchOperationsAvailabilityQuery>'.
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(109,5): error TS2322: Type 'SdkResult<BranchOperationsAvailabilityQuery>' is not assignable to type 'SdkResult<BranchOperationsAvailabilityDto>'.
+  Type 'SdkSuccess<BranchOperationsAvailabilityQuery>' is not assignable to type 'SdkResult<BranchOperationsAvailabilityDto>'.
+    Type 'SdkSuccess<BranchOperationsAvailabilityQuery>' is not assignable to type 'SdkSuccess<BranchOperationsAvailabilityDto>'.
+      Type 'BranchOperationsAvailabilityQuery' is missing the following properties from type 'BranchOperationsAvailabilityDto': enabled, isOperationallyAvailable, blockers, hours, and 3 more.
+src/sdk/branch/operations-sdk/BranchOperationsOrchestrator.ts(131,73): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'BranchOperationsAvailabilityQuery'.
+  Property 'branchId' is missing in type '{}' but required in type 'BranchOperationsAvailabilityQuery'.
+src/sdk/branch/operations-sdk/contracts/BranchOperationsSDK.ts(5,37): error TS2307: Cannot find module '../../core/result' or its corresponding type declarations.
+src/sdk/branch/operations-sdk/contracts/BranchOperationsSDK.ts(6,89): error TS2307: Cannot find module '../dto/operations' or its corresponding type declarations.
+src/sdk/branch/operations-sdk/contracts/BranchOperationsSDK.ts(7,31): error TS2307: Cannot find module '../types/branded' or its corresponding type declarations.
+src/sdk/branch/operations-sdk/contracts/BranchOperationsSDK.ts(8,51): error TS2307: Cannot find module '../operations/BranchOperationsRepository' or its corresponding type declarations.
+src/sdk/branch/operations-sdk/contracts/BranchOperationsSDK.ts(9,55): error TS2307: Cannot find module '../operations-sdk/createBranchOperationsSdk.options' or its corresponding type declarations.
+src/sdk/branch/validation/validateBranchQuery.ts(41,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchSelectionQuery>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchSelectionQuery>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchSelectionQuery>'.
+      Type 'string' is not assignable to type 'BranchSelectionQuery'.
+src/sdk/branch/validation/validateBranchQuery.ts(62,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchEligibilityQuery>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchEligibilityQuery>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchEligibilityQuery>'.
+      Type 'string' is not assignable to type 'BranchEligibilityQuery'.
+src/sdk/branch/validation/validateBranchQuery.ts(77,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchListFilter>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchListFilter>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchListFilter>'.
+      Type 'string' is not assignable to type 'BranchListFilter'.
+src/sdk/branch/validation/validateBranchQuery.ts(88,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchAssignmentRequest>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchAssignmentRequest>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchAssignmentRequest>'.
+      Type 'string' is not assignable to type 'BranchAssignmentRequest'.
+src/sdk/branch/validation/validateBranchQuery.ts(109,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchOverrideRequest>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchOverrideRequest>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchOverrideRequest>'.
+      Type 'string' is not assignable to type 'BranchOverrideRequest'.
+src/sdk/branch/validation/validateBranchQuery.ts(128,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchETAInput>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchETAInput>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchETAInput>'.
+      Type 'string' is not assignable to type 'BranchETAInput'.
+src/sdk/branch/validation/validateBranchQuery.ts(149,5): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<BranchValidationInput>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<BranchValidationInput>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<BranchValidationInput>'.
+      Type 'string' is not assignable to type 'BranchValidationInput'.
+src/sdk/discovery/adapters/DefaultDiscoveryAdapter.ts(107,5): error TS2322: Type 'Promise<SdkResult<readonly RankedCandidate[]>>' is not assignable to type 'SdkAsyncResult<RankedCandidate[]>'.
+  Type 'SdkResult<readonly RankedCandidate[]>' is not assignable to type 'SdkResult<RankedCandidate[]>'.
+    Type 'SdkSuccess<readonly RankedCandidate[]>' is not assignable to type 'SdkResult<RankedCandidate[]>'.
+      Type 'SdkSuccess<readonly RankedCandidate[]>' is not assignable to type 'SdkSuccess<RankedCandidate[]>'.
+        The type 'readonly RankedCandidate[]' is 'readonly' and cannot be assigned to the mutable type 'RankedCandidate[]'.
+src/sdk/discovery/repository/mappers/DiscoveryCandidateMapper.ts(56,15): error TS2352: Conversion of type 'TenantId' to type 'BranchId' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'TenantId' is not comparable to type '{ readonly __brand: "BranchId"; }'.
+    Types of property '__brand' are incompatible.
+      Type '"TenantId"' is not comparable to type '"BranchId"'.
+src/sdk/events/adapters/DefaultEventAdapter.ts(60,23): error TS2352: Conversion of type 'OutboxRepositoryPort' to type 'ExtendedOutboxRepositoryPort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'listPending' is missing in type 'OutboxRepositoryPort' but required in type 'ExtendedOutboxRepositoryPort'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(92,7): error TS2322: Type 'EventEnvelope<unknown>' is not assignable to type 'EventEnvelope<TPayload>'.
+  Type 'unknown' is not assignable to type 'TPayload'.
+    'TPayload' could be instantiated with an arbitrary type which could be unrelated to 'unknown'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(105,35): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<TPayload>>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(106,9): error TS2322: Type 'SdkResult<EventEnvelope<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<EventEnvelope<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<EventEnvelope<TPayload>>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'EventEnvelope<TPayload>' is missing the following properties from type 'PublishResult': eventId, publishedAt
+src/sdk/events/adapters/DefaultEventPublisher.ts(115,44): error TS2339: Property 'error' does not exist on type 'SdkResult<EventSchemaDefinition>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventSchemaDefinition>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(116,7): error TS2322: Type 'SdkResult<EventSchemaDefinition>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<EventSchemaDefinition>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<EventSchemaDefinition>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'EventSchemaDefinition' is missing the following properties from type 'PublishResult': eventId, publishedAt
+src/sdk/events/adapters/DefaultEventPublisher.ts(125,46): error TS2339: Property 'error' does not exist on type 'SdkResult<string>'.
+  Property 'error' does not exist on type 'SdkSuccess<string>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(126,9): error TS2322: Type 'SdkResult<string>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<string>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<string>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'string' is not assignable to type 'PublishResult'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(135,40): error TS2339: Property 'error' does not exist on type 'SdkResult<boolean>'.
+  Property 'error' does not exist on type 'SdkSuccess<boolean>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(136,9): error TS2322: Type 'SdkResult<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<boolean>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'boolean' is not assignable to type 'PublishResult'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(145,40): error TS2339: Property 'error' does not exist on type 'SdkResult<boolean>'.
+  Property 'error' does not exist on type 'SdkSuccess<boolean>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(146,9): error TS2322: Type 'SdkResult<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<boolean>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'boolean' is not assignable to type 'PublishResult'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(167,44): error TS2339: Property 'error' does not exist on type 'SdkResult<OutboxRecord<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<OutboxRecord<TPayload>>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(168,7): error TS2322: Type 'SdkResult<OutboxRecord<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<OutboxRecord<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<OutboxRecord<TPayload>>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'OutboxRecord<TPayload>' is not assignable to type 'PublishResult'.
+        Property 'publishedAt' is optional in type 'OutboxRecord<TPayload>' but required in type 'PublishResult'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(173,43): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/adapters/DefaultEventPublisher.ts(174,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'void' is not assignable to type 'PublishResult'.
+src/sdk/events/adapters/DefaultEventSubscriber.ts(133,59): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/adapters/DefaultReplayService.ts(82,25): error TS2322: Type 'SdkResult<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+  Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+    Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkSuccess<ReplayResult>'.
+      Type 'EventEnvelope<unknown>[]' is missing the following properties from type 'ReplayResult': consumerGroup, eventsReplayed, startedAt, completedAt, dryRun
+src/sdk/events/adapters/DefaultReplayService.ts(113,25): error TS2322: Type 'SdkResult<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+  Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+    Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkSuccess<ReplayResult>'.
+      Type 'EventEnvelope<unknown>[]' is missing the following properties from type 'ReplayResult': consumerGroup, eventsReplayed, startedAt, completedAt, dryRun
+src/sdk/events/adapters/DefaultReplayService.ts(154,25): error TS2322: Type 'SdkResult<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+  Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+    Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkSuccess<ReplayResult>'.
+      Type 'EventEnvelope<unknown>[]' is missing the following properties from type 'ReplayResult': consumerGroup, eventsReplayed, startedAt, completedAt, dryRun
+src/sdk/events/adapters/DefaultReplayService.ts(177,27): error TS2322: Type 'SdkResult<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+  Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkResult<ReplayResult>'.
+    Type 'SdkSuccess<EventEnvelope<unknown>[]>' is not assignable to type 'SdkSuccess<ReplayResult>'.
+      Type 'EventEnvelope<unknown>[]' is missing the following properties from type 'ReplayResult': consumerGroup, eventsReplayed, startedAt, completedAt, dryRun
+src/sdk/events/adapters/DefaultSchemaRegistry.ts(55,23): error TS2322: Type 'SdkResult<EventSchemaDefinition>' is not assignable to type 'SdkResult<boolean>'.
+  Type 'SdkSuccess<EventSchemaDefinition>' is not assignable to type 'SdkResult<boolean>'.
+    Type 'SdkSuccess<EventSchemaDefinition>' is not assignable to type 'SdkSuccess<boolean>'.
+      Type 'EventSchemaDefinition' is not assignable to type 'boolean'.
+src/sdk/events/adapters/EventInfrastructureFactory.ts(71,25): error TS2352: Conversion of type 'OutboxRepositoryPort' to type 'ExtendedOutboxRepositoryPort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'listPending' is missing in type 'OutboxRepositoryPort' but required in type 'ExtendedOutboxRepositoryPort'.
+src/sdk/events/adapters/EventInfrastructureFactory.ts(161,12): error TS2352: Conversion of type 'OutboxRepositoryPort' to type 'ExtendedOutboxRepositoryPort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'listPending' is missing in type 'OutboxRepositoryPort' but required in type 'ExtendedOutboxRepositoryPort'.
+src/sdk/events/adapters/notConfigured.ts(24,16): error TS2345: Argument of type '"REPLAY_DISABLED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/adapters/notConfigured.ts(33,16): error TS2345: Argument of type '"OUTBOX_UNAVAILABLE"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventFactory.ts(36,20): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventFactory.ts(40,24): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventFactory.ts(50,20): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventFactory.ts(54,24): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventFactory.ts(64,20): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventFactory.ts(68,24): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<EventEnvelope<unknown>>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<EventEnvelope<unknown>>'.
+      Type 'void' is not assignable to type 'EventEnvelope<unknown>'.
+src/sdk/events/business/orders/OrderEventMapper.ts(99,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventMapper.ts(120,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventMapper.ts(141,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventPublisher.ts(30,44): error TS2339: Property 'error' does not exist on type 'SdkResult<PublishResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<PublishResult>'.
+src/sdk/events/business/orders/OrderEventValidator.ts(39,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventValidator.ts(61,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventValidator.ts(68,38): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventValidator.ts(73,38): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventValidator.ts(78,38): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderEventValidator.ts(83,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/business/orders/OrderShadowPublisher.ts(111,54): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<unknown>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<unknown>>'.
+src/sdk/events/business/orders/OrderShadowPublisher.ts(112,56): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<unknown>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<unknown>>'.
+src/sdk/events/business/orders/OrderShadowPublisher.ts(119,44): error TS2339: Property 'error' does not exist on type 'SdkResult<PublishResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<PublishResult>'.
+src/sdk/events/idempotency/IdempotencyStoreAdapter.ts(22,21): error TS2322: Type 'SdkResult<boolean>' is not assignable to type 'SdkResult<IdempotencyRecord>'.
+  Type 'SdkSuccess<boolean>' is not assignable to type 'SdkResult<IdempotencyRecord>'.
+    Type 'SdkSuccess<boolean>' is not assignable to type 'SdkSuccess<IdempotencyRecord>'.
+      Type 'boolean' is not assignable to type 'IdempotencyRecord'.
+src/sdk/events/operations/ProjectionOperationalValidator.ts(95,42): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionOperationalSample[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionOperationalSample[]>'.
+src/sdk/events/operations/ProjectionOperationalValidator.ts(96,7): error TS2322: Type 'SdkResult<ProjectionOperationalSample[]>' is not assignable to type 'SdkResult<ProjectionOperationalValidationResult>'.
+  Type 'SdkSuccess<ProjectionOperationalSample[]>' is not assignable to type 'SdkResult<ProjectionOperationalValidationResult>'.
+    Type 'SdkSuccess<ProjectionOperationalSample[]>' is not assignable to type 'SdkSuccess<ProjectionOperationalValidationResult>'.
+      Type 'ProjectionOperationalSample[]' is missing the following properties from type 'ProjectionOperationalValidationResult': report, lag, driftDetected, replayVerified
+src/sdk/events/parity/order/OrderParityComparator.ts(67,45): error TS2339: Property 'error' does not exist on type 'SdkResult<LegacyOrderDocument>'.
+  Property 'error' does not exist on type 'SdkSuccess<LegacyOrderDocument>'.
+src/sdk/events/parity/order/OrderParityComparator.ts(68,9): error TS2322: Type 'SdkResult<LegacyOrderDocument>' is not assignable to type 'SdkResult<OrderParityResult>'.
+  Type 'SdkSuccess<LegacyOrderDocument>' is not assignable to type 'SdkResult<OrderParityResult>'.
+    Type 'SdkSuccess<LegacyOrderDocument>' is not assignable to type 'SdkSuccess<OrderParityResult>'.
+      Type 'LegacyOrderDocument' is missing the following properties from type 'OrderParityResult': orderId, outcome, differences, comparedAt
+src/sdk/events/parity/order/OrderParityComparator.ts(73,49): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderProjectionReadModel>'.
+src/sdk/events/parity/order/OrderParityComparator.ts(74,9): error TS2322: Type 'SdkResult<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderParityResult>'.
+  Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderParityResult>'.
+    Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkSuccess<OrderParityResult>'.
+      Type 'OrderProjectionReadModel' is missing the following properties from type 'OrderParityResult': outcome, differences, comparedAt
+src/sdk/events/parity/order/OrderParityFactory.ts(103,11): error TS2322: Type '(orderId: string) => Promise<SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>>' is not assignable to type '(orderId: string) => SdkAsyncResult<OrderParityResult>'.
+  Type 'Promise<SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>>' is not assignable to type 'SdkAsyncResult<OrderParityResult>'.
+    Type 'SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>' is not assignable to type 'SdkResult<OrderParityResult>'.
+      Type 'SdkSuccess<OrderParityValidateResult>' is not assignable to type 'SdkResult<OrderParityResult>'.
+        Type 'SdkSuccess<OrderParityValidateResult>' is not assignable to type 'SdkSuccess<OrderParityResult>'.
+          Type 'OrderParityValidateResult' is missing the following properties from type 'OrderParityResult': outcome, differences, comparedAt
+src/sdk/events/parity/order/OrderParityFactory.ts(109,11): error TS2322: Type '(orderId: string) => Promise<SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>>' is not assignable to type '(orderId: string) => SdkAsyncResult<OrderParityReportRecord>'.
+  Type 'Promise<SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>>' is not assignable to type 'SdkAsyncResult<OrderParityReportRecord>'.
+    Type 'SdkFailure | SdkSuccess<OrderParityValidateResult> | SdkSuccess<OrderParityResult>' is not assignable to type 'SdkResult<OrderParityReportRecord>'.
+      Type 'SdkSuccess<OrderParityValidateResult>' is not assignable to type 'SdkResult<OrderParityReportRecord>'.
+        Type 'SdkSuccess<OrderParityValidateResult>' is not assignable to type 'SdkSuccess<OrderParityReportRecord>'.
+          Type 'OrderParityValidateResult' is missing the following properties from type 'OrderParityReportRecord': reportId, outcome, differences, comparedAt
+src/sdk/events/parity/order/OrderParityFactory.ts(115,42): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderParityValidateResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderParityValidateResult>'.
+src/sdk/events/parity/order/OrderParityValidator.ts(14,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/parity/soak/ProjectionParitySoakRunner.ts(77,35): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderParityReportRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderParityReportRecord[]>'.
+src/sdk/events/parity/soak/ProjectionParitySoakRunner.ts(78,7): error TS2322: Type 'SdkResult<OrderParityReportRecord[]>' is not assignable to type 'SdkResult<ParityCertificationReport>'.
+  Type 'SdkSuccess<OrderParityReportRecord[]>' is not assignable to type 'SdkResult<ParityCertificationReport>'.
+    Type 'SdkSuccess<OrderParityReportRecord[]>' is not assignable to type 'SdkSuccess<ParityCertificationReport>'.
+      Type 'OrderParityReportRecord[]' is missing the following properties from type 'ParityCertificationReport': certificationId, metrics, health, readiness, and 2 more.
+src/sdk/events/parity/soak/ProjectionParitySoakRunner.ts(90,23): error TS2322: Type 'SdkResult<ParityCertificationReport>' is not assignable to type 'SdkResult<ProjectionParitySoakRunResult>'.
+  Type 'SdkSuccess<ParityCertificationReport>' is not assignable to type 'SdkResult<ProjectionParitySoakRunResult>'.
+    Type 'SdkSuccess<ParityCertificationReport>' is not assignable to type 'SdkSuccess<ProjectionParitySoakRunResult>'.
+      Type 'ParityCertificationReport' is missing the following properties from type 'ProjectionParitySoakRunResult': certification, reportCount
+src/sdk/events/parity/soak/ProjectionParitySoakRunner.ts(113,21): error TS2322: Type 'SdkResult<OrderParityReportRecord[]>' is not assignable to type 'SdkResult<ParitySoakMetrics>'.
+  Type 'SdkSuccess<OrderParityReportRecord[]>' is not assignable to type 'SdkResult<ParitySoakMetrics>'.
+    Type 'SdkSuccess<OrderParityReportRecord[]>' is not assignable to type 'SdkSuccess<ParitySoakMetrics>'.
+      Type 'OrderParityReportRecord[]' is missing the following properties from type 'ParitySoakMetrics': totalComparisons, successfulComparisons, fieldMismatches, missingProjections, and 10 more.
+src/sdk/events/persistence/FirestorePersistenceFactory.ts(60,3): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/events/persistence/FirestorePersistenceFactory.ts(180,5): error TS2322: Type 'OutboxRepositoryPort | ExtendedOutboxRepositoryPort' is not assignable to type 'OutboxRepositoryPort'.
+  Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/events/persistence/FirestorePersistenceFactory.ts(235,7): error TS2741: Property 'fetchPending' is missing in type 'ExtendedOutboxRepositoryPort' but required in type 'OutboxRepositoryPort'.
+src/sdk/events/persistence/mappers/eventStoreMapper.ts(54,79): error TS2307: Cannot find module '../../core/types' or its corresponding type declarations.
+src/sdk/events/persistence/PersistenceTelemetry.ts(37,12): error TS2322: Type '() => number' is not assignable to type 'number'.
+src/sdk/events/persistence/PersistenceTelemetry.ts(63,5): error TS1117: An object literal cannot have multiple properties with the same name.
+src/sdk/events/persistence/ShadowPublisher.ts(61,7): error TS2322: Type 'EventEnvelope<unknown>' is not assignable to type 'EventEnvelope<TPayload>'.
+  Type 'unknown' is not assignable to type 'TPayload'.
+    'TPayload' could be instantiated with an arbitrary type which could be unrelated to 'unknown'.
+src/sdk/events/persistence/ShadowPublisher.ts(73,44): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<TPayload>>'.
+src/sdk/events/persistence/ShadowPublisher.ts(74,9): error TS2322: Type 'SdkResult<EventEnvelope<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<EventEnvelope<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<EventEnvelope<TPayload>>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'EventEnvelope<TPayload>' is missing the following properties from type 'PublishResult': eventId, publishedAt
+src/sdk/events/persistence/ShadowPublisher.ts(83,23): error TS2322: Type 'SdkResult<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<boolean>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<boolean>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'boolean' is not assignable to type 'PublishResult'.
+src/sdk/events/persistence/ShadowPublisher.ts(96,44): error TS2339: Property 'error' does not exist on type 'SdkResult<OutboxRecord<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<OutboxRecord<TPayload>>'.
+src/sdk/events/persistence/ShadowPublisher.ts(97,7): error TS2322: Type 'SdkResult<OutboxRecord<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+  Type 'SdkSuccess<OutboxRecord<TPayload>>' is not assignable to type 'SdkResult<PublishResult>'.
+    Type 'SdkSuccess<OutboxRecord<TPayload>>' is not assignable to type 'SdkSuccess<PublishResult>'.
+      Type 'OutboxRecord<TPayload>' is not assignable to type 'PublishResult'.
+        Property 'publishedAt' is optional in type 'OutboxRecord<TPayload>' but required in type 'PublishResult'.
+src/sdk/events/projection/ProjectionDispatcher.ts(33,21): error TS2322: Type 'SdkResult<ProjectionHandlerRegistration[]>' is not assignable to type 'SdkResult<ProjectionDispatchResult>'.
+  Type 'SdkSuccess<ProjectionHandlerRegistration[]>' is not assignable to type 'SdkResult<ProjectionDispatchResult>'.
+    Type 'SdkSuccess<ProjectionHandlerRegistration[]>' is not assignable to type 'SdkSuccess<ProjectionDispatchResult>'.
+      Type 'ProjectionHandlerRegistration[]' is missing the following properties from type 'ProjectionDispatchResult': matchedHandlers, invokedHandlers, failedHandlers
+src/sdk/events/projection/ProjectionDispatcher.ts(52,33): error TS2339: Property 'error' does not exist on type 'SdkResult<string>'.
+  Property 'error' does not exist on type 'SdkSuccess<string>'.
+src/sdk/events/projection/ProjectionDispatcher.ts(79,40): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/projection/ProjectionRebuildEngine.ts(78,11): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projection/ProjectionRegistry.ts(37,25): error TS2322: Type 'SdkResult<readonly string[]>' is not assignable to type 'SdkResult<void>'.
+  Type 'SdkSuccess<readonly string[]>' is not assignable to type 'SdkResult<void>'.
+    Type 'SdkSuccess<readonly string[]>' is not assignable to type 'SdkSuccess<void>'.
+      Type 'readonly string[]' is not assignable to type 'void'.
+src/sdk/events/projection/ProjectionRegistry.ts(42,11): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projection/ProjectionRunner.ts(115,23): error TS2322: Type 'SdkResult<boolean>' is not assignable to type 'SdkResult<ProjectionRunResult>'.
+  Type 'SdkSuccess<boolean>' is not assignable to type 'SdkResult<ProjectionRunResult>'.
+    Type 'SdkSuccess<boolean>' is not assignable to type 'SdkSuccess<ProjectionRunResult>'.
+      Type 'boolean' is not assignable to type 'ProjectionRunResult'.
+src/sdk/events/projection/ProjectionWorker.ts(77,47): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<TPayload>>'.
+src/sdk/events/projection/ProjectionWorker.ts(80,29): error TS2339: Property 'error' does not exist on type 'SdkResult<EventEnvelope<TPayload>>'.
+  Property 'error' does not exist on type 'SdkSuccess<EventEnvelope<TPayload>>'.
+src/sdk/events/projection/ProjectionWorker.ts(91,43): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionDispatchResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionDispatchResult>'.
+src/sdk/events/projection/ProjectionWorker.ts(92,52): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionDispatchResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionDispatchResult>'.
+src/sdk/events/projection/runtime/ProjectionCoordinator.ts(50,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projection/runtime/ProjectionCoordinator.ts(80,35): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionRunResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionRunResult>'.
+src/sdk/events/projection/runtime/ProjectionCoordinator.ts(81,7): error TS2322: Type 'SdkResult<ProjectionRunResult>' is not assignable to type 'SdkResult<ProjectionRuntimeExecuteResult>'.
+  Type 'SdkSuccess<ProjectionRunResult>' is not assignable to type 'SdkResult<ProjectionRuntimeExecuteResult>'.
+    Type 'SdkSuccess<ProjectionRunResult>' is not assignable to type 'SdkSuccess<ProjectionRuntimeExecuteResult>'.
+      Property 'executionId' is missing in type 'ProjectionRunResult' but required in type 'ProjectionRuntimeExecuteResult'.
+src/sdk/events/projection/runtime/ProjectionRuntime.ts(54,3): error TS2416: Property 'getStatistics' in type 'ProjectionRuntime' is not assignable to the same property in base type 'ProjectionRuntimePort'.
+  Type '(projectionName: string, consumerGroup: string) => SdkAsyncResult<unknown>' is not assignable to type '(projectionName: string, consumerGroup: string) => SdkAsyncResult<ProjectionRuntimeStatistics>'.
+    Type 'SdkAsyncResult<unknown>' is not assignable to type 'SdkAsyncResult<ProjectionRuntimeStatistics>'.
+      Type 'SdkResult<unknown>' is not assignable to type 'SdkResult<ProjectionRuntimeStatistics>'.
+        Type 'SdkSuccess<unknown>' is not assignable to type 'SdkResult<ProjectionRuntimeStatistics>'.
+          Type 'SdkSuccess<unknown>' is not assignable to type 'SdkSuccess<ProjectionRuntimeStatistics>'.
+            Type '{}' is missing the following properties from type 'ProjectionRuntimeStatistics': projectionName, consumerGroup, processed, failed, and 5 more.
+src/sdk/events/projection/runtime/ProjectionRuntime.ts(61,9): error TS2416: Property 'getCheckpoint' in type 'ProjectionRuntime' is not assignable to the same property in base type 'ProjectionRuntimePort'.
+  Type '(projectionName: string, consumerGroup: string) => Promise<SdkFailure | SdkSuccess<unknown>>' is not assignable to type '(projectionName: string, consumerGroup: string) => SdkAsyncResult<PersistedProjectionCheckpoint>'.
+    Type 'Promise<SdkFailure | SdkSuccess<unknown>>' is not assignable to type 'SdkAsyncResult<PersistedProjectionCheckpoint>'.
+      Type 'SdkFailure | SdkSuccess<unknown>' is not assignable to type 'SdkResult<PersistedProjectionCheckpoint>'.
+        Type 'SdkSuccess<unknown>' is not assignable to type 'SdkResult<PersistedProjectionCheckpoint>'.
+          Type 'SdkSuccess<unknown>' is not assignable to type 'SdkSuccess<PersistedProjectionCheckpoint>'.
+            Type '{}' is missing the following properties from type 'PersistedProjectionCheckpoint': projectionName, projectionVersion, consumerGroup, schemaVersion, updatedAt
+src/sdk/events/projection/runtime/ProjectionRuntime.ts(70,3): error TS2322: Type 'ProjectionRuntime' is not assignable to type 'ProjectionRuntimePort'.
+  The types returned by 'getStatistics(...)' are incompatible between these types.
+    Type 'SdkAsyncResult<unknown>' is not assignable to type 'SdkAsyncResult<ProjectionRuntimeStatistics>'.
+      Type 'SdkResult<unknown>' is not assignable to type 'SdkResult<ProjectionRuntimeStatistics>'.
+        Type 'SdkSuccess<unknown>' is not assignable to type 'SdkResult<ProjectionRuntimeStatistics>'.
+          Type 'SdkSuccess<unknown>' is not assignable to type 'SdkSuccess<ProjectionRuntimeStatistics>'.
+            Type '{}' is missing the following properties from type 'ProjectionRuntimeStatistics': projectionName, consumerGroup, processed, failed, and 5 more.
+src/sdk/events/projections/order/OrderProjectionMapper.ts(80,16): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(23,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(28,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(40,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(53,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(63,11): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionValidator.ts(72,11): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(84,53): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(85,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<OrderProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'OrderProjectionProcessResult'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(89,29): error TS2322: Type 'SdkResult<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+  Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+    Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkSuccess<OrderProjectionProcessResult>'.
+      Type 'OrderProjectionReadModel' is missing the following properties from type 'OrderProjectionProcessResult': eventType, eventId, applied
+src/sdk/events/projections/order/OrderProjectionWorker.ts(96,55): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(104,40): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(111,41): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderProjectionReadModel>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(119,26): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderProjectionReadModel>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(126,50): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(127,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<OrderProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<OrderProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'OrderProjectionProcessResult'.
+src/sdk/events/projections/order/OrderProjectionWorker.ts(155,7): error TS2322: Type '<TPayload>(envelope: EventEnvelope<TPayload>, _context: ProjectionHandlerContext) => Promise<SdkFailure | SdkSuccess<any> | { ...; }>' is not assignable to type '<TPayload>(envelope: EventEnvelope<TPayload>, context: ProjectionHandlerContext) => SdkAsyncResult<void>'.
+  Type 'Promise<SdkFailure | SdkSuccess<any> | { ok: false; error: { code: "PROJECTION_SKIPPED"; message: string; }; }>' is not assignable to type 'SdkAsyncResult<void>'.
+    Type 'SdkFailure | SdkSuccess<any> | { ok: false; error: { code: "PROJECTION_SKIPPED"; message: string; }; }' is not assignable to type 'SdkResult<void>'.
+      Type '{ ok: false; error: { code: "PROJECTION_SKIPPED"; message: string; }; }' is not assignable to type 'SdkResult<void>'.
+        Type '{ ok: false; error: { code: "PROJECTION_SKIPPED"; message: string; }; }' is not assignable to type 'SdkFailure'.
+          The types of 'error.code' are incompatible between these types.
+            Type '"PROJECTION_SKIPPED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/events/validation/validateAggregateConsistency.ts(15,16): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateAggregateConsistency.ts(19,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(17,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(20,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(24,16): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(28,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(31,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(34,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(37,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateEventEnvelope.ts(40,29): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateRequiredMetadata.ts(14,16): error TS2345: Argument of type '"ENVELOPE_INVALID"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateSchemaCompatibility.ts(15,29): error TS2345: Argument of type '"SCHEMA_NOT_FOUND"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateSchemaCompatibility.ts(24,11): error TS2345: Argument of type '"SCHEMA_VERSION_MISMATCH"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateVersionCompatibility.ts(17,16): error TS2345: Argument of type '"SCHEMA_VERSION_MISMATCH"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/events/validation/validateVersionCompatibility.ts(27,11): error TS2345: Argument of type '"SCHEMA_VERSION_MISMATCH"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/location/providers/browser/BrowserLocationProviderImpl.ts(62,18): error TS2352: Conversion of type 'number' to type 'IsoDateTime' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'number' is not comparable to type 'string'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(102,40): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuAdapterDecision>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuAdapterDecision>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(135,21): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(137,25): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(139,27): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(148,41): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(167,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(168,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<Menu>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<Menu>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<Menu>'.
+      Type 'void' is not assignable to type 'Menu'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(189,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(190,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuItem>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuItem>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuItem>'.
+      Type 'void' is not assignable to type 'MenuItem'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(211,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(212,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuCategory[]>'.
+      Type 'void' is not assignable to type 'MenuCategory[]'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(233,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/adapter/MenuReadAdapter.ts(234,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<Combo>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<Combo>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<Combo>'.
+      Type 'void' is not assignable to type 'Combo'.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(31,21): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<Menu>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<Menu>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<Menu>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'Menu': menuId, name, categories, items, and 2 more.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(43,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(49,22): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuItem>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuItem>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<MenuItem>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'MenuItem': itemId, name, kind, categoryId, and 3 more.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(59,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(65,22): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<MenuCategory[]>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'MenuCategory[]': length, pop, push, concat, and 29 more.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(72,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(78,22): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<Combo>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<Combo>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<Combo>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'Combo': comboId, name, components, price, and 2 more.
+src/sdk/menu/adapter/ProjectionMenuAdapter.ts(88,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/menu/certification/MenuCertificationEvaluator.ts(36,52): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCertificationEvidenceBundle>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCertificationEvidenceBundle>'.
+src/sdk/menu/certification/MenuCertificationEvaluator.ts(37,7): error TS2322: Type 'SdkResult<MenuCertificationEvidenceBundle>' is not assignable to type 'SdkResult<MenuCertificationDecisionPackage>'.
+  Type 'SdkSuccess<MenuCertificationEvidenceBundle>' is not assignable to type 'SdkResult<MenuCertificationDecisionPackage>'.
+    Type 'SdkSuccess<MenuCertificationEvidenceBundle>' is not assignable to type 'SdkSuccess<MenuCertificationDecisionPackage>'.
+      Type 'MenuCertificationEvidenceBundle' is missing the following properties from type 'MenuCertificationDecisionPackage': certificationId, status, goNoGo, recommendation, and 5 more.
+src/sdk/menu/certification/MenuCertificationEvaluator.ts(45,50): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCertificationDecisionPackage>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCertificationDecisionPackage>'.
+src/sdk/menu/certification/MenuCertificationEvaluator.ts(60,48): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/certification/MenuCertificationEvaluator.ts(61,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuCertificationDecisionPackage>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuCertificationDecisionPackage>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuCertificationDecisionPackage>'.
+      Type 'void' is not assignable to type 'MenuCertificationDecisionPackage'.
+src/sdk/menu/operations/MenuOperationalValidator.ts(105,42): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuOperationalSample[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuOperationalSample[]>'.
+src/sdk/menu/operations/MenuOperationalValidator.ts(106,7): error TS2322: Type 'SdkResult<MenuOperationalSample[]>' is not assignable to type 'SdkResult<MenuOperationalValidationResult>'.
+  Type 'SdkSuccess<MenuOperationalSample[]>' is not assignable to type 'SdkResult<MenuOperationalValidationResult>'.
+    Type 'SdkSuccess<MenuOperationalSample[]>' is not assignable to type 'SdkSuccess<MenuOperationalValidationResult>'.
+      Type 'MenuOperationalSample[]' is missing the following properties from type 'MenuOperationalValidationResult': report, lag, driftDetected, replayVerified
+src/sdk/menu/orchestration/MenuErrorMapper.ts(24,21): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuErrorMapper.ts(24,40): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuErrorMapper.ts(25,17): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuErrorMapper.ts(26,24): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuErrorMapper.ts(26,58): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuErrorMapper.ts(27,24): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(103,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(104,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<Menu>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<Menu>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<Menu>'.
+      Type 'boolean' is not assignable to type 'Menu'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(147,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(148,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<MenuItem>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<MenuItem>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<MenuItem>'.
+      Type 'boolean' is not assignable to type 'MenuItem'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(184,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(185,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<MenuCategory[]>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<MenuCategory[]>'.
+      Type 'boolean' is not assignable to type 'MenuCategory[]'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(269,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(270,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<Combo>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<Combo>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<Combo>'.
+      Type 'boolean' is not assignable to type 'Combo'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(306,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/menu/orchestration/MenuSdkOrchestrator.ts(307,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<MenuValidationResult>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<MenuValidationResult>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<MenuValidationResult>'.
+      Type 'boolean' is not assignable to type 'MenuValidationResult'.
+src/sdk/menu/parity/MenuParityComparator.ts(64,45): error TS2339: Property 'error' does not exist on type 'SdkResult<LegacyMenuCatalogDocument>'.
+  Property 'error' does not exist on type 'SdkSuccess<LegacyMenuCatalogDocument>'.
+src/sdk/menu/parity/MenuParityComparator.ts(65,9): error TS2322: Type 'SdkResult<LegacyMenuCatalogDocument>' is not assignable to type 'SdkResult<MenuParityResult>'.
+  Type 'SdkSuccess<LegacyMenuCatalogDocument>' is not assignable to type 'SdkResult<MenuParityResult>'.
+    Type 'SdkSuccess<LegacyMenuCatalogDocument>' is not assignable to type 'SdkSuccess<MenuParityResult>'.
+      Type 'LegacyMenuCatalogDocument' is missing the following properties from type 'MenuParityResult': outcome, differences, comparedAt
+src/sdk/menu/parity/MenuParityComparator.ts(70,49): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCatalogProjectionReadModel>'.
+src/sdk/menu/parity/MenuParityComparator.ts(71,9): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuParityResult>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuParityResult>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<MenuParityResult>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'MenuParityResult': outcome, differences, comparedAt
+src/sdk/menu/parity/MenuParityFactory.ts(117,11): error TS2322: Type '(catalogId: string) => Promise<SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>>' is not assignable to type '(catalogId: string) => SdkAsyncResult<MenuParityResult>'.
+  Type 'Promise<SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>>' is not assignable to type 'SdkAsyncResult<MenuParityResult>'.
+    Type 'SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>' is not assignable to type 'SdkResult<MenuParityResult>'.
+      Type 'SdkSuccess<MenuParityValidateResult>' is not assignable to type 'SdkResult<MenuParityResult>'.
+        Type 'SdkSuccess<MenuParityValidateResult>' is not assignable to type 'SdkSuccess<MenuParityResult>'.
+          Type 'MenuParityValidateResult' is missing the following properties from type 'MenuParityResult': outcome, differences, comparedAt
+src/sdk/menu/parity/MenuParityFactory.ts(123,11): error TS2322: Type '(catalogId: string) => Promise<SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>>' is not assignable to type '(catalogId: string) => SdkAsyncResult<MenuParityReportRecord>'.
+  Type 'Promise<SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>>' is not assignable to type 'SdkAsyncResult<MenuParityReportRecord>'.
+    Type 'SdkFailure | SdkSuccess<MenuParityValidateResult> | SdkSuccess<MenuParityResult>' is not assignable to type 'SdkResult<MenuParityReportRecord>'.
+      Type 'SdkSuccess<MenuParityValidateResult>' is not assignable to type 'SdkResult<MenuParityReportRecord>'.
+        Type 'SdkSuccess<MenuParityValidateResult>' is not assignable to type 'SdkSuccess<MenuParityReportRecord>'.
+          Type 'MenuParityValidateResult' is missing the following properties from type 'MenuParityReportRecord': reportId, outcome, differences, comparedAt
+src/sdk/menu/parity/MenuParityFactory.ts(135,42): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuParityValidateResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuParityValidateResult>'.
+src/sdk/menu/parity/soak/MenuProjectionSoakRunner.ts(72,35): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuParityReportRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuParityReportRecord[]>'.
+src/sdk/menu/parity/soak/MenuProjectionSoakRunner.ts(73,7): error TS2322: Type 'SdkResult<MenuParityReportRecord[]>' is not assignable to type 'SdkResult<MenuProjectionCertificationReport>'.
+  Type 'SdkSuccess<MenuParityReportRecord[]>' is not assignable to type 'SdkResult<MenuProjectionCertificationReport>'.
+    Type 'SdkSuccess<MenuParityReportRecord[]>' is not assignable to type 'SdkSuccess<MenuProjectionCertificationReport>'.
+      Type 'MenuParityReportRecord[]' is missing the following properties from type 'MenuProjectionCertificationReport': certificationId, metrics, health, readiness, and 2 more.
+src/sdk/menu/parity/soak/MenuProjectionSoakRunner.ts(91,23): error TS2322: Type 'SdkResult<MenuProjectionCertificationReport>' is not assignable to type 'SdkResult<MenuProjectionSoakRunResult>'.
+  Type 'SdkSuccess<MenuProjectionCertificationReport>' is not assignable to type 'SdkResult<MenuProjectionSoakRunResult>'.
+    Type 'SdkSuccess<MenuProjectionCertificationReport>' is not assignable to type 'SdkSuccess<MenuProjectionSoakRunResult>'.
+      Type 'MenuProjectionCertificationReport' is missing the following properties from type 'MenuProjectionSoakRunResult': certification, reportCount
+src/sdk/menu/parity/soak/MenuProjectionSoakRunner.ts(114,21): error TS2322: Type 'SdkResult<MenuParityReportRecord[]>' is not assignable to type 'SdkResult<MenuProjectionSoakMetrics>'.
+  Type 'SdkSuccess<MenuParityReportRecord[]>' is not assignable to type 'SdkResult<MenuProjectionSoakMetrics>'.
+    Type 'SdkSuccess<MenuParityReportRecord[]>' is not assignable to type 'SdkSuccess<MenuProjectionSoakMetrics>'.
+      Type 'MenuParityReportRecord[]' is missing the following properties from type 'MenuProjectionSoakMetrics': totalComparisons, successfulComparisons, fieldMismatches, missingInProjection, and 9 more.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(100,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(101,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionExecuteResult'.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(124,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(125,11): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionExecuteResult'.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(134,38): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projection/MenuProjectionCoordinator.ts(135,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionExecuteResult'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(73,28): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(77,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionProcessResult'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(83,24): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCatalogProjectionReadModel>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(87,7): error TS2322: Type 'SdkResult<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+  Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+    Type 'SdkSuccess<MenuCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<MenuProjectionProcessResult>'.
+      Type 'MenuCatalogProjectionReadModel' is missing the following properties from type 'MenuProjectionProcessResult': eventType, eventId, applied
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(96,30): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(105,38): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(111,41): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCatalogProjectionReadModel>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(117,24): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuCatalogProjectionReadModel>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(124,25): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(128,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionProcessResult'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(133,45): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(134,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionProcessResult'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(146,26): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/menu/projections/menu/MenuProjectionWorker.ts(150,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<MenuProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<MenuProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'MenuProjectionProcessResult'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(44,63): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuRecord>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuRecord>'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(47,75): error TS2339: Property 'error' does not exist on type 'SdkResult<readonly CategoryRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<readonly CategoryRecord[]>'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(50,65): error TS2339: Property 'error' does not exist on type 'SdkResult<readonly MenuItemRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<readonly MenuItemRecord[]>'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(67,55): error TS2339: Property 'error' does not exist on type 'SdkResult<MenuItemRecord>'.
+  Property 'error' does not exist on type 'SdkSuccess<MenuItemRecord>'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(74,55): error TS2339: Property 'error' does not exist on type 'SdkResult<readonly CategoryRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<readonly CategoryRecord[]>'.
+src/sdk/menu/repository/MenuRepositoryAdapter.ts(85,55): error TS2339: Property 'error' does not exist on type 'SdkResult<readonly ComboRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<readonly ComboRecord[]>'.
+src/sdk/menu/repository/MenuRepositoryMapper.ts(156,5): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/menu/repository/MenuRepositoryMapper.ts(167,5): error TS2322: Type 'string' is not assignable to type 'IsoDateTime'.
+  Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/menu/rollout/ProjectionRolloutEvaluator.ts(140,24): error TS2322: Type 'SdkResult<RolloutPromotionDecision>' is not assignable to type 'SdkResult<MenuProjectionRolloutConfigurationState>'.
+  Type 'SdkSuccess<RolloutPromotionDecision>' is not assignable to type 'SdkResult<MenuProjectionRolloutConfigurationState>'.
+    Type 'SdkSuccess<RolloutPromotionDecision>' is not assignable to type 'SdkSuccess<MenuProjectionRolloutConfigurationState>'.
+      Type 'RolloutPromotionDecision' is missing the following properties from type 'MenuProjectionRolloutConfigurationState': currentStage, manualApprovalGranted, updatedAt
+src/sdk/menu/validation/validateMenuQuery.ts(30,19): error TS2322: Type 'SdkResult<MenuQuery>' is not assignable to type 'SdkResult<MenuItemQuery>'.
+  Type 'SdkSuccess<MenuQuery>' is not assignable to type 'SdkResult<MenuItemQuery>'.
+    Type 'SdkSuccess<MenuQuery>' is not assignable to type 'SdkSuccess<MenuItemQuery>'.
+      Property 'itemId' is missing in type 'MenuQuery' but required in type 'MenuItemQuery'.
+src/sdk/menu/validation/validateMenuQuery.ts(45,19): error TS2322: Type 'SdkResult<MenuQuery>' is not assignable to type 'SdkResult<MenuSearchQuery>'.
+  Type 'SdkSuccess<MenuQuery>' is not assignable to type 'SdkResult<MenuSearchQuery>'.
+    Type 'SdkSuccess<MenuQuery>' is not assignable to type 'SdkSuccess<MenuSearchQuery>'.
+      Property 'text' is missing in type 'MenuQuery' but required in type 'MenuSearchQuery'.
+src/sdk/order/adapter/OrderAdapterValidation.ts(14,36): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/order/adapter/OrderAdapterValidation.ts(23,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/order/adapter/OrderAdapterValidation.ts(33,18): error TS2322: Type '"VALIDATION_FAILED"' is not assignable to type 'SdkErrorCode'.
+src/sdk/order/adapter/OrderReadAdapter.ts(95,40): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderAdapterDecision>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderAdapterDecision>'.
+src/sdk/order/adapter/OrderReadAdapter.ts(118,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/order/adapter/OrderReadAdapter.ts(119,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<OrderReadModel>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<OrderReadModel>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<OrderReadModel>'.
+      Type 'void' is not assignable to type 'OrderReadModel'.
+src/sdk/order/adapter/OrderReadAdapter.ts(137,41): error TS2339: Property 'error' does not exist on type 'SdkResult<OrderReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<OrderReadModel>'.
+src/sdk/order/adapter/OrderReadAdapter.ts(159,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/order/adapter/OrderReadAdapter.ts(160,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<OrderReadModel[]>'.
+      Type 'void' is not assignable to type 'OrderReadModel[]'.
+src/sdk/order/adapter/OrderReadAdapter.ts(196,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/order/adapter/OrderReadAdapter.ts(197,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<OrderReadModel[]>'.
+      Type 'void' is not assignable to type 'OrderReadModel[]'.
+src/sdk/order/adapter/ProjectionOrderAdapter.ts(28,21): error TS2322: Type 'SdkResult<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderReadModel>'.
+  Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkResult<OrderReadModel>'.
+    Type 'SdkSuccess<OrderProjectionReadModel>' is not assignable to type 'SdkSuccess<OrderReadModel>'.
+      Type 'OrderProjectionReadModel' is missing the following properties from type 'OrderReadModel': id, userId, paymentMethod, paymentStatus, and 2 more.
+src/sdk/order/adapter/ProjectionOrderAdapter.ts(44,21): error TS2322: Type 'SdkResult<OrderProjectionReadModel[]>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+  Type 'SdkSuccess<OrderProjectionReadModel[]>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+    Type 'SdkSuccess<OrderProjectionReadModel[]>' is not assignable to type 'SdkSuccess<OrderReadModel[]>'.
+      Type 'OrderProjectionReadModel[]' is not assignable to type 'OrderReadModel[]'.
+        Type 'OrderProjectionReadModel' is missing the following properties from type 'OrderReadModel': id, userId, paymentMethod, paymentStatus, and 2 more.
+src/sdk/order/adapter/ProjectionOrderAdapter.ts(59,21): error TS2322: Type 'SdkResult<OrderProjectionReadModel[]>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+  Type 'SdkSuccess<OrderProjectionReadModel[]>' is not assignable to type 'SdkResult<OrderReadModel[]>'.
+    Type 'SdkSuccess<OrderProjectionReadModel[]>' is not assignable to type 'SdkSuccess<OrderReadModel[]>'.
+      Type 'OrderProjectionReadModel[]' is not assignable to type 'OrderReadModel[]'.
+        Type 'OrderProjectionReadModel' is missing the following properties from type 'OrderReadModel': id, userId, paymentMethod, paymentStatus, and 2 more.
+src/sdk/order/certification/ProjectionCertificationEvaluator.ts(36,52): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionCertificationEvidenceBundle>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionCertificationEvidenceBundle>'.
+src/sdk/order/certification/ProjectionCertificationEvaluator.ts(37,7): error TS2322: Type 'SdkResult<ProjectionCertificationEvidenceBundle>' is not assignable to type 'SdkResult<ProjectionCertificationDecisionPackage>'.
+  Type 'SdkSuccess<ProjectionCertificationEvidenceBundle>' is not assignable to type 'SdkResult<ProjectionCertificationDecisionPackage>'.
+    Type 'SdkSuccess<ProjectionCertificationEvidenceBundle>' is not assignable to type 'SdkSuccess<ProjectionCertificationDecisionPackage>'.
+      Type 'ProjectionCertificationEvidenceBundle' is missing the following properties from type 'ProjectionCertificationDecisionPackage': certificationId, status, goNoGo, recommendation, and 5 more.
+src/sdk/order/certification/ProjectionCertificationEvaluator.ts(45,50): error TS2339: Property 'error' does not exist on type 'SdkResult<ProjectionCertificationDecisionPackage>'.
+  Property 'error' does not exist on type 'SdkSuccess<ProjectionCertificationDecisionPackage>'.
+src/sdk/order/certification/ProjectionCertificationEvaluator.ts(60,48): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/order/certification/ProjectionCertificationEvaluator.ts(61,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<ProjectionCertificationDecisionPackage>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<ProjectionCertificationDecisionPackage>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<ProjectionCertificationDecisionPackage>'.
+      Type 'void' is not assignable to type 'ProjectionCertificationDecisionPackage'.
+src/sdk/order/rollout/ProjectionRolloutEvaluator.ts(132,24): error TS2322: Type 'SdkResult<RolloutPromotionDecision>' is not assignable to type 'SdkResult<ProjectionRolloutConfigurationState>'.
+  Type 'SdkSuccess<RolloutPromotionDecision>' is not assignable to type 'SdkResult<ProjectionRolloutConfigurationState>'.
+    Type 'SdkSuccess<RolloutPromotionDecision>' is not assignable to type 'SdkSuccess<ProjectionRolloutConfigurationState>'.
+      Type 'RolloutPromotionDecision' is missing the following properties from type 'ProjectionRolloutConfigurationState': currentStage, manualApprovalGranted, updatedAt
+src/sdk/orders/adapters/OrderApiAdapter.ts(123,7): error TS2322: Type 'SdkSuccess<{ token: string; expiresAt: string; }>' is not assignable to type 'SdkResult<GuestViewTokenResult>'.
+  Type 'SdkSuccess<{ token: string; expiresAt: string; }>' is not assignable to type 'SdkSuccess<GuestViewTokenResult>'.
+    Type '{ token: string; expiresAt: string; }' is not assignable to type 'GuestViewTokenResult'.
+      Types of property 'expiresAt' are incompatible.
+        Type 'string' is not assignable to type 'IsoDateTime'.
+          Type 'string' is not assignable to type '{ readonly __brand: "IsoDateTime"; }'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(97,40): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingAdapterDecision>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingAdapterDecision>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(131,23): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(133,27): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(135,29): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(144,43): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(170,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(171,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PriceResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PriceResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PriceResult>'.
+      Type 'void' is not assignable to type 'PriceResult'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(196,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(197,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PriceResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PriceResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PriceResult>'.
+      Type 'void' is not assignable to type 'PriceResult'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(222,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/adapter/PricingReadAdapter.ts(223,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PriceResult[]>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PriceResult[]>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PriceResult[]>'.
+      Type 'void' is not assignable to type 'PriceResult[]'.
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(26,21): error TS2322: Type 'SdkResult<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult>'.
+  Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult>'.
+    Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<PriceResult>'.
+      Type 'PricingCatalogProjectionReadModel' is missing the following properties from type 'PriceResult': unitPrice, totalPrice
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(38,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(48,22): error TS2322: Type 'SdkResult<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult>'.
+  Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult>'.
+    Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<PriceResult>'.
+      Type 'PricingCatalogProjectionReadModel' is missing the following properties from type 'PriceResult': unitPrice, totalPrice
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(58,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(68,22): error TS2322: Type 'SdkResult<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult[]>'.
+  Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PriceResult[]>'.
+    Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<PriceResult[]>'.
+      Type 'PricingCatalogProjectionReadModel' is missing the following properties from type 'PriceResult[]': length, pop, push, concat, and 29 more.
+src/sdk/pricing/adapter/ProjectionPricingAdapter.ts(75,31): error TS2345: Argument of type '"MAPPER_FAILED"' is not assignable to parameter of type 'SdkErrorCode'.
+src/sdk/pricing/certification/PricingCertificationEvaluator.ts(36,52): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCertificationEvidenceBundle>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCertificationEvidenceBundle>'.
+src/sdk/pricing/certification/PricingCertificationEvaluator.ts(37,7): error TS2322: Type 'SdkResult<PricingCertificationEvidenceBundle>' is not assignable to type 'SdkResult<PricingCertificationDecisionPackage>'.
+  Type 'SdkSuccess<PricingCertificationEvidenceBundle>' is not assignable to type 'SdkResult<PricingCertificationDecisionPackage>'.
+    Type 'SdkSuccess<PricingCertificationEvidenceBundle>' is not assignable to type 'SdkSuccess<PricingCertificationDecisionPackage>'.
+      Type 'PricingCertificationEvidenceBundle' is missing the following properties from type 'PricingCertificationDecisionPackage': certificationId, status, goNoGo, recommendation, and 5 more.
+src/sdk/pricing/certification/PricingCertificationEvaluator.ts(45,50): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCertificationDecisionPackage>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCertificationDecisionPackage>'.
+src/sdk/pricing/certification/PricingCertificationEvaluator.ts(60,48): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/certification/PricingCertificationEvaluator.ts(61,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingCertificationDecisionPackage>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingCertificationDecisionPackage>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingCertificationDecisionPackage>'.
+      Type 'void' is not assignable to type 'PricingCertificationDecisionPackage'.
+src/sdk/pricing/operations/PricingOperationalValidator.ts(105,42): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingOperationalSample[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingOperationalSample[]>'.
+src/sdk/pricing/operations/PricingOperationalValidator.ts(106,7): error TS2322: Type 'SdkResult<PricingOperationalSample[]>' is not assignable to type 'SdkResult<PricingOperationalValidationResult>'.
+  Type 'SdkSuccess<PricingOperationalSample[]>' is not assignable to type 'SdkResult<PricingOperationalValidationResult>'.
+    Type 'SdkSuccess<PricingOperationalSample[]>' is not assignable to type 'SdkSuccess<PricingOperationalValidationResult>'.
+      Type 'PricingOperationalSample[]' is missing the following properties from type 'PricingOperationalValidationResult': report, lag, driftDetected, replayVerified
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(25,39): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(25,60): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(28,27): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(29,17): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(30,27): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(30,64): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingErrorMapper.ts(31,24): error TS2339: Property 'error' does not exist on type 'SdkResult<T>'.
+  Property 'error' does not exist on type 'SdkSuccess<T>'.
+src/sdk/pricing/orchestration/PricingSdkOrchestrator.ts(123,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/pricing/orchestration/PricingSdkOrchestrator.ts(124,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<PriceResult>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<PriceResult>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<PriceResult>'.
+      Type 'boolean' is not assignable to type 'PriceResult'.
+src/sdk/pricing/orchestration/PricingSdkOrchestrator.ts(165,32): error TS2339: Property 'error' does not exist on type 'SdkResult<true>'.
+  Property 'error' does not exist on type 'SdkSuccess<true>'.
+src/sdk/pricing/orchestration/PricingSdkOrchestrator.ts(166,5): error TS2322: Type 'SdkResult<true>' is not assignable to type 'SdkResult<PriceCalculation>'.
+  Type 'SdkSuccess<true>' is not assignable to type 'SdkResult<PriceCalculation>'.
+    Type 'SdkSuccess<true>' is not assignable to type 'SdkSuccess<PriceCalculation>'.
+      Type 'boolean' is not assignable to type 'PriceCalculation'.
+src/sdk/pricing/parity/PricingParityComparator.ts(67,45): error TS2339: Property 'error' does not exist on type 'SdkResult<LegacyPricingCatalogDocument>'.
+  Property 'error' does not exist on type 'SdkSuccess<LegacyPricingCatalogDocument>'.
+src/sdk/pricing/parity/PricingParityComparator.ts(68,9): error TS2322: Type 'SdkResult<LegacyPricingCatalogDocument>' is not assignable to type 'SdkResult<PricingParityResult>'.
+  Type 'SdkSuccess<LegacyPricingCatalogDocument>' is not assignable to type 'SdkResult<PricingParityResult>'.
+    Type 'SdkSuccess<LegacyPricingCatalogDocument>' is not assignable to type 'SdkSuccess<PricingParityResult>'.
+      Type 'LegacyPricingCatalogDocument' is missing the following properties from type 'PricingParityResult': outcome, differences, comparedAt
+src/sdk/pricing/parity/PricingParityComparator.ts(73,49): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCatalogProjectionReadModel>'.
+src/sdk/pricing/parity/PricingParityComparator.ts(74,9): error TS2322: Type 'SdkResult<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PricingParityResult>'.
+  Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PricingParityResult>'.
+    Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<PricingParityResult>'.
+      Type 'PricingCatalogProjectionReadModel' is missing the following properties from type 'PricingParityResult': outcome, differences, comparedAt
+src/sdk/pricing/parity/PricingParityFactory.ts(117,11): error TS2322: Type '(priceListId: string) => Promise<SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>>' is not assignable to type '(priceListId: string) => SdkAsyncResult<PricingParityResult>'.
+  Type 'Promise<SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>>' is not assignable to type 'SdkAsyncResult<PricingParityResult>'.
+    Type 'SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>' is not assignable to type 'SdkResult<PricingParityResult>'.
+      Type 'SdkSuccess<PricingParityValidateResult>' is not assignable to type 'SdkResult<PricingParityResult>'.
+        Type 'SdkSuccess<PricingParityValidateResult>' is not assignable to type 'SdkSuccess<PricingParityResult>'.
+          Type 'PricingParityValidateResult' is missing the following properties from type 'PricingParityResult': outcome, differences, comparedAt
+src/sdk/pricing/parity/PricingParityFactory.ts(123,11): error TS2322: Type '(priceListId: string) => Promise<SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>>' is not assignable to type '(priceListId: string) => SdkAsyncResult<PricingParityReportRecord>'.
+  Type 'Promise<SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>>' is not assignable to type 'SdkAsyncResult<PricingParityReportRecord>'.
+    Type 'SdkFailure | SdkSuccess<PricingParityValidateResult> | SdkSuccess<PricingParityResult>' is not assignable to type 'SdkResult<PricingParityReportRecord>'.
+      Type 'SdkSuccess<PricingParityValidateResult>' is not assignable to type 'SdkResult<PricingParityReportRecord>'.
+        Type 'SdkSuccess<PricingParityValidateResult>' is not assignable to type 'SdkSuccess<PricingParityReportRecord>'.
+          Type 'PricingParityValidateResult' is missing the following properties from type 'PricingParityReportRecord': reportId, outcome, differences, comparedAt
+src/sdk/pricing/parity/PricingParityFactory.ts(135,42): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingParityValidateResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingParityValidateResult>'.
+src/sdk/pricing/parity/soak/PricingProjectionSoakRunner.ts(75,35): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingParityReportRecord[]>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingParityReportRecord[]>'.
+src/sdk/pricing/parity/soak/PricingProjectionSoakRunner.ts(76,7): error TS2322: Type 'SdkResult<PricingParityReportRecord[]>' is not assignable to type 'SdkResult<PricingProjectionCertificationReport>'.
+  Type 'SdkSuccess<PricingParityReportRecord[]>' is not assignable to type 'SdkResult<PricingProjectionCertificationReport>'.
+    Type 'SdkSuccess<PricingParityReportRecord[]>' is not assignable to type 'SdkSuccess<PricingProjectionCertificationReport>'.
+      Type 'PricingParityReportRecord[]' is missing the following properties from type 'PricingProjectionCertificationReport': certificationId, metrics, health, readiness, and 2 more.
+src/sdk/pricing/parity/soak/PricingProjectionSoakRunner.ts(94,23): error TS2322: Type 'SdkResult<PricingProjectionCertificationReport>' is not assignable to type 'SdkResult<PricingProjectionSoakRunResult>'.
+  Type 'SdkSuccess<PricingProjectionCertificationReport>' is not assignable to type 'SdkResult<PricingProjectionSoakRunResult>'.
+    Type 'SdkSuccess<PricingProjectionCertificationReport>' is not assignable to type 'SdkSuccess<PricingProjectionSoakRunResult>'.
+      Type 'PricingProjectionCertificationReport' is missing the following properties from type 'PricingProjectionSoakRunResult': certification, reportCount
+src/sdk/pricing/parity/soak/PricingProjectionSoakRunner.ts(117,21): error TS2322: Type 'SdkResult<PricingParityReportRecord[]>' is not assignable to type 'SdkResult<PricingProjectionSoakMetrics>'.
+  Type 'SdkSuccess<PricingParityReportRecord[]>' is not assignable to type 'SdkResult<PricingProjectionSoakMetrics>'.
+    Type 'SdkSuccess<PricingParityReportRecord[]>' is not assignable to type 'SdkSuccess<PricingProjectionSoakMetrics>'.
+      Type 'PricingParityReportRecord[]' is missing the following properties from type 'PricingProjectionSoakMetrics': totalComparisons, successfulComparisons, fieldMismatches, missingInProjection, and 9 more.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(101,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(102,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionExecuteResult'.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(126,41): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(127,11): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionExecuteResult'.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(136,38): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projection/PricingProjectionCoordinator.ts(137,7): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionExecuteResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionExecuteResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionExecuteResult'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(77,30): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(81,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionProcessResult'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(87,26): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCatalogProjectionReadModel>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(91,9): error TS2322: Type 'SdkResult<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+  Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+    Type 'SdkSuccess<PricingCatalogProjectionReadModel>' is not assignable to type 'SdkSuccess<PricingProjectionProcessResult>'.
+      Type 'PricingCatalogProjectionReadModel' is missing the following properties from type 'PricingProjectionProcessResult': eventType, eventId, applied
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(100,32): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(109,40): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(115,43): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCatalogProjectionReadModel>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(121,26): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingCatalogProjectionReadModel>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingCatalogProjectionReadModel>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(128,27): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(132,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionProcessResult'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(137,47): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(138,9): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionProcessResult'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(150,28): error TS2339: Property 'error' does not exist on type 'SdkResult<void>'.
+  Property 'error' does not exist on type 'SdkSuccess<void>'.
+src/sdk/pricing/projections/pricing/PricingProjectionWorker.ts(154,11): error TS2322: Type 'SdkResult<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+  Type 'SdkSuccess<void>' is not assignable to type 'SdkResult<PricingProjectionProcessResult>'.
+    Type 'SdkSuccess<void>' is not assignable to type 'SdkSuccess<PricingProjectionProcessResult>'.
+      Type 'void' is not assignable to type 'PricingProjectionProcessResult'.
+src/sdk/pricing/repository/PricingRepositoryAdapter.ts(39,55): error TS2339: Property 'error' does not exist on type 'SdkResult<PriceRecord>'.
+  Property 'error' does not exist on type 'SdkSuccess<PriceRecord>'.
+src/sdk/pricing/repository/PricingRepositoryAdapter.ts(71,55): error TS2339: Property 'error' does not exist on type 'SdkResult<PriceListRecord>'.
+  Property 'error' does not exist on type 'SdkSuccess<PriceListRecord>'.
+src/sdk/pricing/repository/PricingRepositoryAdapter.ts(103,53): error TS2339: Property 'error' does not exist on type 'SdkResult<{ readonly ok: true; }>'.
+  Property 'error' does not exist on type 'SdkSuccess<{ readonly ok: true; }>'.
+src/sdk/pricing/repository/PricingRepositoryAdapter.ts(112,53): error TS2339: Property 'error' does not exist on type 'SdkResult<PricingSearchRecordResult>'.
+  Property 'error' does not exist on type 'SdkSuccess<PricingSearchRecordResult>'.

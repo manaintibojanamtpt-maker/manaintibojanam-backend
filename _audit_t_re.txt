@@ -1,0 +1,40 @@
+﻿node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+file:///F:/Manaintibojanam_final2/manaintibojanam-backend/backend-lib/delivery/__tests__/routeEngine.test.ts:43
+  callCount = 0;
+  constructor(private readonly queue: readonly RoadRouteProviderResult[]) {}
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  async getRoadRoute(): Promise<RoadRouteProviderResult> {
+
+SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]: TypeScript parameter property is not supported in strip-only mode
+    at parseTypeScript (node:internal/modules/typescript:68:40)
+    at processTypeScriptCode (node:internal/modules/typescript:146:42)
+    at stripTypeScriptModuleTypes (node:internal/modules/typescript:209:22)
+    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:680:29)
+    at #translate (node:internal/modules/esm/loader:434:20)
+    at afterLoad (node:internal/modules/esm/loader:502:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:507:12)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:560:36)
+    at afterResolve (node:internal/modules/esm/loader:607:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:613:12) {
+  code: 'ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX'
+}
+
+Node.js v24.18.0
+Γ£û backend-lib\delivery\__tests__\routeEngine.test.ts (83.8743ms)
+Γä╣ tests 1
+Γä╣ suites 0
+Γä╣ pass 0
+Γä╣ fail 1
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 92.1746
+
+Γ£û failing tests:
+
+test at backend-lib\delivery\__tests__\routeEngine.test.ts:1:1
+Γ£û backend-lib\delivery\__tests__\routeEngine.test.ts (83.8743ms)
+  'test failed'

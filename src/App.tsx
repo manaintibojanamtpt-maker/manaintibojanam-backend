@@ -10,6 +10,7 @@ import { readCachedOwnerTenantIds } from './lib/ownerRedirect';
 import { useAuth } from './context/AuthContext';
 import { useFirestoreConnection } from './lib/firebase-db';
 import { useTenant } from './context/TenantContext';
+import { SubscriptionProvider } from './providers/SubscriptionProvider';
 import {
   Header,
   BottomNav,
@@ -795,9 +796,11 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
+    <SubscriptionProvider>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+    </SubscriptionProvider>
   );
 };
 

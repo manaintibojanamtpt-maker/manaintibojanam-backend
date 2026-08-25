@@ -1,0 +1,3 @@
+﻿diff --git a/src/components/ImageWithPlaceholder.tsx b/src/components/ImageWithPlaceholder.tsx
+index f2fe532..c8cbe5b 100644
+Binary files a/src/components/ImageWithPlaceholder.tsx and b/src/components/ImageWithPlaceholder.tsx differ

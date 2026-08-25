@@ -1,0 +1,96 @@
+﻿===== HEAD version of ImageWithPlaceholder (utf8-converted) =====
+import React, { useState } from 'react';
+import { cn } from '../lib/utils';
+
+interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  aspectRatio?: 'square' | 'video' | 'auto';
+  containerClassName?: string;
+}
+
+export const ImageWithPlaceholder = ({ 
+  src, 
+  alt, 
+  className, 
+  aspectRatio = 'auto', 
+  containerClassName,
+  ...props 
+}: ImageProps) => {
+  const [loaded, setLoaded] = useState(false);
+  
+  return (
+    <div className={cn(
+      'relative overflow-hidden',
+      aspectRatio === 'square' && 'aspect-square',
+      aspectRatio === 'video' && 'aspect-video',
+      containerClassName
+    )}>
+      {!loaded && <div className=\
+absolute
+inset-0
+bg-white/5
+shimmer
+z-0\ />}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          'w-full h-full object-cover transition-opacity duration-300',
+          loaded ? 'opacity-100' : 'opacity-0',
+          className
+        )}
+        onLoad={() => setLoaded(true)}
+        {...props}
+      />
+    </div>
+  );
+};
+
+
+===== WORKING version (utf8-converted) =====
+import React, { useState } from 'react';
+import { cn } from '../lib/utils';
+
+interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  aspectRatio?: 'square' | 'video' | 'auto';
+  containerClassName?: string;
+}
+
+export const ImageWithPlaceholder = ({ 
+  src, 
+  alt, 
+  className, 
+  aspectRatio = 'auto', 
+  containerClassName,
+  ...props 
+}: ImageProps) => {
+  const [loaded, setLoaded] = useState(false);
+  
+  return (
+    <div className={cn(
+      'relative overflow-hidden',
+      aspectRatio === 'square' && 'aspect-square',
+      aspectRatio === 'video' && 'aspect-video',
+      containerClassName
+    )}>
+      {!loaded && <div className={`
+absolute
+inset-0
+bg-white/5
+shimmer
+z-0`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          'w-full h-full object-cover transition-opacity duration-300',
+          loaded ? 'opacity-100' : 'opacity-0',
+          className
+        )}
+        onLoad={() => setLoaded(true)}
+        {...props}
+      />
+    </div>
+  );
+};
+
+

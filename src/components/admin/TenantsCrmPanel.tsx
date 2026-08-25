@@ -12,6 +12,7 @@ import {
   Clock,
   Crown,
 } from 'lucide-react';
+import { getEffectiveEntitlement } from '../../lib/effectiveEntitlement';
 
 type StatusIndicator = {
   color: string;
@@ -153,34 +154,34 @@ const IconAction = memo(function IconAction({
 });
 
 function formatSubscriptionLabel(tenant: any): string {
-  const planId = tenant.subscription?.planId || 'starter';
-  const status = tenant.subscription?.status || tenant.status || 'unknown';
-  const expiresAt = tenant.subscription?.trialExpiresAt || tenant.trialEndsAt;
-  if (expiresAt) {
-    const expiry = new Date(expiresAt);
-    const expired = expiry.getTime() <= Date.now();
-    const date = expiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-    return `${planId} · ${status}${expired ? ' · expired' : ` · until ${date}`}`;
-  }
-  return `${planId} · ${status}`;
+  const entitlement = getEffectiveEntitlement(tenant);
+  return entitlement.displayLabel;
 }
 
 function subscriptionPlanLines(tenant: any): { plan: string; detail: string } {
-  const plan = tenant.subscription?.planId || 'starter';
-  const status = tenant.subscription?.status || tenant.status || 'unknown';
-  const expiresAt = tenant.subscription?.trialExpiresAt || tenant.trialEndsAt;
-  if (expiresAt) {
-    const expiry = new Date(expiresAt);
-    const expired = expiry.getTime() <= Date.now();
-    const date = expiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const entitlement = getEffectiveEntitlement(tenant);
+  const planName = entitlement.effectivePlanId.charAt(0).toUpperCase() + entitlement.effectivePlanId.slice(1);
+  if (entitlement.founderOverride) {
     return {
-      plan: plan.charAt(0).toUpperCase() + plan.slice(1),
-      detail: expired ? `${status} · expired` : `${status} · until ${date}`,
+      plan: planName,
+      detail: 'active · granted by admin',
+    };
+  }
+  if (entitlement.isTrialActive) {
+    return {
+      plan: planName,
+      detail: `trialing · active`,
+    };
+  }
+  if (entitlement.isExpired) {
+    return {
+      plan: planName,
+      detail: `expired`,
     };
   }
   return {
-    plan: plan.charAt(0).toUpperCase() + plan.slice(1),
-    detail: status,
+    plan: planName,
+    detail: entitlement.status,
   };
 }
 

@@ -1,0 +1,26 @@
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/DiscoveryViewModel.kt:29:57 Unresolved reference: asStateFlow
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/DiscoveryViewModel.kt:35:13 'when' expression must be exhaustive, add necessary 'Loading' branch or 'else' branch instead
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:18:45 Unresolved reference: viewModelFactory
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:19:45 Unresolved reference: hiltViewModel
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:57:23 Not enough information to infer type variable T
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:59:13 Unresolved reference: FoodItem
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:68:13 Unresolved reference: FoodItem
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:77:13 Unresolved reference: FoodItem
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:90:30 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:205:49 Unresolved reference: id
+e: file:///F:/Manaintibojanam_final2/manaintibojanam-backend/android/customer/src/main/java/com/bhojanos/customer/presentation/discovery/OrderBhojanHomeScreen.kt:222:11 Unresolved reference: FoodItem
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':customer:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 37s

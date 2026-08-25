@@ -7,19 +7,11 @@ import toast from 'react-hot-toast';
 import FounderBetaTrustBanner from '../../components/FounderBetaTrustBanner';
 import { PricingPlanCard, PricingComparisonTable } from '../../components/pricing/PricingPlanCard';
 import {
-  getEffectivePlanId,
   getOwnerPlanActionLabel,
   getOwnerTrialNote,
-  growthTrialDaysRemaining,
-  isOnGrowthOnboardingTrial,
-  isTrialCurrentlyActive,
   activateGrowthOnboardingTrial,
   ownerPlanRequiresPayment,
   isOwnerPlanActionable,
-  isGrowthTrialExpired,
-  isProTrialExpired,
-  isTrialInGracePeriod,
-  gracePeriodDaysRemaining,
 } from '../../lib/planStatus';
 import { upgradeOwnerSubscriptionPlan } from '../../lib/ownerSubscriptionApi';
 import { runOwnerSubscriptionPayment } from '../../lib/ownerSubscriptionPayment';
@@ -33,6 +25,7 @@ import {
   getPlanById,
   pricingPageCopy,
 } from '../../config/pricing';
+import { useSubscriptionSync } from '../../hooks/useSubscriptionSync';
 
 const OwnerSubscription = () => {
   const { tenantInfo, loading: tenantLoading, refreshTenant } = useTenant();
@@ -40,6 +33,18 @@ const OwnerSubscription = () => {
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState<PaidPlanId | null>(null);
   const copy = pricingPageCopy.owner;
+
+  const tenantDocId = tenantInfo?.id || tenantInfo?.slug;
+
+  // Use subscription sync hook for real-time state
+  const subscription = useSubscriptionSync(tenantDocId, {
+    enabled: !!tenantDocId && !tenantLoading,
+    refetchInterval: 30000,
+    staleTime: 10000,
+    onSuccess: () => {
+      // Optionally refresh tenant info when subscription updates
+    },
+  });
 
   if (tenantLoading && !tenantInfo) {
     return (
@@ -73,14 +78,22 @@ const OwnerSubscription = () => {
   const hasMobileNumber = !!tenantInfo.kyc?.mobileNumber;
   const canActivate = isEmailVerified && isMerchantAgreementAccepted && isKycCompleted && hasBusinessAddress && hasMobileNumber;
 
-  const effectivePlanId = getEffectivePlanId(tenantInfo);
-  const trialExpiresAt = tenantInfo.subscription?.trialExpiresAt
-    ? new Date(tenantInfo.subscription.trialExpiresAt)
-    : null;
-  const isTrialActive = isTrialCurrentlyActive(tenantInfo);
-  const growthOnboardingTrial = isOnGrowthOnboardingTrial(tenantInfo);
-  const trialDaysLeft = growthTrialDaysRemaining(tenantInfo);
+  // Use synced subscription state
+  const effectivePlanId = subscription.effectivePlanId || getEffectivePlanId(tenantInfo);
+  const trialExpiresAt = subscription.trialExpiresAt;
+  const isTrialActive = subscription.isTrialActive;
+  const growthOnboardingTrial = subscription.trialType === 'growth_onboarding';
+  const trialDaysLeft = subscription.daysUntilNextBilling;
   const currentPlan = getPlanById(effectivePlanId) || FREE_PLAN;
+
+  // Computed from synced state
+  const isInGracePeriod = subscription.isInGracePeriod;
+  const isCanceledAtPeriodEnd = subscription.isCanceledAtPeriodEnd;
+  const isPastDue = subscription.isPastDue;
+  const failedPaymentAttempts = subscription.failedPaymentAttempts;
+  const nextBillingAttemptAt = subscription.nextBillingAttemptAt;
+  const isBillable = subscription.isBillable;
+  const daysUntilNextBillingValue = subscription.daysUntilNextBilling;
 
   const getOwnerPlanActionLabelWithEnterprise = (plan: (typeof PAID_PLANS)[number]) => {
     if (effectivePlanId === 'enterprise') {
@@ -114,7 +127,10 @@ const OwnerSubscription = () => {
     setLoadingPlan(planId);
     const tenantDocId = tenantInfo.id || tenantInfo.slug;
     try {
-      if (ownerPlanRequiresPayment(tenantInfo, planId)) {
+      // Check if payment is required
+      const requiresPayment = subscription.requiresPaymentForUpgrade?.(effectivePlanId, planId, subscription.trialUsed) ?? ownerPlanRequiresPayment(tenantInfo, planId);
+
+      if (requiresPayment) {
         await runOwnerSubscriptionPayment({
           tenantId: tenantDocId,
           planId,
@@ -130,7 +146,7 @@ const OwnerSubscription = () => {
       if (
         planId === 'growth' &&
         effectivePlanId === 'starter' &&
-        !tenantInfo.subscription?.trialUsed
+        !subscription.trialUsed
       ) {
         await activateGrowthOnboardingTrial(tenantDocId);
         await refreshTenant();
@@ -138,9 +154,10 @@ const OwnerSubscription = () => {
         return;
       }
 
-      await upgradeOwnerSubscriptionPlan(tenantDocId, planId);
+      // Use the sync hook's upgradePlan for optimistic updates
+      await subscription.upgradePlan(planId);
       await refreshTenant();
-      if (!tenantInfo.subscription?.trialUsed && effectivePlanId === 'starter') {
+      if (!subscription.trialUsed && effectivePlanId === 'starter') {
         toast.success(`${PLAN_TRIALS.paidUpgradeDays}-day ${plan.name} trial started. ${copy.upgradeSuccess}`);
       } else {
         toast.success(copy.upgradeSuccess);
@@ -191,27 +208,27 @@ const OwnerSubscription = () => {
           <h2 className="text-xl font-black text-white mt-1">{formatPlanDisplayName(effectivePlanId)}</h2>
           {isTrialActive && trialExpiresAt && (
             <p className="text-sm text-orange-400 mt-1">
-              {growthOnboardingTrial
-                ? `${PLAN_TRIALS.growthOnboardingDays}-day Growth trial · ${trialDaysLeft ?? '—'} days left · ends ${trialExpiresAt.toLocaleDateString('en-IN')}`
+              {subscription.trialType === 'growth_onboarding'
+                ? `${PLAN_TRIALS.growthOnboardingDays}-day Growth trial · ${subscription.daysUntilNextBilling ?? '—'} days left · ends ${trialExpiresAt.toLocaleDateString('en-IN')}`
                 : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
             </p>
           )}
-          {isTrialInGracePeriod(tenantInfo) && effectivePlanId === 'growth' && (
+          {subscription.isInGracePeriod && effectivePlanId === 'growth' && (
             <p className="text-sm text-amber-400 mt-1 font-medium">
-              Your Growth trial has expired. You are in a 3-day grace period ({gracePeriodDaysRemaining(tenantInfo)} days left). Pay ₹999/mo below to avoid suspension.
+              Your Growth trial has expired. You are in a 3-day grace period ({subscription.gracePeriodDaysRemaining ?? '—'} days left). Pay ₹999/mo below to avoid suspension.
             </p>
           )}
-          {!isTrialInGracePeriod(tenantInfo) && isGrowthTrialExpired(tenantInfo) && effectivePlanId === 'growth' && (
+          {!subscription.isInGracePeriod && subscription.isGrowthTrialExpired && effectivePlanId === 'growth' && (
             <p className="text-sm text-rose-400 mt-1 font-medium">
               Your Growth trial has expired. Pay ₹999/mo below to keep accepting live orders.
             </p>
           )}
-          {isTrialInGracePeriod(tenantInfo) && effectivePlanId === 'pro' && (
+          {subscription.isInGracePeriod && effectivePlanId === 'pro' && (
             <p className="text-sm text-amber-400 mt-1 font-medium">
-              Your Pro trial has expired. You are in a 3-day grace period ({gracePeriodDaysRemaining(tenantInfo)} days left). Pay ₹2,999/mo below to avoid downgrade.
+              Your Pro trial has expired. You are in a 3-day grace period ({subscription.gracePeriodDaysRemaining ?? '—'} days left). Pay ₹2,999/mo below to avoid downgrade.
             </p>
           )}
-          {!isTrialInGracePeriod(tenantInfo) && isProTrialExpired(tenantInfo) && effectivePlanId === 'pro' && (
+          {!subscription.isInGracePeriod && subscription.isProTrialExpired && effectivePlanId === 'pro' && (
             <p className="text-sm text-rose-400 mt-1 font-medium">
               Your Pro trial has expired. Pay ₹2,999/mo below to keep Pro features active.
             </p>
@@ -292,6 +309,117 @@ const OwnerSubscription = () => {
               Mobile number on file
             </li>
           </ul>
+        </div>
+      )}
+
+      {/* Subscription Management Section */}
+      {effectivePlanId !== 'starter' && (
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#111] to-[#0A0A0A] p-5 sm:p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Subscription Management</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white/5 rounded-xl p-4">
+              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Status</p>
+              <p className="text-lg font-bold text-white">{subscription.statusLabel}</p>
+            </div>
+            <div className="bg-white/5 rounded-xl p-4">
+              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Billing Cycle</p>
+              <p className="text-lg font-bold text-white">
+                {subscription.currentPeriodEnd
+                  ? `Ends ${subscription.currentPeriodEnd.toLocaleDateString('en-IN')}`
+                  : 'Monthly'}
+              </p>
+            </div>
+            <div className="bg-white/5 rounded-xl p-4">
+              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Next Charge</p>
+              <p className="text-lg font-bold text-white">
+                {daysUntilNextBillingValue !== null
+                  ? `${daysUntilNextBillingValue} day(s)`
+                  : '—'}
+              </p>
+            </div>
+          </div>
+
+          {isCanceledAtPeriodEnd && (
+            <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <p className="text-amber-400 text-sm font-medium mb-2">
+                Your subscription is set to cancel at the end of the current billing period.
+              </p>
+              <p className="text-white/70 text-sm mb-3">
+                You'll continue to have access until {subscription.currentPeriodEnd
+                  ? subscription.currentPeriodEnd.toLocaleDateString('en-IN')
+                  : 'the period ends'}.
+              </p>
+              <button
+                onClick={async () => {
+                  const confirmed = window.confirm('Resume your subscription? You will continue to be billed monthly.');
+                  if (!confirmed) return;
+                  try {
+                    await subscription.resumeSubscription();
+                    await refreshTenant();
+                    toast.success('Subscription resumed successfully');
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to resume subscription');
+                  }
+                }}
+                disabled={subscription.isResuming}
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-500 transition-colors disabled:opacity-50"
+              >
+                {subscription.isResuming ? 'Resuming...' : 'Resume Subscription'}
+              </button>
+            </div>
+          )}
+
+          {!isCanceledAtPeriodEnd && isBillable && (
+            <div className="mt-4">
+              <button
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    'Cancel your subscription? You will keep access until the end of the current billing period, then your plan will downgrade to Free Storefront.'
+                  );
+                  if (!confirmed) return;
+                  try {
+                    await subscription.cancelSubscription();
+                    await refreshTenant();
+                    toast.success('Subscription will cancel at period end');
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to cancel subscription');
+                  }
+                }}
+                disabled={subscription.isCanceling}
+                className="rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-400 px-5 py-2.5 text-sm font-medium hover:bg-rose-600/30 transition-colors w-full disabled:opacity-50"
+              >
+                {subscription.isCanceling ? 'Canceling...' : 'Cancel Subscription (at period end)'}
+              </button>
+            </div>
+          )}
+
+          {failedPaymentAttempts > 0 && (
+            <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+              <p className="text-rose-400 text-sm font-medium mb-2">
+                Payment issue detected — {failedPaymentAttempts} failed attempt(s)
+              </p>
+              <p className="text-white/70 text-sm mb-3">
+                Next retry: {nextBillingAttemptAt
+                  ? new Date(nextBillingAttemptAt).toLocaleString('en-IN')
+                  : 'Soon'}
+              </p>
+              <button
+                onClick={async () => {
+                  try {
+                    await subscription.retryBilling();
+                    await refreshTenant();
+                    toast.success('Billing retry triggered');
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to retry billing');
+                  }
+                }}
+                disabled={subscription.isRetrying}
+                className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-500 transition-colors disabled:opacity-50"
+              >
+                {subscription.isRetrying ? 'Retrying...' : 'Retry Payment Now'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
