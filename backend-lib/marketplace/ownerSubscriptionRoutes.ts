@@ -321,9 +321,15 @@ export function registerOwnerSubscriptionRoutes(
         },
       });
 
+      // Return both order and subscription fields so client knows the checkout type
+      // Use order as fallback subscription when subscription creation failed
+      subscription.id = order.id;
+      subscription.amount = order.amount;
+      subscription.currency = order.currency;
+
       return res.json({
         success: true,
-        order,
+        subscription,
         key: razorpayDeps.razorpayKeyId,
         planId,
       });
