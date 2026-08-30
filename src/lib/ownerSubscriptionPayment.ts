@@ -3,6 +3,7 @@ import { EnvironmentConfig } from '../config/environment';
 import { ensureRazorpayLoaded } from '../utils/loadRazorpay';
 import type { PaidPlanId } from '../config/pricing';
 import { getPlanById } from '../config/pricing';
+import { warmOwnerApi } from './ownerProvisioning';
 
 function resolveApiBase(): string {
   if (
@@ -24,6 +25,17 @@ async function ownerAuthHeaders(): Promise<HeadersInit> {
   };
 }
 
+/** Bounded fetch with AbortController timeout for the Render-hosted API (cold starts can be slow). */
+async function fetchWithTimeout(resource: string, init: RequestInit = {}, timeoutMs = 45_000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(resource, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 export async function runOwnerSubscriptionPayment(params: {
   tenantId: string;
   planId: PaidPlanId;
@@ -39,15 +51,43 @@ export async function runOwnerSubscriptionPayment(params: {
   const apiBase = resolveApiBase();
   const headers = await ownerAuthHeaders();
 
-  const checkoutRes = await fetch(`${apiBase}/api/owner/subscription/checkout`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ tenantId: params.tenantId, planId: params.planId }),
-  });
-  const checkoutData = await checkoutRes.json();
+  // Wake up the Render API (cold starts can take 30-60s) before creating the payment session,
+  // so the owner never sees an endless "Updating…" spinner or a raw network error.
+  void warmOwnerApi(20_000).catch(() => undefined);
+
+  let checkoutRes: Response;
+  let checkoutData: any;
+  try {
+    checkoutRes = await fetchWithTimeout(`${apiBase}/api/owner/subscription/checkout`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ tenantId: params.tenantId, planId: params.planId }),
+    });
+    checkoutData = await checkoutRes.json();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Payment session is taking longer than usual. Please try again — your card has not been charged.');
+    }
+    throw new Error('Could not reach the payment server. Check your connection and try again.');
+  }
 
   if (!checkoutRes.ok || (!checkoutData.subscription?.id && !checkoutData.order?.id)) {
-    throw new Error(checkoutData.error || 'Failed to create payment session');
+    // Retry once in case Render was still cold-starting on the first attempt.
+    if (checkoutRes.status === 500 || checkoutRes.status === 502 || checkoutRes.status === 504 || checkoutRes.status === 0) {
+      try {
+        checkoutRes = await fetchWithTimeout(`${apiBase}/api/owner/subscription/checkout`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ tenantId: params.tenantId, planId: params.planId }),
+        });
+        checkoutData = await checkoutRes.json();
+      } catch {
+        throw new Error('Could not reach the payment server. Check your connection and try again.');
+      }
+    }
+    if (!checkoutRes.ok || (!checkoutData.subscription?.id && !checkoutData.order?.id)) {
+      throw new Error(checkoutData?.error || 'Failed to create payment session');
+    }
   }
 
   if (checkoutData.isMock) {
