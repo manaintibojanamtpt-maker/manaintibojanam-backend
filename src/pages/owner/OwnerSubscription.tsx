@@ -27,6 +27,7 @@ import {
   pricingPageCopy,
 } from '../../config/pricing';
 import { useSubscriptionSync } from '../../hooks/useSubscriptionSync';
+import { isFounderOwnerEmail } from '../../config/founder';
 
 const formatDateLabel = (dateVal: Date | string | null | undefined): string => {
   if (!dateVal) return '—';
@@ -87,7 +88,12 @@ const OwnerSubscription = () => {
   const isKycCompleted = tenantInfo.kyc?.verificationLevel !== undefined && tenantInfo.kyc.verificationLevel >= 0;
   const hasBusinessAddress = !!tenantInfo.location?.lat;
   const hasMobileNumber = !!tenantInfo.kyc?.mobileNumber;
-  const canActivate = isEmailVerified && isMerchantAgreementAccepted && isKycCompleted && hasBusinessAddress && hasMobileNumber;
+  // Founder tenant is exempt from activation gating (mirrors backend founderOverride) —
+  // payment must remain available even if optional profile fields (e.g. mobile) are missing.
+  const isFounder = isFounderOwnerEmail(currentUser?.email);
+  const canActivate =
+    (isEmailVerified && isMerchantAgreementAccepted && isKycCompleted && hasBusinessAddress && hasMobileNumber) ||
+    isFounder;
 
   // Use synced subscription state
   const effectivePlanId = subscription.effectivePlanId || getEffectivePlanId(tenantInfo);
