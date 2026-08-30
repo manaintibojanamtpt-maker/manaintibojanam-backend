@@ -102,8 +102,8 @@ const initialState: SubscriptionState = {
 // Helper to compute derived state
 function computeDerivedState(state: Partial<SubscriptionState>): Partial<SubscriptionState> {
   const now = new Date();
-  const trialExpiresAt = state.trialExpiresAt;
-  const currentPeriodEnd = state.currentPeriodEnd;
+  const trialExpiresAt = parseDate(state.trialExpiresAt);
+  const currentPeriodEnd = parseDate(state.currentPeriodEnd);
   const status = state.status || 'none';
   const planId = state.planId || 'starter';
   const trialType = state.trialType;

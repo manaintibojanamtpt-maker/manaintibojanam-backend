@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useShallow } from 'zustand/react/shallow';
 import { useSubscriptionStore, selectSubscriptionStatus, selectSubscriptionLoading, selectSubscriptionError, selectSubscriptionHydrated } from '../lib/subscriptionStore';
 import { subscriptionKeys, useSubscriptionStatus, subscriptionHooks, fetchSubscriptionStatus } from '../lib/subscriptionQueries';
 import type { SubscriptionStatusResponse } from '../lib/subscriptionQueries';
@@ -21,7 +22,12 @@ export function useSubscriptionSync(tenantId: string | null | undefined, options
   const queryClient = useQueryClient();
 
   // Zustand store selectors
-  const storeStatus = useSubscriptionStore(selectSubscriptionStatus);
+  // NOTE: selectSubscriptionStatus returns a NEW object literal on every call.
+  // With zustand v5 + React 19 (useSyncExternalStore), using it directly causes
+  // an infinite re-render loop ("Maximum update depth exceeded") because the
+  // snapshot is never reference-stable. Wrap it with useShallow so the returned
+  // object is cached while its fields are shallow-equal.
+  const storeStatus = useSubscriptionStore(useShallow(selectSubscriptionStatus));
   const storeLoading = useSubscriptionStore(selectSubscriptionLoading);
   const storeError = useSubscriptionStore(selectSubscriptionError);
   const storeHydrated = useSubscriptionStore(selectSubscriptionHydrated);
@@ -48,29 +54,33 @@ export function useSubscriptionSync(tenantId: string | null | undefined, options
   const initialSyncedRef = useRef(false);
   const tenantIdRef = useRef(tenantId);
   tenantIdRef.current = tenantId;
+  // Keep latest options in a ref so effects don't re-run on every render
+  // (callers pass an inline object literal which changes identity each render).
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Sync query data to Zustand store
   useEffect(() => {
     if (query.data) {
       setFromServer(query.data);
-      if (options?.onSuccess) {
-        options.onSuccess(query.data);
+      if (optionsRef.current?.onSuccess) {
+        optionsRef.current.onSuccess(query.data);
       }
     }
-  }, [query.data, setFromServer, options]);
+  }, [query.data, setFromServer]);
 
   // Sync query error to Zustand store
   useEffect(() => {
     if (query.error) {
       const error = query.error instanceof Error ? query.error : new Error('Unknown error');
       setError(error.message);
-      if (options?.onError) {
-        options.onError(error);
+      if (optionsRef.current?.onError) {
+        optionsRef.current.onError(error);
       }
     } else if (query.isSuccess) {
       clearError();
     }
-  }, [query.error, query.isSuccess, setError, clearError, options]);
+  }, [query.error, query.isSuccess, setError, clearError]);
 
   // Sync loading state
   useEffect(() => {
@@ -294,7 +304,8 @@ export function useSubscriptionSync(tenantId: string | null | undefined, options
  * Useful for components that only need to display cached data.
  */
 export function useSubscriptionState(tenantId: string | null | undefined) {
-  const storeStatus = useSubscriptionStore(selectSubscriptionStatus);
+  // useShallow required here too — see note in useSubscriptionSync above.
+  const storeStatus = useSubscriptionStore(useShallow(selectSubscriptionStatus));
   const storeLoading = useSubscriptionStore(selectSubscriptionLoading);
   const storeError = useSubscriptionStore(selectSubscriptionError);
   const storeHydrated = useSubscriptionStore(selectSubscriptionHydrated);

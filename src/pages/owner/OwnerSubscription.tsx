@@ -28,6 +28,16 @@ import {
 } from '../../config/pricing';
 import { useSubscriptionSync } from '../../hooks/useSubscriptionSync';
 
+const formatDateLabel = (dateVal: Date | string | null | undefined): string => {
+  if (!dateVal) return '—';
+  try {
+    const d = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-IN');
+  } catch {
+    return '—';
+  }
+};
+
 const OwnerSubscription = () => {
   const { tenantInfo, loading: tenantLoading, refreshTenant } = useTenant();
   const { currentUser } = useAuth();
@@ -210,8 +220,8 @@ const OwnerSubscription = () => {
           {isTrialActive && trialExpiresAt && (
             <p className="text-sm text-orange-400 mt-1">
               {subscription.trialType === 'growth_onboarding'
-                ? `${PLAN_TRIALS.growthOnboardingDays}-day Growth trial · ${subscription.daysUntilNextBilling ?? '—'} days left · ends ${trialExpiresAt.toLocaleDateString('en-IN')}`
-                : `Trial active until ${trialExpiresAt.toLocaleDateString('en-IN')}`}
+                ? `${PLAN_TRIALS.growthOnboardingDays}-day Growth trial · ${subscription.daysUntilNextBilling ?? '—'} days left · ends ${formatDateLabel(trialExpiresAt)}`
+                : `Trial active until ${formatDateLabel(trialExpiresAt)}`}
             </p>
           )}
           {subscription.isInGracePeriod && effectivePlanId === 'growth' && (
@@ -326,7 +336,7 @@ const OwnerSubscription = () => {
               <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Billing Cycle</p>
               <p className="text-lg font-bold text-white">
                 {subscription.currentPeriodEnd
-                  ? `Ends ${subscription.currentPeriodEnd.toLocaleDateString('en-IN')}`
+                  ? `Ends ${formatDateLabel(subscription.currentPeriodEnd)}`
                   : 'Monthly'}
               </p>
             </div>
@@ -347,7 +357,7 @@ const OwnerSubscription = () => {
               </p>
               <p className="text-white/70 text-sm mb-3">
                 You'll continue to have access until {subscription.currentPeriodEnd
-                  ? subscription.currentPeriodEnd.toLocaleDateString('en-IN')
+                  ? formatDateLabel(subscription.currentPeriodEnd)
                   : 'the period ends'}.
               </p>
               <button
