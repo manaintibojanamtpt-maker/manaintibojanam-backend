@@ -7,36 +7,36 @@ export const productModules = [
   {
     id: "kitchen",
     title: "Kitchen Management",
-    description: "Streamline KDS, order routing, and prep-time optimization to eliminate kitchen bottlenecks."
+    description: "Streamline KDS, order routing, and prep-time optimization to keep your kitchen running smoothly."
   },
   {
     id: "orders",
-    title: "Omnichannel Orders",
-    description: "Automatically aggregate dine-in, takeaway, and third-party delivery orders into one screen."
+    title: "Order Management",
+    description: "Direct orders from your storefront and OrderBhojan flow into one screen with live status tracking."
   },
   {
     id: "crm",
     title: "Customer CRM",
-    description: "Build lasting relationships with automated loyalty programs and deep customer insights."
+    description: "Build repeat business with customer profiles, order history, and targeted retention campaigns."
   },
   {
     id: "analytics",
     title: "Real-Time Analytics",
-    description: "Track margins, sales trends, and operational efficiency with interactive dashboards."
+    description: "Track sales, orders, and operational efficiency with live dashboards."
   },
   {
     id: "ai",
-    title: "AI Automation",
-    description: "Predict demand, automate inventory alerts, and intelligently dynamic-price your menu."
+    title: "AI Insights",
+    description: "Demand forecasts, prep suggestions, and inventory alerts that turn data into one clear action."
   },
   {
     id: "marketing",
-    title: "Marketing Engine",
-    description: "Launch targeted SMS and push campaigns directly to your most loyal customer segments."
+    title: "Marketing Tools",
+    description: "Launch WhatsApp campaigns and share tools that bring repeat customers back to your storefront."
   },
   {
     id: "payments",
-    title: "Secure Payments",
-    description: "Process zero-friction payments with instant settlement and multi-provider redundancy."
+    title: "Payments",
+    description: "Accept online payments (Razorpay) or cash — settled to your account, 0% commission on orders."
   }
 ];

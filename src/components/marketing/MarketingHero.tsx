@@ -1,20 +1,13 @@
-import React, { memo, lazy, Suspense, useCallback } from 'react';
-import { LazyMotion, domAnimation } from 'framer-motion';
+import React, { memo } from 'react';
 import { ArrowRight, Star, Check } from 'lucide-react';
 import { MarketingSoftCTA } from './MarketingSoftCTA';
 import { MarketingSoftPill } from './MarketingSoftPill';
+import { HeroEcosystemCard } from './HeroEcosystemCard';
 import { landingHero } from '../../config/landing';
 import { onboardingPlanMessaging } from '../../config/pricing';
-
-const LiveDashboardPreview = lazy(() =>
-  import('./LiveDashboardPreview').then((m) => ({ default: m.LiveDashboardPreview }))
-);
+import { orderBhojanPublic } from '../../config/demoData';
 
 export const MarketingHero = memo(function MarketingHero() {
-  const scrollToDemo = useCallback(() => {
-    document.getElementById(landingHero.demoTargetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
   return (
     <section className="marketing-hero-offset relative overflow-hidden pb-10 sm:pb-16 lg:pb-20">
       <div className="pointer-events-none absolute inset-0 marketing-hero-grid-bg opacity-50" aria-hidden />
@@ -37,7 +30,7 @@ export const MarketingHero = memo(function MarketingHero() {
             </div>
 
             <h1 className="mb-4 sm:mb-5 marketing-hero-enter marketing-hero-enter-delay-1">
-              {landingHero.headlineLines.map((line) => (
+              {landingHero.headlineLines.filter(Boolean).map((line) => (
                 <span
                   key={line}
                   className={`block text-[1.625rem] sm:text-4xl md:text-[2.5rem] lg:text-[2.85rem] font-black tracking-[-0.03em] leading-[1.08] ${
@@ -75,13 +68,14 @@ export const MarketingHero = memo(function MarketingHero() {
                 {landingHero.primaryCta}
                 <ArrowRight size={17} strokeWidth={2.5} />
               </MarketingSoftCTA>
-              <MarketingSoftCTA
-                tone="ghost"
-                onClick={scrollToDemo}
-                className="marketing-soft-cta--block w-full sm:w-auto sm:min-w-[180px]"
+              <a
+                href={orderBhojanPublic.homeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="marketing-soft-cta marketing-soft-cta--ghost soft-btn--ghost marketing-soft-cta--block w-full sm:w-auto sm:min-w-[180px]"
               >
-                {landingHero.secondaryCta}
-              </MarketingSoftCTA>
+                <span className="marketing-soft-cta-inner soft-btn__inner">{landingHero.secondaryCta} →</span>
+              </a>
             </div>
 
             <p className="text-xs sm:text-sm text-neutral-500 max-w-xl mx-auto lg:mx-0 mb-6">
@@ -102,18 +96,7 @@ export const MarketingHero = memo(function MarketingHero() {
           </div>
 
           <div className="w-full max-w-md mx-auto lg:max-w-none order-2 lg:order-2 marketing-hero-demo-frame">
-            <Suspense
-              fallback={
-                <div
-                  className="w-full h-[min(340px,68vw)] rounded-2xl border border-white/[0.06] bg-white/[0.03] animate-pulse"
-                  aria-hidden
-                />
-              }
-            >
-              <LazyMotion features={domAnimation}>
-                <LiveDashboardPreview compact animateStats={false} />
-              </LazyMotion>
-            </Suspense>
+            <HeroEcosystemCard />
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Linkedin, Twitter, Mail } from 'lucide-react';
+import { Linkedin, Twitter, Mail, ShoppingBag } from 'lucide-react';
 import SoftButton from './ui/SoftButton';
 import { SUPPORT_EMAIL, SOCIAL_LINKS } from '../config/support';
+import { orderBhojanPublic } from '../config/demoData';
 
 export const EnterpriseFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -15,17 +16,17 @@ export const EnterpriseFooter: React.FC = () => {
         { label: 'Overview', to: '/platform' },
         { label: 'Restaurant OS', to: '/platform#os' },
         { label: 'Pricing', to: '/pricing' },
-        { label: 'AI Copilot', to: '/onboard#ai' },
+        { label: 'AI Insights', to: '/onboard#ai' },
         { label: 'Security', to: '/security' },
       ],
+      external: [] as Array<{ label: string; href: string }>,
     },
     {
-      title: 'Resources',
-      links: [
-        { label: 'Documentation', to: '/docs' },
-        { label: 'API', to: '/docs/api' },
-        { label: 'Blog', to: '/blog' },
-        { label: 'Help Center', to: '/help' },
+      title: 'For Customers',
+      links: [] as Array<{ label: string; to: string }>,
+      external: [
+        { label: 'Order Food on OrderBhojan', href: orderBhojanPublic.homeUrl },
+        { label: 'OrderBhojan — Discover & Order', href: orderBhojanPublic.homeUrl },
       ],
     },
     {
@@ -34,17 +35,16 @@ export const EnterpriseFooter: React.FC = () => {
         { label: 'About', to: '/about' },
         { label: 'Leadership', to: '/about#leadership' },
         { label: 'Contact', to: '/contact' },
-        { label: 'Careers', to: '/contact#careers' },
       ],
+      external: [] as Array<{ label: string; href: string }>,
     },
     {
       title: 'Legal',
       links: [
-        { label: 'Privacy Policy', to: '/privacy' },
+        { label: 'Privacy Policy', to: '/privacy-policy' },
         { label: 'Terms', to: '/terms' },
-        { label: 'Refund Policy', to: '/refund-policy' },
-        { label: 'Cancellation', to: '/cancellation-policy' },
       ],
+      external: [] as Array<{ label: string; href: string }>,
     },
   ];
 
@@ -63,9 +63,21 @@ export const EnterpriseFooter: React.FC = () => {
             <span className="text-white font-bold text-xl tracking-tight block mb-3">
               Bhojan<span className="text-[#FF7A00]">OS</span>
             </span>
-            <p className="text-sm text-neutral-500 leading-relaxed max-w-sm mb-6">
-              The AI operating system for restaurants. Own your customers, brand, and revenue — zero commission.
+            <p className="text-sm text-neutral-500 leading-relaxed max-w-sm mb-2">
+              The operating platform for food businesses.
             </p>
+            <p className="text-xs text-neutral-600 leading-relaxed max-w-sm mb-6">
+              Restaurants run, manage and grow with BhojanOS. Customers discover and order through OrderBhojan — two connected parts of one ecosystem.
+            </p>
+            <a
+              href={orderBhojanPublic.homeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold hover:bg-[#FF7A00]/15 transition-colors mb-6"
+            >
+              <ShoppingBag size={15} aria-hidden />
+              Order Food
+            </a>
             <div className="flex items-center gap-3">
               {SOCIAL_LINKS.linkedin ? (
                 <a
@@ -137,6 +149,18 @@ export const EnterpriseFooter: React.FC = () => {
                     </Link>
                   </li>
                 ))}
+                {(section.external || []).map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neutral-500 hover:text-[#FF7A00] text-sm font-medium transition-colors"
+                    >
+                      {link.label} ↗
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
@@ -144,9 +168,9 @@ export const EnterpriseFooter: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/[0.06] gap-3">
           <p className="text-neutral-600 text-xs sm:text-sm text-center sm:text-left">
-            © {currentYear} BhojanOS. The AI Operating System for Restaurants.
+            © {currentYear} BhojanOS. The operating platform for food businesses.
           </p>
-          <p className="text-neutral-600 text-xs">Zero commission · Own your customers</p>
+          <p className="text-neutral-600 text-xs">Powered by BhojanOS · OrderBhojan for customers</p>
         </div>
       </div>
     </footer>

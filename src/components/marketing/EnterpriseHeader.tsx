@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import bhojanOsLogo from '../../assets/bhojan-os-logo.png';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, ShoppingBag } from 'lucide-react';
 import { MarketingSoftCTA } from './MarketingSoftCTA';
+import { orderBhojanPublic } from '../../config/demoData';
 
 const navLinkClass = (active: boolean) =>
   `transition-colors ${active ? 'text-white font-semibold' : 'hover:text-white text-neutral-400'}`;
@@ -63,6 +64,15 @@ export const EnterpriseHeader: React.FC = () => {
             </div>
           </div>
 
+          <a
+            href={orderBhojanPublic.homeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center h-10 transition-colors hover:text-white text-neutral-400`}
+          >
+            For Customers
+          </a>
+
           <Link to="/pricing" className={`inline-flex items-center h-10 ${navLinkClass(isPricing)}`}>Pricing</Link>
 
           <div className="group relative flex items-center h-full">
@@ -102,11 +112,20 @@ export const EnterpriseHeader: React.FC = () => {
         </div>
 
         <div className="hidden lg:flex items-center gap-3">
+          <a
+            href={orderBhojanPublic.homeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold hover:bg-[#FF7A00]/15 transition-colors"
+          >
+            <ShoppingBag size={15} aria-hidden />
+            Order Food
+          </a>
           <MarketingSoftCTA to="/owner/login" tone="ghost" size="compact">
             Sign In
           </MarketingSoftCTA>
           <MarketingSoftCTA to="/owner/register" size="compact">
-            Start free storefront
+            Get Started
           </MarketingSoftCTA>
         </div>
       </div>
@@ -118,12 +137,23 @@ export const EnterpriseHeader: React.FC = () => {
       >
         <div className="px-4 sm:px-6 py-5 flex flex-col gap-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <Link to="/platform" onClick={() => setMobileMenuOpen(false)} className={`text-base font-semibold py-1 ${isPlatform ? 'text-[#FF6B00]' : 'text-white'}`}>Platform</Link>
+          <a href={orderBhojanPublic.homeUrl} target="_blank" rel="noopener noreferrer" className="text-base font-semibold py-1 text-white">For Customers</a>
           <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className={`text-base font-semibold py-1 ${isPricing ? 'text-[#FF6B00]' : 'text-white'}`}>Pricing</Link>
           <Link to="/about" onClick={() => setMobileMenuOpen(false)} className={`text-base font-semibold py-1 ${isAbout ? 'text-[#FF6B00]' : 'text-white'}`}>About Us</Link>
           <Link to="/about#leadership" onClick={() => setMobileMenuOpen(false)} className="text-base font-semibold py-1 text-white">Leadership</Link>
           <Link to="/security" onClick={() => setMobileMenuOpen(false)} className={`text-base font-semibold py-1 ${isSecurity ? 'text-[#FF6B00]' : 'text-white'}`}>Security</Link>
           <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className={`text-base font-semibold py-1 ${isContact ? 'text-[#FF6B00]' : 'text-white'}`}>Contact</Link>
           <div className="pt-3 mt-1 border-t border-white/[0.06] flex flex-col gap-3">
+            <a
+              href={orderBhojanPublic.homeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold"
+            >
+              <ShoppingBag size={15} aria-hidden />
+              Order Food
+            </a>
             <MarketingSoftCTA
               to="/owner/login"
               tone="ghost"
@@ -139,7 +169,7 @@ export const EnterpriseHeader: React.FC = () => {
               className="marketing-soft-cta--block w-full"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Start free storefront
+              Get Started
             </MarketingSoftCTA>
           </div>
         </div>

@@ -15,8 +15,8 @@ const PlatformPage: React.FC = () => {
       <EnterpriseHeader />
       <main className="flex-grow marketing-main-offset">
         <MarketingPageHero
-          title="The intelligent engine for your restaurant."
-          subtitle="A unified, cloud-native operating system designed to scale from a single cafe to a national franchise."
+          title="For Restaurants — Run Everything with BhojanOS."
+          subtitle="The operating platform for independent food businesses. Manage your storefront, menu, kitchen, orders, and customers — then connect directly with new customers through OrderBhojan."
         />
         <PlatformOverview />
         <ProductOverview />

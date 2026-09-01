@@ -2,22 +2,22 @@ export const platformCapabilities = [
   {
     id: "ai-auto",
     title: "AI Automation",
-    description: "Automate mundane tasks like inventory counting and demand forecasting using specialized machine learning models."
+    description: "Automate repetitive tasks like demand forecasting and prep planning with practical, data-driven suggestions."
   },
   {
     id: "multi-tenant",
     title: "Multi-Tenant SaaS",
-    description: "Enterprise-grade data isolation ensuring your restaurant's data is cryptographically separated and secure."
+    description: "Enterprise-grade data isolation ensuring each restaurant's data is separated and secure."
   },
   {
     id: "cloud-native",
     title: "Cloud Native",
-    description: "Built on serverless edge architecture, guaranteeing 99.99% uptime during your busiest peak hours."
+    description: "Built on modern serverless infrastructure that scales with you during peak hours."
   },
   {
     id: "real-time",
-    title: "Real-Time Analytics",
-    description: "Live web-socket driven dashboards that update the millisecond an order is placed or fulfilled."
+    title: "Real-Time Dashboards",
+    description: "Live dashboards update the moment an order is placed or fulfilled."
   },
   {
     id: "rbac",
@@ -27,7 +27,7 @@ export const platformCapabilities = [
   {
     id: "secure-pay",
     title: "Secure Payments",
-    description: "PCI-compliant payment processing with automated daily settlements."
+    description: "Payments processed securely through Razorpay and settled to your account, 0% commission."
   },
   {
     id: "pwa",
@@ -37,7 +37,7 @@ export const platformCapabilities = [
   {
     id: "offline",
     title: "Offline Ready",
-    description: "Keep punching orders and printing KOTs even when the internet goes down."
+    description: "Key order and menu flows continue working even when connectivity is interrupted."
   },
   {
     id: "apis",

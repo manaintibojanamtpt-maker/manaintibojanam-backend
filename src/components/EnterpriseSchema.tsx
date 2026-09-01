@@ -10,7 +10,8 @@ export const EnterpriseSchema: React.FC = () => {
         "name": "BhojanOS",
         "url": "https://bhojanos.com",
         "logo": "https://bhojanos.com/logo.png",
-        "description": "AI-powered Restaurant Operating System",
+        "description": "BhojanOS is the operating platform for independent food businesses. Powers restaurants, brands and food entrepreneurs, connected to customers through OrderBhojan.",
+        "knowsAbout": ["food business technology", "restaurant management", "direct food ordering", "restaurant operating system"],
         "founder": [
           {
             "@type": "Person",

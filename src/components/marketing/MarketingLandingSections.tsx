@@ -3,7 +3,7 @@ import { LazyMotion, domAnimation } from 'framer-motion';
 import { PlatformFeatures } from './PlatformFeatures';
 import { CommissionComparison } from './CommissionComparison';
 import { HowItWorksTimeline } from './HowItWorksTimeline';
-import { OwnerDashboardPreview } from './OwnerDashboardPreview';
+import { EcosystemVisual } from './EcosystemVisual';
 import { AIManagerSection } from './AIManagerSection';
 import { SocialProofGrid } from './SocialProofGrid';
 import { ExecutiveLeadership } from '../ExecutiveLeadership';
@@ -15,10 +15,10 @@ import { CallToAction } from '../CallToAction';
 export default function MarketingLandingSections() {
   return (
     <LazyMotion features={domAnimation}>
+      <EcosystemVisual />
       <PlatformFeatures />
       <CommissionComparison />
       <HowItWorksTimeline />
-      <OwnerDashboardPreview />
       <AIManagerSection />
       <SocialProofGrid />
       <LandingPricing />

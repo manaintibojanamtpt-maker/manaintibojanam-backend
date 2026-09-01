@@ -10,22 +10,20 @@
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { marketingDemoData } from './demoData';
-
 export const landingHero = {
-  category: 'The Premium Kitchen OS',
-  badges: ['0% Commission', 'No Onboarding Fee', 'AI Powered', 'Own Your Customers'],
-  headlineLines: ['Run your restaurant.', 'like a tech company.', '0% Commission.'],
+  category: 'The Food Business Platform',
+  badges: ['0% Commission', 'Own Your Customers', 'Direct Ordering', 'AI Powered'],
+  headlineLines: ['One food platform.', 'From kitchen to customer.', ''],
   subhead:
-    'BhojanOS is the all-in-one operating system for modern restaurants.',
+    'BhojanOS powers independent food businesses. OrderBhojan connects them directly with customers.',
   description:
-    'Launch a premium, app-like storefront for free. Upgrade to Growth to accept live orders and own your customers — without the 30% aggregator tax.',
-  primaryCta: 'Start Free Storefront',
-  secondaryCta: 'Watch 2 Minute Demo',
-  demoTargetId: 'dashboard-preview',
+    'Run your restaurant with BhojanOS. Let your customers order directly through OrderBhojan. Zero commission, full ownership, complete control.',
+  primaryCta: 'Get Started',
+  secondaryCta: 'Order Food',
+  demoTargetId: 'ecosystem',
   trustStars: 5,
-  trustLabel: 'Launching Early Access',
-  trustSub: 'Already onboarding restaurants across India',
+  trustLabel: 'Built for independent food businesses',
+  trustSub: 'Direct ordering. Zero commission. Full ownership.',
 };
 
 export const platformFeatures: Array<{
@@ -35,8 +33,8 @@ export const platformFeatures: Array<{
 }> = [
   {
     icon: Store,
-    title: 'Storefront',
-    description: 'Your branded online store with menu, checkout, and customer data you own.',
+    title: 'Branded Storefront',
+    description: 'Your own ordering page under your name. Menu, checkout, and customer data you own.',
   },
   {
     icon: ChefHat,
@@ -45,7 +43,7 @@ export const platformFeatures: Array<{
   },
   {
     icon: Package,
-    title: 'Inventory',
+    title: 'Inventory Management',
     description: 'Recipe-linked stock, low-stock alerts, and automatic deduction on every order.',
   },
   {
@@ -56,7 +54,7 @@ export const platformFeatures: Array<{
   {
     icon: CreditCard,
     title: 'Payments',
-    description: 'Online and cash payments with your gateway — 0% commission on direct orders.',
+    description: 'Online (Razorpay) and cash payments — settled to your account, 0% commission.',
   },
   {
     icon: Users,
@@ -65,12 +63,12 @@ export const platformFeatures: Array<{
   },
   {
     icon: Megaphone,
-    title: 'Marketing Automation',
+    title: 'Marketing Tools',
     description: 'WhatsApp campaigns, win-back flows, and share tools that drive direct orders.',
   },
   {
     icon: Sparkles,
-    title: 'AI Copilot',
+    title: 'AI Insights',
     description: 'Demand forecasts, prep suggestions, and actionable insights — explained clearly.',
   },
 ];
@@ -94,22 +92,17 @@ export const commissionComparison = {
 };
 
 export const aiManagerInsights = [
-  { type: 'success', title: 'Morning Briefing', body: 'Revenue increased 18% vs last week.' },
-  { type: 'warning', title: 'Paneer stock low', body: 'Reorder before Friday lunch rush.' },
-  { type: 'neutral', title: 'Chicken sufficient', body: '8.4 kg remaining — no action needed.' },
-  { type: 'info', title: 'Recommended menu today', body: 'Highlight Biryani combo — high conversion.' },
-  { type: 'success', title: 'Customers likely to reorder', body: '14 high-value customers due this week.' },
-  { type: 'info', title: 'WhatsApp campaign ready', body: 'Win-back message drafted for 23 customers.' },
-  { type: 'success', title: 'Weekly profit', body: `₹${marketingDemoData.weeklyProfit.netAmount.toLocaleString('en-IN')} net after costs — up ${marketingDemoData.weeklyProfit.changePercent}%.` },
-  { type: 'warning', title: 'Delivery delay warning', body: 'Zone B averaging +8 min — add rider.' },
-  { type: 'info', title: 'Sales forecast', body: `${marketingDemoData.demandForecast.predictedOrdersMin}–${marketingDemoData.demandForecast.predictedOrdersMax} orders projected this weekend.` },
+  { type: 'info', title: 'AI Insights', body: 'Demand forecasts, prep suggestions, and actionable insights — explained clearly.' },
+  { type: 'neutral', title: 'Kitchen Health', body: 'Monitor prep latency, packaging bottlenecks, and kitchen performance.' },
+  { type: 'success', title: 'Customer Retention', body: 'Track repeat buyers, order history, and retention campaigns.' },
+  { type: 'warning', title: 'Inventory Alerts', body: 'Low-stock warnings and automatic deduction on every order.' },
 ];
 
 export const howItWorksSteps = [
   { step: 1, title: 'Create Store', description: 'Sign up and get your branded storefront URL in minutes.' },
-  { step: 2, title: 'Upload Menu', description: 'Add items, photos, and pricing — or use our cloud kitchen template.' },
-  { step: 3, title: 'Accept Orders', description: 'Direct orders flow to your kitchen queue in real time.' },
-  { step: 4, title: 'Receive Payments', description: 'Cash or online — settled to your account, 0% commission.' },
+  { step: 2, title: 'Upload Menu', description: 'Add items, photos, and pricing — organize by categories.' },
+  { step: 3, title: 'Accept Orders', description: 'Customers discover you on OrderBhojan and order directly.' },
+  { step: 4, title: 'Receive Payments', description: 'Online (Razorpay) or cash — settled to your account, 0% commission.' },
   { step: 5, title: 'Grow Customers', description: 'CRM, WhatsApp, and AI tools to drive repeat direct sales.' },
 ];
 
@@ -123,6 +116,16 @@ export const builtForSegments = [
 ];
 
 export const landingFaq = [
+  {
+    question: 'What is OrderBhojan?',
+    answer:
+      'OrderBhojan is the customer-facing food ordering platform powered by BhojanOS. Customers discover local food businesses, view menus, and place orders directly.',
+  },
+  {
+    question: 'How does OrderBhojan connect to BhojanOS?',
+    answer:
+      'Every restaurant on OrderBhojan is managed through BhojanOS. Orders placed on OrderBhojan flow directly to the restaurant\'s BhojanOS dashboard.',
+  },
   {
     question: 'Why 0% commission?',
     answer:
@@ -139,7 +142,7 @@ export const landingFaq = [
       'Yes. Connect Razorpay or accept cash on delivery. Payments go to your account — BhojanOS never takes a cut of order value.',
   },
   {
-    question: 'Can I migrate from Zomato?',
+    question: 'Can I migrate from Zomato or Swiggy?',
     answer:
       'Many kitchens run BhojanOS alongside aggregators first, then shift repeat customers to their direct storefront. We help you import menu and launch quickly.',
   },
@@ -151,6 +154,6 @@ export const landingFaq = [
   {
     question: 'Can I use my own domain?',
     answer:
-      'Every kitchen gets a bhojanos.com/your-kitchen URL at launch. Custom domain support is available on Growth and above.',
+      'Every kitchen gets a branded URL at launch. Custom domain support is available on Growth and above.',
   },
 ];
