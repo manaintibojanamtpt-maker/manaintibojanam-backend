@@ -114,17 +114,20 @@ export const EcosystemVisual = memo(function EcosystemVisual() {
         {/* Capabilities */}
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
-            <h3 className="text-sm font-bold text-white mb-3">BhojanOS — For Restaurants</h3>
+            <h3 className="text-sm font-bold text-white mb-1">BhojanOS — For Restaurants</h3>
+            <p className="text-xs text-[#FF7A00] font-semibold mb-3">The operating platform for food businesses</p>
             <ul className="space-y-2 text-sm text-neutral-400">
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Branded storefront & menu management</li>
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Order queue & kitchen operations</li>
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Inventory & delivery management</li>
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Payments, CRM & marketing tools</li>
-              <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> AI insights & demand forecasts</li>
+              <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> AI insights & sales trends</li>
             </ul>
           </div>
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
-            <h3 className="text-sm font-bold text-white mb-3">OrderBhojan — For Customers</h3>
+            <h3 className="text-sm font-bold text-white mb-1">OrderBhojan — For Customers</h3>
+            <p className="text-xs text-[#FF7A00] font-semibold mb-2">The customer ordering experience</p>
+            <p className="text-xs text-neutral-500 mb-3">Order direct from local food businesses — your order goes straight to the restaurant, not a marketplace.</p>
             <ul className="space-y-2 text-sm text-neutral-400">
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Discover local food businesses</li>
               <li className="flex items-start gap-2"><span className="text-[#FF7A00]">•</span> Browse menus with photos & prices</li>
@@ -135,7 +138,11 @@ export const EcosystemVisual = memo(function EcosystemVisual() {
           </div>
         </div>
 
-        <div className="mt-6 text-center">
+        <p className="mt-6 text-center text-sm text-neutral-400 leading-relaxed max-w-2xl mx-auto">
+          Every restaurant on OrderBhojan is powered by BhojanOS. Orders placed on OrderBhojan flow directly to the restaurant’s BhojanOS dashboard.
+        </p>
+
+        <div className="mt-4 text-center">
           <a
             href={orderBhojanPublic.homeUrl}
             target="_blank"

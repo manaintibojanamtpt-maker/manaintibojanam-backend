@@ -69,7 +69,7 @@ export const platformFeatures: Array<{
   {
     icon: Sparkles,
     title: 'AI Insights',
-    description: 'Demand forecasts, prep suggestions, and actionable insights — explained clearly.',
+    description: 'Order trends, prep suggestions, and actionable insights — explained clearly.',
   },
 ];
 
@@ -92,7 +92,7 @@ export const commissionComparison = {
 };
 
 export const aiManagerInsights = [
-  { type: 'info', title: 'AI Insights', body: 'Demand forecasts, prep suggestions, and actionable insights — explained clearly.' },
+  { type: 'info', title: 'AI Insights', body: 'Order trends, prep suggestions, and actionable insights — explained clearly.' },
   { type: 'neutral', title: 'Kitchen Health', body: 'Monitor prep latency, packaging bottlenecks, and kitchen performance.' },
   { type: 'success', title: 'Customer Retention', body: 'Track repeat buyers, order history, and retention campaigns.' },
   { type: 'warning', title: 'Inventory Alerts', body: 'Low-stock warnings and automatic deduction on every order.' },
@@ -101,7 +101,7 @@ export const aiManagerInsights = [
 export const howItWorksSteps = [
   { step: 1, title: 'Create Store', description: 'Sign up and get your branded storefront URL in minutes.' },
   { step: 2, title: 'Upload Menu', description: 'Add items, photos, and pricing — organize by categories.' },
-  { step: 3, title: 'Accept Orders', description: 'Customers discover you on OrderBhojan and order directly.' },
+  { step: 3, title: 'Accept Orders', description: 'Customers discover you on OrderBhojan and order directly — orders land in your BhojanOS dashboard instantly.' },
   { step: 4, title: 'Receive Payments', description: 'Online (Razorpay) or cash — settled to your account, 0% commission.' },
   { step: 5, title: 'Grow Customers', description: 'CRM, WhatsApp, and AI tools to drive repeat direct sales.' },
 ];
@@ -125,6 +125,11 @@ export const landingFaq = [
     question: 'How does OrderBhojan connect to BhojanOS?',
     answer:
       'Every restaurant on OrderBhojan is managed through BhojanOS. Orders placed on OrderBhojan flow directly to the restaurant\'s BhojanOS dashboard.',
+  },
+  {
+    question: 'Where do my customers place orders?',
+    answer:
+      'On OrderBhojan — the customer ordering experience at orderbhojan.web.app. Every OrderBhojan order flows directly into your BhojanOS dashboard. Customers can also order from your own branded storefront.',
   },
   {
     question: 'Why 0% commission?',

@@ -14,7 +14,7 @@ export const EnterpriseFooter: React.FC = () => {
       title: 'Platform',
       links: [
         { label: 'Overview', to: '/platform' },
-        { label: 'Restaurant OS', to: '/platform#os' },
+        { label: 'Restaurant tools', to: '/platform#os' },
         { label: 'Pricing', to: '/pricing' },
         { label: 'AI Insights', to: '/onboard#ai' },
         { label: 'Security', to: '/security' },
@@ -170,7 +170,7 @@ export const EnterpriseFooter: React.FC = () => {
           <p className="text-neutral-600 text-xs sm:text-sm text-center sm:text-left">
             © {currentYear} BhojanOS. The operating platform for food businesses.
           </p>
-          <p className="text-neutral-600 text-xs">Powered by BhojanOS · OrderBhojan for customers</p>
+          <p className="text-neutral-600 text-xs">Powered by BhojanOS · Order food on OrderBhojan</p>
         </div>
       </div>
     </footer>
