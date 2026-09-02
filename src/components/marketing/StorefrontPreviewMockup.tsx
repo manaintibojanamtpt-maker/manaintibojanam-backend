@@ -1,55 +1,14 @@
-import React, { memo, useState } from 'react';
-import { ShoppingBag, Star, UtensilsCrossed } from 'lucide-react';
+import React, { memo } from 'react';
+import { ShoppingBag, Star } from 'lucide-react';
 import { marketingDemoData } from '../../config/demoData';
-
-/* Marketing-specific food image configuration — verified working URLs */
-const MARKETING_FOOD_IMAGES: Record<string, { url: string; alt: string }> = {
-  'Chicken Biryani': {
-    url: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=400&fm=webp',
-    alt: 'Steaming chicken biryani with saffron rice',
-  },
-  'Paneer Butter Masala': {
-    url: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=400&fm=webp',
-    alt: 'Creamy paneer butter masala curry',
-  },
-  'Masala Dosa': {
-    url: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400&fm=webp',
-    alt: 'Crispy masala dosa with filling',
-  },
-};
+import { getMarketingFoodImage } from '../../config/marketingFoodImages';
+import { FoodImage } from '../ui/FoodImage';
 
 const DEMO_ITEMS = [
   { name: 'Chicken Biryani', price: '₹249', tag: 'Bestseller' },
   { name: 'Paneer Butter Masala', price: '₹199', tag: 'Popular' },
   { name: 'Masala Dosa', price: '₹89', tag: 'Breakfast' },
 ] as const;
-
-const FoodImage = memo(function FoodImage({ src, alt, name }: { src: string; alt: string; name: string }) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
-
-  return (
-    <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-lg overflow-hidden bg-[#0A0A0A]">
-      {status === 'loading' && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#1a1410] to-[#0A0A0A]" />
-      )}
-      {status === 'error' ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF7A00]/15 to-[#1a1410]">
-          <UtensilsCrossed size={20} className="text-[#FF7A00]/60" />
-        </div>
-      ) : (
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setStatus('loaded')}
-          onError={() => setStatus('error')}
-          className={`h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
-        />
-      )}
-    </div>
-  );
-});
 
 export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
   return (
@@ -89,16 +48,18 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
 
           <div className="space-y-2">
             {DEMO_ITEMS.map((item) => {
-              const foodImage = MARKETING_FOOD_IMAGES[item.name];
+              const foodImage = getMarketingFoodImage(item.name);
               return (
                 <div
                   key={item.name}
                   className="group flex items-center gap-3 rounded-lg border border-white/[0.04] bg-white/[0.015] p-2.5 transition-all duration-200 hover:bg-white/[0.03]"
                 >
                   <FoodImage
-                    src={foodImage?.url || ''}
-                    alt={foodImage?.alt || item.name}
-                    name={item.name}
+                    src={foodImage?.url}
+                    alt={foodImage?.alt ?? item.name}
+                    ratio="square"
+                    zoomOnHover
+                    className="h-14 w-14 sm:h-16 sm:w-16"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">

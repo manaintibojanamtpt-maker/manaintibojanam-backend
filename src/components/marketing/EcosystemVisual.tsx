@@ -142,6 +142,33 @@ export const EcosystemVisual = memo(function EcosystemVisual() {
           Every restaurant on OrderBhojan is powered by BhojanOS. Orders placed on OrderBhojan flow directly to the restaurant’s BhojanOS dashboard.
         </p>
 
+        {/* Reverse order-flow relay — an order travelling back through the ecosystem */}
+        <div className="mt-10 sm:mt-12">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500 text-center mb-5">
+            An order flows back through the platform
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-0 sm:max-w-3xl mx-auto">
+            {[
+              { label: 'Customer', sub: 'places order' },
+              { label: 'OrderBhojan', sub: 'receives order' },
+              { label: 'BhojanOS', sub: 'notifies kitchen' },
+              { label: 'Restaurant', sub: 'prepares & fulfills' },
+            ].map((node, i) => (
+              <React.Fragment key={node.label}>
+                <div className="flex flex-col items-center text-center w-28 sm:w-32">
+                  <span className="text-xs font-bold text-white">{node.label}</span>
+                  <span className="text-[10px] text-neutral-500 mt-0.5">{node.sub}</span>
+                </div>
+                {i < 3 && (
+                  <div className="hidden sm:block flex-1 max-w-[60px] h-px bg-gradient-to-r from-[#FF7A00]/40 to-[#FF7A00]/10 relative overflow-hidden">
+                    <span className="absolute inset-y-0 left-0 w-3 rounded-full bg-[#FF7A00] shadow-[0_0_8px_rgba(255,122,0,0.8)] animate-[ecosystem-pulse_2.4s_ease-in-out_infinite]" style={{ animationDelay: `${i * 0.6}s` }} />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 text-center">
           <a
             href={orderBhojanPublic.homeUrl}

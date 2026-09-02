@@ -754,3 +754,21 @@ body {
     transition: none;
   }
 }
+
+/* ── Ecosystem order-flow pulse ── */
+@keyframes ecosystem-pulse {
+  0% {
+    left: -12px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% + 12px);
+    opacity: 0;
+  }
+}

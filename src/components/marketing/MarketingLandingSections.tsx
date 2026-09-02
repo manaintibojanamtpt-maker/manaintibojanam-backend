@@ -9,6 +9,8 @@ import { SocialProofGrid } from './SocialProofGrid';
 import { ExecutiveLeadership } from '../ExecutiveLeadership';
 import { LandingPricing } from './LandingPricing';
 import { LandingFAQ } from './LandingFAQ';
+import { FoodDiscoverySection } from './FoodDiscoverySection';
+import { RestaurantWorkspacePreview } from './RestaurantWorkspacePreview';
 import { CallToAction } from '../CallToAction';
 
 /** Below-the-fold landing sections — lazy-loaded so hero paints first. */
@@ -16,6 +18,8 @@ export default function MarketingLandingSections() {
   return (
     <LazyMotion features={domAnimation}>
       <EcosystemVisual />
+      <FoodDiscoverySection />
+      <RestaurantWorkspacePreview />
       <PlatformFeatures />
       <CommissionComparison />
       <HowItWorksTimeline />
