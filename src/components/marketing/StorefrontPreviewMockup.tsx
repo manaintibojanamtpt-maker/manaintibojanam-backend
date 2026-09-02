@@ -1,15 +1,20 @@
 import React, { memo } from 'react';
-import { ShoppingBag, Star } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { marketingDemoData } from '../../config/demoData';
 import { getMarketingFoodImage } from '../../config/marketingFoodImages';
 import { FoodImage } from '../ui/FoodImage';
 
 const DEMO_ITEMS = [
-  { name: 'Chicken Biryani', price: '₹249', tag: 'Bestseller' },
-  { name: 'Paneer Butter Masala', price: '₹199', tag: 'Popular' },
-  { name: 'Masala Dosa', price: '₹89', tag: 'Breakfast' },
+  { name: 'Chicken Biryani', tag: 'Bestseller' },
+  { name: 'Paneer Butter Masala', tag: 'Popular' },
+  { name: 'Masala Dosa', tag: 'Breakfast' },
 ] as const;
 
+/**
+ * Illustrative preview of a BhojanOS-powered restaurant storefront.
+ * All content is labelled as example UI — no live business data is shown.
+ * Prices are intentionally omitted (not fabricated).
+ */
 export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
   return (
     <div
@@ -68,12 +73,9 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
                         {item.tag}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Star size={10} className="fill-[#FF7A00] text-[#FF7A00]" aria-hidden />
-                      <span className="text-[10px] text-neutral-600">4.8 · 12 min prep</span>
-                    </div>
+                    {/* Real food imagery replaces the former placeholder — no fabricated rating/price */}
                   </div>
-                  <span className="text-sm font-bold text-white tabular-nums shrink-0">{item.price}</span>
+                  {/* Price intentionally omitted — not fabricated */}
                 </div>
               );
             })}
@@ -82,12 +84,16 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
           <div className="flex items-center justify-between rounded-lg bg-[#FF7A00] px-3 py-2.5 text-white">
             <div className="flex items-center gap-1.5">
               <ShoppingBag size={15} aria-hidden />
-              <span className="text-xs font-bold">View cart · 2 items</span>
+              <span className="text-xs font-bold">Your storefront cart</span>
             </div>
-            <span className="text-xs font-black tabular-nums">₹338</span>
+            <span className="text-xs font-black tabular-nums">0 items</span>
           </div>
         </div>
       </div>
+
+      <p className="mt-2 text-center text-[10px] text-neutral-600">
+        Illustration — example storefront preview
+      </p>
     </div>
   );
 });

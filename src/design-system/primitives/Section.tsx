@@ -16,7 +16,7 @@ export const Section: React.FC<SectionProps> = ({
   background = 'default',
   density = 'comfortable',
 }) => {
-    const bgClasses = {
+        const bgClasses = {
     default: 'bg-[#070504]',
     subtle: 'bg-[#0A0A0A]',
     dark: 'bg-[#070504]',
@@ -25,10 +25,10 @@ export const Section: React.FC<SectionProps> = ({
 
   const densityClasses =
     density === 'spacious'
-      ? 'py-16 sm:py-20 lg:py-24'
+      ? 'py-16 sm:py-20 lg:py-32'
       : density === 'hero'
         ? 'pt-2 sm:pt-4 pb-8 sm:pb-10'
-        : 'py-12 sm:py-16 lg:py-20';
+        : 'py-16 sm:py-20 lg:py-24';
 
   return (
     <section id={id} className={`w-full ${densityClasses} relative ${bgClasses[background]} ${className}`}>

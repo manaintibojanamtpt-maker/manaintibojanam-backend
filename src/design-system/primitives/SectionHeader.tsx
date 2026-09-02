@@ -25,8 +25,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         </div>
       )}
 
-      {title && (
-        <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.02em] leading-[1.08] mb-3 sm:mb-4">
+            {title && (
+        <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-[-0.015em] leading-[1.05] mb-3 sm:mb-4">
           {title}
         </h2>
       )}

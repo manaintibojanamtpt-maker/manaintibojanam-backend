@@ -55,8 +55,8 @@ export const FoodImage = memo(function FoodImage({
       role="img"
       aria-label={alt}
     >
-      {showSkeleton && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#1a1410] to-[#0A0A0A]" aria-hidden />
+            {showSkeleton && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#1a1410] to-[#0A0A0A] rounded-inherit" aria-hidden />
       )}
 
       {src ? (
