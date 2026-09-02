@@ -32,8 +32,10 @@ export const marketingDemoData = {
     changePercent: 0,
   },
 
-  /** Revenue bar chart heights (0–100) — shared across dashboard previews */
-  revenueBarHeights: [32, 45, 38, 52, 48, 68, 72, 65, 78, 84, 76, 92] as const,
+    /** Revenue bar chart heights (0–100) — shared across dashboard previews.
+   * All zeros: this is a UI preview, not real business data.
+   */
+  revenueBarHeights: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] as const,
 } as const;
 
 /**
