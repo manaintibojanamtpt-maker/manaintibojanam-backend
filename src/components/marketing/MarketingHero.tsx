@@ -9,11 +9,11 @@ import { orderBhojanPublic } from '../../config/demoData';
 
 export const MarketingHero = memo(function MarketingHero() {
   return (
-    <section className="marketing-hero-offset relative overflow-hidden pb-12 sm:pb-16 lg:pb-24">
+    <section className="marketing-hero-offset relative overflow-hidden pb-16 sm:pb-20 lg:pb-28">
       {/* Ambient background treatment */}
-      <div className="pointer-events-none absolute inset-0 marketing-hero-grid-bg opacity-40" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 marketing-hero-grid-bg opacity-30" aria-hidden />
       <div
-        className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[min(100%,700px)] h-[420px] rounded-full bg-[#FF7A00]/[0.07] blur-[120px]"
+        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[min(100%,800px)] h-[500px] rounded-full bg-[#FF7A00]/[0.06] blur-[140px]"
         aria-hidden
       />
       <div
@@ -22,7 +22,7 @@ export const MarketingHero = memo(function MarketingHero() {
       />
 
       <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-8 lg:gap-12 xl:gap-14 items-center">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] gap-10 lg:gap-14 xl:gap-20 items-center">
           <div className="text-center lg:text-left order-1">
             <div className="marketing-hero-enter mb-5 flex justify-center lg:justify-start">
               <MarketingSoftPill variant="eyebrow">
@@ -34,7 +34,7 @@ export const MarketingHero = memo(function MarketingHero() {
               {landingHero.headlineLines.filter(Boolean).map((line) => (
                 <span
                   key={line}
-                                     className="block font-display text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] xl:text-[5rem] font-black tracking-[-0.025em] leading-[1.02] text-white"
+                                     className="block font-display text-[2.25rem] sm:text-[3rem] md:text-[4rem] lg:text-[4.5rem] xl:text-[5.5rem] font-black tracking-[-0.03em] leading-[0.98] text-white"
                 >
                   {line}
                 </span>

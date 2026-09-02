@@ -59,7 +59,7 @@ export const FoodDiscoverySection = memo(function FoodDiscoverySection() {
           return (
             <div
               key={dish.name}
-              className="group relative flex flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.06] bg-[#0A0A0A]/80 transition-all duration-300 hover:border-[#FF7A00]/25 hover:-translate-y-1 hover:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.7)]"
+              className="group relative flex flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-[#0A0A0A]/80 transition-all duration-300 hover:border-[#FF7A00]/25 hover:-translate-y-1.5 hover:shadow-[0_32px_64px_-20px_rgba(0,0,0,0.7)]"
             >
               <FoodImage
                 src={foodImage?.url}
@@ -68,10 +68,10 @@ export const FoodDiscoverySection = memo(function FoodDiscoverySection() {
                 zoomOnHover
                 className="rounded-none !h-auto"
               />
-              <div className="flex flex-col flex-1 gap-2 p-4 sm:p-5">
+              <div className="flex flex-col flex-1 gap-2 p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-display text-base sm:text-lg font-bold text-white tracking-tight">
+                    <h3 className="font-display text-lg sm:text-xl font-bold text-white tracking-tight">
                       {dish.name}
                     </h3>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF7A00]/80 mt-0.5">
@@ -103,7 +103,7 @@ export const FoodDiscoverySection = memo(function FoodDiscoverySection() {
         })}
       </div>
 
-      <div className="mt-8 text-center">
+      <div className="mt-10 text-center">
         <a
           href={orderBhojanPublic.homeUrl}
           target="_blank"
