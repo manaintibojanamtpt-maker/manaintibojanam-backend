@@ -20,7 +20,7 @@ export const MarketingHero = memo(function MarketingHero() {
         aria-hidden
       />
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-8 lg:gap-12 xl:gap-14 items-center">
           <div className="text-center lg:text-left order-1">
             <div className="marketing-hero-enter mb-4 flex justify-center lg:justify-start">
@@ -33,9 +33,7 @@ export const MarketingHero = memo(function MarketingHero() {
               {landingHero.headlineLines.filter(Boolean).map((line) => (
                 <span
                   key={line}
-                  className={`block text-[1.625rem] sm:text-4xl md:text-[2.5rem] lg:text-[2.85rem] font-black tracking-[-0.03em] leading-[1.08] ${
-                    line === '0% Commission.' ? 'marketing-hero-accent-text' : 'text-white'
-                  }`}
+                                     className="block font-display text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] xl:text-[5rem] font-black tracking-[-0.025em] leading-[1.02] text-white"
                 >
                   {line}
                 </span>
