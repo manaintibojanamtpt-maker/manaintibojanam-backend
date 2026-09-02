@@ -9,10 +9,11 @@ import { orderBhojanPublic } from '../../config/demoData';
 
 export const MarketingHero = memo(function MarketingHero() {
   return (
-    <section className="marketing-hero-offset relative overflow-hidden pb-10 sm:pb-16 lg:pb-20">
-      <div className="pointer-events-none absolute inset-0 marketing-hero-grid-bg opacity-50" aria-hidden />
+    <section className="marketing-hero-offset relative overflow-hidden pb-12 sm:pb-16 lg:pb-24">
+      {/* Ambient background treatment */}
+      <div className="pointer-events-none absolute inset-0 marketing-hero-grid-bg opacity-40" aria-hidden />
       <div
-        className="pointer-events-none absolute -top-24 left-1/4 w-[min(100%,560px)] h-[360px] rounded-full bg-[#FF7A00]/[0.08] blur-[100px]"
+        className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[min(100%,700px)] h-[420px] rounded-full bg-[#FF7A00]/[0.07] blur-[120px]"
         aria-hidden
       />
       <div
@@ -23,13 +24,13 @@ export const MarketingHero = memo(function MarketingHero() {
       <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-8 lg:gap-12 xl:gap-14 items-center">
           <div className="text-center lg:text-left order-1">
-            <div className="marketing-hero-enter mb-4 flex justify-center lg:justify-start">
+            <div className="marketing-hero-enter mb-5 flex justify-center lg:justify-start">
               <MarketingSoftPill variant="eyebrow">
                 <span className="marketing-soft-pill-eyebrow-text">{landingHero.category}</span>
               </MarketingSoftPill>
             </div>
 
-            <h1 className="mb-4 sm:mb-5 marketing-hero-enter marketing-hero-enter-delay-1">
+            <h1 className="mb-5 sm:mb-6 marketing-hero-enter marketing-hero-enter-delay-1">
               {landingHero.headlineLines.filter(Boolean).map((line) => (
                 <span
                   key={line}
@@ -40,16 +41,16 @@ export const MarketingHero = memo(function MarketingHero() {
               ))}
             </h1>
 
-            <p className="marketing-hero-enter marketing-hero-enter-delay-2 text-[15px] sm:text-lg font-semibold text-white/90 mb-2 max-w-xl mx-auto lg:mx-0">
+            <p className="marketing-hero-enter marketing-hero-enter-delay-2 text-base sm:text-lg font-semibold text-white/90 mb-3 max-w-xl mx-auto lg:mx-0">
               {landingHero.subhead}
             </p>
 
-            <p className="text-sm sm:text-[15px] text-neutral-400 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-6 sm:mb-7">
+            <p className="text-sm sm:text-[15px] text-neutral-400 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-7 sm:mb-8">
               {landingHero.description}
             </p>
 
             <div
-              className="marketing-hero-enter marketing-hero-enter-delay-2 marketing-hero-badge-row justify-center lg:justify-start mb-6 sm:mb-7"
+              className="marketing-hero-enter marketing-hero-enter-delay-2 marketing-hero-badge-row justify-center lg:justify-start mb-7 sm:mb-8"
               role="list"
               aria-label="Key benefits"
             >

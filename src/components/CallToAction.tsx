@@ -10,12 +10,12 @@ export const CallToAction: React.FC = () => {
     <Section background="gradient" density="spacious" className="border-t border-white/[0.06]">
       <div className="max-w-2xl mx-auto text-center relative z-10">
         <p className="marketing-section-eyebrow mb-4">One ecosystem. Every food business.</p>
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight mb-3 leading-[1.12]">
+        <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-[-0.02em] leading-[1.08] mb-4">
           Run your restaurant with BhojanOS.
           <br />
           Let customers order through OrderBhojan.
         </h2>
-        <p className="text-[15px] sm:text-base text-neutral-400 font-medium mb-7 max-w-xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg text-neutral-400 font-medium mb-8 max-w-xl mx-auto leading-relaxed">
           BhojanOS gives you everything to run, manage, and grow your food business.
           OrderBhojan connects you directly with customers — zero commission, complete ownership.
         </p>

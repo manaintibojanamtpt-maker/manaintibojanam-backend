@@ -32,7 +32,7 @@ export const EnterpriseHeader: React.FC = () => {
   const isContact = location.pathname === '/contact';
 
   return (
-    <header className="fixed top-0 z-[100] w-full border-b border-white/[0.06] bg-[#030303] backdrop-blur-md pt-[env(safe-area-inset-top)]">
+    <header className="fixed top-0 z-[100] w-full border-b border-white/[0.06] bg-[#070504]/90 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-[4.5rem] flex items-center justify-between w-full overflow-visible">
         <Link to="/" className="flex items-center gap-3 cursor-pointer min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
