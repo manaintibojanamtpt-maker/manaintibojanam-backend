@@ -1,5 +1,7 @@
 @import "tailwindcss" source(none);
 @import "./styles/soft-buttons.css";
+@import "./styles/marketing-cinematic.css";
+@import "./styles/marketing-cinematic.css";
 
 @source "./MarketingApp.tsx";
 @source "./marketing-main.tsx";

@@ -1,0 +1,240 @@
+/**
+ * Cinematic redesign layer — 3D depth, floating UI, animated flows.
+ * Progressive enhancement: every element is fully visible without JS animation.
+ * All animation uses transform/opacity only (compositor-friendly).
+ */
+
+/* ---------- Keyframes ---------- */
+
+@keyframes cine-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes cine-float-soft {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -5px, 0); }
+}
+
+@keyframes cine-hero-zoom {
+  0% { transform: scale(1.0); }
+  100% { transform: scale(1.06); }
+}
+
+@keyframes cine-dash-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+@keyframes cine-glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes cine-coin-drop {
+  0% { transform: translate3d(0, -10px, 0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate3d(0, 46px, 0); opacity: 0; }
+}
+
+@keyframes cine-arrow-flow {
+  0% { transform: translate3d(-6px, 0, 0); opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { transform: translate3d(6px, 0, 0); opacity: 0.2; }
+}
+
+@keyframes cine-shimmer-line {
+  0% { left: -30%; }
+  100% { left: 110%; }
+}
+
+/* ---------- Utilities ---------- */
+
+/* Floating elements — layered depth */
+.cine-float {
+  animation: cine-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+.cine-float-soft {
+  animation: cine-float-soft 5s ease-in-out infinite;
+  will-change: transform;
+}
+.cine-float-delay-1 { animation-delay: 1.2s; }
+.cine-float-delay-2 { animation-delay: 2.4s; }
+.cine-float-delay-3 { animation-delay: 3.6s; }
+
+/* Slow Ken Burns zoom on hero photography */
+.cine-hero-zoom {
+  animation: cine-hero-zoom 18s ease-out forwards;
+  will-change: transform;
+}
+
+/* Cinematic photo grading — one campaign look */
+.cine-photo {
+  position: relative;
+  overflow: hidden;
+}
+.cine-photo img {
+  filter: saturate(1.08) contrast(1.06) brightness(0.94);
+}
+.cine-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(3, 3, 3, 0.72) 0%, rgba(3, 3, 3, 0.12) 42%, rgba(3, 3, 3, 0) 65%),
+    radial-gradient(120% 90% at 70% 20%, rgba(255, 122, 0, 0.10) 0%, rgba(255, 122, 0, 0) 55%);
+}
+
+/* Glass card — floating UI panels */
+.cine-glass {
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 24px 48px -16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 122, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cine-glass-accent {
+  border-color: rgba(255, 122, 0, 0.28);
+  box-shadow:
+    0 24px 48px -16px rgba(0, 0, 0, 0.7),
+    0 0 24px -6px rgba(255, 122, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Animated dashed connector path (SVG) */
+.cine-dash-path {
+  stroke-dasharray: 6 6;
+  animation: cine-dash-flow 1.2s linear infinite;
+}
+
+/* Pulsing node dot on connectors */
+.cine-node {
+  animation: cine-glow-pulse 2.6s ease-in-out infinite;
+}
+
+/* Money-flow coin (commission section) */
+.cine-coin {
+  animation: cine-coin-drop 2.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Horizontal flowing arrow (ecosystem) */
+.cine-arrow {
+  animation: cine-arrow-flow 1.8s ease-in-out infinite;
+}
+
+/* Shimmer sweep on premium cards */
+.cine-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.cine-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: cine-shimmer-line 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Food card — portrait, edge-to-edge photo, hover lift + glow */
+.cine-food-card {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+  will-change: transform;
+}
+.cine-food-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 122, 0, 0.35);
+  box-shadow:
+    0 32px 64px -20px rgba(0, 0, 0, 0.75),
+    0 0 32px -8px rgba(255, 122, 0, 0.3);
+}
+.cine-food-card:hover .cine-food-img {
+  transform: scale(1.06);
+}
+.cine-food-img {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Mobile: reduce float amplitude + disable heavy zoom */
+@media (max-width: 640px) {
+  .cine-float,
+  .cine-float-soft {
+    animation-duration: 7s;
+  }
+  .cine-hero-zoom {
+    animation: none;
+  }
+}
+
+/* Entrance animation — staggered rise, fully visible if JS/animation absent */
+@keyframes cine-rise {
+  0% { opacity: 0; transform: translate3d(0, 18px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.cine-rise {
+  animation: cine-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.cine-rise-d1 { animation-delay: 0.08s; }
+.cine-rise-d2 { animation-delay: 0.16s; }
+.cine-rise-d3 { animation-delay: 0.24s; }
+.cine-rise-d4 { animation-delay: 0.34s; }
+.cine-rise-d5 { animation-delay: 0.44s; }
+.cine-rise-d6 { animation-delay: 0.56s; }
+
+/* Phone rotate-in (gentle, spring-like) */
+@keyframes cine-phone-in {
+  0% { opacity: 0; transform: rotate(10deg) translate3d(0, 24px, 0); }
+  100% { opacity: 1; transform: rotate(6deg) translate3d(0, 0, 0); }
+}
+.cine-phone-in {
+  animation: cine-phone-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-rise,
+  .cine-rise-d1,
+  .cine-rise-d2,
+  .cine-rise-d3,
+  .cine-rise-d4,
+  .cine-rise-d5,
+  .cine-rise-d6,
+  .cine-phone-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-float,
+  .cine-float-soft,
+  .cine-hero-zoom,
+  .cine-dash-path,
+  .cine-node,
+  .cine-coin,
+  .cine-arrow,
+  .cine-shimmer::before {
+    animation: none !important;
+  }
+  .cine-food-card,
+  .cine-food-card:hover {
+    transform: none;
+  }
+  .cine-food-card:hover .cine-food-img {
+    transform: none;
+  }
+}

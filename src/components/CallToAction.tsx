@@ -1,42 +1,85 @@
-import React from 'react';
-import { Section } from './ui/Section';
-import { MarketingSoftCTA } from './marketing/MarketingSoftCTA';
-import { SocialProofStrip } from './marketing/SocialProofStrip';
-import { orderBhojanPublic } from '../config/demoData';
-import { ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
+import { CINEMATIC_ENV_IMAGES } from '../config/marketingFoodImages';
 
-export const CallToAction: React.FC = () => {
+/**
+ * Restaurant CTA — cinematic chef/kitchen composition with layered depth.
+ * Background kitchen scene graded dark, warm rim light, CTAs wired to real
+ * flows: /onboard (restaurant onboarding) + OrderBhojan (ordering).
+ */
+
+const IMG = CINEMATIC_ENV_IMAGES;
+
+export function CallToAction() {
   return (
-    <Section background="gradient" density="spacious" className="border-t border-white/[0.06]">
-      <div className="max-w-2xl mx-auto text-center relative z-10">
-        <p className="marketing-section-eyebrow mb-4">One ecosystem. Every food business.</p>
-        <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-[-0.02em] leading-[1.08] mb-4">
-          Run your restaurant with BhojanOS.
-          <br />
-          Let customers order through OrderBhojan.
-        </h2>
-        <p className="text-base sm:text-lg text-neutral-400 font-medium mb-8 max-w-xl mx-auto leading-relaxed">
-          BhojanOS gives you everything to run, manage, and grow your food business.
-          OrderBhojan connects you directly with customers — zero commission, complete ownership.
-        </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md mx-auto sm:max-w-none">
-          <MarketingSoftCTA to="/owner/register" className="marketing-soft-cta--block w-full sm:w-auto sm:min-w-[220px]">
-            Start with BhojanOS
-          </MarketingSoftCTA>
-          <a
-            href={orderBhojanPublic.homeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="marketing-soft-cta marketing-soft-cta--ghost soft-btn--ghost marketing-soft-cta--block w-full sm:w-auto sm:min-w-[220px]"
-          >
-            <span className="marketing-soft-cta-inner soft-btn__inner">
-              <ShoppingBag size={16} aria-hidden />
-              Order Food on OrderBhojan →
-            </span>
-          </a>
-        </div>
-        <SocialProofStrip />
+    <section className="relative overflow-hidden" aria-labelledby="cta-heading">
+      {/* Background: kitchen scene, graded dark */}
+      <div className="cine-photo absolute inset-0" aria-hidden>
+        <img
+          src={IMG.kitchen.url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover object-center"
+        />
       </div>
-    </Section>
+
+      {/* Depth layering: scrims keep text readable over photography */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-r from-[#030303] via-[#030303]/78 to-[#030303]/30"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-[#030303]/60"
+      />
+      {/* Warm rim light (right side, toward the chef) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[8%] top-1/2 h-[380px] w-[380px] -translate-y-1/2 rounded-full bg-[#FF7A00]/[0.14] blur-[110px]"
+      />
+
+      <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+        <div className="max-w-2xl">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.28em] text-[#FF7A00]">
+            Join BhojanOS
+          </p>
+          <h2
+            id="cta-heading"
+            className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl"
+          >
+            Ready to take control of{' '}
+            <span className="text-[#FF7A00]">your food business?</span>
+          </h2>
+          <p className="mt-5 max-w-lg text-base text-white/60">
+            Set up in minutes. Keep every rupee. Own every customer.
+          </p>
+
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <Link
+              to="/onboard"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_36px_rgba(255,122,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Start Your Restaurant
+              <ArrowRight
+                size={17}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+                aria-hidden
+              />
+            </Link>
+            <a
+              href="https://www.orderbhojan.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cine-glass inline-flex items-center gap-2 rounded-full px-8 py-4 text-sm font-bold uppercase tracking-wide text-white transition-all duration-300 hover:border-[#FF7A00]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
+            >
+              Order Food
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   );
-};
+}
+
+export default CallToAction;

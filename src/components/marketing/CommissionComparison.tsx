@@ -1,176 +1,124 @@
-import React, { memo } from 'react';
-import { m } from 'framer-motion';
-import { Check, X } from 'lucide-react';
-import { Section } from '../ui/Section';
-import { SectionHeader } from '../ui/SectionHeader';
-import { commissionComparison } from '../../config/landing';
+import { ArrowDown, IndianRupee, BadgeCheck, Ban } from 'lucide-react';
 
-type CellVal = boolean | string;
+/**
+ * Zero Commission — visual money-flow comparison.
+ * LEFT: aggregator take-rate. RIGHT: BhojanOS direct (₹0 commission).
+ * Coin animation = money moving customer → restaurant. Static JSX + CSS only.
+ */
 
-function CompareIcon({ included, label }: { included: boolean; label: string }) {
-  if (included) {
-    return (
-      <span
-        className="marketing-compare-value inline-flex items-center justify-center text-emerald-400"
-        role="img"
-        aria-label={`${label}: included`}
-      >
-        <Check size={17} strokeWidth={2.5} aria-hidden />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className="marketing-compare-value inline-flex items-center justify-center text-red-400/85"
-      role="img"
-      aria-label={`${label}: not included`}
-    >
-      <X size={16} strokeWidth={2.5} aria-hidden />
-    </span>
-  );
-}
-
-function CellValue({
+function MoneyRow({
+  label,
   value,
-  highlight,
-  platformLabel,
+  tone,
+  big,
 }: {
-  value: CellVal;
-  highlight?: boolean;
-  platformLabel: string;
+  label: string;
+  value: string;
+  tone: 'plain' | 'bad' | 'good' | 'accent';
+  big?: boolean;
 }) {
-  if (typeof value === 'boolean') {
-    return <CompareIcon included={value} label={platformLabel} />;
-  }
-
-  if (value === '0%') {
-    return (
+  const tones: Record<string, string> = {
+    plain: 'text-white/85',
+    bad: 'text-red-400',
+    good: 'text-[#34D399]',
+    accent: 'text-[#FF7A00]',
+  };
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-white/[0.04] px-4 py-3">
+      <span className="text-xs font-medium text-white/55">{label}</span>
       <span
-        className={`text-xs sm:text-sm font-bold tabular-nums ${highlight ? 'text-[#FF7A00]' : 'text-neutral-400'}`}
-        aria-label={`${platformLabel}: ${value}`}
+        className={`font-display font-extrabold ${big ? 'text-2xl' : 'text-lg'} ${tones[tone]}`}
       >
         {value}
       </span>
-    );
-  }
-
-  if (value === 'Limited' || value === 'Basic' || value === 'Platform') {
-    const isNegative = !highlight;
-    return (
-      <span className="inline-flex flex-col items-center gap-1" aria-label={`${platformLabel}: ${value}`}>
-        {isNegative ? (
-          <CompareIcon included={false} label={platformLabel} />
-        ) : (
-          <CompareIcon included={true} label={platformLabel} />
-        )}
-        <span className="text-[10px] font-medium text-neutral-500 leading-tight">{value}</span>
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`text-xs sm:text-sm font-bold tabular-nums ${highlight ? 'text-white' : 'text-neutral-400'}`}
-      aria-label={`${platformLabel}: ${value}`}
-    >
-      {value}
-    </span>
+    </div>
   );
 }
 
-const platformLabels = [
-  { key: 'swiggy' as const, label: 'Swiggy' },
-  { key: 'zomato' as const, label: 'Zomato' },
-  { key: 'bhojanos' as const, label: 'BhojanOS', highlight: true },
-];
-
-export const CommissionComparison = memo(function CommissionComparison() {
-  const { title, subtitle, rows } = commissionComparison;
-
+function FlowArrow({ good }: { good?: boolean }) {
   return (
-    <Section id="compare" background="default" className="scroll-mt-24">
-      <SectionHeader label="Compare" title={title} description={subtitle} />
-
-      <div className="md:hidden space-y-3">
-        {rows.map((row, i) => (
-          <m.article
-            key={row.label}
-            initial={{ opacity: 1, y: 0 }}
-            className="marketing-compare-card p-4"
-          >
-            <h3 className="text-sm font-semibold text-white mb-3">{row.label}</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {platformLabels.map(({ key, label, highlight }) => (
-                <div
-                  key={key}
-                  className={`rounded-xl px-2 py-2.5 text-center ${
-                    highlight ? 'marketing-compare-card--highlight' : 'bg-white/[0.02] border border-white/[0.05]'
-                  }`}
-                >
-                  <p
-                    className={`text-[10px] font-bold uppercase tracking-wide mb-1.5 truncate ${
-                      highlight ? 'text-[#FF7A00]' : 'text-neutral-500'
-                    }`}
-                  >
-                    {label}
-                  </p>
-                  <CellValue value={row[key]} highlight={highlight} platformLabel={label} />
-                </div>
-              ))}
-            </div>
-          </m.article>
-        ))}
-      </div>
-
-      <div className="hidden md:block overflow-hidden rounded-[var(--radius-marketing-card)] border border-white/[0.08] bg-[#0A0A0A]/60 backdrop-blur-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/[0.08]">
-              <th className="p-4 lg:p-5 text-xs font-bold uppercase tracking-wider text-neutral-500 w-[30%]">
-                Feature
-              </th>
-              {platformLabels.map(({ label, highlight }) => (
-                <th
-                  key={label}
-                  className={`p-4 lg:p-5 text-sm font-black ${
-                    highlight
-                      ? 'text-[#FF7A00] bg-[#FF7A00]/[0.06] border-x border-[#FF7A00]/15'
-                      : 'text-neutral-400'
-                  }`}
-                >
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr
-                key={row.label}
-                className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors"
-              >
-                <td className="p-4 lg:p-5 text-sm font-medium text-neutral-300">{row.label}</td>
-                <td className="p-4 lg:p-5 text-center">
-                  <CellValue value={row.swiggy} platformLabel="Swiggy" />
-                </td>
-                <td className="p-4 lg:p-5 text-center">
-                  <CellValue value={row.zomato} platformLabel="Zomato" />
-                </td>
-                <td className="p-4 lg:p-5 text-center bg-[#FF7A00]/[0.04] border-x border-[#FF7A00]/10">
-                  <CellValue value={row.bhojanos} highlight platformLabel="BhojanOS" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="mt-5 sm:mt-6 text-center text-xs text-neutral-600 max-w-2xl mx-auto leading-relaxed">
-        Aggregator fees vary by city and contract. BhojanOS charges zero commission on direct orders — always.
-      </p>
-    </Section>
+    <div className="flex justify-center py-3" aria-hidden>
+      <ArrowDown
+        size={18}
+        className={good ? 'text-[#34D399]' : 'text-red-400/70'}
+        strokeWidth={2.5}
+      />
+    </div>
   );
-});
+}
+
+export function CommissionComparison() {
+  return (
+    <section
+      className="relative overflow-hidden py-20 sm:py-24"
+      aria-labelledby="commission-heading"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#FF7A00]">
+            Zero commission
+          </p>
+          <h2
+            id="commission-heading"
+            className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
+          >
+            See where your{' '}
+            <span className="text-[#FF7A00]">money goes.</span>
+          </h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* OTHER PLATFORMS */}
+          <div className="relative rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+            <div className="mb-5 flex items-center gap-2">
+              <Ban size={16} className="text-red-400" aria-hidden />
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white/60">
+                Other platforms
+              </h3>
+            </div>
+            <MoneyRow label="Customer pays" value="₹1,000" tone="plain" big />
+            <FlowArrow />
+            <MoneyRow label="Platform commission (20%)" value="− ₹200" tone="bad" />
+            <FlowArrow />
+            <MoneyRow label="You receive" value="₹800" tone="bad" big />
+            <p className="mt-5 text-center text-xs text-white/40">
+              Every order bleeds margin. Forever.
+            </p>
+          </div>
+
+          {/* BHOJANOS DIRECT */}
+          <div className="cine-glass cine-glass-accent relative rounded-3xl p-6 sm:p-8">
+            {/* animated coins: money flowing to the restaurant */}
+            <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2" aria-hidden>
+              <div className="cine-coin flex h-7 w-7 items-center justify-center rounded-full bg-[#FF7A00]/90 text-black shadow-[0_0_16px_rgba(255,122,0,0.6)]">
+                <IndianRupee size={13} strokeWidth={3} />
+              </div>
+            </div>
+            <div className="mb-5 flex items-center gap-2">
+              <BadgeCheck size={16} className="text-[#FF7A00]" aria-hidden />
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white/85">
+                BhojanOS direct
+              </h3>
+            </div>
+            <MoneyRow label="Customer pays" value="₹1,000" tone="plain" big />
+            <FlowArrow good />
+            <MoneyRow label="BhojanOS commission (0%)" value="− ₹0" tone="good" />
+            <FlowArrow good />
+            <MoneyRow label="You receive" value="₹1,000" tone="accent" big />
+            <p className="mt-5 text-center text-xs font-semibold text-[#FF7A00]/90">
+              0% commission on every direct order.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-10 text-center font-display text-xl font-extrabold text-white sm:text-2xl">
+          With BhojanOS you keep{' '}
+          <span className="text-[#FF7A00]">100% of your earnings.</span>
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export default CommissionComparison;
+
