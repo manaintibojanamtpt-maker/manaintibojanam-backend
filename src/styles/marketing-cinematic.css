@@ -227,6 +227,27 @@
   .cine-node,
   .cine-coin,
   .cine-arrow,
+  .cine-shimmer::before,
+  .cine-rise,
+  .cine-rise-d1,
+  .cine-rise-d2,
+  .cine-rise-d3,
+  .cine-rise-d4,
+  .cine-rise-d5,
+  .cine-rise-d6,
+  .cine-phone-in {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-float,
+  .cine-float-soft,
+  .cine-hero-zoom,
+  .cine-dash-path,
+  .cine-node,
+  .cine-coin,
+  .cine-arrow,
   .cine-shimmer::before {
     animation: none !important;
   }
@@ -238,3 +259,75 @@
     transform: none;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   V2 — Mouse parallax, scroll storytelling, 3D tilt, order particles.
+   Progressive enhancement: all static without JS.
+   ────────────────────────────────────────────────────────────────── */
+
+/* Parallax depth layers — movement multipliers set by JS via CSS vars */
+.cine-parallax {
+  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.cine-parallax-deep { --parallax-x: 0px; --parallax-y: 0px; transform: translate3d(var(--parallax-x), var(--parallax-y), 0); }
+.cine-parallax-mid { --parallax-x: 0px; --parallax-y: 0px; transform: translate3d(var(--parallax-x), var(--parallax-y), 0); }
+.cine-parallax-front { --parallax-x: 0px; --parallax-y: 0px; transform: translate3d(var(--parallax-x), var(--parallax-y), 0); }
+
+/* Scroll reveal */
+@keyframes cine-reveal-up {
+  0% { opacity: 0; transform: translate3d(0, 28px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.cine-reveal { opacity: 0; }
+.cine-reveal.is-visible { animation: cine-reveal-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Staggered children */
+.cine-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.cine-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.cine-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.cine-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.cine-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.cine-stagger > *:nth-child(6) { animation-delay: 400ms; }
+.cine-stagger > *:nth-child(7) { animation-delay: 480ms; }
+.cine-stagger > *:nth-child(8) { animation-delay: 560ms; }
+
+/* 3D tilt on hover */
+.cine-tilt {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.cine-tilt:hover {
+  transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-6px);
+}
+
+/* Order particle along SVG path */
+@keyframes cine-particle-flow {
+  0% { offset-distance: 0%; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+.cine-particle { animation: cine-particle-flow 3.5s ease-in-out infinite; offset-rotate: 0deg; }
+
+/* Dashboard status pulse */
+@keyframes cine-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 122, 0, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 122, 0, 0); }
+}
+.cine-status-live { animation: cine-status-pulse 2.4s ease-in-out infinite; }
+
+/* Phone subtle rotate on hover */
+.cine-phone-hover { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.cine-phone-hover:hover { transform: perspective(900px) rotateX(2deg) rotateY(-6deg) scale(1.02); }
+
+/* Reduced motion guard for V2 */
+@media (prefers-reduced-motion: reduce) {
+  .cine-parallax, .cine-parallax-deep, .cine-parallax-mid, .cine-parallax-front { transform: none !important; }
+  .cine-reveal { opacity: 1 !important; }
+  .cine-tilt:hover { transform: translateY(-6px) !important; }
+  .cine-particle { animation: none !important; opacity: 0.6; }
+  .cine-phone-hover:hover { transform: none !important; }
+}
+

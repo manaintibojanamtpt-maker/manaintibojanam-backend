@@ -40,7 +40,7 @@ export function CallToAction() {
       />
 
       <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-        <div className="max-w-2xl">
+        <div className="max-w-2xl cine-reveal">
           <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.28em] text-[#FF7A00]">
             Join BhojanOS
           </p>

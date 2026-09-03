@@ -152,7 +152,34 @@ export const CINEMATIC_FOOD_CARDS: CinematicFoodCard[] = [
     url: P('photo-1589301760014-d929f3979dbc'),
     alt: 'South Indian combo of dosa, idli and chutney',
   },
-];
+  {
+    name: 'Idli & Vada',
+    category: 'South Indian',
+    restaurant: 'Madras Cafe',
+    rating: '4.6',
+    price: '₹119',
+    url: P('photo-1631515243349-e0cb75fb8d3a'),
+    alt: 'Steamed idli and crispy vada with chutney',
+  },
+  {
+    name: 'Gulab Jamun',
+    category: 'Dessert',
+    restaurant: 'Sweet House',
+    rating: '4.8',
+    price: '₹89',
+    url: P('photo-1577219491135-ce391730fb2c'),
+    alt: 'Warm gulab jamun in sugar syrup',
+  },
+  {
+    name: 'Premium Thali',
+    category: 'Meals',
+    restaurant: 'Royal Kitchen',
+    rating: '4.9',
+    price: '₹349',
+    url: P('photo-1504674900247-0877df9cc836'),
+    alt: 'Premium restaurant thali with multiple dishes',
+  },
+] as const;
 
 /** Cinematic environment photography (kitchen / interior / dining). */
 export const CINEMATIC_ENV_IMAGES = {

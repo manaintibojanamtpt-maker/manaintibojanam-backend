@@ -1,20 +1,48 @@
 import React, { useState } from 'react';
 import { Star, Plus, Check, ArrowRight } from 'lucide-react';
 import { CINEMATIC_FOOD_CARDS, CINEMATIC_ENV_IMAGES } from '../../config/marketingFoodImages';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 /**
- * Food Discovery / OrderBhojan — portrait food-card gallery.
- * Cards are illustrative marketing previews (config-driven); every card CTA
- * leads to the real OrderBhojan marketplace. Static JSX + CSS hover states.
+ * Food Discovery V2 — cinematic gallery with 3D tilt on hover.
+ * Cards overlap slightly; mouse position drives subtle perspective tilt.
+ * Copy reduced; imagery dominant.
  */
 
 const IMG = CINEMATIC_ENV_IMAGES;
 
-function FoodCard({ item }: { item: (typeof CINEMATIC_FOOD_CARDS)[number] }) {
+function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]; index: number }) {
   const [added, setAdded] = useState(false);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+
+  /* 3D tilt: track mouse position within card, set CSS vars. */
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    el.style.setProperty('--tilt-y', `${px * 8}deg`);
+    el.style.setProperty('--tilt-x', `${-py * 8}deg`);
+  };
+
+  const handleMouseLeave = () => {
+    const el = cardRef.current;
+    if (el) {
+      el.style.setProperty('--tilt-x', '0deg');
+      el.style.setProperty('--tilt-y', '0deg');
+    }
+  };
 
   return (
-    <article className="cine-food-card group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A]">
+    <article
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="cine-food-card cine-tilt group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A]"
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
       <a
         href="https://www.orderbhojan.com"
         target="_blank"
@@ -52,7 +80,6 @@ function FoodCard({ item }: { item: (typeof CINEMATIC_FOOD_CARDS)[number] }) {
         </div>
       </a>
 
-      {/* Add button — decorative feedback, real ordering happens on OrderBhojan */}
       <button
         type="button"
         aria-label={`Add ${item.name} to order (continues on OrderBhojan)`}
@@ -72,10 +99,9 @@ function FoodCard({ item }: { item: (typeof CINEMATIC_FOOD_CARDS)[number] }) {
   );
 }
 
-/* Compact floating phone hinting at the real app. */
 function MiniPhone() {
   return (
-    <div className="cine-float cine-glass cine-glass-accent w-full max-w-[150px] rounded-[20px] p-1.5">
+    <div className="cine-float cine-glass cine-glass-accent cine-phone-hover w-full max-w-[150px] rounded-[20px] p-1.5">
       <div className="rounded-[14px] bg-[#0A0A0A] p-2 text-center">
         <div className="mb-2 text-[10px] font-bold text-white">OrderBhojan</div>
         <img
@@ -86,26 +112,28 @@ function MiniPhone() {
           decoding="async"
           className="cine-food-img mb-2 h-24 w-full rounded-lg object-cover"
         />
-        <div className="text-[9px] text-white/45">Your favourites, direct</div>
+        <div className="text-[9px] text-white/45">Direct to kitchen</div>
       </div>
     </div>
   );
 }
 
 export function FoodDiscoverySection() {
+  const scrollRef = useScrollReveal<HTMLDivElement>();
+
   return (
     <section
       className="relative overflow-hidden py-20 sm:py-24"
       aria-labelledby="discovery-heading"
+      ref={scrollRef}
     >
-      {/* Ambient warm glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#FF7A00]/[0.06] blur-[120px]"
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
+        <div className="mb-12 text-center cine-reveal">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#FF7A00]">
             For customers
           </p>
@@ -113,51 +141,52 @@ export function FoodDiscoverySection() {
             id="discovery-heading"
             className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
           >
-            Discover food worth ordering.
+            Food worth ordering.
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-white/50">
-            OrderBhojan connects you directly with the kitchens you love.
-          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {CINEMATIC_FOOD_CARDS.slice(0, 5).map((item) => (
-            <FoodCard key={item.name} item={item} />
-          ))}
+        {/* Overlapping featured row — large left, staggered right */}
+        <div className="grid gap-5 md:grid-cols-12">
+          {/* Featured large card */}
+          <div className="md:col-span-5 cine-reveal">
+            <FoodCard item={CINEMATIC_FOOD_CARDS[0]} index={0} />
+          </div>
+
+          {/* Staggered smaller cards */}
+          <div className="grid grid-cols-2 gap-5 md:col-span-7">
+            {CINEMATIC_FOOD_CARDS.slice(1, 5).map((item, i) => (
+              <div key={item.name} className="cine-reveal" style={{ animationDelay: `${(i + 1) * 80}ms` }}>
+                <FoodCard item={item} index={i + 1} />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Phone + remaining dishes row */}
-        <div className="mt-14 grid items-center gap-10 lg:grid-cols-[1fr_auto]">
-          <div>
+        {/* Bottom row: phone + remaining dishes */}
+        <div className="mt-12 grid items-center gap-8 md:grid-cols-12">
+          <div className="md:col-span-4 cine-reveal">
             <h3 className="font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-              More to explore on <span className="text-[#FF7A00]">OrderBhojan</span>
+              Order on <span className="text-[#FF7A00]">OrderBhojan</span>
             </h3>
-            <p className="mt-2 max-w-md text-sm text-white/50">
-              Direct ordering, live kitchen status, and loyalty that belongs to the
-              restaurant — not the platform.
-            </p>
             <a
               href="https://www.orderbhojan.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="group mt-6 inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Order Food
-              <ArrowRight
-                size={16}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-                aria-hidden
-              />
+              <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
             </a>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:w-[520px]">
-            {CINEMATIC_FOOD_CARDS.slice(5, 8).map((item) => (
-              <FoodCard key={item.name} item={item} />
+          <div className="grid grid-cols-2 gap-5 md:col-span-5">
+            {CINEMATIC_FOOD_CARDS.slice(5, 7).map((item, i) => (
+              <div key={item.name} className="cine-reveal" style={{ animationDelay: `${(i + 5) * 80}ms` }}>
+                <FoodCard item={item} index={i + 5} />
+              </div>
             ))}
-            {/* Floating OrderBhojan phone fills the grid visually */}
-            <div className="hidden items-center justify-center sm:flex">
-              <MiniPhone />
-            </div>
+          </div>
+          <div className="hidden items-center justify-center md:col-span-3 md:flex cine-reveal">
+            <MiniPhone />
           </div>
         </div>
       </div>
