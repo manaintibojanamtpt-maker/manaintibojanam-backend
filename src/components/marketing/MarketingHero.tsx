@@ -120,8 +120,8 @@ export function MarketingHero() {
       />
 
       <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:pb-28 lg:pt-20">
-        {/* LEFT — copy (reduced) */}
-        <div className="cine-reveal">
+        {/* LEFT — copy (always visible, no scroll-reveal dependency) */}
+        <div>
           <span className="cine-glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
             <Flame size={12} className="text-[#FF7A00]" aria-hidden />
             The Food Business Platform
@@ -131,12 +131,12 @@ export function MarketingHero() {
             id="hero-heading"
             className="font-display mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl"
           >
-            Your kitchen.{' '}
-            <span className="text-[#FF7A00]">Your customers.</span>
+            Run your food business.{' '}
+            <span className="text-[#FF7A00]">Own your customers.</span>
           </h1>
 
-          <p className="mt-5 max-w-md text-base leading-relaxed text-white/55">
-            Orders, kitchen, payments, delivery — one OS. Zero commission, always.
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/55">
+            BhojanOS gives independent food businesses everything they need to run their kitchen, manage orders, and build direct customer relationships.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-4">
@@ -153,9 +153,22 @@ export function MarketingHero() {
               rel="noopener noreferrer"
               className="cine-glass inline-flex items-center gap-2 rounded-full px-8 py-4 text-sm font-bold uppercase tracking-wide text-white transition-all duration-300 hover:border-[#FF7A00]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
             >
-              Explore OrderBhojan
+              Order Food
             </a>
           </div>
+
+          <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-3">
+            {[
+              ['0% marketplace commission', 'Keep every rupee'],
+              ['Own your customer data', 'Names, numbers, loyalty'],
+              ['One connected platform', 'Orders, kitchen, payments'],
+            ].map(([title, sub]) => (
+              <div key={title}>
+                <dt className="text-sm font-extrabold text-white">{title}</dt>
+                <dd className="mt-0.5 text-[11px] text-white/40">{sub}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         {/* RIGHT — cinematic composition with parallax */}
