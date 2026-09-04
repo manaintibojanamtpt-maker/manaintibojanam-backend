@@ -314,6 +314,11 @@ function buildExport() {
     path.join(EXPORT_DIR, 'packages', 'location-core'),
     { stripPrefix: 'packages/location-core/', rootLabel: 'packages/location-core' },
   );
+  copyGitTrackedTree(
+    'packages/voice-core',
+    path.join(EXPORT_DIR, 'packages', 'voice-core'),
+    { stripPrefix: 'packages/voice-core/', rootLabel: 'packages/voice-core' },
+  );
   copyGitTrackedTree('scripts/e2e', path.join(EXPORT_DIR, 'scripts', 'e2e'), {
     stripPrefix: 'scripts/e2e/',
     rootLabel: 'scripts/e2e (harness)',
