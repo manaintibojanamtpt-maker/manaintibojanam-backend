@@ -133,6 +133,7 @@ function patchStandaloneText(content) {
     .replaceAll('"../packages/location-core"', '"packages/location-core"')
     .replaceAll('--prefix ../packages/', '--prefix packages/')
     .replaceAll('../packages/location-core/src/index.ts', 'packages/location-core/src/index.ts')
+    .replaceAll('../packages/voice-core/src/index.ts', 'packages/voice-core/src/index.ts')
     .replaceAll('../src/features/location-v2', 'storefront-src/features/location-v2')
     .replaceAll('tsx ../scripts/e2e/', 'tsx scripts/e2e/')
     .replaceAll("resolve(root, '../packages/design-system')", "resolve(root, 'packages/design-system')")
