@@ -1,0 +1,16 @@
+﻿node_modules
+dist
+.git
+.gemini
+orderbhojan/node_modules
+orderbhojan/dist
+coverage
+*.log
+_*.txt
+_*.html
+_*.js
+_*.mjs
+_*.bat
+_*.ps1
+_*.png
+sub_page.png

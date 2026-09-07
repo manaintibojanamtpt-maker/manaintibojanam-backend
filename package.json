@@ -26,7 +26,7 @@
     "deploy": "npm run deploy:founder",
     "deploy:orderbhojan": "npm run build --prefix orderbhojan && firebase deploy --only hosting:orderbhojan --project orderbhojan",
     "deploy:founder": "npm run build:web && firebase deploy --only hosting:manaintibojanam --project bhojanos-prod",
-    "deploy:vercel:prod": "npx vercel --prod --yes",
+    "deploy:vercel:prod": "npx vercel --prod --archive=tgz --yes",
     "deploy:founder:all": "npm run build:web && firebase deploy --only hosting:manaintibojanam --project bhojanos-prod && npm run deploy:vercel:prod",
     "deploy:owner": "npm run build:web && firebase deploy --only hosting:owner --project bhojanos-prod",
     "test:owner-auth-smoke": "node scripts/puppeteer-owner-auth-smoke.mjs",

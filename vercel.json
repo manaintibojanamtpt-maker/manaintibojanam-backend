@@ -182,12 +182,8 @@
       "destination": "https://bhojanos-prod.firebaseapp.com/__/firebase/:path*"
     },
     {
-      "source": "/",
-      "destination": "/marketing.html"
-    },
-    {
       "source": "/(onboard|pricing|about|platform|security|contact|blog|features|integrations|restaurant-online-ordering|direct-ordering-platform|restaurant-management-system|restaurant-pos|restaurant-billing-software|qr-code-ordering-system|whatsapp-food-ordering-system|restaurant-website-builder|digital-menu-for-restaurants|delivery-management-software|cloud-kitchen-software|qsr-pos-software|cafe-pos-billing-software|solutions|bhojanos-vs-zomato-swiggy|petpooja-alternative|dotpe-alternative|privacy|terms|refund-policy)",
-      "destination": "/marketing.html"
+      "destination": "/index.html"
     },
     {
       "source": "/(owner.*|admin.*|super-admin.*|k/.*|account|addresses|orders.*|order/.*|checkout|subscription|login|menu)",
