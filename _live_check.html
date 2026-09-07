@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>BhojanOS | Restaurant Platform & Direct Food Ordering</title>
+    <meta name="description" content="BhojanOS helps food businesses run, manage and grow. OrderBhojan connects them directly with customers for online food ordering. Zero commission. Own your customers." />
+    <meta name="theme-color" content="#030303" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BhojanOS" />
+    <meta property="og:title" content="BhojanOS | Restaurant Platform & Direct Food Ordering" />
+    <meta property="og:description" content="BhojanOS powers food businesses. OrderBhojan connects them with customers. Discover, order, enjoy — directly." />
+    <meta property="og:url" content="https://www.bhojanos.com/" />
+    <meta property="og:image" content="https://www.bhojanos.com/bhojan-os-icon.png" />
+    <meta property="og:image:alt" content="BhojanOS — Restaurant Platform" />
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="BhojanOS | Restaurant Platform & Direct Food Ordering" />
+    <meta name="twitter:description" content="BhojanOS powers food businesses. OrderBhojan connects them with customers. Zero commission, direct ordering." />
+    <meta name="twitter:image" content="https://www.bhojanos.com/bhojan-os-icon.png" />
+    <link rel="canonical" href="https://www.bhojanos.com/" />
+    <script>(function(){try{var BUILD='e1fac4cc5490';var KEY='bhojanos_app_build';var prev=localStorage.getItem(KEY);function isFirebaseIdb(name){if(!name)return false;var l=name.toLowerCase();return l.indexOf('firebase')!==-1||l.indexOf('firestore')!==-1||l.indexOf('firestore/')===0}function clearFirebaseIdb(done){try{if(!window.indexedDB||typeof indexedDB.databases!=='function'){done();return}indexedDB.databases().then(function(dbs){var names=dbs.map(function(d){return d.name}).filter(isFirebaseIdb);if(!names.length){done();return}var pending=names.length;names.forEach(function(name){var req=indexedDB.deleteDatabase(name);var finish=function(){pending--;if(pending<=0)done()};req.onsuccess=finish;req.onerror=finish;req.onblocked=finish})}).catch(function(){done()})}catch(e){done()}}function bustCaches(done){if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){return reg.update().catch(function(){}).then(function(){return reg.unregister()})}))}).then(function(){if('caches'in window){return caches.keys().then(function(k){return Promise.all(k.map(function(n){return caches.delete(n)}))})}}).then(function(){clearFirebaseIdb(done)}).catch(function(){clearFirebaseIdb(done)})}else clearFirebaseIdb(done)}if(prev&&prev!==BUILD){localStorage.setItem(KEY,BUILD);bustCaches(function(){location.reload()});return}localStorage.setItem(KEY,BUILD);fetch('/version.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(v){if(!v||!v.build)return;var k='bhojanos_version';var p=localStorage.getItem(k);if(p&&p!==v.build){localStorage.setItem(k,v.build);bustCaches(function(){location.reload()})}else localStorage.setItem(k,v.build)}).catch(function(){})}catch(e){}})();</script>
+    <link rel="manifest" href="/manifest-bhojanos.json?v=4" />
+    <link rel="icon" href="/bhojan-os-icon.png?v=4" />
+    <link rel="apple-touch-icon" href="/bhojan-os-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="BhojanOS" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>
+      #boot-fallback {
+        min-height: 100dvh;
+        background: #030303;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        color: #737373;
+        font: 600 14px/1.4 system-ui, sans-serif;
+      }
+      #boot-fallback .spinner {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 9999px;
+        border: 2px solid rgba(255, 122, 0, 0.25);
+        border-top-color: #ff7a00;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/marketing-CW2Pn8up.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Ddt5L922.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-lucide-CeeRfrdr.js">
+    <link rel="modulepreload" crossorigin href="/assets/marketing-core-CO_wBDvf.js">
+    <link rel="stylesheet" crossorigin href="/assets/marketing-core-BFWuiRLx.css">
+  </head>
+  <body>
+    <div id="root">
+      <div id="boot-fallback" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Loading BhojanOS…</span>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+custom token minted
+=== open /owner/login and inject session
+inject: signed-in uid=vpRg4CIY3dcbVL25YbhyIHG1imI2
+=== wait for auto-redirect to dashboard (like a real login)

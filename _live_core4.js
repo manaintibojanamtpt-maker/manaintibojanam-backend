@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>BhojanOS - Direct Ordering OS for Food Businesses</title>
+    <meta name="description" content="BhojanOS helps independent food businesses launch direct ordering, repeat customer memory, subscriptions, and owner delivery operations." />
+    
+    <!-- iOS Specific Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1A0505">
+    <script>(function(){var FALLBACK={"apiKey":"AIzaSyC6kCJwsEWuwLVPGmJsVDDxTyWlayp2yLQ","authDomain":"bhojanos-prod.firebaseapp.com","projectId":"bhojanos-prod","storageBucket":"bhojanos-prod.firebasestorage.app","messagingSenderId":"170989397954","appId":"1:170989397954:web:9c67dbacc58329f360185b"};function applyFallback(){window.__BH_FIREBASE_CONFIG__=FALLBACK}function isProdHost(h){if(h==='localhost'||h==='127.0.0.1')return false;if(h.indexOf('bhojanos')!==-1)return true;if(h.indexOf('manaintibojanam')!==-1)return true;if(h.indexOf('orderbhojan')!==-1)return true;return false}try{var h=location.hostname.toLowerCase();if(!isProdHost(h))return;var paths=['/api/client-config','/api/health?webClient=1'];var bases=[location.origin.replace(/\/$/,''),'https://manaintibojanam-backend.onrender.com'];for(var b=0;b<bases.length;b++){for(var i=0;i<paths.length;i++){try{var xhr=new XMLHttpRequest();xhr.open('GET',bases[b]+paths[i],false);xhr.timeout=8000;xhr.send(null);if(xhr.status!==200)continue;var d=JSON.parse(xhr.responseText);var fb=(d&&d.firebase&&d.firebase.apiKey)?d.firebase:(d&&d.webClient&&d.webClient.firebase&&d.webClient.firebase.apiKey)?d.webClient.firebase:null;if(fb&&fb.projectId&&fb.apiKey){window.__BH_FIREBASE_CONFIG__=fb;return}}catch(e){}}}applyFallback()}catch(e){try{applyFallback()}catch(e2){}}})();</script>
+    <script>(function(){try{var BUILD='f3434312a081';var KEY='bhojanos_app_build';var prev=localStorage.getItem(KEY);function isFirebaseIdb(name){if(!name)return false;var l=name.toLowerCase();return l.indexOf('firebase')!==-1||l.indexOf('firestore')!==-1||l.indexOf('firestore/')===0}function clearFirebaseIdb(done){try{if(!window.indexedDB||typeof indexedDB.databases!=='function'){done();return}indexedDB.databases().then(function(dbs){var names=dbs.map(function(d){return d.name}).filter(isFirebaseIdb);if(!names.length){done();return}var pending=names.length;names.forEach(function(name){var req=indexedDB.deleteDatabase(name);var finish=function(){pending--;if(pending<=0)done()};req.onsuccess=finish;req.onerror=finish;req.onblocked=finish})}).catch(function(){done()})}catch(e){done()}}function bustCaches(done){if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){return reg.update().catch(function(){}).then(function(){return reg.unregister()})}))}).then(function(){if('caches'in window){return caches.keys().then(function(k){return Promise.all(k.map(function(n){return caches.delete(n)}))})}}).then(function(){clearFirebaseIdb(done)}).catch(function(){clearFirebaseIdb(done)})}else clearFirebaseIdb(done)}if(prev&&prev!==BUILD){localStorage.setItem(KEY,BUILD);bustCaches(function(){location.reload()});return}localStorage.setItem(KEY,BUILD);fetch('/version.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(v){if(!v||!v.build)return;var k='bhojanos_version';var p=localStorage.getItem(k);if(p&&p!==v.build){localStorage.setItem(k,v.build);bustCaches(function(){location.reload()})}else localStorage.setItem(k,v.build)}).catch(function(){})}catch(e){}})();</script>
+
+    <script src="/pwa-bootstrap.js"></script>
+    <script>
+      (function() {
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        var splashShown = sessionStorage.getItem('splash_shown') === 'true';
+        var path = window.location.pathname;
+        var host = window.location.hostname.toLowerCase();
+        var isBhojanHost = host === 'localhost' || host === '127.0.0.1' || host.indexOf('bhojanos') !== -1;
+        var isMarketing = path === '/onboard' || path === '/pricing' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && isBhojanHost);
+
+        if (isStandalone || splashShown || isMarketing || window.location.protocol === 'capacitor:') {
+          document.write('<style>#initial-loader { display: none !important; opacity: 0 !important; visibility: hidden !important; }</style>');
+          window.__SKIP_SPLASH__ = true;
+        } else {
+          sessionStorage.setItem('splash_shown', 'true');
+        }
+
+        if (window.__PWA_MANIFEST_INJECTED__) return;
+
+        var isBhojanOS = window.location.hostname.includes('bhojanos');
+        var storeSlugMatch = path.match(/^\/k\/([^/]+)/);
+        if (isBhojanOS && !storeSlugMatch) {
+          document.write('<link rel="manifest" href="/manifest-bhojanos.json?v=4" />');
+          document.write('<link rel="icon" href="/bhojan-os-icon.png?v=4" />');
+          document.write('<link rel="apple-touch-icon" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="152x152" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="180x180" href="/bhojan-os-icon.png">');
+          document.write('<link rel="apple-touch-icon" sizes="167x167" href="/bhojan-os-icon.png">');
+          document.write('<meta name="apple-mobile-web-app-title" content="BhojanOS">');
+          document.title = "BhojanOS - Direct Ordering OS for Food Businesses";
+        } else if (!storeSlugMatch) {
+          document.write('<link rel="manifest" href="/manifest.json?v=4" />');
+          document.write('<link rel="icon" href="/favicon.ico?v=4" />');
+          document.write('<link rel="apple-touch-icon" href="/icon-v20-192.png">');
+          document.write('<link rel="apple-touch-icon" sizes="152x152" href="/icon-v20-192.png">');
+          document.write('<link rel="apple-touch-icon" sizes="180x180" href="/icon-v20-512.png">');
+          document.write('<link rel="apple-touch-icon" sizes="167x167" href="/icon-v20-512.png">');
+          document.write('<meta name="apple-mobile-web-app-title" content="Mana Inti Bojanam">');
+          document.title = "Mana Inti Bojanam - Real Home Food";
+        }
+      })();
+    </script>
+    
+    <!-- iPhone Splash Screens -->
+    <link rel="apple-touch-startup-image" href="/splash-premium.png">
+    
+    <!-- Preconnects for active landing-page dependencies -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+    
+    <!-- Preload LCP Images for storefront menu (skipped on BhojanOS marketing host) -->
+    <script>
+      (function() {
+        var path = window.location.pathname;
+        var host = window.location.hostname.toLowerCase();
+        var isBhojanHost = host === 'localhost' || host === '127.0.0.1' || host.indexOf('bhojanos') !== -1;
+        var isMarketing = path === '/onboard' || path === '/pricing' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && isBhojanHost);
+        var isNonStorefront = isMarketing || path.indexOf('/owner') === 0 || path.indexOf('/super-admin') === 0 || path.indexOf('/admin') === 0;
+        if (isNonStorefront) return;
+        document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
+        document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
+        document.write('<link rel="preload" as="image" href="https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=400&auto=format&fit=crop" fetchpriority="high">');
+      })();
+    </script>
+    <!-- Google Fonts: Non-blocking via preload+onload -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap"></noscript>
+
+    <style>
+      body {
+        margin: 0;
+        background-color: #0C0C0C;
+        overscroll-behavior-y: none; /* iOS bounce fix */
+      }
+
+      /* Premium SaaS Splash Screen Animations */
+      
+      /* Phase 1: Dark Reveal (Ambient Light) */
+      .splash-bg {
+        position: absolute;
+        inset: 0;
+        background-color: #080808;
+        z-index: 1;
+      }
+      .splash-ambient-light {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 120vw;
+        height: 120vh;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle at center, rgba(30, 30, 30, 0.7) 0%, transparent 60%);
+        opacity: 0;
+        z-index: 2;
+        animation: splashAmbientEmerges 0.8s ease-in forwards;
+      }
+
+      .splash-logo-container {
+        position: relative;
+        width: 54vw;
+        max-width: 260px;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Phase 2: Outline Trace */
+      .splash-layer-trace {
+        position: absolute;
+        width: 100%;
+        height: auto;
+        filter: url(#splash-edge-trace);
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        animation: 
+          splashTraceReveal 1.2s cubic-bezier(0.65, 0, 0.35, 1) forwards 0.8s,
+          splashTraceFade 0.8s ease-out forwards 2.0s;
+      }
+
+      /* Phase 3 & 4: Color Reveal & Brand Hold */
+      .splash-layer-color {
+        position: relative;
+        width: 100%;
+        height: auto;
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        animation: 
+          splashColorRevealMask 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards 2.0s,
+          splashColorRevealOpacity 0.8s ease-out forwards 2.0s,
+          splashBrandHold 1.2s ease-in-out forwards 2.8s;
+      }
+
+      @keyframes splashAmbientEmerges {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      @keyframes splashTraceReveal {
+        0% { opacity: 1; clip-path: inset(0 100% 0 0); }
+        100% { opacity: 1; clip-path: inset(0 0 0 0); }
+      }
+
+      @keyframes splashTraceFade {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      @keyframes splashColorRevealMask {
+        0% { clip-path: inset(0 100% 0 0); }
+        100% { clip-path: inset(0 0 0 0); }
+      }
+
+      @keyframes splashColorRevealOpacity {
+        0% { opacity: 0; filter: drop-shadow(0 0 10px rgba(255,255,255,0)); }
+        100% { opacity: 1; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); }
+      }
+
+      @keyframes splashBrandHold {
+        0% { transform: scale(1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); }
+        50% { transform: scale(1.02); filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5)); }
+        100% { transform: scale(1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.4)); }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/main-PTeU8DyD.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Ddt5L922.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-lucide-CeeRfrdr.js">
+    <link rel="modulepreload" crossorigin href="/assets/marketing-core-voqfK-YU.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-CRb_-2nx.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-motion-Bq0xiqVJ.js">
+    <link rel="modulepreload" crossorigin href="/assets/owner-shell-CBfPO__D.js">
+    <link rel="modulepreload" crossorigin href="/assets/mountPwaUpdatePrompt-D81ahjIa.js">
+    <link rel="stylesheet" crossorigin href="/assets/marketing-core-OKC3qQ7C.css">
+    <link rel="stylesheet" crossorigin href="/assets/main-CzRYLuuS.css">
+  </head>
+
+  <body>
+    <script>
+      window.__SPLASH_START_TIME__ = Date.now();
+    </script>
+    
+    <!-- BhojanOS platform splash screen -->
+    <div id="initial-loader" style="position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; transition: opacity 0.8s ease-in-out;">
+      
+      <div class="splash-bg"></div>
+      <div class="splash-ambient-light"></div>
+
+      <div class="splash-logo-container">
+        <!-- SVG Filter for Exact Contour Tracing -->
+        <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+          <filter id="splash-edge-trace" color-interpolation-filters="sRGB">
+            <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="dilated" />
+            <feComposite in="dilated" in2="SourceAlpha" operator="out" result="outlineAlpha" />
+            <feFlood flood-color="#ffffff" flood-opacity="0.9" result="floodColor" />
+            <feComposite in="floodColor" in2="outlineAlpha" operator="in" result="outline" />
+            <feGaussianBlur in="outline" stdDeviation="0.5" result="softOutline" />
+            <feMerge>
+              <feMergeNode in="softOutline" />
+              <feMergeNode in="outline" />
+            </feMerge>
+          </filter>
+        </svg>
+
+        <img class="splash-layer-trace" src="/assets/bhojan-os-logo-BR-_Y--z.png" alt="BhojanOS Logo Outline" />
+        <img class="splash-layer-color" src="/assets/bhojan-os-logo-BR-_Y--z.png" alt="BhojanOS Logo" />
+      </div>
+    </div>
+
+    <div id="root">
+      <div id="boot-fallback" style="min-height:100dvh;background:#030303;display:flex;align-items:center;justify-content:center;color:#737373;font:600 14px/1.4 system-ui,sans-serif;">
+        Loading BhojanOS…
+      </div>
+    </div>
+    <script>
+      (function () {
+        function showBootRecovery() {
+          var loader = document.getElementById('initial-loader');
+          if (loader) loader.remove();
+          var root = document.getElementById('root');
+          if (!root || !document.getElementById('boot-fallback')) return;
+          root.innerHTML =
+            '<div style="min-height:100dvh;background:#030303;color:#fff;display:flex;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:system-ui,sans-serif">' +
+            '<div><p style="font-weight:700;margin-bottom:0.5rem">Unable to load BhojanOS</p>' +
+            '<p style="color:#737373;font-size:14px;margin-bottom:1rem;max-width:340px">Your browser may have a stale cached version. Hard refresh (Ctrl+Shift+R) or clear site data, then try again.</p>' +
+            '<button type="button" onclick="location.reload()" style="padding:0.65rem 1.25rem;border-radius:0.75rem;border:none;background:#ff7a00;color:#fff;font-weight:600;cursor:pointer">Reload</button></div></div>';
+        }
+
+        window.addEventListener('error', function (ev) {
+          var t = ev.target;
+          if (t && t.tagName === 'SCRIPT' && t.src && t.src.indexOf('/assets/') !== -1) {
+            showBootRecovery();
+          }
+        }, true);
+
+        window.setTimeout(function () {
+          if (document.getElementById('boot-fallback')) {
+            showBootRecovery();
+          }
+        }, 15000);
+      })();
+    </script>
+    <!-- Razorpay Checkout SDK: Loaded lazily on demand, NOT blocking initial render -->
+    <!-- The RazorpayProvider loads this dynamically when payment is initiated -->
+  </body>
+</html>

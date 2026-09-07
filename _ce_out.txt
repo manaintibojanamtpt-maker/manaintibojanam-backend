@@ -1,0 +1,8 @@
+{
+  "emailVerified": true,
+  "disabled": false,
+  "providers": [
+    "google.com",
+    "password"
+  ]
+}

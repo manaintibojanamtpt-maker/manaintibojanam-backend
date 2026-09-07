@@ -1,0 +1,16 @@
+{
+  "id": "mana-inti",
+  "slug": "mana-inti",
+  "name": "manaintibojanam",
+  "legal": {
+    "merchantDeclarationAcceptedAt": "2026-06-23T10:42:10.337Z"
+  },
+  "kyc": {
+    "emailVerificationStatus": null,
+    "verificationLevel": 1,
+    "mobileNumber": null
+  },
+  "locationLat": 18.499646969977075,
+  "plan": "growth"
+}
+manaintibojanam: NOT FOUND

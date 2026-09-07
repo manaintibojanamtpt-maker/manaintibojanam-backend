@@ -1,2 +1,52 @@
+# BhojanOS Robots.txt
+# https://www.bhojanos.com
+
 User-agent: *
 Allow: /
+Allow: /restaurant-online-ordering
+Allow: /direct-ordering-platform
+Allow: /restaurant-management-system
+Allow: /restaurant-pos
+Allow: /restaurant-billing-software
+Allow: /qr-code-ordering-system
+Allow: /whatsapp-food-ordering-system
+Allow: /restaurant-website-builder
+Allow: /digital-menu-for-restaurants
+Allow: /delivery-management-software
+Allow: /features
+Allow: /integrations
+Allow: /cloud-kitchen-software
+Allow: /qsr-pos-software
+Allow: /cafe-pos-billing-software
+Allow: /solutions
+Allow: /bhojanos-vs-zomato-swiggy
+Allow: /petpooja-alternative
+Allow: /dotpe-alternative
+Allow: /pricing
+Allow: /blog
+Allow: /about
+Allow: /security
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /refund-policy
+
+# Protect internal/private portal routes from search engine indexing
+Disallow: /owner/
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /api/
+Disallow: /checkout
+Disallow: /account
+Disallow: /addresses
+Disallow: /orders
+Disallow: /my-orders
+Disallow: /order/
+Disallow: /subscription
+Disallow: /k/*/checkout
+Disallow: /k/*/orders
+Disallow: /k/*/account
+Disallow: /k/*/addresses
+
+# Search Engine Sitemap
+Sitemap: https://www.bhojanos.com/sitemap.xml

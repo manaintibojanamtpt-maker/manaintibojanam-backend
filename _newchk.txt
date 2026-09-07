@@ -1,0 +1,14 @@
+One food platform : 0
+kitchen & business : 1
+Run your menu, orders, kitchen, payments : 1
+Customers discover & order : 1
+Discover • Order • Enjoy : 0
+Order Food on OrderBhojan : 1
+operating platform for food businesses : 1
+customer ordering experience : 1
+Orders placed on OrderBhojan flow directly : 0
+orderbhojan.web.app : 0
+x:-12 : 0
+opacity:0 : 0
+Discovers & orders : 0
+8410

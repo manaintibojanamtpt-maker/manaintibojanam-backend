@@ -1,0 +1,5 @@
+custom token minted
+ID token obtained
+
+=== checkout(pro): 200 in 3887ms
+{"success":true,"order":{"amount":299900,"amount_due":299900,"amount_paid":0,"attempts":0,"created_at":1788080376,"currency":"INR","entity":"order","id":"order_TVvKy2dBKGeEeO","notes":{"ownerUid":"vpRg4CIY3dcbVL25YbhyIHG1imI2","planId":"pro","tenantId":"mana-inti","type":"owner_saas"},"offer_id":null,"receipt":"receipt_saas_mana-int_1788080375979","status":"created"},"key":"rzp_live_Sjcjj19nnWXEzX","planId":"pro"}

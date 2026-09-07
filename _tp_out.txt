@@ -1,0 +1,9 @@
+{
+  "kycMobile": null,
+  "contact": {
+    "whatsapp": "8885668863"
+  },
+  "emailVerifiedFlag": null,
+  "authMobile": null,
+  "ownerProfileMobile": null
+}

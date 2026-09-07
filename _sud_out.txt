@@ -1,0 +1,6 @@
+token minted
+=== open login, sign in via real form
+credentials submitted, waiting for dashboard redirect...
+=== wait for dashboard
+now at: https://www.bhojanos.com/owner/dashboard
+=== go to subscription page

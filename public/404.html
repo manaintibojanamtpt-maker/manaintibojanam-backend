@@ -2,7 +2,103 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Not Found</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found | BhojanOS</title>
+    <meta name="description" content="The requested page could not be found on BhojanOS. Explore our direct online ordering system, restaurant software, and pricing." />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="icon" href="/bhojan-os-icon.png" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background-color: #070504;
+        color: #fff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+      }
+      .card {
+        background: #0d0a08;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.5rem;
+        padding: 3rem 2rem;
+        max-width: 520px;
+        width: 100%;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(255, 122, 0, 0.12);
+        color: #FF7A00;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 1.25rem;
+      }
+      h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.75rem;
+      }
+      p {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+      .btn-primary {
+        background: #FF7A00;
+        color: #000;
+      }
+      .btn-primary:hover {
+        background: #e66e00;
+        box-shadow: 0 0 25px rgba(255, 122, 0, 0.4);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    </style>
   </head>
-  <body>Not Found</body>
+  <body>
+    <div class="card">
+      <div class="badge">404 Error</div>
+      <h1>Page Not Found</h1>
+      <p>The page you are looking for has been moved, deleted, or does not exist. Explore our restaurant operating platform and direct ordering solutions below.</p>
+      <div class="actions">
+        <a href="/" class="btn btn-primary">Return to Homepage</a>
+        <a href="/restaurant-online-ordering-system" class="btn btn-secondary">Online Ordering</a>
+        <a href="/pricing" class="btn btn-secondary">Pricing</a>
+      </div>
+    </div>
+  </body>
 </html>

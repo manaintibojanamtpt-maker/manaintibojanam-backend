@@ -5504,7 +5504,51 @@ async function startServer() {
       host.includes("firebaseapp.com");
     if (!isBhojanHost) return false;
     const pathname = req.path.split("?")[0].replace(/\/$/, "") || "/";
-    return ["/", "/onboard", "/pricing", "/about", "/platform", "/security", "/contact", "/blog"].includes(pathname);
+    const marketingRoutes = [
+      "/",
+      "/onboard",
+      "/pricing",
+      "/about",
+      "/platform",
+      "/security",
+      "/contact",
+      "/blog",
+      "/features",
+      "/integrations",
+      "/restaurant-online-ordering",
+      "/direct-ordering-platform",
+      "/restaurant-management-system",
+      "/restaurant-pos",
+      "/restaurant-billing-software",
+      "/qr-code-ordering-system",
+      "/whatsapp-food-ordering-system",
+      "/restaurant-website-builder",
+      "/digital-menu-for-restaurants",
+      "/delivery-management-software",
+      "/cloud-kitchen-software",
+      "/qsr-pos-software",
+      "/cafe-pos-billing-software",
+      "/solutions",
+      "/bhojanos-vs-zomato-swiggy",
+      "/petpooja-alternative",
+      "/dotpe-alternative",
+      "/privacy",
+      "/terms",
+      "/refund-policy",
+      "/restaurant-online-ordering-system",
+      "/restaurant-management-software",
+      "/qr-ordering",
+      "/whatsapp-ordering",
+      "/restaurant-website",
+      "/digital-menu",
+      "/restaurant-delivery-management",
+      "/privacy-policy",
+      "/cancellation-policy"
+    ];
+    if (marketingRoutes.includes(pathname)) {
+      return true;
+    }
+    return pathname.startsWith("/solutions/") || pathname.startsWith("/compare/");
   };
 
   const marketingShellMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -5533,6 +5577,15 @@ async function startServer() {
       app.get("*", (req, res) => {
         if (req.path.startsWith("/api")) return;
         if (isBhojanMarketingRequest(req)) {
+          const slug = req.path.replace(/^\//, '').replace(/\/$/, '');
+          const staticPagePath = path.join(DIST_PATH, slug, "index.html");
+          const staticFlatPath = path.join(DIST_PATH, `${slug}.html`);
+          if (slug && fs.existsSync(staticPagePath)) {
+            return res.sendFile(staticPagePath);
+          }
+          if (slug && fs.existsSync(staticFlatPath)) {
+            return res.sendFile(staticFlatPath);
+          }
           const marketingPath = path.join(DIST_PATH, "marketing.html");
           if (fs.existsSync(marketingPath)) {
             return res.sendFile(marketingPath);

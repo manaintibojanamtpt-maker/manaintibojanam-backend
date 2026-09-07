@@ -1,6 +1,7 @@
 {
   "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
+  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
@@ -8,6 +9,15 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(self), microphone=(self), camera=()"
+        }
+      ]
+    },
+    {
+      "source": "/(owner|admin|super-admin|checkout|account|addresses|orders|my-orders|subscription)(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
         }
       ]
     },
@@ -66,6 +76,98 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/restaurant-online-ordering-system",
+      "destination": "/restaurant-online-ordering",
+      "permanent": true
+    },
+    {
+      "source": "/restaurant-management-software",
+      "destination": "/restaurant-management-system",
+      "permanent": true
+    },
+    {
+      "source": "/qr-ordering",
+      "destination": "/qr-code-ordering-system",
+      "permanent": true
+    },
+    {
+      "source": "/whatsapp-ordering",
+      "destination": "/whatsapp-food-ordering-system",
+      "permanent": true
+    },
+    {
+      "source": "/restaurant-website",
+      "destination": "/restaurant-website-builder",
+      "permanent": true
+    },
+    {
+      "source": "/digital-menu",
+      "destination": "/digital-menu-for-restaurants",
+      "permanent": true
+    },
+    {
+      "source": "/restaurant-delivery-management",
+      "destination": "/delivery-management-software",
+      "permanent": true
+    },
+    {
+      "source": "/solutions/cloud-kitchens",
+      "destination": "/cloud-kitchen-software",
+      "permanent": true
+    },
+    {
+      "source": "/solutions/qsr",
+      "destination": "/qsr-pos-software",
+      "permanent": true
+    },
+    {
+      "source": "/solutions/cafes",
+      "destination": "/cafe-pos-billing-software",
+      "permanent": true
+    },
+    {
+      "source": "/solutions/restaurants",
+      "destination": "/solutions",
+      "permanent": true
+    },
+    {
+      "source": "/solutions/food-businesses",
+      "destination": "/solutions",
+      "permanent": true
+    },
+    {
+      "source": "/compare/bhojanos-vs-zomato",
+      "destination": "/bhojanos-vs-zomato-swiggy",
+      "permanent": true
+    },
+    {
+      "source": "/compare/bhojanos-vs-swiggy",
+      "destination": "/bhojanos-vs-zomato-swiggy",
+      "permanent": true
+    },
+    {
+      "source": "/compare/bhojanos-vs-petpooja",
+      "destination": "/petpooja-alternative",
+      "permanent": true
+    },
+    {
+      "source": "/compare/bhojanos-vs-dotpe",
+      "destination": "/dotpe-alternative",
+      "permanent": true
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/cancellation-policy",
+      "destination": "/refund-policy",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -84,11 +186,11 @@
       "destination": "/marketing.html"
     },
     {
-      "source": "/(onboard|pricing|about|platform|security|contact|blog)",
+      "source": "/(onboard|pricing|about|platform|security|contact|blog|features|integrations|restaurant-online-ordering|direct-ordering-platform|restaurant-management-system|restaurant-pos|restaurant-billing-software|qr-code-ordering-system|whatsapp-food-ordering-system|restaurant-website-builder|digital-menu-for-restaurants|delivery-management-software|cloud-kitchen-software|qsr-pos-software|cafe-pos-billing-software|solutions|bhojanos-vs-zomato-swiggy|petpooja-alternative|dotpe-alternative|privacy|terms|refund-policy)",
       "destination": "/marketing.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/(owner.*|admin.*|super-admin.*|k/.*|account|addresses|orders.*|order/.*|checkout|subscription|login|menu)",
       "destination": "/app.html"
     }
   ]

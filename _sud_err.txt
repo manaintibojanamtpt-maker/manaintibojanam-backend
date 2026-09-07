@@ -1,0 +1,20 @@
+file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:33
+    #error = new Error('LifecycleWatcher terminated');
+             ^
+
+Error: Navigating frame was detached
+    at <instance_members_initializer> (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:33:14)
+    at new LifecycleWatcher (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:37:16)
+    at CdpFrame.goto (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:150:29)
+    at CdpFrame.<anonymous> (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/util/decorators.js:101:27)
+    at CdpPage.goto (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:576:43)
+    at file:///F:/Manaintibojanam_final2/manaintibojanam-backend/_sub_ui_diag.mjs:54:12 {
+  cause: Error: LifecycleWatcher disposed
+      at LifecycleWatcher.dispose (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:170:29)
+      at CdpFrame.goto (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:170:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async CdpPage.goto (file:///F:/Manaintibojanam_final2/manaintibojanam-backend/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:576:20)
+      at async file:///F:/Manaintibojanam_final2/manaintibojanam-backend/_sub_ui_diag.mjs:54:1
+}
+
+Node.js v24.18.0

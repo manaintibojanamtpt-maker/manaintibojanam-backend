@@ -129,14 +129,16 @@ export function MarketingHero() {
 
           <h1
             id="hero-heading"
-            className="font-display mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl"
+            className="font-display mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-white"
           >
-            Run your food business.{' '}
-            <span className="text-[#FF7A00]">Own your customers.</span>
+            Direct Online Ordering Platform for Restaurants
+            <span className="block text-2xl sm:text-3xl lg:text-4xl text-[#FF7A00] font-bold mt-3">
+              Run your food business. Own your customers.
+            </span>
           </h1>
 
-          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/55">
-            BhojanOS gives independent food businesses everything they need to run their kitchen, manage orders, and build direct customer relationships.
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70">
+            BhojanOS gives restaurants, cloud kitchens, and food businesses everything they need to launch direct online ordering, manage kitchen operations, eliminate 30% marketplace commissions, and build direct customer relationships.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-4">

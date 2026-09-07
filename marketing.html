@@ -3,63 +3,704 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BhojanOS | Restaurant Platform & Direct Food Ordering</title>
-    <meta name="description" content="BhojanOS helps food businesses run, manage and grow. OrderBhojan connects them directly with customers for online food ordering. Zero commission. Own your customers." />
+    <title>BhojanOS | Direct Online Ordering Platform for Restaurants</title>
+    <meta name="description" content="BhojanOS is the direct online ordering system and restaurant software platform. Accept online orders, manage your kitchen, eliminate 30% marketplace commissions, and own your customer data." />
+    <meta name="keywords" content="restaurant online ordering system, direct ordering platform for restaurants, restaurant ordering software, restaurant management software, digital menu, QR ordering, WhatsApp ordering, restaurant delivery management" />
     <meta name="theme-color" content="#030303" />
-    <!-- Open Graph -->
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.bhojanos.com/" />
+
+    <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BhojanOS" />
-    <meta property="og:title" content="BhojanOS | Restaurant Platform & Direct Food Ordering" />
-    <meta property="og:description" content="BhojanOS powers food businesses. OrderBhojan connects them with customers. Discover, order, enjoy — directly." />
+    <meta property="og:title" content="BhojanOS | Direct Online Ordering Platform for Restaurants" />
+    <meta property="og:description" content="The direct online ordering platform for restaurants and food businesses. 0% commission, branded storefront, digital menu, kitchen operations, and direct customer relationships." />
     <meta property="og:url" content="https://www.bhojanos.com/" />
     <meta property="og:image" content="https://www.bhojanos.com/bhojan-os-icon.png" />
-    <meta property="og:image:alt" content="BhojanOS — Restaurant Platform" />
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="BhojanOS | Restaurant Platform & Direct Food Ordering" />
-    <meta name="twitter:description" content="BhojanOS powers food businesses. OrderBhojan connects them with customers. Zero commission, direct ordering." />
+    <meta property="og:image:alt" content="BhojanOS — Direct Online Ordering Platform for Restaurants" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BhojanOS | Direct Online Ordering Platform for Restaurants" />
+    <meta name="twitter:description" content="The direct online ordering platform for restaurants and food businesses. 0% commission, branded storefront, digital menu, kitchen operations, and direct customer relationships." />
     <meta name="twitter:image" content="https://www.bhojanos.com/bhojan-os-icon.png" />
-    <link rel="canonical" href="https://www.bhojanos.com/" />
+
+    <!-- Mobile & PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="BhojanOS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!--APP_VERSION_BOOTSTRAP-->
     <link rel="manifest" href="/manifest-bhojanos.json?v=4" />
     <link rel="icon" href="/bhojan-os-icon.png?v=4" />
     <link rel="apple-touch-icon" href="/bhojan-os-icon.png" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="BhojanOS" />
+
+    <!-- Preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- JSON-LD Structured Data for Crawlers & AI Engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.bhojanos.com/#organization",
+          "name": "BhojanOS",
+          "url": "https://www.bhojanos.com",
+          "logo": "https://www.bhojanos.com/bhojan-os-icon.png",
+          "description": "BhojanOS is the direct online ordering system and operating platform for independent restaurants, cloud kitchens, and food businesses.",
+          "knowsAbout": [
+            "restaurant online ordering system",
+            "direct food ordering platform",
+            "restaurant management software",
+            "restaurant POS",
+            "QR code ordering",
+            "WhatsApp ordering for restaurants",
+            "digital menu",
+            "cloud kitchen software"
+          ],
+          "founder": [
+            {
+              "@type": "Person",
+              "name": "M. Vishwa Kalyan",
+              "jobTitle": "Founder & CEO"
+            },
+            {
+              "@type": "Person",
+              "name": "Lakshmi Prasanna",
+              "jobTitle": "Co-Founder & CFO"
+            }
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "support@bhojanos.com",
+            "areaServed": "IN",
+            "availableLanguage": ["English", "Telugu", "Hindi"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.bhojanos.com/#website",
+          "url": "https://www.bhojanos.com",
+          "name": "BhojanOS",
+          "publisher": {
+            "@id": "https://www.bhojanos.com/#organization"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://www.bhojanos.com/#software",
+          "name": "BhojanOS",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web Browser, Progressive Web App (PWA)",
+          "description": "Direct online ordering platform, POS, digital menu, and kitchen operations software for restaurants and cloud kitchens.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR",
+            "description": "Free starter plan with 0% marketplace commission"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.bhojanos.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is BhojanOS?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "BhojanOS is a comprehensive direct online ordering and restaurant operating platform. It enables restaurants, cloud kitchens, and cafes to accept direct orders online at 0% commission, manage kitchen operations, control deliveries, and own their customer relationships."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who is BhojanOS for?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "BhojanOS is designed for independent restaurants, cloud kitchens, quick service restaurants (QSR), cafes, bakeries, and regional food brands looking to increase direct orders and reduce high marketplace commission fees."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does direct online ordering work with BhojanOS?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Restaurants receive a branded online ordering website and digital QR menu. Customers order directly via mobile or desktop, pay via UPI or cards, and orders appear instantly on the BhojanOS kitchen display. Payments settle directly into the restaurant's bank account."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does BhojanOS compare to Zomato and Swiggy?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Third-party marketplaces charge 18% to 28% commission per order and keep customer contact data. BhojanOS charges 0% commission on direct orders, gives the restaurant 100% ownership of customer phone numbers and names, and provides custom branding with full control over operations."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can restaurants use their own delivery riders with BhojanOS?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. BhojanOS supports in-house delivery dispatch, custom delivery zones and fees, third-party courier partner integration, and customer live order tracking."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What payment gateways are supported in India?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "BhojanOS integrates with Razorpay for instant UPI, credit/debit cards, and net banking payments, as well as Cash on Delivery (COD). Funds settle directly into your business bank account with zero platform deduction."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <style>
-      #boot-fallback {
-        min-height: 100dvh;
-        background: #030303;
+      /* Base styles matching the BhojanOS dark design system */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #070504;
+        color: #fff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      .seo-shell {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
+      }
+      .seo-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4rem;
+        background: rgba(7, 5, 4, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        color: #737373;
-        font: 600 14px/1.4 system-ui, sans-serif;
+        justify-content: space-between;
+        padding: 0 1.5rem;
+        z-index: 50;
       }
-      #boot-fallback .spinner {
-        width: 2.25rem;
-        height: 2.25rem;
+      .seo-logo {
+        font-size: 1.25rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .seo-accent { color: #FF7A00; }
+      .seo-nav {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .seo-nav a { color: rgba(255, 255, 255, 0.7); }
+      .seo-nav a:hover { color: #fff; }
+      .seo-btn-cta {
+        background: #FF7A00;
+        color: #000;
+        font-weight: 700;
+        padding: 0.5rem 1.25rem;
         border-radius: 9999px;
-        border: 2px solid rgba(255, 122, 0, 0.25);
-        border-top-color: #ff7a00;
-        animation: spin 0.7s linear infinite;
+        font-size: 0.875rem;
       }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
+      .seo-main {
+        flex: 1;
+        padding-top: 6rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+      }
+      .seo-hero {
+        padding: 3rem 0 5rem;
+        text-align: center;
+      }
+      .seo-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 122, 0, 0.1);
+        border: 1px solid rgba(255, 122, 0, 0.25);
+        color: #FF7A00;
+        padding: 0.35rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1.5rem;
+      }
+      .seo-h1 {
+        font-size: clamp(2.25rem, 5vw, 4rem);
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin-bottom: 1.25rem;
+      }
+      .seo-lead {
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        color: rgba(255, 255, 255, 0.7);
+        max-width: 750px;
+        margin: 0 auto 2rem;
+        line-height: 1.6;
+      }
+      .seo-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+        margin-bottom: 3.5rem;
+      }
+      .seo-btn-lg {
+        padding: 0.875rem 2rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+      .seo-btn-outline {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #fff;
+      }
+      .seo-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        padding: 2.5rem 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 5rem;
+      }
+      .seo-stat-val { font-size: 2rem; font-weight: 800; color: #FF7A00; }
+      .seo-stat-lbl { font-size: 0.875rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; }
+      .seo-section { padding: 4rem 0; }
+      .seo-h2 { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 1rem; }
+      .seo-sub { text-align: center; color: rgba(255, 255, 255, 0.65); max-width: 600px; margin: 0 auto 3rem; }
+      .seo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+      .seo-card {
+        background: #0d0a08;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1.25rem;
+        padding: 2rem;
+      }
+      .seo-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; color: #fff; }
+      .seo-card p { font-size: 0.875rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; }
+      .seo-table-wrap {
+        overflow-x: auto;
+        margin: 2.5rem 0;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .seo-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.875rem;
+      }
+      .seo-table th, .seo-table td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .seo-table th { background: #120e0a; font-weight: 700; }
+      .seo-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+      .seo-faq-item {
+        background: #0d0a08;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .seo-faq-q { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+      .seo-faq-a { font-size: 0.875rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; }
+      .seo-footer {
+        background: #040302;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 4rem 1.5rem 2rem;
+        margin-top: 5rem;
+      }
+      .seo-footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+      }
+      .seo-col-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); margin-bottom: 1rem; font-weight: 700; }
+      .seo-links { list-style: none; padding: 0; margin: 0; }
+      .seo-links li { margin-bottom: 0.65rem; }
+      .seo-links a { color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; }
+      .seo-links a:hover { color: #FF7A00; }
+      .seo-copy { text-align: center; font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 2rem; }
+      @media (max-width: 768px) {
+        .seo-nav { display: none; }
       }
     </style>
   </head>
   <body>
     <div id="root">
-      <div id="boot-fallback" aria-live="polite">
-        <div class="spinner" aria-hidden="true"></div>
-        <span>Loading BhojanOS…</span>
+      <!-- Semantic Static Shell for Instant Crawlability & Immediate Rendering -->
+      <div class="seo-shell">
+        <header class="seo-header">
+          <a href="/" class="seo-logo">
+            <span>Bhojan<span class="seo-accent">OS</span></span>
+          </a>
+          <nav class="seo-nav" aria-label="Main Navigation">
+            <a href="/restaurant-online-ordering">Online Ordering</a>
+            <a href="/direct-ordering-platform">Direct Platform</a>
+            <a href="/solutions">Solutions</a>
+            <a href="/bhojanos-vs-zomato-swiggy">Compare</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/blog">Resources</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+          </nav>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <a href="https://www.orderbhojan.com" target="_blank" rel="noopener noreferrer" style="color:#FF7A00;font-weight:700;font-size:0.85rem;">Order Food ↗</a>
+            <a href="/onboard" class="seo-btn-cta">Start Free</a>
+          </div>
+        </header>
+
+        <main class="seo-main">
+          <!-- Hero Section -->
+          <section class="seo-hero">
+            <div class="seo-eyebrow">
+              ★ Direct Restaurant Technology Platform — 0% Marketplace Commission
+            </div>
+            <h1 class="seo-h1">
+              Direct Online Ordering Platform for Restaurants
+              <span style="display:block;color:#FF7A00;font-size:0.55em;margin-top:0.75rem;font-weight:700;">
+                Run your food business. Own your customer relationships.
+              </span>
+            </h1>
+            <p class="seo-lead">
+              BhojanOS gives independent restaurants, cloud kitchens, and food brands in India everything they need to launch their own direct online ordering system, manage kitchen operations, eliminate 30% marketplace commissions, and build repeat customer loyalty.
+            </p>
+            <div class="seo-actions">
+              <a href="/onboard" class="seo-btn-cta seo-btn-lg">Start Your Restaurant Storefront</a>
+              <a href="/pricing" class="seo-btn-outline seo-btn-lg">View Transparent Pricing</a>
+              <a href="https://www.orderbhojan.com" target="_blank" rel="noopener noreferrer" class="seo-btn-outline seo-btn-lg">Order Food on OrderBhojan ↗</a>
+            </div>
+
+            <!-- Commercial Trust Metric Highlights -->
+            <div class="seo-stats">
+              <div>
+                <div class="seo-stat-val">0%</div>
+                <div class="seo-stat-lbl">Marketplace Commission on Direct Orders</div>
+              </div>
+              <div>
+                <div class="seo-stat-val">100%</div>
+                <div class="seo-stat-lbl">Customer Data Ownership (Names, Phones, History)</div>
+              </div>
+              <div>
+                <div class="seo-stat-val">Direct UPI</div>
+                <div class="seo-stat-lbl">Instant Settlement to Your Bank Account via Razorpay</div>
+              </div>
+              <div>
+                <div class="seo-stat-val">All-in-One</div>
+                <div class="seo-stat-lbl">Online Ordering + POS + Kitchen Ops + Delivery</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Why Choose Direct Ordering — Marketplace Comparison -->
+          <section class="seo-section">
+            <h2 class="seo-h2">Why Pay 30% Commission to Aggregators?</h2>
+            <p class="seo-sub">
+              Food delivery marketplaces rent you customers and eat up to 30% of your top-line revenue. BhojanOS gives you the full technology stack to turn diners into direct, loyal repeat customers.
+            </p>
+            <div class="seo-table-wrap">
+              <table class="seo-table">
+                <thead>
+                  <tr>
+                    <th>Capability</th>
+                    <th>Swiggy</th>
+                    <th>Zomato</th>
+                    <th style="color:#FF7A00;">BhojanOS Direct Platform</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Per-Order Commission</strong></td>
+                    <td>18% – 28% + GST</td>
+                    <td>18% – 28% + GST</td>
+                    <td style="color:#FF7A00;font-weight:700;">0% Commission (Keep Every Rupee)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Customer Contact Ownership</strong></td>
+                    <td>Masked (Platform owns data)</td>
+                    <td>Masked (Platform owns data)</td>
+                    <td style="color:#FF7A00;font-weight:700;">100% Yours (Exportable CRM &amp; History)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Branded Website &amp; URL</strong></td>
+                    <td>No (Listed inside app)</td>
+                    <td>No (Listed inside app)</td>
+                    <td style="color:#FF7A00;font-weight:700;">Yes (Your custom brand storefront)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Direct Payment Gateway</strong></td>
+                    <td>Aggregator holds payouts</td>
+                    <td>Aggregator holds payouts</td>
+                    <td style="color:#FF7A00;font-weight:700;">Direct Razorpay settlement to your bank</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Marketing &amp; WhatsApp Retargeting</strong></td>
+                    <td>Aggregator promotes competitors</td>
+                    <td>Aggregator promotes competitors</td>
+                    <td style="color:#FF7A00;font-weight:700;">Direct WhatsApp &amp; SMS retention tools</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Kitchen &amp; POS Operations</strong></td>
+                    <td>Order-taking tablet only</td>
+                    <td>Order-taking tablet only</td>
+                    <td style="color:#FF7A00;font-weight:700;">Unified KDS, inventory &amp; recipe tracking</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Core Platform Features -->
+          <section class="seo-section">
+            <h2 class="seo-h2">The Complete Restaurant Operating System</h2>
+            <p class="seo-sub">Everything you need to accept direct food orders, streamline your kitchen, and grow repeat sales.</p>
+            <div class="seo-grid">
+              <article class="seo-card">
+                <h3>Branded Direct Storefront</h3>
+                <p>Launch your high-converting online ordering website with your menu, images, and brand story. Optimized for mobile, desktop, and zero checkout friction.</p>
+                <a href="/restaurant-online-ordering" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+              <article class="seo-card">
+                <h3>QR Code Dine-In &amp; Pickup Ordering</h3>
+                <p>Place dynamic QR codes on tables and counters. Diners scan, browse the digital menu, and pay directly without waiting for a printed bill.</p>
+                <a href="/qr-code-ordering-system" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+              <article class="seo-card">
+                <h3>WhatsApp Ordering &amp; Reordering</h3>
+                <p>Send automated menu broadcasts, order confirmations, and one-click reordering flows directly inside WhatsApp where Indian customers already are.</p>
+                <a href="/whatsapp-food-ordering-system" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Kitchen Operations &amp; KDS</h3>
+                <p>Live order queue, preparation timers, recipe cards, and station alerts that keep your kitchen staff synchronized during peak rush hours.</p>
+                <a href="/restaurant-management-system" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Delivery Management &amp; Dispatch</h3>
+                <p>Define custom delivery radiuses, zone-based delivery fees, dispatch in-house riders or third-party couriers, and share live tracking links.</p>
+                <a href="/delivery-management-software" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Customer CRM &amp; AI Intelligence</h3>
+                <p>Track top customers, average spend, order frequencies, and automatically re-engage inactive customers with smart personalized offers.</p>
+                <a href="/features" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:1rem;">Learn more →</a>
+              </article>
+            </div>
+          </section>
+
+          <!-- Who BhojanOS is for -->
+          <section class="seo-section">
+            <h2 class="seo-h2">Built for Indian Food Businesses</h2>
+            <p class="seo-sub">Engineered specifically to solve the operational and margin challenges of food businesses across India.</p>
+            <div class="seo-grid">
+              <article class="seo-card">
+                <h3>Dine-In Restaurants</h3>
+                <p>Boost table turnover with QR code ordering, manage takeout orders, and convert weekend diners into regular direct delivery customers.</p>
+                <a href="/solutions" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:0.75rem;">Restaurant solutions →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Cloud Kitchens &amp; Multi-Brands</h3>
+                <p>Manage multiple virtual food brands from a single kitchen display, centralize inventory, and route delivery orders efficiently.</p>
+                <a href="/cloud-kitchen-software" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:0.75rem;">Cloud kitchen solutions →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Cafes &amp; Bakeries</h3>
+                <p>Accept advance pre-orders, manage daily batch availability, and build recurring subscription coffee and pastry memberships.</p>
+                <a href="/cafe-pos-billing-software" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:0.75rem;">Cafe solutions →</a>
+              </article>
+              <article class="seo-card">
+                <h3>Quick Service Restaurants (QSR)</h3>
+                <p>Handle high-volume order rushes with counter pickup displays, lightning-fast UPI QR payments, and zero checkout delays.</p>
+                <a href="/qsr-pos-software" style="color:#FF7A00;font-size:0.8rem;font-weight:700;display:inline-block;margin-top:0.75rem;">QSR solutions →</a>
+              </article>
+            </div>
+          </section>
+
+          <!-- How It Works Timeline -->
+          <section class="seo-section">
+            <h2 class="seo-h2">How BhojanOS Works in 5 Simple Steps</h2>
+            <p class="seo-sub">Get your restaurant online and accepting direct orders in less than 15 minutes.</p>
+            <div class="seo-grid">
+              <div class="seo-card">
+                <span style="color:#FF7A00;font-weight:800;font-size:0.85rem;">STEP 1</span>
+                <h3 style="margin-top:0.5rem;">Create Your Store</h3>
+                <p>Sign up and claim your verified BhojanOS storefront URL and kitchen dashboard.</p>
+              </div>
+              <div class="seo-card">
+                <span style="color:#FF7A00;font-weight:800;font-size:0.85rem;">STEP 2</span>
+                <h3 style="margin-top:0.5rem;">Upload Digital Menu</h3>
+                <p>Add food items, categories, high-res photos, customizable variants, and prices.</p>
+              </div>
+              <div class="seo-card">
+                <span style="color:#FF7A00;font-weight:800;font-size:0.85rem;">STEP 3</span>
+                <h3 style="margin-top:0.5rem;">Connect UPI &amp; Bank</h3>
+                <p>Link your Razorpay account so online customer payments deposit directly into your bank.</p>
+              </div>
+              <div class="seo-card">
+                <span style="color:#FF7A00;font-weight:800;font-size:0.85rem;">STEP 4</span>
+                <h3 style="margin-top:0.5rem;">Accept Direct Orders</h3>
+                <p>Share your link on WhatsApp, Google Maps, Instagram, or table QR codes. Orders ring on your KDS.</p>
+              </div>
+              <div class="seo-card">
+                <span style="color:#FF7A00;font-weight:800;font-size:0.85rem;">STEP 5</span>
+                <h3 style="margin-top:0.5rem;">Grow Repeat Business</h3>
+                <p>Use CRM insights, loyalty discounts, and automated reordering to keep customers ordering direct.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Frequently Asked Questions -->
+          <section class="seo-section" id="faq">
+            <h2 class="seo-h2">Frequently Asked Questions</h2>
+            <p class="seo-sub">Common questions from restaurant owners about direct online ordering and BhojanOS.</p>
+            <div style="max-width:850px;margin:0 auto;">
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">What is BhojanOS?</h3>
+                <p class="seo-faq-a">BhojanOS is an all-in-one direct online ordering platform and restaurant management software for food businesses. It gives you a branded ordering website, digital QR menus, kitchen display system (KDS), inventory management, delivery dispatch, and customer CRM — with 0% marketplace commission.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">How does direct ordering differ from food marketplaces like Zomato and Swiggy?</h3>
+                <p class="seo-faq-a">Third-party aggregators charge 18% to 28% commission per order and do not share customer phone numbers or names with you. With BhojanOS, you own the customer relationship, keep 100% of order revenue, and have direct access to your customer database for WhatsApp and SMS marketing.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">Can restaurants have their own online ordering system and website?</h3>
+                <p class="seo-faq-a">Yes. BhojanOS creates a dedicated, mobile-friendly online ordering website under your restaurant brand. You can share this link on your Google Business Profile, Instagram bio, WhatsApp, and printed flyers.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">How can restaurants get more direct orders?</h3>
+                <p class="seo-faq-a">Restaurants shift customers to direct ordering by placing QR codes on dine-in tables, including direct ordering flyers in delivery bags with a first-order discount, adding their direct link to Google Maps, and using WhatsApp marketing to re-engage repeat customers.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">Can small restaurants and cloud kitchens in India use BhojanOS?</h3>
+                <p class="seo-faq-a">Absolutely. BhojanOS is built for Indian food businesses of all sizes — from single-outlet cloud kitchens and cafes to multi-branch restaurants. It supports UPI payments, FSSAI licensing display, and flexible local delivery options.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">How are online payments processed?</h3>
+                <p class="seo-faq-a">BhojanOS integrates with Razorpay, allowing your customers to pay using Google Pay, PhonePe, Paytm, BHIM UPI, credit/debit cards, and Net Banking. Payments settle directly into your bank account with zero platform commission deductions.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">How does delivery management work?</h3>
+                <p class="seo-faq-a">You have full control over delivery. You can use your own delivery riders, assign third-party delivery partners (like Dunzo, Shadowfax, or Porter), or offer customer takeaway/pickup. You can also configure delivery radius and distance-based fees.</p>
+              </article>
+              <article class="seo-faq-item">
+                <h3 class="seo-faq-q">Can I run BhojanOS alongside Swiggy and Zomato?</h3>
+                <p class="seo-faq-a">Yes! Most restaurants start by running BhojanOS alongside aggregators. Aggregators can provide initial discovery, while BhojanOS converts those diners into high-margin direct repeat customers over time.</p>
+              </article>
+            </div>
+          </section>
+
+          <!-- Final CTA Section -->
+          <section class="seo-section" style="text-align:center;padding:5rem 0;">
+            <div style="background:#0d0a08;border:1px solid rgba(255,122,0,0.3);border-radius:2rem;padding:4rem 2rem;max-width:800px;margin:0 auto;box-shadow:0 0 50px rgba(255,122,0,0.1);">
+              <h2 style="font-size:2.25rem;font-weight:800;margin-bottom:1rem;">Ready to Take Control of Your Restaurant Orders?</h2>
+              <p style="color:rgba(255,255,255,0.7);max-width:550px;margin:0 auto 2rem;line-height:1.6;">
+                Join forward-thinking restaurants, cloud kitchens, and food brands taking back their margins with BhojanOS. Zero marketplace commission. 100% customer ownership.
+              </p>
+              <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;">
+                <a href="/onboard" class="seo-btn-cta seo-btn-lg">Start Free Today</a>
+                <a href="/contact" class="seo-btn-outline seo-btn-lg">Talk to Our Team</a>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer class="seo-footer">
+          <div class="seo-footer-inner">
+            <div>
+              <div class="seo-logo" style="margin-bottom:1rem;">Bhojan<span class="seo-accent">OS</span></div>
+              <p style="font-size:0.85rem;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:1.5rem;">
+                The direct online ordering system and restaurant operating platform. Take direct orders, manage kitchen ops, and eliminate marketplace commissions.
+              </p>
+              <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);">
+                Contact: <a href="mailto:support@bhojanos.com" style="color:#FF7A00;">support@bhojanos.com</a>
+              </p>
+            </div>
+            <div>
+              <div class="seo-col-title">Products</div>
+              <ul class="seo-links">
+                <li><a href="/restaurant-online-ordering">Online Ordering System</a></li>
+                <li><a href="/direct-ordering-platform">Direct Ordering Platform</a></li>
+                <li><a href="/restaurant-management-system">Restaurant Management</a></li>
+                <li><a href="/restaurant-pos">Restaurant POS &amp; Operations</a></li>
+                <li><a href="/qr-code-ordering-system">QR Code Ordering</a></li>
+                <li><a href="/whatsapp-food-ordering-system">WhatsApp Ordering</a></li>
+                <li><a href="/restaurant-website-builder">Restaurant Website Builder</a></li>
+                <li><a href="/digital-menu-for-restaurants">Digital Menu</a></li>
+                <li><a href="/delivery-management-software">Delivery Management</a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="seo-col-title">Solutions</div>
+              <ul class="seo-links">
+                <li><a href="/solutions">For Restaurants</a></li>
+                <li><a href="/cloud-kitchen-software">For Cloud Kitchens</a></li>
+                <li><a href="/cafe-pos-billing-software">For Cafes &amp; Bakeries</a></li>
+                <li><a href="/qsr-pos-software">For Quick Service (QSR)</a></li>
+                <li><a href="/solutions">For Food Businesses</a></li>
+                <li><a href="/pricing">Pricing Plans</a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="seo-col-title">Compare</div>
+              <ul class="seo-links">
+                <li><a href="/bhojanos-vs-zomato-swiggy">BhojanOS vs Zomato</a></li>
+                <li><a href="/bhojanos-vs-zomato-swiggy">BhojanOS vs Swiggy</a></li>
+                <li><a href="/dotpe-alternative">BhojanOS vs DotPe</a></li>
+                <li><a href="/petpooja-alternative">BhojanOS vs Petpooja</a></li>
+                <li><a href="https://www.orderbhojan.com" target="_blank" rel="noopener noreferrer">OrderBhojan Marketplace ↗</a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="seo-col-title">Company &amp; Legal</div>
+              <ul class="seo-links">
+                <li><a href="/about">About Us</a></li>
+                <li><a href="/about#leadership">Leadership</a></li>
+                <li><a href="/blog">Resources &amp; Blog</a></li>
+                <li><a href="/security">Security</a></li>
+                <li><a href="/contact">Contact Us</a></li>
+                <li><a href="/privacy">Privacy Policy</a></li>
+                <li><a href="/terms">Terms of Service</a></li>
+                <li><a href="/refund-policy">Refund Policy</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="seo-copy">
+            &copy; 2026 BhojanOS Technologies. All rights reserved. Direct online ordering platform for restaurants.
+          </div>
+        </footer>
       </div>
     </div>
+    <!-- Client Application Bootstrap -->
     <script type="module" src="/src/marketing-main.tsx"></script>
   </body>
 </html>

@@ -6,12 +6,12 @@ export const EnterpriseSchema: React.FC = () => {
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://bhojanos.com/#organization",
+        "@id": "https://www.bhojanos.com/#organization",
         "name": "BhojanOS",
-        "url": "https://bhojanos.com",
-        "logo": "https://bhojanos.com/logo.png",
-        "description": "BhojanOS is the operating platform for independent food businesses. Powers restaurants, brands and food entrepreneurs, connected to customers through OrderBhojan.",
-        "knowsAbout": ["food business technology", "restaurant management", "direct food ordering", "restaurant operating system"],
+        "url": "https://www.bhojanos.com",
+        "logo": "https://www.bhojanos.com/bhojan-os-icon.png",
+        "description": "BhojanOS is the operating platform and direct online ordering system for restaurants, cloud kitchens, and food businesses.",
+        "knowsAbout": ["food business technology", "restaurant management", "direct food ordering", "restaurant operating system", "cloud kitchen operations"],
         "founder": [
           {
             "@type": "Person",
@@ -29,20 +29,24 @@ export const EnterpriseSchema: React.FC = () => {
         "@type": "SoftwareApplication",
         "name": "BhojanOS",
         "applicationCategory": "BusinessApplication",
-        "operatingSystem": "Web, iOS, Android",
+        "operatingSystem": "Web Browser, Progressive Web App (PWA)",
+        "url": "https://www.bhojanos.com",
+        "description": "Direct restaurant online ordering platform, POS billing, kitchen display system, and delivery dispatch.",
         "offers": {
           "@type": "Offer",
           "price": "0",
-          "priceCurrency": "USD"
+          "priceCurrency": "INR",
+          "description": "0% commission on direct online orders. Transparent software subscription for advanced operations.",
+          "url": "https://www.bhojanos.com/pricing"
         }
       },
       {
         "@type": "WebSite",
-        "@id": "https://bhojanos.com/#website",
-        "url": "https://bhojanos.com",
+        "@id": "https://www.bhojanos.com/#website",
+        "url": "https://www.bhojanos.com",
         "name": "BhojanOS",
         "publisher": {
-          "@id": "https://bhojanos.com/#organization"
+          "@id": "https://www.bhojanos.com/#organization"
         }
       }
     ]

@@ -1,0 +1,34 @@
+--- gating checks for mana-inti
+{
+  "isEmailVerified": false,
+  "isMerchantAgreementAccepted": true,
+  "isKycCompleted": true,
+  "hasBusinessAddress": true,
+  "hasMobileNumber": false
+}
+canActivate = false
+
+--- relevant raw fields
+{
+  "kyc": {
+    "verificationLevel": 1
+  },
+  "legal": {
+    "merchantDeclarationAcceptedAt": "2026-06-23T10:42:10.337Z"
+  },
+  "location": {
+    "lat": 18.499646969977075,
+    "address": "Pari residency, manjaribk"
+  },
+  "slug": "mana-inti",
+  "id": "mana-inti",
+  "onboardingStatus": {
+    "currentStep": 7,
+    "completedAt": {
+      "_seconds": 1782446765,
+      "_nanoseconds": 178000000
+    },
+    "migrated": false,
+    "isComplete": false
+  }
+}

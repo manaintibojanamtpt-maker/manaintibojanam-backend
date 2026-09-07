@@ -1,0 +1,3 @@
+08:44:29 === START ===
+08:44:29 === 1. open login + inject session
+08:44:51 sign-in: FATAL no default app after wait

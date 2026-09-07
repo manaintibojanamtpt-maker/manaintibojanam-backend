@@ -1,0 +1,3 @@
+To https://github.com/manaintibojanamtpt-maker/manaintibojanam-backend.git
+   2a996d9..d1198a2  main -> main
+EXIT=0 
