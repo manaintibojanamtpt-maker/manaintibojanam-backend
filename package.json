@@ -20,6 +20,7 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:express --external:cors --external:body-parser --external:firebase-admin --external:vite --external:node-cron",
     "build:web": "node scripts/verify-vercel-firebase-env.mjs && node scripts/write-version-json.mjs && vite build && node scripts/vercel-marketing-index.mjs && node scripts/generate-seo-static-pages.mjs",
     "seo:check": "node scripts/seo-check.mjs",
+    "seo:check:prod": "node scripts/seo-check-prod.mjs",
     "build:server": "node scripts/build-server.mjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",

@@ -1740,6 +1740,136 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       { label: 'Contact Us', path: '/contact' },
     ],
   },
+  'terms': {
+    slug: 'terms',
+    path: '/terms',
+    title: 'Terms of Service | BhojanOS Merchant Platform Agreement',
+    metaDescription: 'Review the BhojanOS Terms of Service governing platform subscription, direct ordering software usage, payment processing, and merchant responsibilities.',
+    keywords: ['bhojanos terms of service', 'merchant software terms', 'restaurant pos agreement', 'terms of use'],
+    canonical: `${BASE_URL}/terms`,
+    category: 'Legal',
+    h1: 'BhojanOS Terms of Service',
+    subhead: 'Fair, transparent terms designed to protect your business and support independent restaurant growth.',
+    description: 'These terms outline the legal framework governing your subscription and usage of BhojanOS software, POS tools, and direct ordering services.',
+    badge: 'Legal Terms',
+    features: [
+      {
+        title: 'Software Subscription Model',
+        description: 'BhojanOS provides operational software tools on a predictable recurring subscription basis.',
+        tag: 'Subscription',
+      },
+      {
+        title: 'Merchant Independence',
+        description: 'You retain complete autonomy over your menu prices, discount policies, and customer terms.',
+        tag: 'Autonomy',
+      },
+      {
+        title: 'Direct Settlements',
+        description: 'Customer transactions are settled directly into your linked bank account via authorized payment gateways.',
+        tag: 'Payments',
+      },
+      {
+        title: 'Platform Availability & Security',
+        description: 'We maintain enterprise-grade cloud uptime, data backups, and encryption standards.',
+        tag: 'Reliability',
+      },
+    ],
+    problemSolution: {
+      problemTitle: 'Restrictive Aggregator Contracts',
+      problemPoints: [
+        'One-sided merchant terms that permit arbitrary fee increases',
+        'Penalties for operating direct order channels',
+        'Long-term lock-in without data portability',
+      ],
+      solutionTitle: 'Transparent SaaS Terms',
+      solutionPoints: [
+        'Predictable software licensing with no hidden commissions',
+        'Freedom to export your customer records and order history anytime',
+        'Cancel or adjust your subscription tier without punitive penalties',
+      ],
+    },
+    faq: [
+      {
+        question: 'Are there long-term contracts required for BhojanOS?',
+        answer: 'No. BhojanOS is offered on flexible monthly and annual subscriptions. You may upgrade, downgrade, or cancel at any time.',
+      },
+      {
+        question: 'Who owns the transaction records?',
+        answer: 'You retain full ownership and access to your business transaction history and customer analytics.',
+      },
+    ],
+    relatedPages: [
+      { label: 'Privacy Policy', path: '/privacy' },
+      { label: 'Refund Policy', path: '/refund-policy' },
+      { label: 'About BhojanOS', path: '/about' },
+      { label: 'Pricing Plans', path: '/pricing' },
+    ],
+  },
+  'refund-policy': {
+    slug: 'refund-policy',
+    path: '/refund-policy',
+    title: 'Refund & Cancellation Policy | BhojanOS Platform',
+    metaDescription: 'Read the BhojanOS refund and subscription cancellation policy. Understand how software renewals, billing cycles, and merchant subscription refunds are handled.',
+    keywords: ['bhojanos refund policy', 'subscription cancellation', 'billing terms', 'software refund'],
+    canonical: `${BASE_URL}/refund-policy`,
+    category: 'Legal',
+    h1: 'Refund & Subscription Cancellation Policy',
+    subhead: 'Clear guidelines on software subscription billing, cancellation timelines, and refund eligibility.',
+    description: 'We believe in transparent and straightforward billing. Review our policies regarding subscription cancellations and refund requests.',
+    badge: 'Billing Policy',
+    features: [
+      {
+        title: 'Flexible Cancellation',
+        description: 'Cancel your software subscription at any time directly from the owner dashboard.',
+        tag: 'Cancellation',
+      },
+      {
+        title: 'Pro-Rated Billing Transparency',
+        description: 'Access to software features remains active through the end of your paid billing period.',
+        tag: 'Access',
+      },
+      {
+        title: 'Prompt Refund Processing',
+        description: 'Eligible billing disputes or inadvertent duplicate charges are resolved and refunded promptly.',
+        tag: 'Refunds',
+      },
+      {
+        title: 'Dedicated Billing Support',
+        description: 'Direct assistance for billing queries, plan adjustments, or invoice receipts.',
+        tag: 'Support',
+      },
+    ],
+    problemSolution: {
+      problemTitle: 'Opaque Billing Practices',
+      problemPoints: [
+        'Hidden renewal fees without advance notification',
+        'Difficult cancellation processes designed to trap subscribers',
+        'Unresponsive support channels for billing disputes',
+      ],
+      solutionTitle: 'Clear and Predictable Policies',
+      solutionPoints: [
+        'Self-serve cancellation from your account settings with zero friction',
+        'Transparent automated invoices sent to your registered email',
+        'Direct billing support team reachable via email and portal ticket',
+      ],
+    },
+    faq: [
+      {
+        question: 'How do I cancel my BhojanOS subscription?',
+        answer: 'You can manage or cancel your subscription anytime within your BhojanOS Owner Portal under Account > Subscription.',
+      },
+      {
+        question: 'What happens to my data after cancellation?',
+        answer: 'You can export all menu data, order records, and customer contacts before or during your cancellation period.',
+      },
+    ],
+    relatedPages: [
+      { label: 'Terms of Service', path: '/terms' },
+      { label: 'Privacy Policy', path: '/privacy' },
+      { label: 'Pricing Plans', path: '/pricing' },
+      { label: 'Contact Support', path: '/contact' },
+    ],
+  },
 };
 
 // Aliases for backwards compatibility with legacy routes or code references
