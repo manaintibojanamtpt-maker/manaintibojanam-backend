@@ -1,6 +1,7 @@
 import React from 'react';
 import { EnterpriseHeader } from '../../components/marketing/EnterpriseHeader';
 import { EnterpriseFooter } from '../../components/EnterpriseFooter';
+import { EnterpriseSchema } from '../../components/EnterpriseSchema';
 import { MarketingPageHero } from '../../components/marketing/MarketingPageHero';
 import { SUPPORT_EMAIL } from '../../config/support';
 
