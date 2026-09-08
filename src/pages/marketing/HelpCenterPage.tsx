@@ -60,14 +60,15 @@ const HelpCenterPage: React.FC = () => {
 
         <section className="max-w-[900px] mx-auto px-4 sm:px-6 pb-16">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-            <Link
-              to="/owner/register"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
-            >
-              <Store className="text-[#FF7A00] mb-3" size={22} />
-              <h3 className="font-bold text-white mb-1">Owner onboarding</h3>
-              <p className="text-sm text-neutral-500">Register and launch your kitchen in minutes.</p>
-            </Link>
+          {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+          <a
+            href="/owner/register"
+            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
+          >
+            <Store className="text-[#FF7A00] mb-3" size={22} />
+            <h3 className="font-bold text-white mb-1">Owner onboarding</h3>
+            <p className="text-sm text-neutral-500">Register and launch your kitchen in minutes.</p>
+          </a>
             <Link
               to="/pricing"
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
@@ -76,14 +77,15 @@ const HelpCenterPage: React.FC = () => {
               <h3 className="font-bold text-white mb-1">Plans & pricing</h3>
               <p className="text-sm text-neutral-500">Growth trial and subscription options.</p>
             </Link>
-            <Link
-              to="/owner/feedback"
+            {/* Cross-shell navigation: /owner/feedback lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+            <a
+              href="/owner/feedback"
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
             >
               <Bug className="text-[#FF7A00] mb-3" size={22} />
               <h3 className="font-bold text-white mb-1">Report a bug</h3>
               <p className="text-sm text-neutral-500">Owners can submit feedback from the dashboard.</p>
-            </Link>
+            </a>
           </div>
 
           <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">

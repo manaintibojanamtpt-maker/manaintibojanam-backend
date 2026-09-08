@@ -49,13 +49,14 @@ export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): 
     res.json({ ok: true, value: validateMarketplacePincode(pincode, stateCode) });
   });
 
-  app.post(`${prefix}/serviceability`, async (req: Request, res: Response) => {
+  const handleServiceability = async (req: Request, res: Response) => {
     try {
-      const body = (req.body ?? {}) as {
-        lat: number;
-        lng: number;
-        restaurantId?: string;
-        orderType?: 'delivery' | 'pickup';
+      const source = req.method === 'GET' ? req.query : (req.body ?? {});
+      const body = {
+        lat: Number(source.lat),
+        lng: Number(source.lng),
+        restaurantId: source.restaurantId ? String(source.restaurantId).trim() : undefined,
+        orderType: source.orderType as 'delivery' | 'pickup' | undefined,
       };
 
       let restaurantCoords: { lat: number; lng: number } | undefined;
@@ -68,13 +69,24 @@ export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): 
       } | undefined;
       if (body.restaurantId) {
         const loaded = await loadTenantBySlug(db, body.restaurantId);
-        if (!loaded) {
-          return res.status(404).json({ ok: false, error: { code: 'RESTAURANT_NOT_FOUND', message: 'Restaurant not found' } });
+        if (loaded) {
+          if (loaded.tenant.location) {
+            restaurantCoords = { lat: loaded.tenant.location.lat, lng: loaded.tenant.location.lng };
+          }
+          deliveryConfig = (loaded.raw.deliveryConfig ?? {}) as typeof deliveryConfig;
+        } else {
+          // Restaurant not found by slug/id - return graceful 200 with unavailable status instead of breaking client with 404
+          const fallbackResult = toMarketplaceServiceabilityResult({
+            serviceable: false,
+            delivery: false,
+            pickup: false,
+            distanceKm: 0,
+            deliveryFee: 0,
+            etaMinutes: { min: 45, max: 60 },
+            message: 'Restaurant currently unavailable in this area',
+          });
+          return res.json({ ok: true, value: fallbackResult });
         }
-        if (loaded.tenant.location) {
-          restaurantCoords = { lat: loaded.tenant.location.lat, lng: loaded.tenant.location.lng };
-        }
-        deliveryConfig = (loaded.raw.deliveryConfig ?? {}) as typeof deliveryConfig;
       }
 
       const serviceability = checkLocationServiceability({
@@ -91,7 +103,10 @@ export function registerMarketplaceLocationRoutes(app: Express, db: Firestore): 
       const message = error instanceof Error ? error.message : 'Serviceability check failed';
       res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
     }
-  });
+  };
+
+  app.post(`${prefix}/serviceability`, handleServiceability);
+  app.get(`${prefix}/serviceability`, handleServiceability);
 
   app.post(`${prefix}/delivery-zone`, (req: Request, res: Response) => {
     const body = (req.body ?? {}) as { lat: number; lng: number; maxRadiusKm?: number };

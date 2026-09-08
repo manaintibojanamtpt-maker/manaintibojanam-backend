@@ -148,13 +148,14 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              to="/owner/register"
+            {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+            <a
+              href="/owner/register"
               className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
             >
               Start Free Today
               <ArrowRight size={16} aria-hidden />
-            </Link>
+            </a>
             <Link
               to="/pricing"
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-bold uppercase tracking-wide text-white hover:bg-white/10 transition-colors"
@@ -338,13 +339,14 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
               Join Indian food entrepreneurs taking control of their customers and profit margins. 0% commission on direct orders.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                to="/owner/register"
+              {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+              <a
+                href="/owner/register"
                 className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
               >
                 Start Free with BhojanOS
                 <ArrowRight size={16} aria-hidden />
-              </Link>
+              </a>
               <Link
                 to="/contact"
                 className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-bold uppercase tracking-wide text-white hover:bg-white/10 transition-colors"

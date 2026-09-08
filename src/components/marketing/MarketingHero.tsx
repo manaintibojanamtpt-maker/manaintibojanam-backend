@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, Bell, Flame, Bike, CheckCircle2 } from 'lucide-react';
 import { CINEMATIC_ENV_IMAGES } from '../../config/marketingFoodImages';
 
@@ -142,13 +141,14 @@ export function MarketingHero() {
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-4">
-            <Link
-              to="/owner/register"
+            {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+            <a
+              href="/owner/register"
               className="group inline-flex items-center gap-2.5 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_36px_rgba(255,122,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Start Your Restaurant
               <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
-            </Link>
+            </a>
             <a
               href="https://orderbhojan.web.app"
               target="_blank"

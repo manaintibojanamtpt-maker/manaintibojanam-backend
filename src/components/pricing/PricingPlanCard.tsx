@@ -91,8 +91,9 @@ export const PricingPlanCard: React.FC<PricingPlanCardProps> = ({
             Talk to sales
           </Link>
         ) : (
-          <Link
-            to="/owner/register"
+          // Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes).
+          <a
+            href="/owner/register"
             className={`w-full py-3 rounded-xl font-bold text-sm text-center transition-colors ${
               plan.id === 'starter'
                 ? 'border border-white/15 text-white hover:bg-white/5'
@@ -102,7 +103,7 @@ export const PricingPlanCard: React.FC<PricingPlanCardProps> = ({
             }`}
           >
             {ctaText}
-          </Link>
+          </a>
         )
       ) : (
         <button

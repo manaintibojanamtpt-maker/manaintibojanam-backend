@@ -210,13 +210,14 @@ const BlogPage: React.FC = () => {
             Stop losing 30% of every order to third-party marketplaces. Launch your direct ordering storefront with BhojanOS today.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              to="/owner/register"
+            {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+            <a
+              href="/owner/register"
               className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-colors"
             >
               Start Free Today
               <ArrowRight size={15} aria-hidden />
-            </Link>
+            </a>
             <Link
               to="/pricing"
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-3.5 text-sm font-bold uppercase tracking-wide text-white hover:bg-white/10 transition-colors"

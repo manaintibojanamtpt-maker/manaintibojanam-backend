@@ -48,6 +48,7 @@ import {
 } from './projectMarketplaceOrders.js';
 import { registerMarketplaceCustomerRoutes } from './marketplaceCustomerRoutes.js';
 import { registerMarketplaceLocationRoutes } from './marketplaceLocationRoutes.js';
+import { loadTenantBySlug, loadTenantDocBySlug } from './marketplaceTenantLoader.js';
 import { registerMarketplaceMediaPublicRoute } from './ownerStorefrontMediaRoutes.js';
 import { notifyOwnerUpiOrderPending } from './ownerOrdersRoutes.js';
 import {
@@ -123,23 +124,7 @@ function resolveAuthenticatedUserId(req: Request): string | null {
   return typeof user?.uid === 'string' && user.uid.trim() ? user.uid.trim() : null;
 }
 
-async function loadTenantBySlug(db: Firestore, slug: string) {
-  const doc = await loadTenantDocBySlug(db, slug);
-  if (!doc) return null;
-  return {
-    tenant: parseFirestoreTenant(doc.id, doc.data() as Record<string, unknown>),
-    raw: doc.data() as Record<string, unknown>,
-  };
-}
 
-async function loadTenantDocBySlug(db: Firestore, slug: string) {
-  const direct = await db.collection('tenants').doc(slug).get();
-  if (direct.exists) return direct;
-
-  const query = await db.collection('tenants').where('slug', '==', slug).limit(1).get();
-  if (query.empty) return null;
-  return query.docs[0];
-}
 
 const MENU_DIETARY_CACHE_TTL_MS = 60_000;
 const menuDietaryCache = new Map<
