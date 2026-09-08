@@ -27,7 +27,7 @@ import {
   pricingPageCopy,
 } from '../../config/pricing';
 import { useSubscriptionSync } from '../../hooks/useSubscriptionSync';
-import { isFounderOwnerEmail } from '../../config/founder';
+import { isFounderOwnerEmail, hasFounderTenantEntitlements } from '../../config/founder';
 
 const formatDateLabel = (dateVal: Date | string | null | undefined): string => {
   if (!dateVal) return '—';
@@ -90,7 +90,7 @@ const OwnerSubscription = () => {
   const hasMobileNumber = !!tenantInfo.kyc?.mobileNumber;
   // Founder tenant is exempt from activation gating (mirrors backend founderOverride) —
   // payment must remain available even if optional profile fields (e.g. mobile) are missing.
-  const isFounder = isFounderOwnerEmail(currentUser?.email);
+  const isFounder = isFounderOwnerEmail(currentUser?.email) || hasFounderTenantEntitlements(currentUser?.email, tenantInfo.id, tenantInfo.slug);
   const canActivate =
     (isEmailVerified && isMerchantAgreementAccepted && isKycCompleted && hasBusinessAddress && hasMobileNumber) ||
     isFounder;
@@ -144,6 +144,14 @@ const OwnerSubscription = () => {
     setLoadingPlan(planId);
     const tenantDocId = tenantInfo.id || tenantInfo.slug;
     try {
+      // Founder bypass — server activates without payment
+      if (isFounder && planId !== 'enterprise') {
+        await subscription.triggerCheckout(planId);
+        await refreshTenant();
+        toast.success(`${plan.name} activated for founder store.`);
+        return;
+      }
+
       // Check if payment is required
       const requiresPayment = subscription.requiresPaymentForUpgrade?.(effectivePlanId, planId, subscription.trialUsed) ?? ownerPlanRequiresPayment(tenantInfo, planId);
 

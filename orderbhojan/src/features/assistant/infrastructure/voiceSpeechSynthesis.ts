@@ -6,14 +6,14 @@ export type SpeechSynthesisUtteranceLike = {
   rate: number;
   onend: ((ev?: unknown) => void) | null;
   onerror: ((ev?: unknown) => void) | null;
-  voice?: any;
+  voice?: SpeechSynthesisVoice | unknown;
 };
 
 export type SpeechSynthesisLike = {
   speaking: boolean;
   cancel: () => void;
   speak: (utterance: SpeechSynthesisUtteranceLike) => void;
-  getVoices?: () => any[];
+  getVoices?: () => Array<SpeechSynthesisVoice | unknown>;
 };
 
 export type SpeechSynthesisFactory = () => SpeechSynthesisLike | null;
@@ -90,8 +90,7 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
           }
           synth.speak(native);
         };
-
-        let voices = synth.getVoices();
+        const voices = synth.getVoices();
         if (voices.length > 0) {
           trySpeak(voices);
         } else {
@@ -100,13 +99,15 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
           const onVoicesChanged = () => {
             if (fired) return;
             fired = true;
-            synth.removeEventListener('voiceschanged', onVoicesChanged);
             trySpeak(synth.getVoices());
           };
-          synth.addEventListener('voiceschanged', onVoicesChanged);
+          window.speechSynthesis.onvoiceschanged = onVoicesChanged;
           setTimeout(() => {
-            if (!fired) onVoicesChanged();
-          }, 1000);
+            if (!fired) {
+              fired = true;
+              trySpeak(synth.getVoices());
+            }
+          }, 600);
         }
       },
     };
@@ -134,7 +135,7 @@ let sharedAudioContext: AudioContext | null = null;
 export function unlockAudioContext(): void {
   if (typeof window === 'undefined') return;
   if (!sharedAudioContext) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (AudioContextClass) {
       sharedAudioContext = new AudioContextClass();
     }
@@ -170,7 +171,7 @@ async function speakCloudTts(text: string, lang?: string, signal?: AbortSignal):
   const arrayBuffer = await response.arrayBuffer();
 
   if (!sharedAudioContext) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext) : null);
     if (!AudioContextClass) {
       throw new Error('AudioContext not supported on this device');
     }
@@ -265,7 +266,7 @@ export async function speakVoiceConfirmation(params: {
        try {
          await speakCloudTts(text, params.lang, params.signal);
          return;
-       } catch (e) {
+       } catch {
          // ignore
        }
     }
@@ -307,9 +308,9 @@ export async function speakVoiceConfirmation(params: {
     // 2. Try primary language match (e.g. te)
     // 3. Try to find any "Google" voice for that language if available
     const voice = 
-      voices.find(v => v.lang.toLowerCase() === targetLang.toLowerCase()) || 
-      voices.find(v => v.lang.toLowerCase().startsWith(primaryLang)) ||
-      voices.find(v => v.name.toLowerCase().includes('google') && v.lang.toLowerCase().startsWith(primaryLang));
+      voices.find(v => (v as SpeechSynthesisVoice).lang?.toLowerCase() === targetLang.toLowerCase()) || 
+      voices.find(v => (v as SpeechSynthesisVoice).lang?.toLowerCase().startsWith(primaryLang)) ||
+      voices.find(v => (v as SpeechSynthesisVoice).name?.toLowerCase().includes('google') && (v as SpeechSynthesisVoice).lang?.toLowerCase().startsWith(primaryLang));
     if (voice) {
       utterance.voice = voice;
     } else {
@@ -320,7 +321,7 @@ export async function speakVoiceConfirmation(params: {
         try {
           await speakCloudTts(text, params.lang, params.signal);
           return;
-        } catch (e) {
+        } catch {
           // ignore, will try native as absolute last resort
         }
       }

@@ -149,7 +149,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
 
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
-              to="/onboard"
+              to="/owner/register"
               className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
             >
               Start Free Today
@@ -339,7 +339,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
-                to="/onboard"
+                to="/owner/register"
                 className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
               >
                 Start Free with BhojanOS

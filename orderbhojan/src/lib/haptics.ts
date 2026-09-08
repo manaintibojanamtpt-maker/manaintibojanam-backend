@@ -1,7 +1,41 @@
+import { isNativePlatform } from '@/lib/nativePlatform';
+
 type HapticFeedbackType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
-/** Safely triggers haptic feedback on supported mobile browsers (no Capacitor). */
+/** Safely triggers tactile haptic feedback on native Android/iOS and mobile web. */
 export function triggerHaptic(type: HapticFeedbackType = 'light'): void {
+  if (isNativePlatform()) {
+    import('@capacitor/haptics').then(({ Haptics, ImpactStyle, NotificationType }) => {
+      try {
+        switch (type) {
+          case 'light':
+            void Haptics.impact({ style: ImpactStyle.Light });
+            break;
+          case 'medium':
+            void Haptics.impact({ style: ImpactStyle.Medium });
+            break;
+          case 'heavy':
+            void Haptics.impact({ style: ImpactStyle.Heavy });
+            break;
+          case 'success':
+            void Haptics.notification({ type: NotificationType.Success });
+            break;
+          case 'warning':
+            void Haptics.notification({ type: NotificationType.Warning });
+            break;
+          case 'error':
+            void Haptics.notification({ type: NotificationType.Error });
+            break;
+          default:
+            void Haptics.impact({ style: ImpactStyle.Light });
+        }
+      } catch {
+        // Ignore native haptics errors
+      }
+    }).catch(() => {});
+    return;
+  }
+
   if (typeof window === 'undefined' || !window.navigator?.vibrate) {
     return;
   }

@@ -9,8 +9,10 @@ import { useDiscoveryFilterStore } from '@/features/discovery/store/discoveryFil
 import {
 
 } from '@/features/experience/data/food-photo-manifest';
+import type { HomeCategory } from '@/hooks/useHomeCategories';
 import { useCategoryStore } from '@/features/experience/store/categoryStore';
 import type { FoodCategoryId } from '@/features/experience/domain/experience.types';
+import { triggerHaptic } from '@/lib/haptics';
 
 export interface OrderBhojanHomeCategoriesProps {
   readonly compact?: boolean;
@@ -37,12 +39,13 @@ export function OrderBhojanHomeCategories({ compact = false }: OrderBhojanHomeCa
         role="list"
         aria-label="Browse cuisines"
       >
-        {categories.map((cat: any) => {
+        {categories.map((cat: HomeCategory) => {
           const selected = discoveryEnabled
             ? isHomeCategoryDiscoveryFilterActive(cat.id, cuisines)
             : selectedId === cat.id;
 
           const handleSelect = () => {
+            triggerHaptic('light');
             if (discoveryEnabled) {
               setFilters({
                 cuisines: toggleHomeCategoryDiscoveryFilter(cat.id, cuisines),

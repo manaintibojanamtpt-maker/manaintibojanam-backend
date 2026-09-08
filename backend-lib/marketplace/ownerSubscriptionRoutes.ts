@@ -29,6 +29,14 @@ type OwnerAccessFn = (
 type RazorpayDeps = {
   razorpay: {
     orders: { create: (options: Record<string, unknown>) => Promise<{ id: string; amount: number; currency: string }> };
+    plans?: {
+      fetch: (planId: string) => Promise<any>;
+      create: (options: Record<string, unknown>) => Promise<any>;
+    };
+    customers?: {
+      fetch: (customerId: string) => Promise<any>;
+      create: (options: Record<string, unknown>) => Promise<{ id: string }>;
+    };
     subscriptions?: {
       create: (options: Record<string, unknown>) => Promise<{ id: string; status: string; plan_id: string; customer_id?: string; start_at?: number; total_count?: number }>;
       fetch: (subscriptionId: string) => Promise<any>;
@@ -44,6 +52,48 @@ const OWNER_SAAS_PLAN_PRICES: Record<PaidPlanId, number> = {
   pro: 2999,
   enterprise: 4999,
 };
+
+/**
+ * Founder tenants (master/demo stores) get full access without payment gating.
+ * Mirrors src/config/founder.ts — duplicated here because backend-lib cannot import from src/.
+ */
+const FOUNDER_TENANT_IDS = new Set(['mana-inti', 'manaintibojanam']);
+const FOUNDER_OWNER_EMAILS = new Set(['manaintibojanamtpt@gmail.com', 'bhojanos26@gmail.com']);
+
+function isFounderTenantAccess(
+  tenantData: Record<string, unknown>,
+  ownerEmail?: string | null,
+): boolean {
+  const tenantId = String(tenantData.id ?? '').trim().toLowerCase();
+  const tenantSlug = String(tenantData.slug ?? '').trim().toLowerCase();
+  const email = (ownerEmail ?? '').trim().toLowerCase();
+  return (
+    FOUNDER_TENANT_IDS.has(tenantId) ||
+    FOUNDER_TENANT_IDS.has(tenantSlug) ||
+    FOUNDER_OWNER_EMAILS.has(email)
+  );
+}
+
+function buildFounderSubscriptionPatch(planId: PaidPlanId) {
+  const now = new Date().toISOString();
+  return {
+    status: 'active',
+    storeStatus: 'active',
+    subscription: {
+      planId,
+      status: 'active',
+      trialUsed: true,
+      paidActivatedAt: now,
+      currentPeriodStart: now,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      founderOverride: true,
+      founderOverrideAction: 'grantPlan',
+      founderOverrideBy: 'founder-bypass',
+      founderOverrideAt: now,
+    },
+  };
+}
 
 function buildPaidSubscriptionPatch(planId: PaidPlanId, payment?: { orderId: string; paymentId: string }) {
   const now = new Date().toISOString();
@@ -134,6 +184,13 @@ export function registerOwnerSubscriptionRoutes(
 
       const patch: Record<string, unknown> = { updatedAt: fieldValue.serverTimestamp() };
 
+      // Founder bypass — full access, no payment gating
+      if (planId !== 'starter' && isFounderTenantAccess({ ...tenant, id: resolvedTenantId }, req.user.email)) {
+        Object.assign(patch, buildFounderSubscriptionPatch(planId as PaidPlanId));
+        await db.collection('tenants').doc(resolvedTenantId).set(patch, { merge: true });
+        return res.json({ success: true, tenantId: resolvedTenantId, planId, founderBypass: true });
+      }
+
       // Enterprise always requires payment/contact
       if (planId === 'enterprise') {
         return res.status(402).json({
@@ -213,6 +270,22 @@ export function registerOwnerSubscriptionRoutes(
       const amount = OWNER_SAAS_PLAN_PRICES[planId as PaidPlanId];
       if (!amount) {
         return res.status(400).json({ success: false, error: 'Plan price not configured' });
+      }
+
+      // Founder bypass — no Razorpay checkout needed; activate immediately
+      if (isFounderTenantAccess({ ...tenant, id: resolvedTenantId }, req.user.email)) {
+        const founderPatch: Record<string, unknown> = {
+          ...buildFounderSubscriptionPatch(planId as PaidPlanId),
+          updatedAt: fieldValue.serverTimestamp(),
+        };
+        await db.collection('tenants').doc(resolvedTenantId).set(founderPatch, { merge: true });
+        return res.json({
+          success: true,
+          founderBypass: true,
+          planId,
+          tenantId: resolvedTenantId,
+          message: 'Founder store activated without payment.',
+        });
       }
 
       if (!razorpayDeps?.isRazorpayConfigured || !razorpayDeps.razorpay) {
@@ -323,13 +396,17 @@ export function registerOwnerSubscriptionRoutes(
 
       // Return both order and subscription fields so client knows the checkout type
       // Use order as fallback subscription when subscription creation failed
-      subscription.id = order.id;
-      subscription.amount = order.amount;
-      subscription.currency = order.currency;
+      const fallbackSubscription = {
+        id: order.id,
+        status: 'created',
+        plan_id: '',
+        amount: order.amount,
+        currency: order.currency,
+      };
 
       return res.json({
         success: true,
-        subscription,
+        subscription: fallbackSubscription,
         key: razorpayDeps.razorpayKeyId,
         planId,
       });

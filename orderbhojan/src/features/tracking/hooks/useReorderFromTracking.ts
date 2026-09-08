@@ -6,6 +6,7 @@ import { useRestaurantContextStore } from '@/features/restaurant/store/restauran
 import { resolveRestaurantCoords } from '@/features/restaurant/engine/restaurantExperienceLayer';
 import { useActiveLocation } from '@/features/location';
 import { notifyToast } from '@/shared/providers/BdsToastProvider';
+import { triggerHaptic } from '@/lib/haptics';
 import type { OrderTrackingResponse } from '@/types/marketplace';
 
 export function useReorderFromTracking() {
@@ -14,6 +15,7 @@ export function useReorderFromTracking() {
   const [busy, setBusy] = useState(false);
 
   const reorder = async (payload: NonNullable<OrderTrackingResponse['reorder']>) => {
+    triggerHaptic('light');
     setBusy(true);
     try {
       const coords = resolveRestaurantCoords(activeLocation) ?? { lat: 0, lng: 0 };

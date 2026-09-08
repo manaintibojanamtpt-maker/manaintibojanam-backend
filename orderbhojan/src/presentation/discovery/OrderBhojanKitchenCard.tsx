@@ -17,6 +17,7 @@ import { restaurantKeys } from '@/features/restaurant/hooks/restaurantQueryKeys'
 import { loadFoodMenu } from '@/features/food/engine/foodExperienceLayer';
 import { foodKeys } from '@/features/food/hooks/foodQueryKeys';
 import { getMarketplaceQueryBehavior } from '@/config/marketplaceQueryPolicy';
+import { triggerHaptic } from '@/lib/haptics';
 
 export interface OrderBhojanKitchenCardProps {
   readonly restaurant: RestaurantPublic;
@@ -142,6 +143,7 @@ export function OrderBhojanKitchenCard({
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        triggerHaptic('light');
         toggle(restaurant.restaurantId);
       }}
     >

@@ -59,21 +59,23 @@ export function restaurantMatchesDiscoveryCuisineFilter(
 }
 
 export function isHomeCategoryDiscoveryFilterActive(
-  chipId: HomeCategoryChip['id'],
+  chipId: string,
   cuisines: readonly string[] | undefined,
 ): boolean {
   const active = cuisines ?? [];
   if (active.length === 0) return false;
-  const primary = normalizeCuisine(HOME_CATEGORY_DISCOVERY_CUISINES[chipId]);
+  const primaryLabel = HOME_CATEGORY_DISCOVERY_CUISINES[chipId as HomeCategoryChip['id']] ?? chipId;
+  const primary = normalizeCuisine(primaryLabel);
   return active.some((cuisine) => normalizeCuisine(cuisine) === primary);
 }
 
 export function toggleHomeCategoryDiscoveryFilter(
-  chipId: HomeCategoryChip['id'],
+  chipId: string,
   cuisines: readonly string[] | undefined,
 ): readonly string[] | undefined {
   if (isHomeCategoryDiscoveryFilterActive(chipId, cuisines)) return undefined;
-  return [HOME_CATEGORY_DISCOVERY_CUISINES[chipId]];
+  const primaryLabel = HOME_CATEGORY_DISCOVERY_CUISINES[chipId as HomeCategoryChip['id']] ?? chipId;
+  return [primaryLabel];
 }
 
 /** Search query routed when a browse chip is tapped (matches owner menu dish naming). */

@@ -104,10 +104,18 @@ export function buildDeliveryTimeSlots(options: {
   const prepMs = prepMinutes * 60 * 1000;
 
   const todayOpen = parseStoreTimeOnDate(openTime, now, timeZone);
-  const todayClose = parseStoreTimeOnDate(closeTime, now, timeZone);
+  const isMidnightClose = closeTime === '00:00' || closeTime === '24:00';
+  const isOvernight = isMidnightClose || closeTime <= openTime;
+
+  const todayClose = isOvernight
+    ? parseStoreTimeOnDate(isMidnightClose ? '00:00' : closeTime, addCalendarDaysInZone(now, 1, timeZone), timeZone)
+    : parseStoreTimeOnDate(closeTime, now, timeZone);
+
   const tomorrowBase = addCalendarDaysInZone(now, 1, timeZone);
   const tomorrowOpen = parseStoreTimeOnDate(openTime, tomorrowBase, timeZone);
-  const tomorrowClose = parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
+  const tomorrowClose = isOvernight
+    ? parseStoreTimeOnDate(isMidnightClose ? '00:00' : closeTime, addCalendarDaysInZone(tomorrowBase, 1, timeZone), timeZone)
+    : parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
 
   const todaySlots: string[] = [];
   const tomorrowSlots: string[] = [];

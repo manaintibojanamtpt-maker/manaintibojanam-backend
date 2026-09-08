@@ -4,6 +4,7 @@ import { ensureRazorpayLoaded } from '../utils/loadRazorpay';
 import type { PaidPlanId } from '../config/pricing';
 import { getPlanById } from '../config/pricing';
 import { warmOwnerApi } from './ownerProvisioning';
+import { hasFounderTenantEntitlements } from '../config/founder';
 
 function resolveApiBase(): string {
   if (
@@ -46,6 +47,22 @@ export async function runOwnerSubscriptionPayment(params: {
   const plan = getPlanById(params.planId);
   if (!plan || plan.price <= 0) {
     throw new Error('Invalid plan for payment.');
+  }
+
+  // Founder store gets full access — activate server-side without Razorpay.
+  if (hasFounderTenantEntitlements(auth.currentUser?.email, params.tenantId)) {
+    const headers = await ownerAuthHeaders();
+    const apiBase = resolveApiBase();
+    const res = await fetchWithTimeout(`${apiBase}/api/owner/subscription/checkout`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ tenantId: params.tenantId, planId: params.planId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data?.error || 'Founder activation failed');
+    }
+    return;
   }
 
   const apiBase = resolveApiBase();

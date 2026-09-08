@@ -49,7 +49,7 @@
       ]
     },
     {
-      "source": "/index.html",
+      "source": "/",
       "headers": [
         {
           "key": "Cache-Control",
@@ -58,7 +58,7 @@
       ]
     },
     {
-      "source": "/app.html",
+      "source": "/app",
       "headers": [
         {
           "key": "Cache-Control",
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "source": "/marketing.html",
+      "source": "/marketing",
       "headers": [
         {
           "key": "Cache-Control",
@@ -183,11 +183,11 @@
     },
     {
       "source": "/(onboard|pricing|about|platform|security|contact|blog|features|integrations|restaurant-online-ordering|direct-ordering-platform|restaurant-management-system|restaurant-pos|restaurant-billing-software|qr-code-ordering-system|whatsapp-food-ordering-system|restaurant-website-builder|digital-menu-for-restaurants|delivery-management-software|cloud-kitchen-software|qsr-pos-software|cafe-pos-billing-software|solutions|bhojanos-vs-zomato-swiggy|petpooja-alternative|dotpe-alternative|privacy|terms|refund-policy)",
-      "destination": "/index.html"
+      "destination": "/marketing"
     },
     {
       "source": "/(owner.*|admin.*|super-admin.*|k/.*|account|addresses|orders.*|order/.*|checkout|subscription|login|menu)",
-      "destination": "/app.html"
+      "destination": "/app"
     }
   ]
 }

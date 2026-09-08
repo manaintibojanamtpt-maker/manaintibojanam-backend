@@ -44,7 +44,7 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <a
-        href="https://www.orderbhojan.com"
+        href="https://orderbhojan.web.app"
         target="_blank"
         rel="noopener noreferrer"
         className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
@@ -169,7 +169,7 @@ export function FoodDiscoverySection() {
               Order on <span className="text-[#FF7A00]">OrderBhojan</span>
             </h3>
             <a
-              href="https://www.orderbhojan.com"
+              href="https://orderbhojan.web.app"
               target="_blank"
               rel="noopener noreferrer"
               className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"

@@ -211,7 +211,7 @@ const BlogPage: React.FC = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              to="/onboard"
+              to="/owner/register"
               className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-colors"
             >
               Start Free Today

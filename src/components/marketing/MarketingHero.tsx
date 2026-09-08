@@ -143,14 +143,14 @@ export function MarketingHero() {
 
           <div className="mt-7 flex flex-wrap items-center gap-4">
             <Link
-              to="/onboard"
+              to="/owner/register"
               className="group inline-flex items-center gap-2.5 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_36px_rgba(255,122,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Start Your Restaurant
               <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
             </Link>
             <a
-              href="https://www.orderbhojan.com"
+              href="https://orderbhojan.web.app"
               target="_blank"
               rel="noopener noreferrer"
               className="cine-glass inline-flex items-center gap-2 rounded-full px-8 py-4 text-sm font-bold uppercase tracking-wide text-white transition-all duration-300 hover:border-[#FF7A00]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"

@@ -69,10 +69,18 @@ export function buildDeliveryTimeSlots(options: {
   const prepMs = prepMinutes * 60 * 1000;
 
   const todayOpen = parseStoreTimeOnDate(openTime, now, timeZone);
-  const todayClose = parseStoreTimeOnDate(closeTime, now, timeZone);
+  const isMidnightClose = closeTime === '00:00' || closeTime === '24:00';
+  const isOvernight = isMidnightClose || closeTime <= openTime;
+
+  const todayClose = isOvernight
+    ? parseStoreTimeOnDate(isMidnightClose ? '00:00' : closeTime, addCalendarDaysInZone(now, 1, timeZone), timeZone)
+    : parseStoreTimeOnDate(closeTime, now, timeZone);
+
   const tomorrowBase = addCalendarDaysInZone(now, 1, timeZone);
   const tomorrowOpen = parseStoreTimeOnDate(openTime, tomorrowBase, timeZone);
-  const tomorrowClose = parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
+  const tomorrowClose = isOvernight
+    ? parseStoreTimeOnDate(isMidnightClose ? '00:00' : closeTime, addCalendarDaysInZone(tomorrowBase, 1, timeZone), timeZone)
+    : parseStoreTimeOnDate(closeTime, tomorrowBase, timeZone);
 
   const todaySlots: string[] = [];
   const tomorrowSlots: string[] = [];
@@ -128,7 +136,11 @@ export function isAsapSlot(slot: string): boolean {
   return slot === ASAP_SLOT || slot === 'ASAP';
 }
 
-export function getScheduledForTimestamp(slot: string, now: Date = new Date()): string | null {
+export function getScheduledForTimestamp(
+  slot: string,
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_STORE_TIMEZONE,
+): string | null {
   if (isAsapSlot(slot)) return null;
 
   const parts = slot.split(', ');
@@ -138,22 +150,19 @@ export function getScheduledForTimestamp(slot: string, now: Date = new Date()): 
   const timeRange = parts[1];
   const startTimeStr = timeRange.split(' - ')[0];
 
-  const scheduled = new Date(now);
-  if (dayStr === 'Tomorrow') {
-    scheduled.setDate(scheduled.getDate() + 1);
-  }
+  const targetDate = dayStr === 'Tomorrow' ? addCalendarDaysInZone(now, 1, timeZone) : now;
 
   const timeMatch = startTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (timeMatch) {
-    let hour = parseInt(timeMatch[1], 10);
-    const minute = parseInt(timeMatch[2], 10);
-    const ampm = timeMatch[3].toUpperCase();
-    if (ampm === 'PM' && hour < 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-    scheduled.setHours(hour, minute, 0, 0);
-  }
+  if (!timeMatch) return now.toISOString();
 
-  return scheduled.toISOString();
+  let hour = parseInt(timeMatch[1], 10);
+  const minute = parseInt(timeMatch[2], 10);
+  const ampm = timeMatch[3].toUpperCase();
+  if (ampm === 'PM' && hour < 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+
+  const timeHHmm = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  return parseStoreTimeOnDate(timeHHmm, targetDate, timeZone).toISOString();
 }
 
 export function validateMarketplaceSchedule(
@@ -168,6 +177,7 @@ export function validateMarketplaceSchedule(
 ): { deliveryType: 'asap' | 'scheduled'; scheduledFor: string | null; deliveryTimeSlot: string } {
   const deliveryType =
     String(request.deliveryType || '').toLowerCase() === 'scheduled' ? 'scheduled' : 'asap';
+  const timeZone = storeTiming.timezone || DEFAULT_STORE_TIMEZONE;
 
   const slotOptions = {
     storeTiming,
@@ -210,7 +220,19 @@ export function validateMarketplaceSchedule(
     );
   }
 
-  const availableSlots = buildDeliveryTimeSlots(slotOptions).filter((slot) => !isAsapSlot(slot));
+  let availableSlots = buildDeliveryTimeSlots(slotOptions).filter((slot) => !isAsapSlot(slot));
+
+  if (availableSlots.length === 0) {
+    availableSlots = buildDeliveryTimeSlots({
+      ...slotOptions,
+      storeTiming: {
+        ...storeTiming,
+        isStoreOpen: true,
+        openTime: storeTiming.openTime || DEFAULT_OPEN,
+        closeTime: storeTiming.closeTime || DEFAULT_CLOSE,
+      },
+    }).filter((slot) => !isAsapSlot(slot));
+  }
 
   if (availableSlots.length === 0) {
     throw Object.assign(new Error('No delivery slots are available for scheduling.'), {
@@ -218,13 +240,15 @@ export function validateMarketplaceSchedule(
     });
   }
 
-  const slotLabel = request.deliveryTimeSlot?.trim();
-  const matchedByLabel = slotLabel ? availableSlots.find((slot) => slot === slotLabel) : undefined;
+  const slotLabel = request.deliveryTimeSlot?.trim().toLowerCase();
+  const matchedByLabel = slotLabel
+    ? availableSlots.find((slot) => slot.toLowerCase() === slotLabel)
+    : undefined;
 
   let matchedSlot = matchedByLabel;
   if (!matchedSlot) {
     matchedSlot = availableSlots.find((slot) => {
-      const slotTs = getScheduledForTimestamp(slot, now);
+      const slotTs = getScheduledForTimestamp(slot, now, timeZone);
       if (!slotTs) return false;
       return Math.abs(new Date(slotTs).getTime() - scheduledDate.getTime()) < 60_000;
     });
@@ -237,7 +261,7 @@ export function validateMarketplaceSchedule(
     );
   }
 
-  const normalizedScheduledFor = getScheduledForTimestamp(matchedSlot, now);
+  const normalizedScheduledFor = getScheduledForTimestamp(matchedSlot, now, timeZone);
   if (!normalizedScheduledFor) {
     throw Object.assign(new Error('Unable to resolve scheduled delivery time.'), { statusCode: 400 });
   }

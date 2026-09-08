@@ -18,6 +18,7 @@ import { hasActiveDeliveryLocation, hasReadyDeliveryLocation, needsFlatConfirmat
 import { useAuth } from '@/shared/providers/AuthProvider';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import { markPerf } from '@/lib/perfMarks';
+import { triggerHaptic } from '@/lib/haptics';
 import { ContextualRecommendations } from './ContextualRecommendations';
 
 const DELIVERY_LOCATION_GATE_MESSAGE =
@@ -88,6 +89,7 @@ export function OrderBhojanCartExperience() {
   }, [itemCount, reset]);
 
   const handleCheckout = () => {
+    triggerHaptic('medium');
     if (!hasDeliveryLocation) {
       openSelector();
       return;

@@ -134,15 +134,90 @@ export function isKitchenClosedForOrdering(scheduling: CheckoutSchedulingContext
   return !scheduling.isStoreOpen && scheduling.deliverySlots.every((slot) => !isAsapSlot(slot));
 }
 
+export interface EnsureScheduledDeliverySlotsOptions {
+  readonly allowFallback?: boolean;
+  readonly storeTiming?: {
+    openTime?: string;
+    closeTime?: string;
+  };
+  readonly now?: Date;
+  readonly prepMinutes?: number;
+}
+
+export function generateFallbackDeliverySlots(options?: {
+  openTime?: string;
+  closeTime?: string;
+  now?: Date;
+  slotDurationMinutes?: number;
+  prepMinutes?: number;
+}): string[] {
+  const {
+    openTime = '09:00',
+    closeTime = '22:00',
+    now = new Date(),
+    slotDurationMinutes = 30,
+    prepMinutes = 20,
+  } = options ?? {};
+
+  const ist = getISTDateParts(now);
+  const nowMinuteOfDay = ist.hour * 60 + ist.minute;
+  const earliestMinuteOfDay = nowMinuteOfDay + prepMinutes;
+
+  const [openHour, openMin] = (openTime || '09:00').split(':').map(Number);
+  const rawCloseParts = (closeTime || '22:00').split(':').map(Number);
+  // If closeTime is 00:00 or 24:00, treat as midnight (24:00 = 1440 minutes)
+  const closeHour =
+    (rawCloseParts[0] === 0 && rawCloseParts[1] === 0) || rawCloseParts[0] === 24
+      ? 24
+      : rawCloseParts[0] || 22;
+  const closeMin = rawCloseParts[1] || 0;
+
+  const openMinuteOfDay = openHour * 60 + (openMin || 0);
+  const closeMinuteOfDay = closeHour * 60 + closeMin;
+
+  const formatSlotTime = (totalMinutes: number): string => {
+    const mins = totalMinutes % (24 * 60);
+    let h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const ampm = totalMinutes >= 12 * 60 && totalMinutes < 24 * 60 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const todaySlots: string[] = [];
+  const tomorrowSlots: string[] = [];
+
+  // Generate today slots if current time is within service hours
+  let currentStart = openMinuteOfDay;
+  while (currentStart + slotDurationMinutes <= closeMinuteOfDay) {
+    const currentEnd = currentStart + slotDurationMinutes;
+    if (currentStart >= earliestMinuteOfDay) {
+      todaySlots.push(`Today, ${formatSlotTime(currentStart)} - ${formatSlotTime(currentEnd)}`);
+    }
+    currentStart += slotDurationMinutes;
+  }
+
+  // Generate tomorrow slots
+  let tomStart = openMinuteOfDay;
+  while (tomStart + slotDurationMinutes <= closeMinuteOfDay) {
+    const tomEnd = tomStart + slotDurationMinutes;
+    tomorrowSlots.push(`Tomorrow, ${formatSlotTime(tomStart)} - ${formatSlotTime(tomEnd)}`);
+    tomStart += slotDurationMinutes;
+  }
+
+  return [...todaySlots, ...tomorrowSlots];
+}
+
 /**
  * Normalizes delivery slots from the backend.
  * - If backend provides real scheduled slots, returns them as-is (authoritative).
- * - If backend returns only ASAP or empty array, does NOT fabricate scheduled slots.
- *   Returns only what the backend actually provides.
- * - This prevents customers from selecting slots the kitchen doesn't actually support.
+ * - If backend returns only ASAP or empty array and allowFallback is enabled,
+ *   generates fallback scheduled slots so schedule delivery is never missing.
  */
 export function ensureScheduledDeliverySlots(
   slots: readonly string[] = [],
+  options?: EnsureScheduledDeliverySlotsOptions,
 ): string[] {
   const existing = Array.isArray(slots) ? [...slots] : [];
   const hasScheduled = existing.some((s) => !isAsapSlot(s));
@@ -150,7 +225,17 @@ export function ensureScheduledDeliverySlots(
   // If backend provides real scheduled slots, return them (authoritative)
   if (hasScheduled) return existing;
 
-  // Backend returned only ASAP or empty - do NOT fabricate scheduled slots.
-  // Return exactly what backend provided.
+  // When allowFallback is enabled and backend provided no scheduled slots,
+  // generate standard delivery slots so the customer can schedule an order.
+  if (options?.allowFallback) {
+    const fallback = generateFallbackDeliverySlots({
+      openTime: options.storeTiming?.openTime,
+      closeTime: options.storeTiming?.closeTime,
+      now: options.now,
+      prepMinutes: options.prepMinutes,
+    });
+    return existing.length > 0 ? [...existing, ...fallback] : [ASAP_SLOT, ...fallback];
+  }
+
   return existing;
 }

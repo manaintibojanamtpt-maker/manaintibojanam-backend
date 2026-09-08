@@ -155,7 +155,7 @@ export function OrderBhojanAuthShellPage() {
     );
   }
 
-  let onboardingBody: ReactNode = <OrderBhojanPhoneOtpForm />;
+  const onboardingBody: ReactNode = <OrderBhojanPhoneOtpForm />;
 
   return (
     <OrderBhojanOnboardingView

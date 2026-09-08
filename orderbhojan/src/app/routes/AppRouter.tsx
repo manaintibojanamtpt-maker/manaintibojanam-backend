@@ -91,10 +91,15 @@ export function AppRouter() {
 
   useEffect(() => {
     if (isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+        StatusBar.setBackgroundColor({ color: '#050403' }).catch(() => {});
+      }).catch(() => {});
+
       import('@capacitor/splash-screen').then(({ SplashScreen }) => {
         // App shell is mounted and React has painted the initial DOM.
         SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
-      });
+      }).catch(() => {});
     }
   }, []);
 

@@ -8,14 +8,22 @@
   "targets": {
     "bhojanos-prod": {
       "hosting": {
-        "manaintibojanam": ["manaintibojanam"],
-        "owner": ["bhojanos-owner"],
-        "admin": ["bhojanos-admin"]
+        "manaintibojanam": [
+          "manaintibojanam"
+        ],
+        "owner": [
+          "bhojanos-owner"
+        ],
+        "admin": [
+          "bhojanos-admin"
+        ]
       }
     },
     "orderbhojan": {
       "hosting": {
-        "orderbhojan": ["orderbhojan"]
+        "orderbhojan": [
+          "orderbhojan"
+        ]
       }
     }
   },

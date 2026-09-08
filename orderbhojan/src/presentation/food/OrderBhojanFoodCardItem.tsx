@@ -8,6 +8,8 @@ import { mapFoodToMenuItemCardView } from './mapFoodToMenuItemCardView';
 
 
 
+import { triggerHaptic } from '@/lib/haptics';
+
 const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
   foodName,
   hasOptions,
@@ -43,6 +45,7 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
           if (!targetLineId) return;
           const line = lines.find((l) => l.lineId === targetLineId);
           if (line) {
+            triggerHaptic('light');
             setQuantity(targetLineId, line.quantity - 1);
           }
         }}
@@ -56,6 +59,7 @@ const FoodCartQuantitySelector = memo(function FoodCartQuantitySelector({
         aria-label={`Increase quantity of ${foodName}`}
         onClick={(e) => {
           e.stopPropagation();
+          triggerHaptic('light');
           if (hasOptions) onCustomize(food);
           else addItem({ foodId, name: foodName, price: unitPrice }, 1);
         }}
@@ -94,6 +98,7 @@ export const OrderBhojanFoodCardItem = memo(function OrderBhojanFoodCardItem({
 
   const handleAdd = () => {
     if (!food.availability) return;
+    triggerHaptic('light');
     if (hasOptions) {
       onCustomize(food);
       return;

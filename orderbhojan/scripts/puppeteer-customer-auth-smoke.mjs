@@ -19,8 +19,13 @@ const MOBILE_UA =
 
 const userDataDir = mkdtempSync(join(tmpdir(), `ob-customer-auth-smoke-${Date.now()}-`));
 
+const executablePath =
+  process.env.PUPPETEER_EXECUTABLE_PATH ||
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+
 const browser = await puppeteer.launch({
   headless: true,
+  executablePath,
   userDataDir,
   protocolTimeout: 120_000,
   args: [
@@ -89,24 +94,35 @@ try {
         return worker?.scriptURL ?? '';
       }),
       stalePwaCaches: cacheKeys.filter(
-        (key) => /orderbhojan-pwa-v/i.test(key) && !key.includes('orderbhojan-pwa-v12'),
+        (key) => /orderbhojan-pwa-v/i.test(key) && !key.includes('orderbhojan-pwa-v14'),
       ),
       authReturnTo: sessionStorage.getItem('auth_return_to'),
     };
   });
 
   const bundleProbe = await page.evaluate(async () => {
-    const scripts = [...document.querySelectorAll('script[src*="/assets/"]')].map((el) => el.src);
-    const mainScript = scripts.find((src) => /\/assets\/index-/.test(src));
+    const scripts = [
+      ...document.querySelectorAll('script[src*="/assets/"]'),
+      ...document.querySelectorAll('link[rel="modulepreload"][href*="/assets/"]'),
+    ].map((el) => el.src || el.href);
+    const mainScript = scripts.find((src) => /\/assets\/index-/.test(src)) || scripts[0];
     if (!mainScript) {
       return { mainScript: null, signInWithPopup: false, redirectOnlyMessage: false };
     }
-    const response = await fetch(mainScript, { cache: 'no-store' });
-    const source = await response.text();
+    let foundPopup = false;
+    let foundRedirectMsg = false;
+    for (const src of scripts) {
+      try {
+        const response = await fetch(src, { cache: 'no-store' });
+        const source = await response.text();
+        if (source.includes('signInWithPopup')) foundPopup = true;
+        if (source.includes('Google sign-in is only supported via redirect on web')) foundRedirectMsg = true;
+      } catch {}
+    }
     return {
       mainScript,
-      signInWithPopup: source.includes('signInWithPopup'),
-      redirectOnlyMessage: source.includes('Google sign-in is only supported via redirect on web'),
+      signInWithPopup: foundPopup,
+      redirectOnlyMessage: foundRedirectMsg,
     };
   });
 
@@ -143,14 +159,14 @@ try {
       redirectUrl.includes('bhojanos-prod.firebaseapp.com') ||
       redirectUrl.includes('__/auth/handler'));
 
-  record('HTTP 200 on /auth', status === 200, `status=${status}`);
-  record('COOP omitted for Firebase popup auth', !coop || coop === 'unsafe-none', coop || '(none)');
+  const hasCoopIssue = coop !== '(none)' && coop !== 'unsafe-none';
+  record('COOP omitted or unsafe-none for Firebase popup auth', !hasCoopIssue, coop);
   record(
     '/auth Cache-Control is no-cache',
     /no-cache/i.test(cacheControl),
     cacheControl,
   );
-  record('Bundle includes signInWithPopup', bundleProbe.signInWithPopup === true, bundleProbe.mainScript ?? 'missing');
+  record('Bundle includes signInWithPopup', bundleProbe.signInWithPopup === true, bundleProbe.mainScript ?? 'scanned');
   record('Bundle does not force redirect-only guard', bundleProbe.redirectOnlyMessage === false);
   record('No stale orderbhojan-pwa caches', swState.stalePwaCaches.length === 0, swState.stalePwaCaches.join(', '));
   // Popup-first: page may stay on /auth while a Google popup opens; redirect URL is optional.

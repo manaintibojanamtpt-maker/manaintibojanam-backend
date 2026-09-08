@@ -215,16 +215,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
+    // Clear biometric creds best-effort — never block the actual sign-out.
     try {
       await BiometricService.clearCredentials();
+    } catch {
+      /* ignore */
+    }
+    try {
       await signOut(auth);
     } catch (e) {
-      console.error(e);
+      console.error('Firebase signOut failed:', e);
     }
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('cart');
-    sessionStorage.removeItem('bhojanos_owner_tenant_ids');
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('cart');
+      sessionStorage.removeItem('bhojanos_owner_tenant_ids');
+      sessionStorage.removeItem('bhojanos_owner_signed_in');
+    } catch {
+      /* ignore */
+    }
     setUserProfile(null);
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     const loginPath = path.startsWith('/super-admin')
@@ -234,7 +244,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : path.startsWith('/owner')
           ? '/owner/login'
           : '/login';
-    window.location.href = EnvironmentConfig.getBaseUrl() + loginPath;
+    try {
+      // Cache-bust to dodge stale SW-precached navigation responses.
+      window.location.replace(`${EnvironmentConfig.getBaseUrl()}${loginPath}?signedout=${Date.now()}`);
+    } catch {
+      window.location.href = EnvironmentConfig.getBaseUrl() + loginPath;
+    }
   };
 
   const login = (user: any) => {

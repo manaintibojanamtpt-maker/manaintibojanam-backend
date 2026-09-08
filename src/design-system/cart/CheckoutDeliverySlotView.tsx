@@ -11,7 +11,9 @@ export interface CheckoutDeliverySlotViewProps {
  * Aligns with backend DeliveryTime: asap vs scheduled slots from kitchen.
  */
 export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliverySlotViewProps) {
-  const asapSlot = slot.slots.find((entry) => slot.isAsap(entry));
+  const asapSlot =
+    slot.slots.find((entry) => slot.isAsap(entry)) ??
+    (slot.selectedIsAsap ? slot.selectedSlot : undefined);
   const scheduledSlots = slot.slots.filter((entry) => !slot.isAsap(entry));
   const todaySlots = scheduledSlots.filter((entry) => entry.includes('Today'));
   const tomorrowSlots = scheduledSlots.filter((entry) => entry.includes('Tomorrow'));
@@ -76,7 +78,7 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
           <AlertCircle className="h-4 w-4 text-amber-400" aria-hidden />
         </div>
         <p className="text-xs text-white/65">
-          No delivery slots available from this kitchen right now.
+          {slot.closedMessage || 'No delivery slots available from this kitchen right now.'}
         </p>
       </section>
     );
@@ -149,44 +151,48 @@ export function CheckoutDeliverySlotView({ slot, onSelectSlot }: CheckoutDeliver
         </p>
       ) : null}
 
-      <div
-        className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
-        role="tablist"
-        aria-label="Delivery mode"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'now'}
-          disabled={!asapSlot}
-          onClick={selectDeliverNow}
-          className={`rounded-lg px-3 py-2.5 text-xs font-bold touch-manipulation transition-colors ${
-            mode === 'now'
-              ? 'bg-[#e85d04]/25 text-[#fff8f0] border border-[#f4a261]/60'
-              : 'text-white/60 hover:text-white/85 border border-transparent'
-          } ${!asapSlot ? 'opacity-40 cursor-not-allowed' : ''}`}
+      {scheduledSlots.length > 0 ? (
+        <div
+          className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+          role="tablist"
+          aria-label="Delivery mode"
         >
-          Deliver now
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'schedule'}
-          disabled={scheduledSlots.length === 0}
-          onClick={selectScheduleMode}
-          className={`rounded-lg px-3 py-2.5 text-xs font-bold touch-manipulation transition-colors ${
-            mode === 'schedule'
-              ? 'bg-[#e85d04]/25 text-[#fff8f0] border border-[#f4a261]/60'
-              : 'text-white/60 hover:text-white/85 border border-transparent'
-          } ${scheduledSlots.length === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-        >
-          Schedule
-        </button>
-      </div>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'now'}
+            disabled={!asapSlot}
+            onClick={selectDeliverNow}
+            className={`rounded-lg px-3 py-2.5 text-xs font-bold touch-manipulation transition-colors ${
+              mode === 'now'
+                ? 'bg-[#e85d04]/25 text-[#fff8f0] border border-[#f4a261]/60'
+                : 'text-white/60 hover:text-white/85 border border-transparent'
+            } ${!asapSlot ? 'opacity-40 cursor-not-allowed' : ''}`}
+          >
+            Deliver now
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'schedule'}
+            disabled={scheduledSlots.length === 0}
+            onClick={selectScheduleMode}
+            className={`rounded-lg px-3 py-2.5 text-xs font-bold touch-manipulation transition-colors ${
+              mode === 'schedule'
+                ? 'bg-[#e85d04]/25 text-[#fff8f0] border border-[#f4a261]/60'
+                : 'text-white/60 hover:text-white/85 border border-transparent'
+            } ${scheduledSlots.length === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+          >
+            Schedule
+          </button>
+        </div>
+      ) : null}
 
       {mode === 'now' ? (
         <p className="text-xs text-white/65">
-          We will send this as soon as the kitchen is ready — no future slot selected.
+          {scheduledSlots.length > 0
+            ? 'We will send this as soon as the kitchen is ready — no future slot selected.'
+            : 'Standard Delivery (ASAP) — We will send this as soon as the kitchen is ready.'}
         </p>
       ) : (
         <div className="space-y-4">

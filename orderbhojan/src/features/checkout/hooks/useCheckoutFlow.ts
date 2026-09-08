@@ -36,6 +36,7 @@ import {
   ASAP_SLOT,
   isAsapSlot,
   ensureScheduledDeliverySlots,
+  generateFallbackDeliverySlots,
 } from '../domain/deliveryTimeSlots';
 import { tryResolveSlotFromScheduleAction } from '../domain/resolveVoiceScheduleSlot';
 import { useCheckoutScheduleStore } from '../store/checkoutScheduleStore';
@@ -547,9 +548,19 @@ export function useCheckoutFlow(): CheckoutFlowState {
     // Use the same slot normalization as the UI (ensureScheduledDeliverySlots)
     // This ensures the hook and UI are consistent about what slots exist.
     const normalizedSlots = ensureScheduledDeliverySlots(scheduling.deliverySlots);
+    const resolvedSlots = normalizedSlots.some((s) => !isAsapSlot(s))
+      ? normalizedSlots
+      : [
+          ...normalizedSlots,
+          ...generateFallbackDeliverySlots({
+            openTime: scheduling.storeTiming?.openTime,
+            closeTime: scheduling.storeTiming?.closeTime,
+            prepMinutes: scheduling.prepMinutes,
+          }),
+        ];
     // Check for authoritative scheduled slots (excluding ASAP)
-    const hasScheduledSlots = normalizedSlots.some((s) => !isAsapSlot(s));
-    const hasAnySlots = normalizedSlots.length > 0;
+    const hasScheduledSlots = resolvedSlots.some((s) => !isAsapSlot(s));
+    const hasAnySlots = resolvedSlots.length > 0;
 
     // Voice set_delivery_schedule wins when present — strict match onto kitchen slots.
     if (voiceSchedulePref) {
@@ -572,20 +583,28 @@ export function useCheckoutFlow(): CheckoutFlowState {
       return;
     }
 
-    // Determine status based on AUTHORITATIVE scheduled slots (matching UI state machine)
-    // ASAP is NOT a scheduled slot - it's a separate delivery mode
-    if (!hasScheduledSlots) {
+    // Determine status based on store state and delivery options:
+    // If the kitchen is closed and has no future scheduled slots, delivery is unavailable
+    if (!scheduling.isStoreOpen && !hasScheduledSlots) {
       setDeliverySlotStatus('unavailable');
       setDeliveryTimeSlot(ASAP_SLOT);
       return;
     }
 
-    // We have authoritative scheduled slots available
+    // Kitchen is open (ASAP delivery available) or has future scheduled slots
     setDeliverySlotStatus('available');
 
-    // Validate and set delivery slot against normalized slots
+    // Validate and set delivery slot against resolved slots
     setDeliveryTimeSlot((current) => {
+      if (!scheduling.isStoreOpen && isAsapSlot(current) && hasScheduledSlots) {
+        const firstScheduled = resolvedSlots.find((s) => !isAsapSlot(s));
+        if (firstScheduled) return firstScheduled;
+      }
       if (hasAnySlots) {
+        if (resolvedSlots.includes(current)) {
+          validateSelectedSlot(current, normalizedSlots, isAsapSlot);
+          return current;
+        }
         return validateSelectedSlot(current, normalizedSlots, isAsapSlot);
       }
       return ASAP_SLOT;

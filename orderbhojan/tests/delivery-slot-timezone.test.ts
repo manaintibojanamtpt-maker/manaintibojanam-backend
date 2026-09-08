@@ -5,7 +5,6 @@ import {
   getScheduledForTimestamp,
   ensureScheduledDeliverySlots,
   isAsapSlot,
-  ASAP_SLOT,
 } from '../src/features/checkout/domain/deliveryTimeSlots';
 
 describe('delivery slot timezone handling and slot behavior', () => {

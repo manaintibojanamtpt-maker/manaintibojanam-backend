@@ -73,6 +73,19 @@ describe('deliveryTimeSlots', () => {
     assert.match(firstTomorrow!, /Tomorrow, 9:00 am - 9:30 am/i);
   });
 
+  it('generates tomorrow slots when store closeTime is midnight 00:00', () => {
+    const now = new Date('2026-07-17T23:30:00+05:30');
+    const slots = buildDeliveryTimeSlots({
+      storeTiming: openTiming({ openTime: '09:00', closeTime: '00:00' }),
+      now,
+      prepMinutes: 20,
+    });
+    const tomorrowSlots = slots.filter((slot) => slot.startsWith('Tomorrow,'));
+    assert.ok(tomorrowSlots.length > 0);
+    assert.match(tomorrowSlots[0]!, /Tomorrow, 9:00 am - 9:30 am/i);
+    assert.match(tomorrowSlots[tomorrowSlots.length - 1]!, /Tomorrow, 11:30 pm - 12:00 am/i);
+  });
+
   it('omits ASAP when kitchen is manually closed but keeps tomorrow slots', () => {
     const now = new Date('2026-07-17T12:00:00+05:30');
     const slots = buildDeliveryTimeSlots({
@@ -164,6 +177,25 @@ describe('deliveryTimeSlots', () => {
     assert.equal(result.deliveryType, 'scheduled');
     assert.equal(result.deliveryTimeSlot, scheduledSlot);
     assert.ok(result.scheduledFor);
+  });
+
+  it('accepts scheduled order when server clock is in UTC and store is midnight close', () => {
+    // 00:43 AM IST on Sept 8 = 19:13 UTC on Sept 7
+    const now = new Date('2026-09-07T19:13:00.000Z');
+    const storeTiming = openTiming({ openTime: '09:00', closeTime: '00:00' });
+    const result = validateMarketplaceSchedule(
+      {
+        deliveryType: 'scheduled',
+        deliveryTimeSlot: 'Today, 9:00 AM - 9:30 AM',
+        scheduledFor: '2026-09-08T03:30:00.000Z',
+      },
+      storeTiming,
+      20,
+      now,
+    );
+    assert.equal(result.deliveryType, 'scheduled');
+    assert.match(result.deliveryTimeSlot, /Today, 9:00 am - 9:30 am/i);
+    assert.equal(result.scheduledFor, '2026-09-08T03:30:00.000Z');
   });
 
   it('exports ASAP slot label constant', () => {

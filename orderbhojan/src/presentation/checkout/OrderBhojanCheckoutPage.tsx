@@ -32,11 +32,14 @@ import {
 import { markPerf } from '@/lib/perfMarks';
 import { resolveCheckoutAuthGate } from '@/features/auth/domain/checkoutAuth';
 import {
+  ASAP_SLOT,
   ensureScheduledDeliverySlots,
   formatDeliverySlotLabel,
+  generateFallbackDeliverySlots,
   isAsapSlot,
 } from '@/features/checkout/domain/deliveryTimeSlots';
 import { PRICING_TRUST } from '@/features/experience/domain/pricingTrustCopy';
+import { triggerHaptic } from '@/lib/haptics';
 
 const DELIVERY_ADDRESS_PLACEHOLDER = 'Set your delivery area';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -145,7 +148,7 @@ export function OrderBhojanCheckoutPage() {
   const checkoutActionsDisabled =
     isPlacing ||
     (Boolean(error) && !/reach|network|fetch|timeout|connection/i.test(error ?? '')) ||
-    (!quoteReady && estimatedSubtotal <= 0);
+    !quoteReady;
   const supportsCod = paymentMethods.includes('cod');
   const supportsRazorpay = paymentMethods.includes('razorpay');
   const supportsUpi = paymentMethods.includes('upi');
@@ -257,6 +260,7 @@ export function OrderBhojanCheckoutPage() {
   const handlePlaceCod = async () => {
     if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
+    triggerHaptic('medium');
     setLastPaymentMethod('cod');
     await placeCodOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
@@ -264,6 +268,7 @@ export function OrderBhojanCheckoutPage() {
   const handlePlaceRazorpay = async () => {
     if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
+    triggerHaptic('medium');
     setLastPaymentMethod('razorpay');
     await placeRazorpayOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
@@ -271,6 +276,7 @@ export function OrderBhojanCheckoutPage() {
   const handlePlaceUpi = async () => {
     if (isPlacing) return;
     if (!validatePhone() || !validateEmail()) return;
+    triggerHaptic('medium');
     setLastPaymentMethod('upi');
     await placeUpiOrder(phone.trim(), sessionUser?.displayName ?? undefined, notificationEmail);
   };
@@ -279,20 +285,15 @@ export function OrderBhojanCheckoutPage() {
     if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
       return 'Retry checkout';
     }
-    const estimatedTotal = estimatedSubtotal + (localDeliveryFeeEstimate ?? 0);
-    const total = quote ? `₹${quote.grandTotal}` : `₹${estimatedTotal}`;
-    if (!quoteReady && estimatedSubtotal > 0) {
-      if (selectedPaymentMethod === 'upi') return `Pay ~${total} via UPI`;
-      if (selectedPaymentMethod === 'razorpay') return `Pay ~${total} online`;
-      if (selectedPaymentMethod === 'cod') return `Place order · ~${total}`;
-      return `Continue · ~${total}`;
+    if (!quoteReady || !quote) {
+      return 'Updating bill…';
     }
-    if (!quoteReady) return 'Updating total…';
+    const total = `₹${quote.grandTotal}`;
     if (selectedPaymentMethod === 'upi') return `Pay ${total} via UPI`;
     if (selectedPaymentMethod === 'razorpay') return `Pay ${total} online`;
     if (selectedPaymentMethod === 'cod') return `Place order · ${total}`;
     return `Continue · ${total}`;
-  }, [error, estimatedSubtotal, localDeliveryFeeEstimate, quote, quoteReady, selectedPaymentMethod]);
+  }, [error, quote, quoteReady, selectedPaymentMethod]);
 
   const handlePlaceOrder = () => {
     if (error && /reach|network|fetch|timeout|connection/i.test(error)) {
@@ -474,7 +475,7 @@ export function OrderBhojanCheckoutPage() {
             ? 'Updating taxes and delivery for your address…'
             : undefined,
       }
-    : estimatedSubtotal > 0
+    : !isPreparing && estimatedSubtotal > 0
       ? {
           lines: [
             { label: 'Subtotal (estimated)', amountLabel: `₹${estimatedSubtotal}` },
@@ -493,7 +494,7 @@ export function OrderBhojanCheckoutPage() {
           ],
           totalLabel: `₹${estimatedSubtotal + (localDeliveryFeeEstimate ?? 0)}`,
           deliveryPendingNote:
-            isPreparing || discountQuoteLoading
+            discountQuoteLoading
               ? 'Updating taxes and delivery…'
               : localDeliveryFeeEstimate != null
               ? 'Estimated — final total updates when ready'
@@ -507,7 +508,7 @@ export function OrderBhojanCheckoutPage() {
   ];
   const errorMessage = checkoutMessages.length > 0 ? checkoutMessages.join(' ') : undefined;
 
-  const showQuoteSkeleton = isPreparing && !billView;
+  const showQuoteSkeleton = isPreparing && !quote;
 
   const handleApplyPromo = () => {
     const normalized = promoInput.trim().toUpperCase();
@@ -555,8 +556,23 @@ export function OrderBhojanCheckoutPage() {
 
   const deliverySlotView = scheduling
     ? {
-        // Pass authoritative slots only (no fabrication). UI renders based on deliverySlotStatus.
-        slots: ensureScheduledDeliverySlots(scheduling.deliverySlots),
+        slots: (() => {
+          const raw = ensureScheduledDeliverySlots(scheduling.deliverySlots);
+          const withScheduled = raw.some((s) => !isAsapSlot(s))
+            ? raw
+            : [
+                ...raw,
+                ...generateFallbackDeliverySlots({
+                  openTime: scheduling.storeTiming?.openTime,
+                  closeTime: scheduling.storeTiming?.closeTime,
+                  prepMinutes: scheduling.prepMinutes,
+                }),
+              ];
+          if (scheduling.isStoreOpen && !withScheduled.some((s) => isAsapSlot(s))) {
+            return [ASAP_SLOT, ...withScheduled];
+          }
+          return withScheduled;
+        })(),
         selectedSlot: deliveryTimeSlot,
         selectedIsAsap: isAsapSlot(deliveryTimeSlot),
         selectedSummary: isAsapSlot(deliveryTimeSlot)
@@ -636,7 +652,7 @@ export function OrderBhojanCheckoutPage() {
       placeOrderBusy={placingMethod != null}
       onPlaceOrder={handlePlaceOrder}
       actionsDisabled={
-        Boolean(error && /reach|network|fetch|timeout|connection/i.test(error))
+        error && /reach|network|fetch|timeout|connection/i.test(error)
           ? false
           : checkoutActionsDisabled
       }

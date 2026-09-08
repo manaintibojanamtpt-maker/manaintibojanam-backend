@@ -380,7 +380,7 @@ import('tsx/esm').then(async () => {
             <a href="/restaurant-pos" class="seo-nav-link">POS</a>
             <a href="/pricing" class="seo-nav-link">Pricing</a>
             <a href="/solutions" class="seo-nav-link">Solutions</a>
-            <a href="/onboard" class="seo-btn-cta" style="padding:0.5rem 1.25rem;font-size:0.8rem;">Get Started</a>
+            <a href="/owner/register" class="seo-btn-cta" style="padding:0.5rem 1.25rem;font-size:0.8rem;">Get Started</a>
           </nav>
         </header>
 
@@ -392,7 +392,7 @@ import('tsx/esm').then(async () => {
             <p class="seo-subhead">${data.subhead}</p>
             <p class="seo-desc">${data.description}</p>
             <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-              <a href="/onboard" class="seo-btn-cta">Start Free with BhojanOS →</a>
+              <a href="/owner/register" class="seo-btn-cta">Start Free with BhojanOS →</a>
               <a href="/pricing" class="seo-btn-outline">View Transparent Pricing</a>
             </div>
           </section>
@@ -442,7 +442,7 @@ import('tsx/esm').then(async () => {
                 0% marketplace commission. Direct online ordering. 100% customer data ownership.
               </p>
               <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;">
-                <a href="/onboard" class="seo-btn-cta">Start Free Today</a>
+                <a href="/owner/register" class="seo-btn-cta">Start Free Today</a>
                 <a href="/pricing" class="seo-btn-outline">Explore Pricing Plans</a>
               </div>
             </div>
@@ -491,7 +491,7 @@ import('tsx/esm').then(async () => {
                 <li><a href="/bhojanos-vs-zomato-swiggy">BhojanOS vs Zomato &amp; Swiggy</a></li>
                 <li><a href="/petpooja-alternative">BhojanOS vs Petpooja</a></li>
                 <li><a href="/dotpe-alternative">BhojanOS vs DotPe</a></li>
-                <li><a href="https://www.orderbhojan.com" target="_blank" rel="noopener noreferrer">OrderBhojan Marketplace ↗</a></li>
+                <li><a href="https://orderbhojan.web.app" target="_blank" rel="noopener noreferrer">OrderBhojan Marketplace ↗</a></li>
               </ul>
             </div>
             <div>
