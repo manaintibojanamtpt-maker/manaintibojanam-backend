@@ -36,6 +36,7 @@ interface ConsumerAssistantSheetProps {
   readonly speaking?: boolean;
   readonly voiceTurnPhase?: 'idle' | 'listening' | 'thinking' | 'speaking';
   readonly voiceAgentActive?: boolean;
+  readonly interimTranscript?: string | null;
   readonly error: string | null;
   readonly pendingValidation: CartPlanValidationResult | null;
   readonly voiceEnabled?: boolean;
@@ -65,14 +66,15 @@ export function ConsumerAssistantSheet({
   speaking = false,
   voiceTurnPhase = 'idle',
   voiceAgentActive = false,
+  interimTranscript = null,
   error,
   pendingValidation,
   voiceEnabled = false,
   voiceAvailable = false,
   personalizationEnabled = false,
   assistMode = 'ordering',
-  voiceLanguage = 'en-IN',
-  onVoiceLanguageChange,
+  voiceLanguage: _voiceLanguage = 'en-IN',
+  onVoiceLanguageChange: _onVoiceLanguageChange,
   onClose,
   onSend,
   onVoiceStart,
@@ -167,26 +169,19 @@ export function ConsumerAssistantSheet({
               <h2 id="consumer-assistant-title" className="text-sm font-semibold text-[#fffaf3] whitespace-nowrap">
                 {isPostOrder ? 'Support Assistant' : 'OrderBhojan Voice Agent'}
               </h2>
-              {voiceEnabled && onVoiceLanguageChange && (
-                <select
-                  value={voiceLanguage}
-                  onChange={(e) => onVoiceLanguageChange(e.target.value)}
-                  className="bg-[#1a1412] border border-white/20 text-xs text-[#fffaf3] rounded px-1.5 py-0.5 outline-none focus:border-[#FF7A00] shrink-0"
-                >
-                  <option value="en-IN">English</option>
-                  <option value="te-IN">Telugu</option>
-                  <option value="hi-IN">Hindi</option>
-                  <option value="ta-IN">Tamil</option>
-                  <option value="mr-IN">Marathi</option>
-                </select>
+              {voiceEnabled && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Auto-detecting (తెలుగు / हिंदी / English)
+                </span>
               )}
             </div>
             <p className="text-xs text-[#d0c4b5] truncate mt-0.5">
               {isPostOrder
                 ? 'Order support & help'
                 : voiceAgentActive
-                  ? 'Live voice · say a dish, then “confirm” to add'
-                  : 'Voice + chat · cart still needs your confirm'}
+                  ? 'Realtime voice active · Speak in Telugu, Hindi, or English'
+                  : 'Realtime Voice · Speak in Telugu, Hindi, or English'}
             </p>
           </div>
         </div>
@@ -299,6 +294,13 @@ export function ConsumerAssistantSheet({
           </div>
         ))}
 
+        {interimTranscript && (
+          <div className="flex items-center gap-2 rounded-xl border border-[#FF7A00]/30 bg-[#FF7A00]/10 px-3 py-2 text-xs text-[#ffe0c2] animate-pulse">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-[#FF7A00]" />
+            <span className="italic truncate">“{interimTranscript}”</span>
+          </div>
+        )}
+
         {(statusPhase || applying) && (
           <div className="text-xs text-[#d0c4b5]" aria-live="polite">
             {statusPhase === 'listening'
@@ -308,7 +310,7 @@ export function ConsumerAssistantSheet({
               : statusPhase === 'speaking'
                 ? 'Speaking…'
                 : statusPhase === 'thinking'
-                  ? 'Thinking…'
+                  ? 'Processing realtime turn…'
                   : statusPhase === 'validating' || validating
                     ? 'Validating cart plan…'
                     : applying
@@ -332,9 +334,15 @@ export function ConsumerAssistantSheet({
           className="border-t border-white/10 px-4 py-3"
           data-testid="consumer-assistant-cart-confirm"
         >
-          <p className="text-xs text-[#d0c4b5] mb-2">
-            Status: <span className="text-[#fffaf3]">{pendingValidation.status}</span>
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {pendingValidation.status === 'validated' && pendingValidation.valid
+                ? 'Order plan ready for confirmation'
+                : 'Validating cart plan…'}
+            </span>
+            <span className="text-[10px] text-[#d0c4b5]">Say “confirm” or tap below</span>
+          </div>
           {(() => {
             const lines = summarizePendingCartPlan(pendingValidation);
             if (lines.length === 0) return null;

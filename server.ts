@@ -86,7 +86,10 @@ import {
 } from "./backend-lib/observability/IncidentRepository.js";
 import { registerOpsRoutes } from "./backend-lib/observability/registerOpsRoutes.js";
 import { registerAiGatewayRoutes } from "./backend-lib/ai/registerAiGatewayRoutes.js";
+import { createServer } from "http";
 import { createVoiceTtsRoute } from "./backend-lib/api/routes/voiceTtsRoute.js";
+import { createVoiceSttRoute } from "./backend-lib/voice/voiceSttRoute.js";
+import { setupVoiceGatewayWebSocket } from "./backend-lib/voice/voiceGatewayWs.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
@@ -675,6 +678,21 @@ const verifyFirebaseToken = async (req: any, res: any, next: any) => {
     logger.error({ message: "Firebase token verification failed", error: error.message });
     return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
   }
+};
+
+const optionalFirebaseToken = async (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await getAdminAuth(appAdmin).verifyIdToken(token);
+    req.user = decodedToken;
+  } catch (error: any) {
+    logger.warn({ message: "Optional Firebase token verification failed; proceeding as guest", error: error?.message });
+  }
+  next();
 };
 
 const requireAdmin = async (req: any, res: any, next: any) => {
@@ -3571,7 +3589,8 @@ registerAiGatewayRoutes(app, {
   isQuotaError: isFirestoreQuotaError,
 });
 
-app.use('/api/voice', verifyFirebaseToken, createVoiceTtsRoute());
+app.use('/api/voice', optionalFirebaseToken, createVoiceTtsRoute());
+app.use('/api/voice', optionalFirebaseToken, createVoiceSttRoute());
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
@@ -5612,7 +5631,19 @@ async function startServer() {
   // ================= START =================
   // await verifyConnection(); // Ensure connection is verified before starting
 
-  app.listen(PORT, "0.0.0.0", async () => {
+  const httpServer = createServer(app);
+  setupVoiceGatewayWebSocket(httpServer, {
+    verifyToken: async (token: string) => {
+      try {
+        const decoded = await getAdminAuth(appAdmin).verifyIdToken(token);
+        return { uid: decoded.uid };
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  httpServer.listen(PORT, "0.0.0.0", async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(
       `📦 Build ${process.env.RENDER_GIT_COMMIT?.slice(0, 7) || "local"} | tier=${isFreeTierPlatform() ? "free" : "standard"} | project=${projectId}`

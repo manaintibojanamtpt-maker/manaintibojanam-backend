@@ -165,6 +165,7 @@ export function useAssistantConversation() {
   const [voiceTurnPhase, setVoiceTurnPhase] = useState<
     'idle' | 'listening' | 'thinking' | 'speaking'
   >('idle');
+  const [interimTranscript, setInterimTranscript] = useState<string | null>(null);
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
   
   const voiceAgentActiveRef = useRef(false);
@@ -882,6 +883,7 @@ const usePostOrderPath =
     voiceAgentActiveRef.current = false;
     setVoiceAgentActive(false);
     setVoiceTurnPhase('idle');
+    setInterimTranscript(null);
     voiceAbortRef.current?.abort();
     voiceAbortRef.current = null;
     forceStopSpeechCapture();
@@ -951,6 +953,11 @@ const usePostOrderPath =
           lang: voiceLanguage,
           agentMode,
           ac,
+          onInterim: (partial) => {
+            if (sheetOpenRef.current) {
+              setInterimTranscript(partial);
+            }
+          },
           isVoiceSessionLive: () =>
             sheetOpenRef.current &&
             !ac.signal.aborted &&
@@ -982,6 +989,8 @@ const usePostOrderPath =
             throw firstErr;
           }
         }
+
+        setInterimTranscript(null);
 
         if (!sheetOpenRef.current || (agentMode && !voiceAgentActiveRef.current)) {
           hardStopVoiceSession();
@@ -1026,7 +1035,15 @@ const usePostOrderPath =
           return 'error';
         }
         setVoiceTurnPhase('speaking');
-        await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current);
+        let replyLang = voiceLanguage;
+        if (/[\u0C00-\u0C7F]/.test(reply) || /[\u0C00-\u0C7F]/.test(corrected)) {
+          replyLang = 'te-IN';
+          setVoiceLanguage('te-IN');
+        } else if (/[\u0900-\u097F]/.test(reply) || /[\u0900-\u097F]/.test(corrected)) {
+          replyLang = 'hi-IN';
+          setVoiceLanguage('hi-IN');
+        }
+        await speakReply(reply, ac.signal, options?.forceSpeak === true || voiceAgentActiveRef.current, replyLang);
         // Let TTS / cloud audio fully release the mic before the next listen.
         await new Promise((r) => setTimeout(r, agentMode ? 400 : 280));
         if (pauseLiveVoiceAfterTurnRef.current) {
@@ -1390,6 +1407,7 @@ const usePostOrderPath =
     speaking,
     voiceTurnPhase,
     voiceAgentActive,
+    interimTranscript,
     error,
     pendingValidation,
     voiceEnabled,

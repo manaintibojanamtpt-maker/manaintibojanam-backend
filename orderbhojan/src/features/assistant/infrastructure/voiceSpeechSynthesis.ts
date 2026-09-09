@@ -21,7 +21,7 @@ export type UtteranceFactory = (text: string) => SpeechSynthesisUtteranceLike;
 
 import { Capacitor } from '@capacitor/core';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
-import { loadFeatureFlags, isFeatureEnabled } from '../../../featureFlags/flags';
+import { loadFeatureFlags } from '../../../featureFlags/flags';
 import { getAppConfig } from '@/config';
 import { getMarketplaceAuthTokenProvider } from '@/marketplace-api';
 import { trackEvent } from '@/telemetry';
@@ -235,16 +235,29 @@ export async function speakVoiceConfirmation(params: {
   }
 
   const flags = loadFeatureFlags();
-  const targetLang = params.lang ?? 'en-IN';
-  const primary = targetLang.split('-')[0].toLowerCase();
-  const preferCloudForLocale = primary !== 'en';
+  // Language auto-detection for natural Indian prosody & phonetics
+  let targetLang = params.lang ?? 'en-IN';
+  if (/[\u0C00-\u0C7F]/.test(text)) {
+    targetLang = 'te-IN';
+  } else if (/[\u0900-\u097F]/.test(text)) {
+    targetLang = 'hi-IN';
+  } else if (/[\u0B80-\u0BFF]/.test(text)) {
+    targetLang = 'ta-IN';
+  } else if (/[\u0C80-\u0CFF]/.test(text)) {
+    targetLang = 'kn-IN';
+  }
+
+  // High-fidelity Cloud TTS (Sarvam Bulbul v3) provides natural voice modulation and clarity.
+  // We prioritize Cloud TTS whenever running in the browser, falling back to local synthesis only on error or test mocks.
+  const isTestMock = Boolean(params.createSynthesis);
   const cloudTtsEnabled =
-    (isFeatureEnabled(flags, 'FF_OB_AI_CLOUD_TTS') || preferCloudForLocale) &&
-    typeof window !== 'undefined';
+    !isTestMock &&
+    typeof window !== 'undefined' &&
+    flags.FF_OB_AI_CLOUD_TTS !== false;
 
   if (cloudTtsEnabled) {
     try {
-      await speakCloudTts(text, params.lang, params.signal);
+      await speakCloudTts(text, targetLang, params.signal);
       return;
     } catch (err) {
       console.warn('[Voice TTS] Cloud fallback to native:', err);

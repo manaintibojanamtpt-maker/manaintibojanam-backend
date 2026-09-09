@@ -20,6 +20,8 @@ export const FEATURE_FLAG_KEYS = [
   'FF_OB_AI_VOICE_TTS',
   /** Phase 1: High quality cloud TTS replacing Web Speech API — OFF by default. */
   'FF_OB_AI_CLOUD_TTS',
+  /** Realtime streaming voice agent over WebSocket (/api/voice/stream) — OFF by default. */
+  'FF_OB_VOICE_STREAMING',
   /**
    * Prefer native Android STT bridge when available — OFF by default.
    * Falls back to Web Speech / WebView recognition when native bridge is missing.
@@ -73,6 +75,7 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_AI_VOICE: false,
   FF_OB_AI_VOICE_TTS: false,
   FF_OB_AI_CLOUD_TTS: false,
+  FF_OB_VOICE_STREAMING: false,
   FF_OB_AI_NATIVE_STT: false,
   FF_OB_AI_POST_ORDER: false,
   FF_OB_AI_PERSONALIZATION: false,

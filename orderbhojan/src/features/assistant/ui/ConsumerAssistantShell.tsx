@@ -26,6 +26,7 @@ export function ConsumerAssistantShell() {
           speaking={chat.speaking}
           voiceTurnPhase={chat.voiceTurnPhase}
           voiceAgentActive={chat.voiceAgentActive}
+          interimTranscript={chat.interimTranscript}
           error={chat.error}
           pendingValidation={chat.pendingValidation}
           voiceEnabled={chat.voiceEnabled}
