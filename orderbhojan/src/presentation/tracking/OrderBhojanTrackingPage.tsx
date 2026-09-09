@@ -46,9 +46,24 @@ export function OrderBhojanTrackingPage() {
 
   const etaLabel = useMemo(() => {
     const eta = trackingQuery.data?.etaMinutes;
-    if (!eta) return null;
-    return `${eta.min}–${eta.max} min`;
-  }, [trackingQuery.data?.etaMinutes]);
+    if (!eta) {
+      const rawStatus = trackingQuery.data?.status;
+      if (rawStatus && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(String(rawStatus).toUpperCase())) {
+        return '25–35 min';
+      }
+      return null;
+    }
+    const min = Number(eta.min);
+    const max = Number(eta.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0) {
+      const rawStatus = trackingQuery.data?.status;
+      if (rawStatus && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(String(rawStatus).toUpperCase())) {
+        return '25–35 min';
+      }
+      return null;
+    }
+    return `${Math.round(min)}–${Math.round(max)} min`;
+  }, [trackingQuery.data?.etaMinutes, trackingQuery.data?.status]);
 
   const tracking = trackingQuery.data;
 

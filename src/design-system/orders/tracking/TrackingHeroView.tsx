@@ -11,10 +11,19 @@ export function TrackingHeroView({ hero }: TrackingHeroViewProps) {
       <p className="text-2xl font-extrabold tracking-tight text-white">{hero.statusLabel}</p>
       {hero.kitchenName ? <p className="mt-1 text-lg font-bold text-white/80">{hero.kitchenName}</p> : null}
       <p className="mt-1 text-sm text-white/60">{hero.orderNumberLabel}</p>
-      {hero.etaLabel ? (
-        <p className="mt-3 inline-flex rounded-full bg-[#FF7A00]/15 px-4 py-2 text-sm font-bold text-[#FF7A00]">
-          ETA {hero.etaLabel}
-        </p>
+      {(hero.etaLabel || hero.prepBadgeLabel) ? (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {hero.etaLabel ? (
+            <p className="inline-flex rounded-full bg-[#FF7A00]/15 px-4 py-2 text-sm font-bold text-[#FF7A00]">
+              ETA {hero.etaLabel}
+            </p>
+          ) : null}
+          {hero.prepBadgeLabel ? (
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3.5 py-1.5 text-xs font-bold text-amber-300">
+              {hero.prepBadgeLabel}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {hero.showLive && hero.liveLabel ? (
         <div

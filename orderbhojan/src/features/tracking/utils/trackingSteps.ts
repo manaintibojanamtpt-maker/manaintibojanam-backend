@@ -5,8 +5,8 @@ export const TRACKING_STEPS = [
     label: 'Payment verification',
     message: 'Kitchen is verifying your UPI payment',
   },
-  { id: 'ACCEPTED', label: 'Restaurant accepted', message: 'Kitchen confirmed your order' },
-  { id: 'PREPARING', label: 'Preparing your meal', message: 'Chef is preparing your meal' },
+  { id: 'ACCEPTED', label: 'Restaurant accepted', message: 'Kitchen confirmed your order · 20 min prep standard' },
+  { id: 'PREPARING', label: 'Preparing your meal', message: 'Chef is preparing your fresh meal (~20 min prep)' },
   { id: 'OUT_FOR_DELIVERY', label: 'Out for delivery', message: 'Your order is on the way' },
   { id: 'DELIVERED', label: 'Delivered', message: 'Enjoy your meal' },
 ] as const;

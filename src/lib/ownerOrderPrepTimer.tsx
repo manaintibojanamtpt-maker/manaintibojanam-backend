@@ -62,14 +62,16 @@ export function OwnerOrderPrepTimer({ order }: { order: Record<string, unknown> 
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold ${
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold ${
         urgent
           ? 'bg-orange-500/15 text-orange-300 border border-orange-500/30 animate-pulse'
           : 'bg-purple-500/10 text-purple-200 border border-purple-500/20'
       }`}
     >
       <Clock className="w-3 h-3" />
-      Prep {formatPrepElapsed(elapsedSeconds)}
+      {urgent
+        ? `Prep ${formatPrepElapsed(elapsedSeconds)} (>20m target)`
+        : `Prep ${formatPrepElapsed(elapsedSeconds)} (20m target)`}
     </span>
   );
 }

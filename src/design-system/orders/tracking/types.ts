@@ -22,6 +22,7 @@ export interface TrackingHeroViewModel {
   readonly kitchenName?: string;
   readonly orderNumberLabel: string;
   readonly etaLabel?: string;
+  readonly prepBadgeLabel?: string;
   readonly liveLabel?: string;
   readonly liveActive: boolean;
   readonly showLive: boolean;

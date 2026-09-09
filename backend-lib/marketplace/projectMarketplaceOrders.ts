@@ -216,6 +216,52 @@ export function projectOrderSummary(orderId: string, data: OrderRecord, displayN
   };
 }
 
+function resolveOrderTrackingEtaMinutes(
+  data: OrderRecord,
+  isTerminal: boolean,
+  status: string,
+): { min: number; max: number } | undefined {
+  if (isTerminal) return undefined;
+
+  // 1. Check data.etaMinutes if already an object with valid numbers
+  if (data.etaMinutes && typeof data.etaMinutes === 'object' && !Array.isArray(data.etaMinutes)) {
+    const rawEta = data.etaMinutes as Record<string, unknown>;
+    const min = Number(rawEta.min);
+    const max = Number(rawEta.max);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max > 0) {
+      return { min: Math.min(min, max), max: Math.max(min, max) };
+    }
+  }
+
+  // 2. Check data.eta (could be a scalar number or object)
+  if (data.eta != null) {
+    if (typeof data.eta === 'object' && !Array.isArray(data.eta)) {
+      const rawEta = data.eta as Record<string, unknown>;
+      const min = Number(rawEta.min);
+      const max = Number(rawEta.max);
+      if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max > 0) {
+        return { min: Math.min(min, max), max: Math.max(min, max) };
+      }
+    } else {
+      const numericEta = Number(data.eta);
+      if (Number.isFinite(numericEta) && numericEta > 0) {
+        return {
+          min: Math.max(10, Math.round(numericEta - 5)),
+          max: Math.round(numericEta + 5),
+        };
+      }
+    }
+  }
+
+  // 3. Fallback based on operational status: 20-min kitchen prep + travel
+  const upperStatus = String(status || '').toUpperCase();
+  if (upperStatus === 'OUT_FOR_DELIVERY' || upperStatus === 'DISPATCHED') {
+    return { min: 10, max: 20 };
+  }
+  // Placed, Accepted, Preparing: 20 min kitchen prep + 5-15 min travel window
+  return { min: 25, max: 35 };
+}
+
 export function projectOrderTracking(
   orderId: string,
   data: OrderRecord,
@@ -274,11 +320,7 @@ export function projectOrderTracking(
     paymentStatus: String(data.paymentStatus ?? 'pending'),
     expiresAt,
     timeline,
-    etaMinutes: isTerminal
-      ? undefined
-      : data.eta
-        ? { min: Math.max(10, Number(data.eta) - 5), max: Number(data.eta) + 5 }
-        : undefined,
+    etaMinutes: resolveOrderTrackingEtaMinutes(data, isTerminal, status),
     restaurant: {
       displayName: restaurantName,
       slug: restaurantSlug ?? 'kitchen',

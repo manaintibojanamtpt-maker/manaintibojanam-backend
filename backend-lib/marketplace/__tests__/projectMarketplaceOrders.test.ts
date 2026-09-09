@@ -65,4 +65,43 @@ describe('projectMarketplaceOrders guest tracking', () => {
     const bad = await getMarketplaceTrackingForGuest(db, 'ord-guest', '1111111111');
     assert.equal(bad, null);
   });
+
+  it('projectOrderTracking resolves etaMinutes safely for object, null, and missing shapes', () => {
+    // 1. Explicit object etaMinutes
+    const withObjEta = projectOrderTracking('ord-eta-1', {
+      status: 'PLACED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      etaMinutes: { min: 20, max: 30 },
+    });
+    assert.deepEqual(withObjEta.etaMinutes, { min: 20, max: 30 });
+
+    // 2. Corrupt/null object eta ({ min: null, max: null }) - must fallback safely, never produce null/NaN
+    const withCorruptEta = projectOrderTracking('ord-eta-2', {
+      status: 'PLACED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      eta: { min: null, max: null },
+    });
+    assert.deepEqual(withCorruptEta.etaMinutes, { min: 25, max: 35 });
+
+    // 3. Active PREPARING order without explicit eta - defaults to 20-min prep window
+    const preparingOrder = projectOrderTracking('ord-eta-3', {
+      status: 'PREPARING',
+      createdAt: '2026-01-01T10:00:00.000Z',
+    });
+    assert.deepEqual(preparingOrder.etaMinutes, { min: 25, max: 35 });
+
+    // 4. Active OUT_FOR_DELIVERY order without explicit eta - defaults to travel window
+    const outForDeliveryOrder = projectOrderTracking('ord-eta-4', {
+      status: 'OUT_FOR_DELIVERY',
+      createdAt: '2026-01-01T10:00:00.000Z',
+    });
+    assert.deepEqual(outForDeliveryOrder.etaMinutes, { min: 10, max: 20 });
+
+    // 5. Terminal order - must be undefined
+    const deliveredOrder = projectOrderTracking('ord-eta-5', {
+      status: 'DELIVERED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+    });
+    assert.equal(deliveredOrder.etaMinutes, undefined);
+  });
 });

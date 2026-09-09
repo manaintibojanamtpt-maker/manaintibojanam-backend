@@ -83,12 +83,14 @@ export function mapTrackingHero(
 ): TrackingHeroViewModel {
   const phase = normalizeTrackingStatus(tracking.status);
   const isTerminal = phase === 'DELIVERED' || phase === 'CANCELLED';
+  const isPrepPhase = phase === 'ACCEPTED' || phase === 'PREPARING';
 
   return {
     statusLabel: trackingStepLabel(tracking.status),
     kitchenName: tracking.restaurant?.displayName,
     orderNumberLabel: `Order #${tracking.orderNumber}`,
     etaLabel: options.etaLabel && !isTerminal ? options.etaLabel : undefined,
+    prepBadgeLabel: isPrepPhase ? '🍳 Kitchen Prep · ~20 min' : undefined,
     liveLabel: options.liveActive ? 'Updating live…' : 'Live updates every 5s',
     liveActive: options.liveActive,
     showLive: !isTerminal,
