@@ -6,6 +6,7 @@
 
 import type { IStreamingTtsProvider, TtsRequest } from './types.js';
 import { VoiceProviderError } from './types.js';
+import { normalizeTtsModel } from '../voiceConfig.js';
 
 export interface SarvamStreamingTtsOptions {
   readonly apiKey: string;
@@ -29,10 +30,10 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
         statusCode: 401,
       });
     }
-    this.apiKey = options.apiKey.trim();
+    this.apiKey = options.apiKey.trim().replace(/^["']|["']$/g, '');
     this.baseUrl = (options.baseUrl || 'https://api.sarvam.ai').replace(/\/$/, '');
-    this.model = options.model || 'bulbul:v3';
-    this.defaultVoice = options.defaultVoice || 'aditya';
+    this.model = normalizeTtsModel(options.model);
+    this.defaultVoice = (options.defaultVoice || 'aditya').replace(/^["']|["']$/g, '').trim();
   }
 
   public async *generateSpeechStream(request: TtsRequest, signal?: AbortSignal): AsyncIterable<Buffer> {
@@ -65,17 +66,22 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       }
     }
 
-    const payload = {
+    const isBulbulV3OrV4 = this.model.startsWith('bulbul:v3') || this.model.startsWith('bulbul:v4');
+    const payload: Record<string, any> = {
+      text,
       inputs: [text],
+      language_code: languageCode,
       target_language_code: languageCode,
       speaker: speaker.toLowerCase(),
-      pitch: 0,
       pace: request.pace ?? 1.0,
-      loudness: 1.0,
       speech_sample_rate: 22050,
       enable_preprocessing: true,
       model: this.model,
     };
+    if (!isBulbulV3OrV4) {
+      payload.pitch = 0;
+      payload.loudness = 1.0;
+    }
 
     let response: Response;
     try {

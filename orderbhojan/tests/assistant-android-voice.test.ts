@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadFeatureFlags, isFeatureEnabled } from '../src/featureFlags/flags';
@@ -24,11 +24,14 @@ describe('assistant Phase 5 Android parity + voice hooks', () => {
   });
 
   it('allows microphone for self in hosting Permissions-Policy (fixes not-allowed)', () => {
-    const firebase = readFileSync(path.resolve(__dirname, '../../firebase.json'), 'utf8');
-    const preset = readFileSync(
-      path.resolve(__dirname, '../../scripts/firebase/spa-hosting-preset.json'),
-      'utf8',
-    );
+    const firebasePath = existsSync(path.resolve(__dirname, '../../firebase.json'))
+      ? path.resolve(__dirname, '../../firebase.json')
+      : path.resolve(__dirname, '../../manaintibojanam-backend/firebase.json');
+    const presetPath = existsSync(path.resolve(__dirname, '../../scripts/firebase/spa-hosting-preset.json'))
+      ? path.resolve(__dirname, '../../scripts/firebase/spa-hosting-preset.json')
+      : path.resolve(__dirname, '../../manaintibojanam-backend/scripts/firebase/spa-hosting-preset.json');
+    const firebase = readFileSync(firebasePath, 'utf8');
+    const preset = readFileSync(presetPath, 'utf8');
     assert.match(firebase, /microphone=\(self\)/);
     assert.doesNotMatch(firebase, /microphone=\(\)/);
     assert.match(preset, /microphone=\(self\)/);

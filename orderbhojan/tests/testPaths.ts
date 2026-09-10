@@ -44,3 +44,19 @@ export function readOrderBhojanFile(...segments: string[]): string {
 export function readStorefrontDesignSystemFile(...segments: string[]): string {
   return readFileSync(resolveStorefrontDesignSystemPath(...segments), 'utf8');
 }
+
+/** Resolve a file in the monorepo root (e.g. server.ts, firebase.json, firestore.rules). */
+export function resolveMonorepoPath(...segments: string[]): string {
+  return firstExistingPath(
+    [
+      resolve(orderbhojanRoot, '..', ...segments),
+      resolve(orderbhojanRoot, '../manaintibojanam-backend', ...segments),
+      resolve(orderbhojanRoot, ...segments),
+    ],
+    `Monorepo path ${segments.join('/')}`,
+  );
+}
+
+export function readMonorepoFile(...segments: string[]): string {
+  return readFileSync(resolveMonorepoPath(...segments), 'utf8');
+}

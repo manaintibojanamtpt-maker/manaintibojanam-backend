@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
@@ -43,7 +43,13 @@ describe('OrderBhojan connectivity probe', () => {
   });
 
   it('firebase hosting disables CDN cache on /auth OAuth return shell', () => {
-    const firebaseJson = readFileSync(join(root, '../firebase.json'), 'utf8');
+    const candidates = [
+      join(root, '../firebase.json'),
+      join(root, '../manaintibojanam-backend/firebase.json'),
+      join(root, 'firebase.json'),
+    ];
+    const firebaseJsonPath = candidates.find((p) => existsSync(p)) ?? candidates[0];
+    const firebaseJson = readFileSync(firebaseJsonPath, 'utf8');
     assert.match(firebaseJson, /"source": "\/auth"/);
     assert.match(firebaseJson, /"value": "no-cache, must-revalidate"/);
   });

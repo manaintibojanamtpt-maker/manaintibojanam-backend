@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Purpose: Sarvam AI Speech-to-Text (STT) implementation using Saaras v4.
  * Public API: SarvamSttProvider
  * Dependencies: ISttProvider, SttRequest, SttResult, VoiceProviderError
@@ -6,6 +6,7 @@
 
 import type { ISttProvider, SttRequest, SttResult } from './types.js';
 import { VoiceProviderError } from './types.js';
+import { normalizeSttModel } from '../voiceConfig.js';
 
 export interface SarvamSttOptions {
   readonly apiKey: string;
@@ -29,10 +30,10 @@ export class SarvamSttProvider implements ISttProvider {
         statusCode: 401,
       });
     }
-    this.apiKey = options.apiKey.trim();
+    this.apiKey = options.apiKey.trim().replace(/^["']|["']$/g, '');
     this.baseUrl = (options.baseUrl || 'https://api.sarvam.ai').replace(/\/$/, '');
-    this.model = options.model || 'saaras:v4';
-    this.defaultLanguage = options.defaultLanguage || 'unknown';
+    this.model = normalizeSttModel(options.model);
+    this.defaultLanguage = (options.defaultLanguage || 'unknown').replace(/^["']|["']$/g, '').trim();
   }
 
   public async transcribe(request: SttRequest, signal?: AbortSignal): Promise<SttResult> {

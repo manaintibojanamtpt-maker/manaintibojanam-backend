@@ -1,17 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { orderbhojanRoot } from './testPaths';
-
-const monorepoRoot = resolve(orderbhojanRoot, '..');
+import { readMonorepoFile } from './testPaths';
 
 describe('owner category admin wiring', () => {
   it('registers owner category routes and page entry points', () => {
-    const server = readFileSync(resolve(monorepoRoot, 'server.ts'), 'utf8');
-    const app = readFileSync(resolve(monorepoRoot, 'src/App.tsx'), 'utf8');
-    const menu = readFileSync(resolve(monorepoRoot, 'src/pages/owner/OwnerMenu.tsx'), 'utf8');
-    const rules = readFileSync(resolve(monorepoRoot, 'firestore.rules'), 'utf8');
+    const server = readMonorepoFile('server.ts');
+    const app = readMonorepoFile('src/App.tsx');
+    const menu = readMonorepoFile('src/pages/owner/OwnerMenu.tsx');
+    const rules = readMonorepoFile('firestore.rules');
 
     assert.match(server, /registerOwnerCategoryRoutes/);
     assert.match(app, /OwnerCategories/);

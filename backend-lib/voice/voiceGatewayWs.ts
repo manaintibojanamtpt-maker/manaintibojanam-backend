@@ -44,11 +44,13 @@ export function setupVoiceGatewayWebSocket(
         socket.handshake.auth?.token ||
         socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
 
-      if (!token && deps.verifyToken) {
-        return next(new Error('Authentication required'));
+      // Allow guest/unauthenticated users to use voice assistant
+      if (!token || token === 'guest') {
+        (socket as any).userId = 'guest';
+        return next();
       }
 
-      if (deps.verifyToken && token) {
+      if (deps.verifyToken) {
         const user = await deps.verifyToken(token);
         if (!user) {
           return next(new Error('Invalid authentication token'));

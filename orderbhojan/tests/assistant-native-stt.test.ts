@@ -20,7 +20,7 @@ describe('native Android STT + voice runtime', () => {
 
   it('registers Capacitor plugin OrderBhojanNativeStt in MainActivity', () => {
     const main = readFileSync(
-      path.resolve(__dirname, '../android/app/src/main/java/com/bhojanos/orderbhojan/MainActivity.java'),
+      path.resolve(__dirname, '../android/app/src/main/java/com/bhojanos/customer/MainActivity.java'),
       'utf8',
     );
     assert.match(main, /registerPlugin\(OrderBhojanNativeSttPlugin\.class\)/);
@@ -31,7 +31,7 @@ describe('native Android STT + voice runtime', () => {
     const plugin = readFileSync(
       path.resolve(
         __dirname,
-        '../android/app/src/main/java/com/bhojanos/orderbhojan/OrderBhojanNativeSttPlugin.java',
+        '../android/app/src/main/java/com/bhojanos/customer/OrderBhojanNativeSttPlugin.java',
       ),
       'utf8',
     );

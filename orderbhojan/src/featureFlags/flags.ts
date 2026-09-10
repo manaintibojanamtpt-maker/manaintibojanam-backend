@@ -116,6 +116,11 @@ export function loadFeatureFlags(): FeatureFlagMap {
     flags.FF_OB_PAYMENTS = true;
     flags.FF_LOCATION_ENABLED = true;
     flags.FF_LOCATION_GEOCODE_API = true;
+    if (readEnvFlag('FF_OB_AI_ASSISTANT') === undefined) flags.FF_OB_AI_ASSISTANT = true;
+    if (readEnvFlag('FF_OB_AI_VOICE') === undefined) flags.FF_OB_AI_VOICE = true;
+    if (readEnvFlag('FF_OB_AI_VOICE_TTS') === undefined) flags.FF_OB_AI_VOICE_TTS = true;
+    if (readEnvFlag('FF_OB_AI_CLOUD_TTS') === undefined) flags.FF_OB_AI_CLOUD_TTS = true;
+    if (readEnvFlag('FF_OB_VOICE_STREAMING') === undefined) flags.FF_OB_VOICE_STREAMING = true;
   }
   return flags;
 }

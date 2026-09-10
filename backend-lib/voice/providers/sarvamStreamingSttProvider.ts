@@ -12,6 +12,7 @@ import type {
   SttStreamChunk,
 } from './types.js';
 import { VoiceProviderError } from './types.js';
+import { normalizeStreamingSttModel } from '../voiceConfig.js';
 
 export interface SarvamStreamingSttOptions {
   readonly apiKey: string;
@@ -284,18 +285,18 @@ export class SarvamStreamingSttProvider implements IStreamingSttProvider {
         statusCode: 401,
       });
     }
-    this.apiKey = options.apiKey.trim();
+    this.apiKey = options.apiKey.trim().replace(/^["']|["']$/g, '');
     this.baseUrl = (options.baseUrl || 'https://api.sarvam.ai').replace(/\/$/, '');
-    this.model = options.model || 'saaras:v4-realtime';
-    this.defaultLanguage = options.defaultLanguage || 'unknown';
+    this.model = normalizeStreamingSttModel(options.model);
+    this.defaultLanguage = (options.defaultLanguage || 'unknown').replace(/^["']|["']$/g, '').trim();
     this.maxBufferedBytes = options.maxBufferedBytes || DEFAULT_MAX_BUFFERED_BYTES;
     this.maxReconnectRetries = options.maxReconnectRetries ?? DEFAULT_MAX_RETRIES;
     this.reconnectBaseDelayMs = options.reconnectBaseDelayMs ?? DEFAULT_BASE_DELAY_MS;
   }
 
   public async startStreamingSession(options?: StreamingSttOptions): Promise<IStreamingSttSession> {
-    const language = options?.language?.trim() || this.defaultLanguage;
-    const model = options?.model?.trim() || this.model;
+    const language = (options?.language?.trim() || this.defaultLanguage).replace(/^["']|["']$/g, '').trim();
+    const model = normalizeStreamingSttModel(options?.model || this.model);
     const wsBaseUrl = this.baseUrl.replace(/^http/i, 'ws');
     const wsUrl = `${wsBaseUrl}/speech-to-text-realtime/ws?language_code=${encodeURIComponent(
       language,
