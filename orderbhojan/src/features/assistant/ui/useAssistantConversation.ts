@@ -111,19 +111,48 @@ function nextId(): string {
 function validationSpeakText(
   validation: CartPlanValidationResult,
   kitchenName?: string | null,
+  lang?: string,
 ): string {
   const summary = formatCartPlanSummarySpeech(
     summarizePendingCartPlan(validation, { kitchenName }),
   );
+  const isTelugu = lang?.toLowerCase().startsWith('te');
+  const isHindi = lang?.toLowerCase().startsWith('hi');
+
   if (validation.status === 'validated' && validation.valid) {
+    if (isTelugu) {
+      return summary
+        ? `${summary} సిద్ధంగా ఉంది. కార్ట్ కు చేర్చడానికి "కన్ఫర్మ్" అని చెప్పండి.`
+        : 'ప్లాన్ సిద్ధంగా ఉంది. కార్ట్ కు చేర్చడానికి "కన్ఫర్మ్" అని చెప్పండి.';
+    }
+    if (isHindi) {
+      return summary
+        ? `${summary} तैयार है। कार्ट में जोड़ने के लिए "कन्फर्म" कहें।`
+        : 'प्लान तैयार है। कार्ट में जोड़ने के लिए "कन्फर्म" कहें।';
+    }
     return summary
       ? `Ready: ${summary}. Say confirm to add to cart, or discard to cancel.`
       : 'Plan looks good. Say confirm to add it to your cart, or discard to cancel.';
   }
+
   const clarify =
     validation.clarificationQuestions[0] ||
     validation.issues[0]?.message ||
     'I could not validate that dish on this kitchen’s menu. Try the exact menu name.';
+
+  if (isTelugu) {
+    if (/which menu item/i.test(clarify)) {
+      return 'మీరు ఏ వంటకం ఆర్డర్ చేయాలనుకుంటున్నారో దయచేసి స్పష్టంగా చెప్పండి.';
+    }
+    return 'ఈ వంటకం మెనూలో లభించలేదు. దయచేసి సరైన వంటకం పేరు చెప్పండి.';
+  }
+  if (isHindi) {
+    if (/which menu item/i.test(clarify)) {
+      return 'कृपया बताएं कि आप कौन सा व्यंजन ऑर्डर करना चाहते हैं।';
+    }
+    return 'यह व्यंजन मेनू में उपलब्ध नहीं है। कृपया सही व्यंजन का नाम बताएं।';
+  }
+
   return summary ? `${clarify} (Working on: ${summary})` : clarify;
 }
 
@@ -269,7 +298,24 @@ export function useAssistantConversation() {
       const message = normalizeQuantityAsr(raw.trim());
       if (!message || loading) return undefined;
 
-      
+      const lowerRaw = raw.toLowerCase();
+      let detectedLang: 'te-IN' | 'hi-IN' | 'en-IN' | undefined = undefined;
+      if (
+        /[\u0C00-\u0C7F]/.test(raw) ||
+        /\b(telugu|matladu|matladagalara|matladandi|cheyi|cheyandi|kavali|vaddu|rendu|mudu|nalugu|bhojanam|enti|evaru|undi|undha|dosa|idli|annam|pappu|perugu|tiffin|naa\s*cart|pettandi|vei)\b/i.test(lowerRaw)
+      ) {
+        detectedLang = 'te-IN';
+      } else if (
+        /[\u0900-\u097F]/.test(raw) ||
+        /\b(hindi|namaste|kya|hai|chahiye|do|ek|teen|char|mera|meri|khana|batao|karo|daal|roti)\b/i.test(lowerRaw)
+      ) {
+        detectedLang = 'hi-IN';
+      }
+      const effectiveLang = detectedLang ?? voiceLanguage;
+      if (detectedLang && detectedLang !== voiceLanguage) {
+        setVoiceLanguage(detectedLang);
+      }
+
       const liveAdapter = createLiveVoiceAdapter();
       const planRestaurant = pendingPlanRestaurantRef.current;
       const pending = pendingValidationRef.current;
@@ -496,7 +542,7 @@ const usePostOrderPath =
         if (usePostOrderPath) {
           const result = await askPostOrder({
             message,
-            preferredLanguage: voiceLanguage,
+            preferredLanguage: effectiveLang,
             ...(conversationId ? { conversationId } : {}),
             ...(orderContext ? { orderContext } : {}),
           });
@@ -616,7 +662,7 @@ const usePostOrderPath =
 
         const result = await ask({
           message: groundedMessage,
-          preferredLanguage: voiceLanguage,
+          preferredLanguage: effectiveLang,
           ...(conversationId ? { conversationId } : {}),
           ...(orderingContext ? { orderingContext } : {}),
         });
@@ -774,6 +820,7 @@ const usePostOrderPath =
             const outcome = validationSpeakText(
               validation,
               grounded.kitchen?.displayName ?? kitchenOnlyHit?.name,
+              effectiveLang,
             );
             if (validation.status !== 'validated') {
               displayReply = outcome;
@@ -1036,10 +1083,18 @@ const usePostOrderPath =
         }
         setVoiceTurnPhase('speaking');
         let replyLang = voiceLanguage;
-        if (/[\u0C00-\u0C7F]/.test(reply) || /[\u0C00-\u0C7F]/.test(corrected)) {
+        if (
+          /[\u0C00-\u0C7F]/.test(reply) ||
+          /[\u0C00-\u0C7F]/.test(corrected) ||
+          /\b(telugu|matladu|matladagalara|matladandi|cheyi|cheyandi|kavali|vaddu|rendu|mudu|nalugu|bhojanam|enti|evaru|undi|undha|dosa|idli|annam|pappu|perugu|tiffin|naa\s*cart|pettandi|vei)\b/i.test(corrected)
+        ) {
           replyLang = 'te-IN';
           setVoiceLanguage('te-IN');
-        } else if (/[\u0900-\u097F]/.test(reply) || /[\u0900-\u097F]/.test(corrected)) {
+        } else if (
+          /[\u0900-\u097F]/.test(reply) ||
+          /[\u0900-\u097F]/.test(corrected) ||
+          /\b(hindi|namaste|kya|hai|chahiye|do|ek|teen|char|mera|meri|khana|batao|karo|daal|roti)\b/i.test(corrected)
+        ) {
           replyLang = 'hi-IN';
           setVoiceLanguage('hi-IN');
         }

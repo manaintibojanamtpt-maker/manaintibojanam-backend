@@ -134,14 +134,28 @@ let sharedAudioContext: AudioContext | null = null;
 
 export function unlockAudioContext(): void {
   if (typeof window === 'undefined') return;
-  if (!sharedAudioContext) {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextClass) {
-      sharedAudioContext = new AudioContextClass();
+  try {
+    if (!sharedAudioContext) {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        sharedAudioContext = new AudioContextClass();
+      }
     }
-  }
-  if (sharedAudioContext && sharedAudioContext.state === 'suspended') {
-    sharedAudioContext.resume().catch(console.warn);
+    if (sharedAudioContext) {
+      if (sharedAudioContext.state === 'suspended') {
+        sharedAudioContext.resume().catch(console.warn);
+      }
+      // Play 1 silent sample to unlock iOS Safari audio playback session
+      const buffer = sharedAudioContext.createBuffer(1, 1, 22050);
+      const source = sharedAudioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(sharedAudioContext.destination);
+      source.start(0);
+    }
+  } catch (err) {
+    console.warn('[AudioContext unlock warning]', err);
   }
 }
 
@@ -170,47 +184,85 @@ async function speakCloudTts(text: string, lang?: string, signal?: AbortSignal):
 
   const arrayBuffer = await response.arrayBuffer();
 
-  if (!sharedAudioContext) {
-    const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext) : null);
-    if (!AudioContextClass) {
-      throw new Error('AudioContext not supported on this device');
-    }
-    sharedAudioContext = new AudioContextClass();
-  }
-
-  // Best effort resume if it's still suspended
-  if (sharedAudioContext.state === 'suspended') {
-    await sharedAudioContext.resume().catch(console.warn);
-  }
-
-  const audioBuffer = await sharedAudioContext.decodeAudioData(arrayBuffer);
-
-  return new Promise<void>((resolve, reject) => {
+  // Primary: Web Audio API (with auto-resume)
+  try {
     if (!sharedAudioContext) {
-      reject(new Error('AudioContext was lost'));
-      return;
-    }
-    const source = sharedAudioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(sharedAudioContext.destination);
-
-    const onAbort = () => {
-      source.stop();
-      source.disconnect();
-      reject(new AssistantApiError({ code: 'AI_TTS_ABORTED', message: 'Aborted', retryable: false }));
-    };
-
-    if (signal) {
-      signal.addEventListener('abort', onAbort, { once: true });
+      const AudioContextClass =
+        typeof window !== 'undefined'
+          ? window.AudioContext ||
+            (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+          : null;
+      if (AudioContextClass) {
+        sharedAudioContext = new AudioContextClass();
+      }
     }
 
-    source.onended = () => {
-      if (signal) signal.removeEventListener('abort', onAbort);
-      source.disconnect();
-      resolve();
-    };
+    if (sharedAudioContext) {
+      if (sharedAudioContext.state === 'suspended') {
+        await sharedAudioContext.resume().catch(console.warn);
+      }
 
-    source.start(0);
+      const audioBuffer = await sharedAudioContext.decodeAudioData(arrayBuffer.slice(0));
+      return await new Promise<void>((resolve, reject) => {
+        if (!sharedAudioContext) return resolve();
+        const source = sharedAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(sharedAudioContext.destination);
+
+        const onAbort = () => {
+          try {
+            source.stop();
+            source.disconnect();
+          } catch {}
+          reject(new AssistantApiError({ code: 'AI_TTS_ABORTED', message: 'Aborted', retryable: false }));
+        };
+
+        if (signal) signal.addEventListener('abort', onAbort, { once: true });
+        source.onended = () => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          try {
+            source.disconnect();
+          } catch {}
+          resolve();
+        };
+        source.start(0);
+      });
+    }
+  } catch (webAudioErr) {
+    console.warn('[Voice TTS] WebAudio decode/play failed, falling back to HTML5 Audio:', webAudioErr);
+  }
+
+  // Fallback: HTML5 Audio element with Blob URL (reliable across mobile browsers)
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      const onAbort = () => {
+        audio.pause();
+        audio.src = '';
+        URL.revokeObjectURL(url);
+        reject(new AssistantApiError({ code: 'AI_TTS_ABORTED', message: 'Aborted', retryable: false }));
+      };
+
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
+
+      audio.onended = () => {
+        if (signal) signal.removeEventListener('abort', onAbort);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      audio.onerror = () => {
+        if (signal) signal.removeEventListener('abort', onAbort);
+        URL.revokeObjectURL(url);
+        reject(new Error(`HTML5 Audio playback failed: ${audio.error?.message || 'unknown'}`));
+      };
+
+      void audio.play().catch(reject);
+    } catch (fallbackErr) {
+      reject(fallbackErr);
+    }
   });
 }
 
@@ -237,9 +289,9 @@ export async function speakVoiceConfirmation(params: {
   const flags = loadFeatureFlags();
   // Language auto-detection for natural Indian prosody & phonetics
   let targetLang = params.lang ?? 'en-IN';
-  if (/[\u0C00-\u0C7F]/.test(text)) {
+  if (/[\u0C00-\u0C7F]/.test(text) || /\b(telugu|matladu|cheyi|rendu|kavali|dosa|bhojanam|namaskaram)\b/i.test(text)) {
     targetLang = 'te-IN';
-  } else if (/[\u0900-\u097F]/.test(text)) {
+  } else if (/[\u0900-\u097F]/.test(text) || /\b(hindi|namaste|chahiye|karo|batao)\b/i.test(text)) {
     targetLang = 'hi-IN';
   } else if (/[\u0B80-\u0BFF]/.test(text)) {
     targetLang = 'ta-IN';

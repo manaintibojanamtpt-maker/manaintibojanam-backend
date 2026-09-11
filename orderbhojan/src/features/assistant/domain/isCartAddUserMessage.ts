@@ -83,6 +83,8 @@ const ADD_PATTERNS: readonly RegExp[] = [
 function cleanItemName(raw: string): string {
   return raw
     .replace(/\bto\s+(?:my\s+)?cart\b/gi, '')
+    .replace(/\b(?:naa\s+cart\s*ki|naa\s*kaki|cart\s*ki|cart\s*lo|kaki)\b/gi, '')
+    .replace(/\b(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale)\b/gi, '')
     .replace(/\b(?:please|quantity|qty)\b/gi, '')
     // ASR often prefixes dishes with articles: “An Andhra Veg Thali”.
     .replace(/^(?:a|an|the)\s+/i, '')
@@ -96,6 +98,7 @@ function normalizeAddUtterance(raw: string): string {
   return normalizeKitchenAsr(normalizeQuantityAsr(expandIndicOrderingUtterance(raw)))
     .replace(/\b(feom|fom|frm|fro|form)\b/gi, 'from')
     .replace(/\b(masla|masaala|malasa)\b/gi, 'masala')
+    .replace(/\b(naa\s*kaki|na\s*kaki|kaki)\b/gi, 'cart ki')
     .replace(/\b(inti\s*bojanam|intibojanam|inti\s*bhojan|antibody)\b/gi, 'inti bhojanam')
     .replace(/\s+/g, ' ')
     .trim();
@@ -104,6 +107,40 @@ function normalizeAddUtterance(raw: string): string {
 function isQuantityToken(token: string | undefined): boolean {
   if (!token) return false;
   return parseQuantityToken(token) != null;
+}
+
+/**
+ * Telugu / Tanglish SOV order:
+ * "masala dosa rendu naa cart ki add cheyi"
+ * "masala dosa rendu add cheyi"
+ * "chicken biryani okati kavali"
+ * "idli 2 pettandi"
+ */
+function parseTeluguAddOrder(text: string): ParsedCartAddIntent | null {
+  // Pattern: <dish> <quantity> [naa cart ki|cart ki|cart lo]? (add cheyi|pettandi|vei|kavali|kavale)
+  const teluguMatch = text.match(
+    /^(.+?)\s+(rendu|two|2|రెండు|moodu|three|3|మూడు|nalugu|four|4|నాలుగు|okati|one|1|ఒకటి|aidu|five|5|ఐదు)(?:\s+(?:naa\s+cart\s*ki|cart\s*ki|cart\s*lo|to\s+(?:my\s+)?cart))?\s+(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale|add)\s*$/iu,
+  );
+  if (teluguMatch) {
+    const itemName = cleanItemName(teluguMatch[1] ?? '');
+    const quantity = parseQuantityToken(teluguMatch[2]);
+    if (quantity != null && itemName.length >= 2) {
+      return { quantity, itemName };
+    }
+  }
+
+  // Pattern: <dish> (add cheyi|pettandi|vei|kavali) (default quantity 1)
+  const teluguVerbMatch = text.match(
+    /^(.+?)(?:\s+(?:naa\s+cart\s*ki|cart\s*ki|cart\s*lo|to\s+(?:my\s+)?cart))?\s+(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale)\s*$/iu,
+  );
+  if (teluguVerbMatch) {
+    const itemName = cleanItemName(teluguVerbMatch[1] ?? '');
+    if (itemName.length >= 2) {
+      return { quantity: 1, itemName };
+    }
+  }
+
+  return null;
 }
 
 /** Telugu/SOV: “రెండు మసాలా దోశ ఇంటి భోజనం నుండి” / “two masala dosa inti bhojanam”. */
@@ -126,6 +163,9 @@ function parseIndicSovOrder(text: string): ParsedCartAddIntent | null {
 export function parseCartAddUserMessage(message: string): ParsedCartAddIntent | null {
   const text = normalizeAddUtterance(message);
   if (!text || text.length > 200) return null;
+
+  const teluguOrder = parseTeluguAddOrder(text);
+  if (teluguOrder) return teluguOrder;
 
   const sov = parseIndicSovOrder(text);
   if (sov) return sov;

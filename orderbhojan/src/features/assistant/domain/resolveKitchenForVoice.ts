@@ -118,6 +118,43 @@ function scoreKitchenLabel(query: string, label: string): number {
   return 0.5;
 }
 
+async function resolveKitchenByDishSearch(params: {
+  readonly message: string;
+  readonly lat?: number | null;
+  readonly lng?: number | null;
+}): Promise<ResolvedKitchen | null> {
+  const normalized = normalizeOrderingText(params.message)
+    .replace(
+      /\b(rendu|two|2|moodu|three|3|nalugu|four|4|okati|one|1|add|cheyi|cheyyi|pettandi|vei|kavali|kavale|naa|cart|ki|lo|to|my|please|want|order)\b/giu,
+      ' ',
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (normalized.length < 2) return null;
+
+  const useLat = typeof params.lat === 'number' ? params.lat : 18.5204;
+  const useLng = typeof params.lng === 'number' ? params.lng : 73.8567;
+
+  try {
+    const result = await getMarketplaceApiClient().search({
+      q: normalized,
+      type: 'food',
+      lat: useLat,
+      lng: useLng,
+      limit: 6,
+    });
+    const hits = result.hits ?? [];
+    for (const hit of hits) {
+      const k = kitchenFromHit(hit);
+      if (k) return k;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /**
  * Full Menu-Agent ground step: resolve kitchen, prefetch menu, build assist context.
  */
@@ -136,7 +173,7 @@ export async function groundVoiceOrderingContext(params: {
   readonly expandedMessage: string;
 }> {
   const expandedMessage = expandIndicOrderingUtterance(params.message);
-  const kitchen =
+  let kitchen =
     (await resolveKitchenForVoiceUtterance({
       message: expandedMessage,
       lat: params.lat,
@@ -150,6 +187,15 @@ export async function groundVoiceOrderingContext(params: {
           displayName: params.activeRestaurantSlug,
         }
       : null);
+
+  // Fallback: If no kitchen was named and user is on Home/Discovery, search for the dish across partner kitchens.
+  if (!kitchen) {
+    kitchen = await resolveKitchenByDishSearch({
+      message: expandedMessage,
+      lat: params.lat,
+      lng: params.lng,
+    });
+  }
 
   let menuItemCount = 0;
   if (kitchen) {

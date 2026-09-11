@@ -411,8 +411,29 @@ export function registerAiGatewayRoutes(
       }
     }
 
+    // Automatic Indic language detection from transcript & preference
+    const isTeluguUtterance =
+      preferredLanguage.toLowerCase().startsWith('te') ||
+      /[\u0C00-\u0C7F]/.test(message) ||
+      /\b(telugu|matladu|matladagalara|cheyi|cheyyi|kavali|kavale|pettandi|rendu|moodu|nalugu|enti|undi|dosa|idli|wada|bhojanam|namaskaram|vaddhu|chudandi|evaru|ikkada|akkada|nundi|nuvvu|meeru)\b/i.test(message);
+
+    const isHindiUtterance =
+      !isTeluguUtterance &&
+      (preferredLanguage.toLowerCase().startsWith('hi') ||
+        /[\u0900-\u097F]/.test(message) ||
+        /\b(hindi|namaste|chahiye|batao|karo|kahiye|ek|do|teen|chaar|haan|nahin|kripya|apka)\b/i.test(message));
+
+    const effectiveLanguage = isTeluguUtterance ? 'te-IN' : isHindiUtterance ? 'hi-IN' : (preferredLanguage || 'en-IN');
+
     try {
-      const languageAddon = preferredLanguage ? ` IMPORTANT: Reply exclusively in the ${preferredLanguage} language/locale (e.g. if te-IN, use Telugu) for your 'reply' field. Do not use English unless the locale is English.` : '';
+      let languageAddon = '';
+      if (effectiveLanguage === 'te-IN') {
+        languageAddon = ` IMPORTANT LANGUAGE & SCRIPT REQUIREMENT: The user is communicating in Telugu. You MUST compose your 'reply' field EXCLUSIVELY in authentic, natural, conversational Telugu using the NATIVE TELUGU SCRIPT (తెలుగు లిపి, e.g. "నమస్కారం! నేను తెలుగులో మాట్లాడగలను..."). NEVER output Latin/English transliteration or academic diacritics (such as "Nēnu", "māṭlāḍagalanu", "sammandhiñcina"). The text is fed directly into an Indic voice synthesizer which requires native Telugu script for natural voice modulation.`;
+      } else if (effectiveLanguage === 'hi-IN') {
+        languageAddon = ` IMPORTANT LANGUAGE & SCRIPT REQUIREMENT: The user is communicating in Hindi. You MUST compose your 'reply' field EXCLUSIVELY in natural, conversational Hindi using the NATIVE DEVANAGARI SCRIPT (देवनागरी लिपि, e.g. "नमस्ते! मैं आपकी क्या सहायता कर सकता हूँ?"). NEVER use Hinglish or Latin characters.`;
+      } else if (preferredLanguage && preferredLanguage !== 'en-IN' && preferredLanguage !== 'en') {
+        languageAddon = ` IMPORTANT: Reply exclusively in the ${preferredLanguage} language/locale for your 'reply' field.`;
+      }
 
       const postOrderAddon =
         body.mode === 'consumer_ordering' && postOrder.used && postOrder.context
