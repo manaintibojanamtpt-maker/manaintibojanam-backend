@@ -26,5 +26,6 @@ describe('featureFlags', () => {
     assert.equal(isFeatureEnabled(flags, 'FF_OB_AI_VOICE_CORE_CONFIRM_ADD'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_NATIVE_HOST'), false);
     assert.equal(isFeatureEnabled(flags, 'FF_NATIVE_TRACK'), false);
+    assert.equal(isFeatureEnabled(flags, 'FF_OB_VOICE_FIRST_EXPERIENCE'), false);
   });
 });

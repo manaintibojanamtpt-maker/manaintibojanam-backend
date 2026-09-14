@@ -10,6 +10,8 @@ import { OrderBhojanHomeHero, OrderBhojanHomeCategories } from '@/presentation/d
 import { preloadMarketplaceRouteChunks } from '@/lib/preloadRouteChunks';
 import { DEFAULT_LOCATION_DISCOVERY_CTA } from '@/lib/marketplaceDefaults';
 import { Skeleton } from '@bhojan/storefront-design-system/primitives/Skeleton';
+import { HomeVoiceHeroCard } from '@/features/assistant/ui/HomeVoiceHeroCard';
+import { useVoiceFirstFeature } from '@/features/assistant/hooks/useVoiceFirstFeature';
 
 const LOCATION_NUDGE_DISMISSED_KEY = 'ob-location-nudge-dismissed-v1';
 
@@ -73,6 +75,7 @@ function readLocationNudgeDismissed(): boolean {
 export function HomeExperiencePage() {
   const discoveryEnabled = useDiscoveryFeatureEnabled();
   const locationEnabled = useLocationFeatureEnabled();
+  const voiceFirstEnabled = useVoiceFirstFeature();
   const activeLocation = useActiveLocation();
   const discoveryQuery = useDiscoveryHome();
   const { openSelector } = useLocationActions();
@@ -117,6 +120,12 @@ export function HomeExperiencePage() {
           onSetLocation={() => openSelector()}
           onDismiss={dismissLocationNudge}
         />
+      ) : null}
+
+      {voiceFirstEnabled ? (
+        <div className="px-4 pt-3.5 sm:px-6">
+          <HomeVoiceHeroCard />
+        </div>
       ) : null}
 
       {discoveryEnabled ? (

@@ -200,7 +200,7 @@ export function ConsumerAssistantSheet({
             <p className="text-sm text-[#d0c4b5]">
               {isPostOrder
                 ? 'Ask about tracking, delivery, reorder shortcuts, or cancel/refund/payment issues. This chat guides and escalates — it never cancels, refunds, or promises outcomes.'
-                : 'Tap Live Voice for hands-free ordering. Say a kitchen or dish, then “confirm” after validation — nothing is added until you confirm.'}
+                : 'Tell me what you would like to eat in Telugu, Hindi, or English — I will find it and prepare your cart.'}
             </p>
             {showMic && onStartVoiceAgent ? (
               <button
@@ -209,10 +209,10 @@ export function ConsumerAssistantSheet({
                   if (voiceAgentActive) onStopVoiceAgent?.();
                   else onStartVoiceAgent();
                 }}
-                className="w-full rounded-xl bg-gradient-to-r from-[#ff6b35] to-[#ff9f1c] px-3 py-2.5 text-sm font-semibold text-black"
+                className="w-full rounded-xl bg-gradient-to-r from-[#FF7A00] to-[#E05A00] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_2px_12px_rgba(255,122,0,0.35)] hover:opacity-95 transition"
                 data-testid="consumer-assistant-live-voice"
               >
-                {voiceAgentActive ? 'Stop live voice' : 'Start live voice agent'}
+                {voiceAgentActive ? 'Stop live voice' : 'Tap to speak & order'}
               </button>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -302,20 +302,37 @@ export function ConsumerAssistantSheet({
         )}
 
         {(statusPhase || applying) && (
-          <div className="text-xs text-[#d0c4b5]" aria-live="polite">
-            {statusPhase === 'listening'
-              ? voiceAgentActive
-                ? 'Listening live… speak naturally, then pause.'
-                : 'Listening… speak, then pause.'
-              : statusPhase === 'speaking'
-                ? 'Speaking…'
-                : statusPhase === 'thinking'
-                  ? 'Processing realtime turn…'
-                  : statusPhase === 'validating' || validating
-                    ? 'Validating cart plan…'
-                    : applying
-                      ? 'Applying…'
-                      : null}
+          <div className="flex items-center gap-2 text-xs text-[#d0c4b5]" aria-live="polite">
+            {statusPhase === 'listening' ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 items-center gap-0.5" aria-hidden>
+                  <span className="h-2 w-0.5 animate-pulse rounded-full bg-[#FF7A00]" />
+                  <span className="h-4 w-0.5 animate-bounce rounded-full bg-[#FF7A00]" />
+                  <span className="h-3 w-0.5 animate-pulse rounded-full bg-[#FF7A00]" />
+                </span>
+                <span className="font-medium text-[#FFA043]">
+                  Listening… speak in Telugu, Hindi, or English
+                </span>
+              </div>
+            ) : statusPhase === 'speaking' ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 items-center gap-0.5" aria-hidden>
+                  <span className="h-3 w-0.5 animate-pulse rounded-full bg-emerald-400" />
+                  <span className="h-4 w-0.5 animate-pulse rounded-full bg-emerald-400" />
+                  <span className="h-2 w-0.5 animate-pulse rounded-full bg-emerald-400" />
+                </span>
+                <span className="font-medium text-emerald-300">Speaking…</span>
+              </div>
+            ) : statusPhase === 'thinking' ? (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 animate-ping rounded-full bg-amber-400" />
+                <span className="text-amber-200">Finding dishes & kitchens…</span>
+              </div>
+            ) : statusPhase === 'validating' || validating ? (
+              <span>Validating cart plan…</span>
+            ) : applying ? (
+              <span>Adding to cart…</span>
+            ) : null}
           </div>
         )}
 

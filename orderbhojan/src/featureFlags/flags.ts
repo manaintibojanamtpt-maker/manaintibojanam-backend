@@ -46,11 +46,15 @@ export const FEATURE_FLAG_KEYS = [
    * Not cascaded by FF_OB_FIRESTORE. Hybrid remains default when false.
    */
   'FF_NATIVE_HOST',
-  /**
-   * Native order tracking screen — OFF by default.
+  /** Native order tracking screen — OFF by default.
    * Requires FF_NATIVE_HOST + cohort (see nativeTrackRollout).
    */
   'FF_NATIVE_TRACK',
+  /**
+   * Phase 4D: Proactive AI Greeting & Voice-First Customer Experience — OFF by default.
+   * Cascaded when FF_OB_FIRESTORE is true in production unless explicitly disabled.
+   */
+  'FF_OB_VOICE_FIRST_EXPERIENCE',
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
@@ -83,6 +87,7 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   FF_OB_AI_VOICE_CORE_CONFIRM_ADD: false,
   FF_NATIVE_HOST: false,
   FF_NATIVE_TRACK: false,
+  FF_OB_VOICE_FIRST_EXPERIENCE: false,
 };
 
 function readEnvFlag(key: FeatureFlagKey): boolean | undefined {
@@ -121,6 +126,7 @@ export function loadFeatureFlags(): FeatureFlagMap {
     if (readEnvFlag('FF_OB_AI_VOICE_TTS') === undefined) flags.FF_OB_AI_VOICE_TTS = true;
     if (readEnvFlag('FF_OB_AI_CLOUD_TTS') === undefined) flags.FF_OB_AI_CLOUD_TTS = true;
     if (readEnvFlag('FF_OB_VOICE_STREAMING') === undefined) flags.FF_OB_VOICE_STREAMING = true;
+    if (readEnvFlag('FF_OB_VOICE_FIRST_EXPERIENCE') === undefined) flags.FF_OB_VOICE_FIRST_EXPERIENCE = true;
   }
   return flags;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
@@ -65,6 +65,19 @@ import { useVoiceStt } from '../hooks/useVoiceStt';
 import { useVoiceTts } from '../hooks/useVoiceTts';
 import { unlockAudioContext } from '../infrastructure/voiceSpeechSynthesis';
 import { forceStopSpeechCapture } from '../infrastructure/voiceSpeechCapture';
+import { useVoiceFirstFeature } from '../hooks/useVoiceFirstFeature';
+import {
+  shouldTriggerProactiveGreeting,
+  markGreetingShown,
+  markGreetingSpoken,
+  hasGreetingBeenSpoken,
+  markGreetingDismissed,
+  resolveGreetingContextType,
+} from '../domain/voiceFirstSession';
+import {
+  getGreetingMessage,
+  type GreetingMessageResult,
+} from '../domain/greetingStrategy';
 
 /** Best-effort audit; never blocks confirm/discard UX. */
 function reportCartPlanDecisionQuietly(params: {
@@ -196,6 +209,10 @@ export function useAssistantConversation() {
   >('idle');
   const [interimTranscript, setInterimTranscript] = useState<string | null>(null);
   const [pendingValidation, setPendingValidation] = useState<CartPlanValidationResult | null>(null);
+  const voiceFirstFeatureEnabled = useVoiceFirstFeature();
+  const cartLines = useCartStore((s) => s.lines);
+  const [proactiveGreeting, setProactiveGreeting] = useState<GreetingMessageResult | null>(null);
+  const [audioPlayBlocked, setAudioPlayBlocked] = useState(false);
   
   const voiceAgentActiveRef = useRef(false);
   const voiceTurnPhaseRef = useRef(voiceTurnPhase);
@@ -228,6 +245,69 @@ export function useAssistantConversation() {
     voiceConfirmationRef.current = next
       ? syncConfirmationFromPending(next)
       : clearVoiceConfirmation();
+  }, []);
+
+  useEffect(() => {
+    if (!voiceFirstFeatureEnabled) return;
+    if (open) return;
+    if (!shouldTriggerProactiveGreeting()) return;
+
+    const contextType = resolveGreetingContextType({
+      cartItemCount: cartLines.length,
+      restaurantName: restaurantSlug || undefined,
+      restaurantId: restaurantId ?? undefined,
+    });
+    const greeting = getGreetingMessage(contextType, voiceLanguage, restaurantSlug || undefined);
+    setProactiveGreeting(greeting);
+    markGreetingShown();
+
+    if (!hasGreetingBeenSpoken() && voiceEnabled) {
+      let cancelled = false;
+      const ac = new AbortController();
+      (async () => {
+        try {
+          await speakReply(greeting.spokenText, ac.signal, true);
+          if (!cancelled) {
+            markGreetingSpoken();
+          }
+        } catch {
+          if (!cancelled) {
+            setAudioPlayBlocked(true);
+          }
+        }
+      })();
+      return () => {
+        cancelled = true;
+        ac.abort();
+      };
+    }
+  }, [
+    voiceFirstFeatureEnabled,
+    open,
+    voiceEnabled,
+    voiceLanguage,
+    cartLines.length,
+    restaurantSlug,
+    restaurantId,
+    speakReply,
+  ]);
+
+  const playProactiveGreetingAudio = useCallback(async () => {
+    if (!proactiveGreeting) return;
+    unlockAudioContext();
+    const ac = new AbortController();
+    try {
+      setAudioPlayBlocked(false);
+      await speakReply(proactiveGreeting.spokenText, ac.signal, true);
+      markGreetingSpoken();
+    } catch {
+      setAudioPlayBlocked(true);
+    }
+  }, [proactiveGreeting, speakReply]);
+
+  const dismissProactiveGreeting = useCallback(() => {
+    setProactiveGreeting(null);
+    markGreetingDismissed();
   }, []);
 
   const createLiveVoiceAdapter = useCallback((): OrderBhojanVoiceAdapter => {
@@ -1182,77 +1262,94 @@ const usePostOrderPath =
    * Live voice agent: listen → reply (spoken) → listen again until stop / error / close.
    * Cart still requires spoken or tapped Confirm — never blind checkout.
    */
-  const startVoiceAgent = useCallback(async () => {
-    unlockAudioContext();
-    if (!voiceEnabled) {
-      setError('Enable voice on this build to use the live Voice Agent.');
-      return;
-    }
-    if (voiceAgentActiveRef.current) return;
-    if (!voiceCaptureAvailable) {
-      setError('Speech recognition is not available on this device/browser.');
-      return;
-    }
+  const startVoiceAgent = useCallback(
+    async (options?: {
+      initialPrompt?: string;
+      skipGreetingAudio?: boolean;
+      playGreetingFirst?: boolean;
+    }) => {
+      unlockAudioContext();
+      if (!voiceEnabled) {
+        setError('Enable voice on this build to use the live Voice Agent.');
+        return;
+      }
+      if (voiceAgentActiveRef.current) return;
+      if (!voiceCaptureAvailable) {
+        setError('Speech recognition is not available on this device/browser.');
+        return;
+      }
 
-    voiceAgentActiveRef.current = true;
-    setVoiceAgentActive(true);
-    sheetOpenRef.current = true;
-    setOpen(true);
-    setError(null);
+      setProactiveGreeting(null);
+      markGreetingDismissed();
 
-    const greeting =
-      voiceLanguage.toLowerCase().startsWith('te')
-        ? 'ఆర్డర్‌భోజన్ వాయిస్ ఏజెంట్ సిద్ధం. కిచెన్ లేదా డిష్ చెప్పండి — జోడించాలంటే confirm అనండి.'
-        : voiceLanguage.toLowerCase().startsWith('hi')
-          ? 'OrderBhojan वॉइस एजेंट तैयार है। किचन या डिश बोलें — जोड़ने के लिए confirm कहें।'
-          : 'OrderBhojan Voice Agent ready. Tell me a kitchen or dish — say confirm to add a validated plan.';
-    setMessages((prev) =>
-      prev.length === 0
-        ? [...prev, { id: nextId(), role: 'assistant', text: greeting }]
-        : prev,
-    );
+      voiceAgentActiveRef.current = true;
+      setVoiceAgentActive(true);
+      sheetOpenRef.current = true;
+      setOpen(true);
+      setError(null);
 
-    // Warm menu cache for active kitchen + nearby names before first listen.
-    const coords = activeLocation?.coordinates;
-    void prefetchKitchenMenuForAssist({
-      restaurantId,
-      restaurantSlug,
-      lat: coords?.lat,
-      lng: coords?.lng,
-    });
-    const nearby = toNearbyKitchenHints(
-      buildOrderingAssistContext({
+      const contextType = resolveGreetingContextType({
+        cartItemCount: cartLines.length,
+        restaurantName: restaurantSlug || undefined,
+        restaurantId: restaurantId ?? undefined,
+      });
+      const greetingMsg = getGreetingMessage(contextType, voiceLanguage, restaurantSlug || undefined);
+
+      setMessages((prev) =>
+        prev.length === 0
+          ? [...prev, { id: nextId(), role: 'assistant', text: greetingMsg.text }]
+          : prev,
+      );
+
+      // Warm menu cache for active kitchen + nearby names before first listen.
+      const coords = activeLocation?.coordinates;
+      void prefetchKitchenMenuForAssist({
         restaurantId,
         restaurantSlug,
-        areaLabel: activeLocation?.displayLabel,
-        lat: coords?.lat,
-        lng: coords?.lng,
-      })?.nearbyKitchens,
-    );
-    for (const kitchen of nearby.slice(0, 4)) {
-      void prefetchKitchenMenuForAssist({
-        restaurantId: kitchen.id,
-        restaurantName: kitchen.name,
         lat: coords?.lat,
         lng: coords?.lng,
       });
-    }
-
-    const greetAc = new AbortController();
-    voiceAbortRef.current = greetAc;
-    try {
-      await speakReply(greeting, greetAc.signal, true);
-    } catch {
-      /* non-fatal */
-    } finally {
-      if (voiceAbortRef.current === greetAc) {
-        voiceAbortRef.current = null;
+      const nearby = toNearbyKitchenHints(
+        buildOrderingAssistContext({
+          restaurantId,
+          restaurantSlug,
+          areaLabel: activeLocation?.displayLabel,
+          lat: coords?.lat,
+          lng: coords?.lng,
+        })?.nearbyKitchens,
+      );
+      for (const kitchen of nearby.slice(0, 4)) {
+        void prefetchKitchenMenuForAssist({
+          restaurantId: kitchen.id,
+          restaurantName: kitchen.name,
+          lat: coords?.lat,
+          lng: coords?.lng,
+        });
       }
-    }
-    // Let TTS / cloud audio fully release the mic before listening (Chrome abort guard).
-    await new Promise((r) => setTimeout(r, 500));
 
-    let emptyListenStreak = 0;
+      if (options?.initialPrompt?.trim()) {
+        const promptText = options.initialPrompt.trim();
+        await send(promptText);
+        return;
+      }
+
+      if (options?.playGreetingFirst) {
+        const greetAc = new AbortController();
+        voiceAbortRef.current = greetAc;
+        try {
+          await speakReply(greetingMsg.spokenText, greetAc.signal, true);
+        } catch {
+          /* non-fatal */
+        } finally {
+          if (voiceAbortRef.current === greetAc) {
+            voiceAbortRef.current = null;
+          }
+        }
+        // Let TTS / cloud audio fully release the mic before listening (Chrome abort guard).
+        await new Promise((r) => setTimeout(r, 400));
+      }
+
+      let emptyListenStreak = 0;
     while (voiceAgentActiveRef.current && sheetOpenRef.current) {
       if (!sheetOpenRef.current || !voiceAgentActiveRef.current) break;
       if (loading || validating || applying || speaking || voiceTurnPhaseRef.current === 'thinking' || voiceTurnPhaseRef.current === 'speaking') {
@@ -1300,7 +1397,7 @@ const usePostOrderPath =
     }
 
     hardStopVoiceSession();
-  }, [applying, hardStopVoiceSession, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled, voiceLanguage, voiceCaptureAvailable, activeLocation, restaurantId, restaurantSlug]);
+  }, [applying, hardStopVoiceSession, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled, voiceLanguage, voiceCaptureAvailable, activeLocation, restaurantId, restaurantSlug, cartLines.length, send]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {
@@ -1481,5 +1578,9 @@ const usePostOrderPath =
     confirmApplyPlan,
     dismissPlan,
     clearError: () => setError(null),
+    proactiveGreeting,
+    audioPlayBlocked,
+    playProactiveGreetingAudio,
+    dismissProactiveGreeting,
   };
 }

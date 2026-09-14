@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 import { ConsumerAssistantFab } from './ConsumerAssistantFab';
 import { ConsumerAssistantSheet } from './ConsumerAssistantSheet';
+import { VoiceFirstWelcomeToast } from './VoiceFirstWelcomeToast';
 import { useAssistantConversation } from './useAssistantConversation';
 
 export function ConsumerAssistantShell() {
   const chat = useAssistantConversation();
 
   useEffect(() => {
-    const onOpenVoiceAgent = () => {
-      void chat.startVoiceAgent();
+    const onOpenVoiceAgent = (event?: Event) => {
+      const customEvent = event as CustomEvent<{ initialPrompt?: string }> | undefined;
+      const initialPrompt = customEvent?.detail?.initialPrompt;
+      void chat.startVoiceAgent({ initialPrompt });
     };
     window.addEventListener('ob-voice-agent-open', onOpenVoiceAgent);
     return () => window.removeEventListener('ob-voice-agent-open', onOpenVoiceAgent);
@@ -47,6 +50,16 @@ export function ConsumerAssistantShell() {
           onClearError={chat.clearError}
         />
       ) : null}
+
+      {!chat.open && chat.proactiveGreeting ? (
+        <VoiceFirstWelcomeToast
+          greetingText={chat.proactiveGreeting.text}
+          onOpenVoice={() => void chat.startVoiceAgent()}
+          onPlayAudioGreeting={chat.playProactiveGreetingAudio}
+          audioPlayBlocked={chat.audioPlayBlocked}
+        />
+      ) : null}
+
       <ConsumerAssistantFab
         open={chat.open}
         listening={chat.listening}
