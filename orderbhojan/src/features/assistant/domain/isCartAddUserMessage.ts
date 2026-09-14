@@ -83,8 +83,8 @@ const ADD_PATTERNS: readonly RegExp[] = [
 function cleanItemName(raw: string): string {
   return raw
     .replace(/\bto\s+(?:my\s+)?cart\b/gi, '')
-    .replace(/\b(?:naa\s+cart\s*ki|naa\s*kaki|cart\s*ki|cart\s*lo|kaki)\b/gi, '')
-    .replace(/\b(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale)\b/gi, '')
+    .replace(/\b(?:naa\s+cart\s*ki|naa\s*kaki|cart\s*ki|cart\s*lo|cart\s*mein|cart\s*me|kaki)\b/gi, '')
+    .replace(/\b(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale|dalo|daalo|add\s*karo|kardo|rakho)\b/gi, '')
     .replace(/\b(?:please|quantity|qty)\b/gi, '')
     // ASR often prefixes dishes with articles: “An Andhra Veg Thali”.
     .replace(/^(?:a|an|the)\s+/i, '')
@@ -110,14 +110,15 @@ function isQuantityToken(token: string | undefined): boolean {
 }
 
 /**
- * Telugu / Tanglish SOV order:
- * "masala dosa rendu naa cart ki add cheyi"
+ * Telugu / Tanglish / Hindi SOV order:
+ * "2 Masala Dosa add cheyi"
  * "masala dosa rendu add cheyi"
+ * "2 Veg Meals cart mein dalo"
  * "chicken biryani okati kavali"
  * "idli 2 pettandi"
  */
 function parseTeluguAddOrder(text: string): ParsedCartAddIntent | null {
-  // Pattern: <dish> <quantity> [naa cart ki|cart ki|cart lo]? (add cheyi|pettandi|vei|kavali|kavale)
+  // Pattern 1: <dish> <quantity> [naa cart ki|cart ki|cart lo]? (add cheyi|pettandi|vei|kavali|kavale)
   const teluguMatch = text.match(
     /^(.+?)\s+(rendu|two|2|రెండు|moodu|three|3|మూడు|nalugu|four|4|నాలుగు|okati|one|1|ఒకటి|aidu|five|5|ఐదు)(?:\s+(?:naa\s+cart\s*ki|cart\s*ki|cart\s*lo|to\s+(?:my\s+)?cart))?\s+(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale|add)\s*$/iu,
   );
@@ -129,14 +130,27 @@ function parseTeluguAddOrder(text: string): ParsedCartAddIntent | null {
     }
   }
 
-  // Pattern: <dish> (add cheyi|pettandi|vei|kavali) (default quantity 1)
+  // Pattern 2: [quantity]? <dish> (add cheyi|pettandi|vei|kavali|kavale|dalo|daalo|add karo)
   const teluguVerbMatch = text.match(
-    /^(.+?)(?:\s+(?:naa\s+cart\s*ki|cart\s*ki|cart\s*lo|to\s+(?:my\s+)?cart))?\s+(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale)\s*$/iu,
+    /^(.+?)(?:\s+(?:naa\s+cart\s*ki|cart\s*ki|cart\s*lo|to\s+(?:my\s+)?cart|cart\s*mein|cart\s*me))?\s+(?:add\s*cheyi|add\s*cheyyi|pettandi|vei|kavali|kavale|dalo|daalo|add\s*karo|kardo|rakho)\s*$/iu,
   );
   if (teluguVerbMatch) {
-    const itemName = cleanItemName(teluguVerbMatch[1] ?? '');
+    let rawItem = teluguVerbMatch[1] ?? '';
+    let quantity = 1;
+    // Check if the item starts with a quantity token (e.g. "2 Masala Dosa", "rendu Dosa", "2 Veg Meals")
+    const leadingQty = rawItem.match(
+      /^(rendu|two|2|రెండు|moodu|three|3|మూడు|nalugu|four|4|నాలుగు|okati|one|1|ఒకటి|aidu|five|5|ఐదు|ek|do|teen|chaar|char|\d+)\s+(.+)$/iu,
+    );
+    if (leadingQty) {
+      const parsedQty = parseQuantityToken(leadingQty[1]);
+      if (parsedQty != null) {
+        quantity = parsedQty;
+        rawItem = leadingQty[2] ?? '';
+      }
+    }
+    const itemName = cleanItemName(rawItem);
     if (itemName.length >= 2) {
-      return { quantity: 1, itemName };
+      return { quantity, itemName };
     }
   }
 

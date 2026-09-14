@@ -134,6 +134,20 @@ function formatKitchenDisplayName(slugOrName?: string | null): string | undefine
   return raw;
 }
 
+function sanitizeConsumerReplyText(raw?: string | null): string {
+  if (!raw) return '';
+  return raw
+    .replace(/\(?\s*foodId\s*=\s*[^)\s]+\s*\)?/gi, '')
+    .replace(/\[?\s*foodId\s*=\s*[^\]\s]+\s*\]?/gi, '')
+    .replace(/\(?\s*restaurantId\s*=\s*[^)\s]+\s*\)?/gi, '')
+    .replace(/\[?\s*restaurantId\s*=\s*[^\]\s]+\s*\]?/gi, '')
+    .replace(/\([0-9a-zA-Z_-]{16,36}\)/g, '')
+    .replace(/foodId=[a-zA-Z0-9_-]+/gi, '')
+    .replace(/\s+([,.:!?])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function validationSpeakText(
   validation: CartPlanValidationResult,
   kitchenName?: string | null,
@@ -797,9 +811,11 @@ const usePostOrderPath =
                   parsedAdd?.itemName ||
                   '';
                 const qty =
-                  typeof plan.payload?.quantity === 'number'
-                    ? plan.payload.quantity
-                    : (parsedAdd?.quantity ?? 1);
+                  (parsedAdd?.quantity && parsedAdd.quantity > 1)
+                    ? parsedAdd.quantity
+                    : typeof plan.payload?.quantity === 'number' && plan.payload.quantity > 0
+                      ? plan.payload.quantity
+                      : (parsedAdd?.quantity ?? 1);
                 return {
                   ...plan,
                   payload: {
@@ -874,7 +890,7 @@ const usePostOrderPath =
         }
 
         // Prefer validation-aware copy over optimistic “I found…” when validate fails.
-        let displayReply = result.reply;
+        let displayReply = sanitizeConsumerReplyText(result.reply);
         setMessages((prev) => [
           ...prev,
           {
@@ -904,6 +920,7 @@ const usePostOrderPath =
             lng: coords?.lng,
             force: true,
           });
+          setLoading(false);
           setValidating(true);
           try {
             const validation = await validate({
@@ -942,6 +959,7 @@ const usePostOrderPath =
                 return next;
               });
             } else {
+              displayReply = outcome || displayReply;
               setMessages((prev) => [
                 ...prev,
                 {
@@ -1360,7 +1378,19 @@ const usePostOrderPath =
 
       if (options?.initialPrompt?.trim()) {
         const promptText = options.initialPrompt.trim();
-        await send(promptText);
+        const reply = await send(promptText);
+        if (reply && voiceEnabled) {
+          const ac = new AbortController();
+          voiceAbortRef.current = ac;
+          setVoiceTurnPhase('speaking');
+          try {
+            await speakReply(reply, ac.signal, true);
+          } catch {
+            /* non-fatal */
+          } finally {
+            setVoiceTurnPhase('idle');
+          }
+        }
         return;
       }
 

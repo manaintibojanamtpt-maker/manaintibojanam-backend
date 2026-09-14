@@ -214,13 +214,47 @@ describe('Phase 4D: Voice-First Experience', () => {
       assert.ok(convSrc.includes('setError(null)'));
     });
 
-    it('ConsumerAssistantSheet features consumer-grade multilingual guidance footer', () => {
+    it('ConsumerAssistantSheet features consumer-grade multilingual guidance footer and contextual cues', () => {
       const sheetSrc = readFileSync(
         path.resolve(__dirname, '../src/features/assistant/ui/ConsumerAssistantSheet.tsx'),
         'utf8',
       );
       assert.ok(sheetSrc.includes('Speak or type in Telugu, Hindi, or English'));
       assert.ok(sheetSrc.includes('Listening continuously in Telugu, Hindi, or English'));
+      assert.ok(sheetSrc.includes('Listening for "Confirm" or next item'));
+    });
+
+    it('accurately extracts leading quantity in Telugu and Hindi utterances', async () => {
+      const { parseCartAddUserMessage } = await import(
+        '../src/features/assistant/domain/isCartAddUserMessage'
+      );
+      const teluguAdd = parseCartAddUserMessage('2 Masala Dosa add cheyi');
+      assert.deepEqual(teluguAdd, { quantity: 2, itemName: 'Masala Dosa' });
+
+      const teluguWord = parseCartAddUserMessage('rendu Masala Dosa add cheyi');
+      assert.deepEqual(teluguWord, { quantity: 2, itemName: 'Masala Dosa' });
+
+      const hindiAdd = parseCartAddUserMessage('2 Veg Meals cart mein dalo');
+      assert.deepEqual(hindiAdd, { quantity: 2, itemName: 'Veg Meals' });
+    });
+
+    it('useAssistantConversation sanitizes technical IDs and database keys from customer text', () => {
+      const convSrc = readFileSync(
+        path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),
+        'utf8',
+      );
+      assert.ok(convSrc.includes('sanitizeConsumerReplyText'));
+      assert.ok(convSrc.includes('foodId='));
+    });
+
+    it('voiceSpeechCapture supports onInterim streaming and silence debounce timer', () => {
+      const capSrc = readFileSync(
+        path.resolve(__dirname, '../src/features/assistant/infrastructure/voiceSpeechCapture.ts'),
+        'utf8',
+      );
+      assert.ok(capSrc.includes('onInterim'));
+      assert.ok(capSrc.includes('silenceTimer'));
+      assert.ok(capSrc.includes('onspeechend'));
     });
   });
 });

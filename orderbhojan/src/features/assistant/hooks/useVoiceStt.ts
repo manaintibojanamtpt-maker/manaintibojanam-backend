@@ -233,6 +233,7 @@ export function useVoiceStt() {
             lang,
             // Live agent: longer window so pause after dish name is OK.
             timeoutMs: agentMode ? 10_000 : 7_000,
+            onInterim,
           });
           transcript = web.transcript;
         }

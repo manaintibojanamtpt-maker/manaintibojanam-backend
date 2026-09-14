@@ -157,6 +157,7 @@ export async function captureVoiceTranscript(params: {
   readonly platform?: 'web' | 'android' | 'unknown';
   readonly createRecognition?: SpeechRecognitionFactory;
   readonly signal?: AbortSignal;
+  readonly onInterim?: (partial: string) => void;
 }): Promise<VoiceTranscriptResult> {
   if (typeof window !== 'undefined' && window.isSecureContext === false) {
     throw new AssistantApiError({
@@ -206,6 +207,7 @@ export async function captureVoiceTranscript(params: {
       let finalTranscript = '';
       let sawResult = false;
       let intentionalAbort = false;
+      let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
       activeRecognition = recognition;
 
@@ -220,6 +222,10 @@ export async function captureVoiceTranscript(params: {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        if (silenceTimer) {
+          clearTimeout(silenceTimer);
+          silenceTimer = null;
+        }
         params.signal?.removeEventListener('abort', onAbort);
         markEnded();
         fn();
@@ -278,6 +284,23 @@ export async function captureVoiceTranscript(params: {
       recognition.maxAlternatives = 3;
       recognition.continuous = false;
 
+      (recognition as unknown as Record<string, unknown>).onspeechend = () => {
+        if (finalTranscript.trim()) {
+          try {
+            recognition.stop();
+          } catch {
+            // ignore
+          }
+          finish(() =>
+            resolve({
+              transcript: finalTranscript.trim(),
+              source: 'web_speech',
+              platform,
+            }),
+          );
+        }
+      };
+
       recognition.onresult = (event) => {
         if (myGeneration !== captureGeneration) {
           intentionalAbort = true;
@@ -317,8 +340,31 @@ export async function captureVoiceTranscript(params: {
         }
 
         finalTranscript = finalBuilder.trim() || interimBuilder.trim();
+        if (finalTranscript.trim()) {
+          params.onInterim?.(finalTranscript.trim());
+        }
 
-        // Resolve once we have a final segment — stop recognition promptly.
+        // Adaptive natural human pause: if speech was heard and pauses for 1100ms, finalize immediately!
+        if (finalTranscript.trim().length > 0) {
+          if (silenceTimer) clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(() => {
+            if (settled) return;
+            try {
+              recognition.stop();
+            } catch {
+              // ignore
+            }
+            finish(() =>
+              resolve({
+                transcript: finalTranscript.trim(),
+                source: 'web_speech',
+                platform,
+              }),
+            );
+          }, 1100);
+        }
+
+        // Resolve once browser marks a final segment — stop recognition promptly.
         const last = results?.[(results.length ?? 1) - 1] as { isFinal?: boolean } | undefined;
         if (last?.isFinal && finalTranscript.trim()) {
           try {

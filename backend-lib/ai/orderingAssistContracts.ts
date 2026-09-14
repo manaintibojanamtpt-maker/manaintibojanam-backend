@@ -166,6 +166,7 @@ export function buildOrderingSystemAddon(context: OrderingAssistContext): string
     'If the user asks for available kitchens, list nearbyKitchens from facts (or say none are loaded and suggest Home/Search).',
     'If the user asks for a dish, match menuItems from facts using the EXACT menu spelling and foodId when present.',
     'For add-to-cart requests, emit cart_add_plan with payload { foodId, name, quantity, restaurantId? } using foodId from menuItems facts whenever available — copy the menu name exactly (e.g. Medu Wada not Medu Vada). Never claim the cart was updated.',
+    'CRITICAL: In your conversational "reply" field, NEVER include raw internal database keys such as "foodId=...", "(foodId=...)", "[foodId=...]", or "restaurantId=...". Speak warmly, concisely, and naturally like a helpful human restaurant host using only the clean dish name and quantity (e.g. in Telugu: "మీ కార్ట్‌కు 2 మసాలా దోశలు జోడించడానికి సిద్ధంగా ఉంది. ఆర్డర్ చేయమంటారా?").',
     'Checkout/payment/place_order remain blocked; user must confirm plans in the app UI.',
     facts.length > 0
       ? `Known facts: ${facts.join('; ')}.`
