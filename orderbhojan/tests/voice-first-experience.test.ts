@@ -192,5 +192,35 @@ describe('Phase 4D: Voice-First Experience', () => {
       assert.ok(shellSrc.includes('ConsumerAssistantFab'));
       assert.ok(shellSrc.includes('startVoiceAgent'));
     });
+
+    it('useAssistantConversation verifies isKitchenPage route and formats kitchen display names', () => {
+      const convSrc = readFileSync(
+        path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),
+        'utf8',
+      );
+      assert.ok(convSrc.includes("location.pathname.startsWith('/restaurant/')"));
+      assert.ok(convSrc.includes('formatKitchenDisplayName'));
+      assert.ok(convSrc.includes('effectiveKitchenName'));
+    });
+
+    it('useAssistantConversation soft-recovers on speech timeout without harsh red error box', () => {
+      const convSrc = readFileSync(
+        path.resolve(__dirname, '../src/features/assistant/ui/useAssistantConversation.ts'),
+        'utf8',
+      );
+      assert.ok(convSrc.includes("err.code === 'AI_VOICE_TIMEOUT' || err.code === 'AI_VOICE_EMPTY'"));
+      assert.ok(convSrc.includes('మీ మాట వినిపించలేదు'));
+      assert.ok(convSrc.includes('I didn’t catch that'));
+      assert.ok(convSrc.includes('setError(null)'));
+    });
+
+    it('ConsumerAssistantSheet features consumer-grade multilingual guidance footer', () => {
+      const sheetSrc = readFileSync(
+        path.resolve(__dirname, '../src/features/assistant/ui/ConsumerAssistantSheet.tsx'),
+        'utf8',
+      );
+      assert.ok(sheetSrc.includes('Speak or type in Telugu, Hindi, or English'));
+      assert.ok(sheetSrc.includes('Listening continuously in Telugu, Hindi, or English'));
+    });
   });
 });

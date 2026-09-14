@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { applyConfirmedCartPlan } from '@/features/cart/domain/applyConfirmedCartPlan';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import {
@@ -121,13 +121,27 @@ function nextId(): string {
   return `ob_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function formatKitchenDisplayName(slugOrName?: string | null): string | undefined {
+  if (!slugOrName?.trim()) return undefined;
+  const raw = slugOrName.trim();
+  if (raw.includes('-')) {
+    return raw
+      .split('-')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+  return raw;
+}
+
 function validationSpeakText(
   validation: CartPlanValidationResult,
   kitchenName?: string | null,
   lang?: string,
 ): string {
+  const cleanKitchenName = formatKitchenDisplayName(kitchenName) ?? kitchenName;
   const summary = formatCartPlanSummarySpeech(
-    summarizePendingCartPlan(validation, { kitchenName }),
+    summarizePendingCartPlan(validation, { kitchenName: cleanKitchenName }),
   );
   const isTelugu = lang?.toLowerCase().startsWith('te');
   const isHindi = lang?.toLowerCase().startsWith('hi');
@@ -179,6 +193,7 @@ function toNearbyKitchenHints(
 }
 
 export function useAssistantConversation() {
+  const location = useLocation();
   const { ask, askPostOrder, postOrderAssistEnabled, validate, loading, setLoading, validating, setValidating, error, setError } = useAssistantApi();
   const { listening, setListening, startListening, cancelListening, voiceCaptureAvailable, voiceAbortRef } = useVoiceStt();
   const { speaking, setSpeaking, voiceLanguage, setVoiceLanguage, speakReply } = useVoiceTts();
@@ -252,12 +267,16 @@ export function useAssistantConversation() {
     if (open) return;
     if (!shouldTriggerProactiveGreeting()) return;
 
+    const isKitchenPage = location.pathname.startsWith('/restaurant/');
+    const effectiveKitchenName = isKitchenPage ? formatKitchenDisplayName(restaurantSlug) : undefined;
+    const effectiveKitchenId = isKitchenPage ? (restaurantId ?? undefined) : undefined;
+
     const contextType = resolveGreetingContextType({
       cartItemCount: cartLines.length,
-      restaurantName: restaurantSlug || undefined,
-      restaurantId: restaurantId ?? undefined,
+      restaurantName: effectiveKitchenName,
+      restaurantId: effectiveKitchenId,
     });
-    const greeting = getGreetingMessage(contextType, voiceLanguage, restaurantSlug || undefined);
+    const greeting = getGreetingMessage(contextType, voiceLanguage, effectiveKitchenName);
     setProactiveGreeting(greeting);
     markGreetingShown();
 
@@ -289,6 +308,7 @@ export function useAssistantConversation() {
     cartLines.length,
     restaurantSlug,
     restaurantId,
+    location.pathname,
     speakReply,
   ]);
 
@@ -1207,7 +1227,14 @@ const usePostOrderPath =
           // Soft-fail timeouts / Chrome "aborted" remaps in live agent — re-listen quietly.
           if (err.code === 'AI_VOICE_TIMEOUT' || err.code === 'AI_VOICE_EMPTY') {
             if (agentMode) return 'timeout';
-            setError(err.message);
+            const friendlyNudge =
+              voiceLanguage.toLowerCase().startsWith('te')
+                ? 'మీ మాట వినిపించలేదు. మీరు మాట్లాడటానికి సిద్ధంగా ఉన్నప్పుడు మైక్ నొక్కండి.'
+                : voiceLanguage.toLowerCase().startsWith('hi')
+                  ? 'कोई आवाज़ नहीं सुनाई दी। जब आप तैयार हों, तब माइक दबाकर बोलें।'
+                  : 'I didn’t catch that. Tap the mic when you’re ready to speak.';
+            setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: friendlyNudge }]);
+            setError(null);
             return 'timeout';
           }
           if (
@@ -1288,12 +1315,16 @@ const usePostOrderPath =
       setOpen(true);
       setError(null);
 
+      const isKitchenPage = location.pathname.startsWith('/restaurant/');
+      const effectiveKitchenName = isKitchenPage ? formatKitchenDisplayName(restaurantSlug) : undefined;
+      const effectiveKitchenId = isKitchenPage ? (restaurantId ?? undefined) : undefined;
+
       const contextType = resolveGreetingContextType({
         cartItemCount: cartLines.length,
-        restaurantName: restaurantSlug || undefined,
-        restaurantId: restaurantId ?? undefined,
+        restaurantName: effectiveKitchenName,
+        restaurantId: effectiveKitchenId,
       });
-      const greetingMsg = getGreetingMessage(contextType, voiceLanguage, restaurantSlug || undefined);
+      const greetingMsg = getGreetingMessage(contextType, voiceLanguage, effectiveKitchenName);
 
       setMessages((prev) =>
         prev.length === 0
@@ -1397,7 +1428,7 @@ const usePostOrderPath =
     }
 
     hardStopVoiceSession();
-  }, [applying, hardStopVoiceSession, loading, runVoiceTurn, speakReply, speaking, validating, voiceEnabled, voiceLanguage, voiceCaptureAvailable, activeLocation, restaurantId, restaurantSlug, cartLines.length, send]);
+  }, [applying, hardStopVoiceSession, loading, location.pathname, runVoiceTurn, speakReply, speaking, validating, voiceEnabled, voiceLanguage, voiceCaptureAvailable, activeLocation, restaurantId, restaurantSlug, cartLines.length, send]);
 
   const followHint = useCallback(
     (hint: ConsumerAssistHint) => {

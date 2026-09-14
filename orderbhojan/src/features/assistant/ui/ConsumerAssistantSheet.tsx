@@ -482,10 +482,10 @@ export function ConsumerAssistantSheet({
           </button>
         </div>
         {showMic ? (
-          <p className="mt-2 text-[10px] text-[#8a7f72]">
+          <p className="mt-2 text-[11px] text-[#8a7f72]">
             {voiceAgentActive
-              ? 'Live mode: listen → reply by voice → listen again. Say “confirm” to apply a validated plan, or “stop listening” to pause.'
-              : 'Tap mic for one turn, or Start live voice agent for continuous talk. Cart still needs Confirm.'}
+              ? 'Listening continuously in Telugu, Hindi, or English. Say “confirm” anytime to add to cart, or “stop” to pause.'
+              : 'Speak or type in Telugu, Hindi, or English. Confirm anytime to add items to your cart.'}
           </p>
         ) : null}
       </footer>
