@@ -1,3 +1,4 @@
+import { readCheckoutReplay, commitCheckoutAttempt } from './customerCheckoutAttempt.js';
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { formatOrderNumberLabel } from './orderNumberAllocator.js';
@@ -11,6 +12,7 @@ import {
   isValidUpiId,
   UPI_PAYMENT_EXPIRY_MS,
 } from './upiPayUrl.js';
+import { signGuestOrderToken } from '../guestOrderToken.js';
 import {
   computeTenantDeliveryFee,
   haversineKm,
@@ -490,6 +492,9 @@ export function enabledPaymentMethods(tenant: TenantRaw): string[] {
 }
 
 export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
+  clientAttemptId?: string;
+  expectedAmountPaise?: number;
+  quoteExpiresAt?: string;
   paymentMethod: 'cod' | 'razorpay' | 'upi';
   phone: string;
   customerName?: string;
@@ -501,7 +506,7 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
 }
 
 export type MarketplacePlaceResult =
-  | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote }
+  | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote; guestTrackingToken?: string }
   | {
       kind: 'upi';
       orderId: string;
@@ -511,6 +516,7 @@ export type MarketplacePlaceResult =
       upiUrl: string;
       paymentStatus: 'pending';
       expiresAt: string;
+      guestTrackingToken?: string;
     }
   | {
       kind: 'razorpay';
@@ -519,6 +525,7 @@ export type MarketplacePlaceResult =
       tenantId: string;
       quote: BillQuote;
       amountInPaise: number;
+      guestTrackingToken?: string;
     };
 
 function buildResolvedOrderItems(
@@ -535,14 +542,17 @@ function buildResolvedOrderItems(
     const lineTax = Math.round((lineSubtotal * quote.gstPercent) / 100);
     return {
       menuItemId: itemId,
+      itemId,
       name: line.name ?? menuItem?.name ?? 'Item',
       unitPrice,
+      price: unitPrice,
       quantity,
       lineSubtotal,
       discount: 0,
       discountApplied: false,
       lineTax,
       lineTotal: lineSubtotal + lineTax,
+      notes: '',
     };
   });
 }
@@ -613,6 +623,28 @@ function buildOrderPayload(
     deliveryRuntime: runtime,
     source: 'marketplace_checkout_v1',
     contextToken: request.contextToken ?? null,
+
+    // Phase 4E POS Fields
+    orderSource: 'ORDERBHOJAN',
+    onlineOrderId: docId,
+    restaurantId: tenantId,
+    orderStatus: 'NEW',
+    pricing: {
+      subtotal: quote.subtotal,
+      taxes: quote.gstAmount,
+      deliveryFee: quote.deliveryFee,
+      packingFee: quote.packagingFee,
+      discount: quote.discountAmount,
+      total: quote.grandTotal,
+    },
+    customer: {
+      name: request.customerName ?? 'Guest',
+      phone: request.phone.trim(),
+      address: ((deliveryAddress as Record<string, unknown>)?.addressLine1 as string) || (address as string) || '',
+    },
+    timestamps: {
+      createdAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -621,6 +653,13 @@ export async function placeMarketplaceOrder(
   fieldValue: typeof FieldValue,
   request: MarketplacePlaceRequest,
 ): Promise<MarketplacePlaceResult> {
+  if (request.clientAttemptId) {
+    const replay = await readCheckoutReplay<MarketplacePlaceResult>(db, request.userId || '', request.clientAttemptId, request);
+    if (replay) return replay;
+    if (!request.quoteExpiresAt || !Number.isFinite(Date.parse(request.quoteExpiresAt)) || Date.parse(request.quoteExpiresAt) <= Date.now() || Date.parse(request.quoteExpiresAt) > Date.now() + 10 * 60_000) {
+      throw Object.assign(new Error('Checkout quote expired; refresh before creating an attempt'), { statusCode: 409 });
+    }
+  }
   if (!request.phone?.trim()) {
     throw Object.assign(new Error('phone is required'), { statusCode: 400 });
   }
@@ -634,6 +673,9 @@ export async function placeMarketplaceOrder(
 
   const { tenantId, quote, menuPrices, etaMinutes, deliveryDecision } = await buildMarketplaceQuoteContext(db, request);
 
+  if (request.clientAttemptId && (!Number.isInteger(request.expectedAmountPaise) || request.expectedAmountPaise !== Math.round(quote.grandTotal * 100))) {
+    throw Object.assign(new Error('Checkout total changed; review a fresh quote'), { statusCode: 409 });
+  }
   const docId =
     paymentMethod === 'razorpay'
       ? db.collection('order_drafts').doc().id
@@ -662,100 +704,46 @@ export async function placeMarketplaceOrder(
     docId,
   );
 
+  let result: MarketplacePlaceResult;
+  const extra: Record<string, unknown> = {};
   if (paymentMethod === 'upi') {
-    const paymentConfig = (tenantRaw.paymentConfig ?? {}) as Record<string, unknown>;
-    const providers = (paymentConfig.providers ?? {}) as Record<string, { upiId?: string; merchantName?: string }>;
+    const providers = ((tenantRaw.paymentConfig as any)?.providers ?? {});
     const upiId = providers.upi?.upiId;
-    if (!upiId || !isValidUpiId(upiId)) {
-      throw Object.assign(new Error('Direct UPI is not configured for this kitchen'), { statusCode: 400 });
-    }
-
+    if (!upiId || !isValidUpiId(upiId)) throw Object.assign(new Error('Direct UPI is not configured for this kitchen'), { statusCode: 400 });
     const expiresAt = new Date(Date.now() + UPI_PAYMENT_EXPIRY_MS).toISOString();
-    await db.collection('orders').doc(docId).set({
-      ...orderPayload,
-      expiresAt,
-      createdAt: fieldValue.serverTimestamp(),
-      updatedAt: fieldValue.serverTimestamp(),
+    extra.expiresAt = expiresAt;
+    const upiUrl = buildUpiPayUrl({ upiId, merchantName: providers.upi?.merchantName || tenantRaw.name || 'Merchant', amount: quote.grandTotal, orderId: docId, transactionNote: 'OrderBhojan #' + orderNumber });
+    result = { kind: 'upi', orderId: docId, orderNumber, tenantId, quote, upiUrl, paymentStatus: 'pending', expiresAt };
+  } else if (paymentMethod === 'razorpay') {
+    extra.amountInPaise = Math.round(quote.grandTotal * 100);
+    result = { kind: 'razorpay', draftId: docId, orderNumber, tenantId, quote, amountInPaise: Number(extra.amountInPaise) };
+  } else result = { kind: 'cod', orderId: docId, orderNumber, tenantId, quote };
+  const write = (tx: import('firebase-admin/firestore').Transaction) => {
+    tx.create(db.collection(paymentMethod === 'razorpay' ? 'order_drafts' : 'orders').doc(docId), {
+      ...orderPayload, ...extra,
+      customerAttemptId: request.clientAttemptId ?? null,
+      createdAt: fieldValue.serverTimestamp(), updatedAt: fieldValue.serverTimestamp(),
     });
-
-    const merchantName =
-      typeof providers.upi?.merchantName === 'string'
-        ? providers.upi.merchantName
-        : typeof tenantRaw.name === 'string'
-          ? tenantRaw.name
-          : 'Merchant';
-    const upiUrl = buildUpiPayUrl({
-      upiId,
-      merchantName,
-      amount: quote.grandTotal,
-      orderId: docId,
-      transactionNote: `OrderBhojan #${orderNumber}`,
-    });
-
-    const batch = db.batch();
-    for (const item of orderItems) {
-      if (item.menuItemId) {
-        batch.update(db.collection('menu').doc(item.menuItemId), {
-          itemOrderCount: fieldValue.increment(item.quantity),
-        });
-      }
+    if (paymentMethod !== 'razorpay') for (const item of orderItems) {
+      if (item.menuItemId) tx.update(db.collection('menu').doc(item.menuItemId), { itemOrderCount: fieldValue.increment(item.quantity) });
     }
-    await batch.commit();
-
-    return {
-      kind: 'upi',
-      orderId: docId,
-      orderNumber,
-      tenantId,
-      quote,
-      upiUrl,
-      paymentStatus: 'pending',
-      expiresAt,
-    };
-  }
-
-  if (paymentMethod === 'razorpay') {
-    const amountInPaise = quote.grandTotal * 100;
-    await db.collection('order_drafts').doc(docId).set({
-      ...orderPayload,
-      amountInPaise,
-      createdAt: fieldValue.serverTimestamp(),
-      updatedAt: fieldValue.serverTimestamp(),
-    });
-
-    return {
-      kind: 'razorpay',
-      draftId: docId,
-      orderNumber,
-      tenantId,
-      quote,
-      amountInPaise,
-    };
-  }
-
-  await db.collection('orders').doc(docId).set({
-    ...orderPayload,
-    createdAt: fieldValue.serverTimestamp(),
-    updatedAt: fieldValue.serverTimestamp(),
-  });
-
-  const batch = db.batch();
-  for (const item of orderItems) {
-    if (item.menuItemId) {
-      batch.update(db.collection('menu').doc(item.menuItemId), {
-        itemOrderCount: fieldValue.increment(item.quantity),
-      });
-    }
-  }
-  await batch.commit();
-
-  return {
-    kind: 'cod',
-    orderId: docId,
-    orderNumber,
-    tenantId,
-    quote,
   };
+  if (request.clientAttemptId) return commitCheckoutAttempt(db, request.userId || '', request.clientAttemptId, request, result, write);
+  // Backward-compatible legacy client, with atomic order/counter writes as well.
+  await db.runTransaction(async tx => { write(tx); });
+  if (!request.userId && result.kind !== 'razorpay') {
+    try {
+      const guestTokenResult = signGuestOrderToken(result.orderId);
+      await db.collection('orders').doc(result.orderId).update({
+        guestTrackingToken: guestTokenResult.token,
+        guestTrackingTokenExpiresAt: guestTokenResult.expiresAt.toISOString(),
+      });
+      return { ...result, guestTrackingToken: guestTokenResult.token };
+    } catch {
+      return result;
+    }
+  }
+  return result;
 }
 
 export function createCheckoutCorrelationId(prefix: string = 'chk'): string {

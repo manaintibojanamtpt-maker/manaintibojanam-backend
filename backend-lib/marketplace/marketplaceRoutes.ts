@@ -1,6 +1,8 @@
+import { checkoutAttemptRef, rejectCheckoutAttempt } from './customerCheckoutAttempt.js';
 import type { Express, Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import rateLimit from 'express-rate-limit';
 import {
   buildMarketplaceCheckoutPrepare,
   buildMarketplaceQuote,
@@ -10,6 +12,8 @@ import {
   type MarketplacePlaceRequest,
   type MarketplaceQuoteRequest,
 } from './projectCheckout.js';
+import { signGuestOrderToken, verifyGuestOrderToken, parseGuestAuthorizationHeader } from '../guestOrderToken.js';
+import { getMarketplaceTrackingForGuest } from './projectMarketplaceOrders.js';
 import { normalizeCustomerEmail } from '../shared/resolveCustomerEmail.js';
 import {
   loadActivePublicCouponsForTenant,
@@ -46,6 +50,7 @@ import {
   getMarketplaceTrackingForGuest,
   listMarketplaceOrdersForUser,
 } from './projectMarketplaceOrders.js';
+import { shadowReadOrder, isProjectionReadsEnabled, isShadowReadsEnabled } from '../orders/orderLifecycleProjection.js';
 import { registerMarketplaceCustomerRoutes } from './marketplaceCustomerRoutes.js';
 import { registerMarketplaceLocationRoutes } from './marketplaceLocationRoutes.js';
 import { loadTenantBySlug, loadTenantDocBySlug } from './marketplaceTenantLoader.js';
@@ -237,6 +242,21 @@ export function registerMarketplaceRoutes(
   registerMarketplaceMediaPublicRoute(app, db);
   const prefix = '/api/marketplace';
   const verifyFirebaseToken = deps?.verifyFirebaseToken;
+
+  const guestTrackingLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: {
+      ok: false,
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many tracking requests. Try again in a minute.',
+        retryable: true,
+      },
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   async function discoveryPool(req: Request) {
     const params = parseDiscoveryRequest(new URL(req.originalUrl, 'http://localhost'));
@@ -870,16 +890,48 @@ export function registerMarketplaceRoutes(
                 orderNumber: result.orderNumber,
                 paymentMethod: 'cod',
               };
-        sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
+      if (result.guestTrackingToken) {
+        (value as Record<string, unknown>).guestTrackingToken = result.guestTrackingToken;
+      }
+      sendMarketplaceJson(res, success(value, { correlationId: createCheckoutCorrelationId() }));
       } catch (error: unknown) {
         const status = (error as { statusCode?: number }).statusCode ?? 500;
         const message = error instanceof Error ? error.message : 'Failed to place order';
+        if ([400, 409].includes(status) && req.body?.clientAttemptId && resolveAuthenticatedUserId(req)) {
+          // CAS cannot overwrite a committed result, including a concurrent winner.
+          await rejectCheckoutAttempt(db, resolveAuthenticatedUserId(req)!, req.body.clientAttemptId).catch(() => {});
+        }
         res.status(status).json({ ok: false, error: { code: 'PLACE_FAILED', message, retryable: status >= 500 } });
       }
     },
   );
 
   if (verifyFirebaseToken) {
+    app.get(`${prefix}/checkout/capabilities`, verifyFirebaseToken, (_req, res) => {
+      sendMarketplaceJson(res, success({ contract: 'customer-checkout-v1' }));
+    });
+    app.get(`${prefix}/checkout/attempts/:attemptId`, verifyFirebaseToken, async (req: any, res: Response) => {
+      try {
+        const record = await checkoutAttemptRef(db, req.user.uid, String(req.params.attemptId)).get();
+        if (!record.exists) return res.status(404).json({ ok: false, error: { code: 'ATTEMPT_UNKNOWN', message: 'Attempt outcome is unknown. Do not place another order yet.', retryable: false } });
+        if (record.data()?.rejected) return sendMarketplaceJson(res, success({ state: 'failed' }));
+        const result = record.data()!.result;
+        const orderId = result.orderId || result.draftId;
+        const order = await db.collection('orders').doc(orderId).get();
+        const draft = !order.exists ? await db.collection('order_drafts').doc(orderId).get() : order;
+        const raw = draft.data();
+        if (!raw || raw.userId !== req.user.uid) return res.status(409).json({ ok: false, error: { code: 'ATTEMPT_UNKNOWN', message: 'Order status is unavailable', retryable: false } });
+        const payment = String(raw.paymentStatus || '').toLowerCase();
+        const status = String(raw.status || '').toLowerCase();
+        const paid = ['paid', 'verified', 'success', 'captured'].includes(payment);
+        const terminal = ['cancelled', 'canceled', 'failed', 'expired'].includes(status);
+        // Payment failure alone does not close an order or prove a late payment impossible.
+        const state = paid ? 'confirmed' : terminal ? (status === 'expired' ? 'expired' : 'failed') : result.kind === 'cod' ? 'confirmed' : 'pending';
+        sendMarketplaceJson(res, success({ state, orderId, orderNumber: result.orderNumber, paymentMethod: result.kind, paymentStatus: payment, expiresAt: result.expiresAt }));
+      } catch (error: any) {
+        res.status(error.statusCode || 500).json({ ok: false, error: { code: 'RECOVERY_FAILED', message: error.message, retryable: false } });
+      }
+    });
     app.get(`${prefix}/orders`, verifyFirebaseToken, async (req: any, res: Response) => {
       try {
         const orders = await listMarketplaceOrdersForUser(db, req.user.uid);
@@ -892,11 +944,27 @@ export function registerMarketplaceRoutes(
 
     app.get(`${prefix}/orders/:orderId`, verifyFirebaseToken, async (req: any, res: Response) => {
       try {
-        const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid, FieldValue);
-        if (!order) {
-          return res.status(404).json(notFound('Order not found'));
+        const orderId = String(req.params.orderId);
+        const userId = req.user.uid;
+
+        if (isProjectionReadsEnabled()) {
+          // Use shadow read: compare projection vs authoritative, record metrics
+          const { data, fromProjection } = await shadowReadOrder(db, orderId, req.user.uid);
+          if (!data) {
+            return res.status(404).json(notFound('Order not found'));
+          }
+          // Verify ownership
+          if (String(data.userId ?? '') !== req.user.uid) {
+            return res.status(404).json(notFound('Order not found'));
+          }
+          sendMarketplaceJson(res, success({ summary: data, _meta: { fromProjection } }));
+        } else {
+          const order = await getMarketplaceOrderForUser(db, String(req.params.orderId), req.user.uid, FieldValue);
+          if (!order) {
+            return res.status(404).json(notFound('Order not found'));
+          }
+          sendMarketplaceJson(res, success(order.summary));
         }
-        sendMarketplaceJson(res, success(order.summary));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to load order';
         res.status(500).json({ ok: false, error: { code: 'INTERNAL', message, retryable: true } });
@@ -1004,8 +1072,31 @@ export function registerMarketplaceRoutes(
     });
   }
 
-  app.get(`${prefix}/orders/:orderId/guest-tracking`, async (req: Request, res: Response) => {
+  app.post(`${prefix}/orders/:orderId}/guest-token`, guestTrackingLimiter, async (_req: Request, res: Response) => {
+    sendMarketplaceJson(res, {
+      ...notFound('Guest token recovery is unavailable. Use the token provided at checkout.'),
+    });
+  });
+
+  app.get(`${prefix}/orders/:orderId/guest-tracking`, guestTrackingLimiter, async (req: Request, res: Response) => {
     try {
+      const guestToken = parseGuestAuthorizationHeader(req.headers.authorization);
+      if (!guestToken) {
+        return res.status(401).json({
+          ok: false,
+          error: { code: 'GUEST_TOKEN_REQUIRED', message: 'A valid guest token is required for tracking.', retryable: false },
+        });
+      }
+      const orderId = String(req.params.orderId ?? '').trim();
+      try {
+        verifyGuestOrderToken(guestToken, orderId);
+      } catch (err) {
+        const code = err instanceof Error && 'code' in err ? String((err as Record<string, unknown>).code) : 'INVALID_TOKEN';
+        return res.status(401).json({
+          ok: false,
+          error: { code, message: 'Invalid or expired guest token.', retryable: false },
+        });
+      }
       const phone = String(req.query.phone ?? '').trim();
       if (!phone) {
         return res.status(400).json({
@@ -1013,7 +1104,7 @@ export function registerMarketplaceRoutes(
           error: { code: 'INVALID', message: 'phone query parameter is required', retryable: false },
         });
       }
-      const tracking = await getMarketplaceTrackingForGuest(db, String(req.params.orderId), phone, FieldValue);
+      const tracking = await getGuestTrackingForGuest(db, orderId, phone, FieldValue);
       if (!tracking) {
         return res.status(404).json(notFound('Order not found'));
       }

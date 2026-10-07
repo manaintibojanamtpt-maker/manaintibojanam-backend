@@ -53,6 +53,12 @@ const SubscriptionRoutePage = lazy(() =>
   })),
 );
 
+const PosApp = lazy(() =>
+  import('@/features/pos').then((module) => ({
+    default: module.PosApp,
+  })),
+);
+
 function RouteFallback() {
   return (
     <div className="space-y-4 p-4" aria-busy="true" aria-label="Loading page">
@@ -224,6 +230,14 @@ export function AppRouter() {
           element={
             <LazyRoute>
               <SubscriptionRoutePage />
+            </LazyRoute>
+          }
+        />
+        <Route
+          path="pos"
+          element={
+            <LazyRoute>
+              <PosApp />
             </LazyRoute>
           }
         />

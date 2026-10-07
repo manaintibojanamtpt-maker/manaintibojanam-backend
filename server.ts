@@ -1,3 +1,4 @@
+import { createPaymentIntentOnce } from './backend-lib/marketplace/customerCheckoutAttempt.js';
 import express from "express";
 import dns from "dns";
 import rateLimit from "express-rate-limit";
@@ -5,7 +6,7 @@ import { createCorsMiddleware } from "./backend-lib/shared/corsPolicy.js";
 import bodyParser from "body-parser";
 import path from "path";
 import fs from "fs";
-import { createHmac } from "crypto";
+import { createHmac, createHash } from "crypto";
 import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -63,6 +64,20 @@ import { registerOwnerStorefrontMediaRoutes } from "./backend-lib/marketplace/ow
 import { registerOwnerCouponsRoutes } from "./backend-lib/marketplace/ownerCouponsRoutes.js";
 import { couponBelongsToTenant } from "./backend-lib/marketplace/projectPublicCoupons.js";
 import { registerOwnerOrdersRoutes } from "./backend-lib/marketplace/ownerOrdersRoutes.js";
+import { registerOrderCommandRoutes } from "./backend-lib/orders/registerOrderCommandRoutes.js";
+import { registerPricingReviewRoutes } from "./backend-lib/orders/registerPricingReviewRoutes.js";
+import { registerSupervisorRoutes } from "./backend-lib/orders/registerSupervisorRoutes.js";
+import { registerBusinessDayRoutes } from "./backend-lib/orders/registerBusinessDayRoutes.js";
+import { registerPosTenantRoutes } from "./backend-lib/domain/posTenantRoutes.js";
+import {
+  dispatchOutboxBatch,
+  listOrderOutboxSubscriptions,
+} from "./backend-lib/orders/orderOutboxDispatcher.js";
+import {
+  OrderOutboxRegistrationError,
+  registerRequiredOrderOutboxHandlers,
+  verifyOrderOutboxRegistration,
+} from "./backend-lib/orders/orderOutboxHandlers.js";
 import { registerOwnerPortalRoutes } from "./backend-lib/marketplace/ownerPortalRoutes.js";
 import { registerOwnerSubscriptionRoutes } from "./backend-lib/marketplace/ownerSubscriptionRoutes.js";
 import { registerPlatformTenantSubscriptionRoutes } from "./backend-lib/marketplace/platformTenantSubscriptionRoutes.js";
@@ -3554,6 +3569,124 @@ registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess,
   sendWhatsAppNotification,
   notifyCustomer,
 });
+/**
+ * Tenant membership and POS role for the order Command API.
+ *
+ * Roles are read from data, never assumed: a signed-in account with no role for
+ * a tenant is refused rather than upgraded, because the default grant would let
+ * any authenticated user record payments in that tenant.
+ */
+const POS_ROLE_ALIASES: Record<string, string> = {
+  owner: 'owner',
+  founder: 'owner',
+  manager: 'manager',
+  admin: 'manager',
+  superadmin: 'manager',
+  cashier: 'cashier',
+  counter: 'cashier',
+  kitchen: 'kitchen',
+  chef: 'kitchen',
+};
+
+const getTenantMembershipsForUser = async (
+  uid: string
+): Promise<Array<{ tenantId: string; role?: string }>> => {
+  const userDoc = await db.collection('users').doc(uid).get();
+  const data = (userDoc.exists ? userDoc.data() : {}) as Record<string, any>;
+  const memberships = new Map<string, { tenantId: string; role?: string }>();
+
+  const addCandidate = (tenantId: unknown, role: unknown) => {
+    const id = typeof tenantId === 'string' ? tenantId.trim() : '';
+    if (!id) return;
+    const normalized = POS_ROLE_ALIASES[String(role ?? '').trim().toLowerCase()];
+    const existing = memberships.get(id);
+    if (!existing) {
+      memberships.set(id, normalized ? { tenantId: id, role: normalized } : { tenantId: id });
+      return;
+    }
+    // Keep the most specific role seen for the tenant.
+    if (!existing.role && normalized) existing.role = normalized;
+  };
+
+  for (const key of ['tenantId', 'restaurantId']) addCandidate(data[key], data.posRole ?? data.role);
+  for (const key of ['ownedTenantIds', 'ownedTenants']) {
+    const list = Array.isArray(data[key]) ? data[key] : [];
+    for (const tenantId of list) addCandidate(tenantId, 'owner');
+  }
+
+  // Per-tenant overrides, e.g. tenantRoles: { tenant_x: 'cashier' }.
+  const perTenant = data.tenantRoles && typeof data.tenantRoles === 'object' ? data.tenantRoles : {};
+  for (const [tenantId, role] of Object.entries(perTenant as Record<string, unknown>)) {
+    addCandidate(tenantId, role);
+  }
+
+  // Tenant ownership recorded on the tenant document itself.
+  for (const membership of [...memberships.values()]) {
+    if (membership.role) continue;
+    const tenantDoc = await db.collection('tenants').doc(membership.tenantId).get();
+    if (tenantDoc.exists && tenantDoc.data()?.ownerId === uid) {
+      membership.role = 'owner';
+    }
+  }
+
+  return [...memberships.values()];
+};
+
+/**
+ * Display name for a tenant, for the POS tenant picker. Best effort: a missing
+ * name degrades to `null` in the response and the client falls back to the id,
+ * which is still unambiguous. It is never allowed to fail the authorization
+ * check, so it lives outside `getTenantMembershipsForUser`.
+ */
+const getTenantDisplayName = async (tenantId: string): Promise<string | null> => {
+  try {
+    const snap = await db.collection('tenants').doc(tenantId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() as Record<string, any>;
+    const name = data.name ?? data.restaurantName ?? data.displayName;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+registerPosTenantRoutes(app, {
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+  getTenantName: getTenantDisplayName,
+});
+
+registerOrderCommandRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  // Token verifier, not the Express auth middleware: the command route
+  // authenticates from its own Authorization header and enforces tenant scope.
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
+registerPricingReviewRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
+// Supervisor codes are short by nature, so verification applies its own
+// per-tenant attempt limiter inside the service (5 per 10 minutes, 429 with
+// Retry-After on lockout). That limiter is deliberately not the shared
+// express-rate-limit: it must key on the tenant rather than the caller IP so one
+// terminal's lockout cannot be used to deny a whole office.
+registerSupervisorRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
+registerBusinessDayRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
 registerOwnerPortalRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess, FieldValue, {
   sendEmailNotification,
   getTransporter,
@@ -3964,7 +4097,7 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
       });
 
       if (!bindDecision.allowed) {
-        if (!isRazorpayDraftBindEnforced()) {
+        if (!draftDocData.customerAttemptId && !isRazorpayDraftBindEnforced()) {
           logRazorpayDraftBindWouldBlock(bindDecision, { draftId, draftUserId });
         } else {
           return res.status(bindDecision.statusCode || 403).json({
@@ -4028,7 +4161,9 @@ app.post("/api/create-razorpay-order", strictLimiter, async (req, res) => {
         userId: userId || 'anonymous'
       }
     };
-    const order = await razorpay.orders.create(options);
+    const order = draftId
+      ? await createPaymentIntentOnce(_db, String(draftId), () => razorpay.orders.create(options))
+      : await razorpay.orders.create(options);
     logger.info({
       message: "Razorpay order created",
       amount,
@@ -4171,10 +4306,25 @@ app.post("/api/admin/notify-registration", requireAdmin, async (req: any, res: a
 });
 
 // GET MENU
-app.get("/api/menu", async (_, res) => {
+app.get("/api/menu", async (req, res) => {
   try {
     const snapshot: any = await withTimeout(db.collection("menu").get(), "menu collection read");
     const menu = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Generate ETag from menu content hash
+    const menuJson = JSON.stringify(menu);
+    const etag = `"${createHash('sha256').update(menuJson).digest('hex').slice(0, 32)}"`;
+    
+    // Check If-None-Match header for conditional request
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return res.status(304).end();
+    }
+    
+    // Set ETag and Cache-Control headers
+    res.set('ETag', etag);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
+    
     res.json({ success: true, data: menu });
   } catch (err: any) {
     console.error("Menu read error:", err);
@@ -4190,7 +4340,7 @@ app.get("/api/menu", async (_, res) => {
 });
 
 // LIGHTWEIGHT MENU DIAGNOSTIC
-app.get("/api/menu-ping", async (_, res) => {
+app.get("/api/menu-ping", async (req, res) => {
   try {
     const snapshot: any = await withTimeout(
       db.collection("menu").limit(1).get(),
@@ -5271,6 +5421,64 @@ app.patch("/api/orders/:id/status", verifyFirebaseToken, async (req: any, res: a
 });
 
 // ================= WORKER CRON =================
+
+/**
+ * How often the domain outbox is drained. Short enough that lifecycle tracking
+ * and notifications stay close to the command that caused them; the dispatcher
+ * itself is idempotent, so an extra pass costs a query and nothing else.
+ */
+const ORDER_OUTBOX_DISPATCH_INTERVAL_MS = Number(
+  process.env.ORDER_OUTBOX_DISPATCH_INTERVAL_MS || 15_000
+);
+
+/**
+ * Domain outbox worker. The command API writes order events transactionally and
+ * nothing consumes them until this runs, so a stalled worker means tracking,
+ * notifications and the lifecycle projection silently fall behind. Failures are
+ * logged and swallowed here so one bad batch never kills the timer.
+ */
+const dispatchOrderOutbox = async (): Promise<void> => {
+  try {
+    const summary = await dispatchOutboxBatch(db, FieldValue, 100);
+    if (
+      summary.dispatched > 0 ||
+      summary.failed > 0 ||
+      summary.deadLettered > 0 ||
+      summary.unhandledRequired > 0
+    ) {
+      logger.info({
+        message: 'order_outbox_dispatched',
+        ...summary,
+      });
+    }
+    if (summary.unhandledRequired > 0) {
+      // Belt-and-braces: boot verification should have made this impossible, so
+      // reaching here means a handler was removed at runtime.
+      logger.error({
+        message: 'order_outbox_required_handler_missing',
+        unhandledRequired: summary.unhandledRequired,
+      });
+    }
+  } catch (error: any) {
+    logger.error({ message: 'order_outbox_dispatch_failed', error: error?.message });
+  }
+};
+
+/**
+ * The interval is armed only after the required subscribers are registered and
+ * verified. It used to be armed at module scope, which meant the first pass could
+ * run against an empty registry.
+ */
+let orderOutboxTimer: NodeJS.Timeout | null = null;
+
+const startOrderOutboxDispatcher = (): void => {
+  if (orderOutboxTimer) return;
+  orderOutboxTimer = setInterval(() => {
+    void dispatchOrderOutbox();
+  }, ORDER_OUTBOX_DISPATCH_INTERVAL_MS);
+  orderOutboxTimer.unref?.();
+};
+
 app.post("/api/cron/expire-unpaid-payments", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -5296,7 +5504,8 @@ app.post("/api/cron/process-workers", async (req, res) => {
   try {
     await Promise.all([
       processOutboxBatch(),
-      processPrepAlertsBatch()
+      processPrepAlertsBatch(),
+      dispatchOrderOutbox(),
     ]);
     res.json({ success: true, message: "Workers processed successfully" });
   } catch (err: any) {
@@ -5311,7 +5520,7 @@ app.post("/api/cron/process-outbox", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    await processOutboxBatch();
+    await Promise.all([processOutboxBatch(), dispatchOrderOutbox()]);
     res.json({ success: true, message: "Outbox processed" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -5508,7 +5717,33 @@ async function startServer() {
     databaseId = firebaseCtx.databaseId;
     configStorageBucket = firebaseCtx.storageBucket;
     initializeMonitoringJobs();
+
+    /**
+     * Register the order outbox subscribers and prove they are present *before*
+     * the dispatch timer is armed.
+     *
+     * This is deliberately fatal on failure. A server that boots without its
+     * outbox handlers accepts commands, writes receipts, emits events, and then
+     * quietly delivers none of them — every event stays PENDING and is rescanned
+     * every 15 seconds forever. Refusing to start is the only outcome an operator
+     * can act on.
+     */
+    registerRequiredOrderOutboxHandlers();
+    verifyOrderOutboxRegistration();
+    startOrderOutboxDispatcher();
+    logger.info({
+      message: "order_outbox_dispatcher_started",
+      intervalMs: ORDER_OUTBOX_DISPATCH_INTERVAL_MS,
+      subscriptions: listOrderOutboxSubscriptions().map(
+        (entry) => `${entry.name}@${entry.eventType}`
+      ),
+    });
   } catch (error) {
+    if (error instanceof OrderOutboxRegistrationError) {
+      console.error("Fatal: order outbox handlers are not registered. Server will not start.");
+      console.error(error.message);
+      process.exit(1);
+    }
     console.error("Fatal: Firebase authentication failed. Server will not start.");
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);

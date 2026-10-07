@@ -7,6 +7,9 @@ import type { Firestore, FieldValue } from 'firebase-admin/firestore';
  */
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/** The order Command API path, which owns its own transactional idempotency. */
+const ORDER_COMMAND_PATH = /^\/api\/v1\/tenants\/[^/]+\/orders\/[^/]+\/commands$/;
+
 export interface IdempotencyRecord {
   key: string;
   response: unknown;
@@ -14,6 +17,8 @@ export interface IdempotencyRecord {
   createdAt: number;
   expiresAt: number;
   requestHash: string;
+  /** `pending` until the handler responds, then `completed`. */
+  status?: 'pending' | 'completed';
 }
 
 /**
@@ -39,6 +44,19 @@ export function createIdempotencyMiddleware(db: Firestore, fieldValue: typeof Fi
 
     // Skip for webhook endpoints (they have their own idempotency via event IDs)
     if (req.path.startsWith('/api/webhooks/')) {
+      return next();
+    }
+
+    /**
+     * Skip the order Command API. It implements idempotency where it has to be
+     * correct: inside the same transaction that writes the order, so a command is
+     * applied at most once. This middleware cannot provide that — it records the
+     * key before the handler runs and caches whatever response comes back, so a
+     * cached 409 would be replayed for 24 hours to a client retrying with fresh
+     * state, and two concurrent requests would both execute.
+     */
+    // Customer checkout owns the journal atomically with order creation; mounted /api paths may be relative.
+    if (ORDER_COMMAND_PATH.test(req.path) || /^(?:\/api)?\/marketplace\/checkout\/place$/.test(req.path)) {
       return next();
     }
 

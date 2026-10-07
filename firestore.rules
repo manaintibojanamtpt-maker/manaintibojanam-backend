@@ -2,37 +2,138 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Helper Functions
+    // Helper Functions (Unified: BhojanOS Platform + Inti Bojanam POS)
     // ===============================================================
     function isAuthenticated() {
       return request.auth != null;
     }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+
+    function hasUserDoc() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    /**
+     * Reads a claim defensively. Firebase ID tokens carry `restaurantId` or
+     * `role` only when a tenant issued them, and reading an absent key raises a
+     * rule evaluation error — which fails the whole request closed. A staff
+     * member on a normal token would otherwise be denied every client read.
+     */
+    function getUserRestaurantId() {
+      return ('restaurantId' in request.auth.token && request.auth.token.restaurantId != null)
+        ? request.auth.token.restaurantId
+        : (hasUserDoc() && 'restaurantId' in getUserDoc() && getUserDoc().restaurantId != null
+            ? getUserDoc().restaurantId
+            : null);
+    }
+
+    function getUserRole() {
+      return ('role' in request.auth.token && request.auth.token.role != null)
+        ? request.auth.token.role
+        : (hasUserDoc() && 'role' in getUserDoc() && getUserDoc().role != null
+            ? getUserDoc().role
+            : null);
+    }
+
+    /**
+     * The `admin` and `role` claims are issued only by tenants that grant them.
+     * Read through `in` guards for the same reason as the helpers above: an
+     * unguarded `request.auth.token.admin` raises "Property admin is undefined",
+     * and that evaluation error fails every rule the helper touches closed — so a
+     * legitimate platform admin whose token carries no claims at all was denied
+     * reads they are entitled to.
+     */
+    function hasTokenAdminClaim() {
+      return 'admin' in request.auth.token && request.auth.token.admin == true;
+    }
+
+    function getTokenRole() {
+      return ('role' in request.auth.token && request.auth.token.role != null)
+        ? request.auth.token.role
+        : null;
+    }
+
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+        hasTokenAdminClaim() ||
+        getTokenRole() == 'ADMIN' ||
+        getTokenRole() == 'admin' ||
+        (hasUserDoc() && (
+          getUserDoc().role == 'admin' ||
+          getUserDoc().role == 'superadmin' ||
+          getUserDoc().role == 'ADMIN'
+        ))
       );
     }
+
+    /**
+     * True only for a real, non-empty tenant id.
+     *
+     * Without this, `isTenantStaff(data.tenantId || data.restaurantId)` compares
+     * `null == null` for a document that carries neither field and a user who
+     * carries neither claim, granting tenant staff access to any such document.
+     * A blank tenant is never a legitimate scope, so it is never staff.
+     */
+    function hasTenantScope(tenantId) {
+      return tenantId != null && tenantId != '';
+    }
+
+    function isTenantStaff(tenantId) {
+      return isAuthenticated() && hasTenantScope(tenantId) && (
+        getUserRestaurantId() == tenantId ||
+        (hasUserDoc() && 'ownedTenantIds' in getUserDoc() && tenantId in getUserDoc().ownedTenantIds)
+      );
+    }
+
+    function isTenantAdmin(tenantId) {
+      return hasTenantScope(tenantId) && (isAdmin() || (isTenantStaff(tenantId) && (
+        getUserRole() == 'ADMIN' ||
+        getUserRole() == 'admin' ||
+        getUserRole() == 'owner'
+      )));
+    }
+
+    function isTenantOwner(tenantId) {
+      return isAuthenticated() && hasTenantScope(tenantId) && (
+        isAdmin() ||
+        (hasUserDoc() && 'ownedTenantIds' in getUserDoc() && tenantId in getUserDoc().ownedTenantIds) ||
+        getUserRestaurantId() == tenantId
+      );
+    }
+
     function isWithinCancellationWindow(resource) {
       return request.time < resource.data.createdAt + duration.value(60, 's');
-    }
-    function isTenantOwner(tenantId) {
-      return isAuthenticated() && (
-        tenantId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ownedTenantIds
-      );
     }
     
     function isUnmodified(fields) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
     }
     
+    /**
+     * Payment states a client may assert on its own.
+     *
+     * These are all *non-settled* observations: an order is not yet paid, or a
+     * payment attempt failed or expired. `PAID`/`paid` is deliberately absent.
+     * A client that can write a settled status is a client that can invent
+     * revenue, and the Command API is the only thing allowed to do that — by
+     * matching the amount against the settleable balance and recording the
+     * actor. Removing `PAID` from this list is what makes the guard below mean
+     * anything; with it present, any tenant staff member or owner could mark an
+     * order paid with a direct SDK write and no Command API ever involved.
+     */
+    function clientSettlingPaymentStates() {
+      return ['pending', 'pending_verification', 'failed', 'expired', 'unpaid', 'PENDING'];
+    }
     function allowsClientPaymentStatusChange() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus'])
-        || request.resource.data.paymentStatus in ['pending', 'pending_verification', 'failed', 'expired', 'unpaid'];
+        || request.resource.data.paymentStatus in clientSettlingPaymentStates();
     }
 
     function protectsServerPaymentFields() {
@@ -41,18 +142,134 @@ service cloud.firestore {
         'paymentVerifiedBy',
         'razorpayPaymentId',
         'paymentRail',
+        'paymentSource',
+        'settlementSource',
         'reconciliationSource',
         'reconciliationEventId'
       ]);
     }
 
+    /**
+     * Settlement is server-only. Staff collect cash in the real world and record
+     * it through the Command API, which writes `RECORDED`; only a verified
+     * provider webhook may write `VERIFIED`. Without this a client could mark any
+     * order paid by writing the field directly.
+     *
+     * Note the asymmetry with `clientCannotSettlePayment()`: the *recorded*
+     * states below are what a legitimate legacy client may assert, but none of
+     * them is a settled state. `PAID` and `VERIFIED` are never client-writable.
+     */
+    function clientCannotSettlePayment() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus'])
+        || request.resource.data.paymentStatus in [
+          'pending', 'pending_verification', 'failed', 'expired', 'unpaid',
+          'PENDING', 'RECORDED', 'recorded'
+        ];
+    }
+
+    /**
+     * True when a `create` payload would assert a settled or provider-verified
+     * payment. Applied to document creation, where there is no prior state to
+     * diff against, so the field-scoped diff guards cannot be used.
+     */
+    function createDoesNotAssertSettlement(data) {
+      return !('paymentStatus' in data && data.paymentStatus in [
+        'PAID', 'paid', 'VERIFIED', 'verified', 'RECORDED', 'recorded', 'SETTLED', 'settled'
+      ]);
+    }
+
+    /** A create may never carry provider or settlement provenance. */
+    function createHasNoServerPaymentProvenance(data) {
+      return !('paymentVerifiedAt' in data)
+        && !('paymentVerifiedBy' in data)
+        && !('razorpayPaymentId' in data)
+        && !('paymentRail' in data)
+        && !('paymentSource' in data)
+        && !('settlementSource' in data)
+        && !('reconciliationSource' in data)
+        && !('reconciliationEventId' in data);
+    }
+
+    /**
+     * States that assert money has been received or confirmed.
+     *
+     * `RECORDED` is here because even the staff-recorded state is written by the
+     * Command API, which also matches the amount against the settleable balance
+     * and records the actor. A direct SDK write of any of these skips both.
+     */
+    function settledPaymentStates() {
+      return ['VERIFIED', 'verified', 'PAID', 'paid', 'SETTLED', 'settled', 'CAPTURED', 'captured', 'RECORDED', 'recorded'];
+    }
+
+    /**
+     * For payment *documents*, the document's own `status` field is the
+     * settlement state, so the `paymentStatus` guards above do not cover it.
+     * This closes the remaining route to declaring a payment settled directly.
+     */
+    function clientCannotDeclarePaymentSettled(data) {
+      return !('status' in data) || !(data.status in settledPaymentStates());
+    }
+
+    /**
+     * Reads whichever tenant field a document actually has.
+     *
+     * Order documents are written with `tenantId`, POS documents with
+     * `restaurantId`, so both shapes are real and both must resolve. Written as
+     * `data.tenantId || data.restaurantId` this instead produced `null` for a
+     * document carrying neither, which then compared equal to a user with no
+     * tenant claim; `hasTenantScope` closes that off.
+     */
+    function tenantOf(data) {
+      // Rules function bodies are a single return expression, so this is a
+      // ternary rather than statements. Fail closed: a document with no
+      // canonical tenant resolves to '', which `hasTenantScope` then rejects.
+      return ('tenantId' in data && data.tenantId != null)
+        ? data.tenantId
+        : (('restaurantId' in data && data.restaurantId != null) ? data.restaurantId : '');
+    }
+
+    /**
+     * A staff member updating an order through the client SDK may only move
+     * lifecycle and operational fields. Money, ownership and audit fields are
+     * server-owned, which is what keeps a compromised or buggy POS from rewriting
+     * history or declaring settlement.
+     */
+    function staffOrderUpdateIsScoped() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status',
+        'orderStatus',
+        'canonicalOrderStatus',
+        'kitchenStatus',
+        'paymentMethod',
+        'paymentProofType',
+        'paymentProofValue',
+        'paymentReferenceNumber',
+        'paymentSubmittedAt',
+        'trackingToken',
+        'trackingStatus',
+        'deliveryPartner',
+        'deliveryTrackingId',
+        'estimatedDeliveryTime',
+        'cancellationReason',
+        'rejectionReason',
+        'notes',
+        'timeline',
+        'items',
+        'kotNumber',
+        'version',
+        'updatedAt',
+        'lastUpdatedBy',
+        'lastUpdatedAt'
+      ]);
+    }
+
     function isValidOrderStatusTransition(oldStatus, newStatus) {
       return 
-        (oldStatus in ['CREATED', 'PLACED', 'PENDING'] && newStatus == 'ACCEPTED') ||
-        (oldStatus == 'ACCEPTED' && newStatus == 'PREPARING') ||
-        (oldStatus == 'PREPARING' && newStatus in ['READY', 'OUT_FOR_DELIVERY']) ||
-        (oldStatus == 'READY' && newStatus == 'OUT_FOR_DELIVERY') ||
-        (oldStatus == 'OUT_FOR_DELIVERY' && newStatus == 'DELIVERED') ||
+        (oldStatus in ['CREATED', 'PLACED', 'PENDING', 'NEW'] && newStatus in ['ACCEPTED', 'PREPARING', 'CONFIRMED']) ||
+        (oldStatus in ['ACCEPTED', 'CONFIRMED'] && newStatus == 'PREPARING') ||
+        (oldStatus == 'PREPARING' && newStatus in ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'DELIVERED']) ||
+        (oldStatus == 'READY' && newStatus in ['OUT_FOR_DELIVERY', 'COMPLETED', 'DELIVERED']) ||
+        (oldStatus == 'OUT_FOR_DELIVERY' && newStatus in ['DELIVERED', 'COMPLETED']) ||
         (newStatus == 'CANCELLED') ||
         (newStatus == 'REJECTED');
     }
@@ -101,23 +318,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (
+        isOwner(uid) ||
+        isAdmin() ||
+        (getUserRole() == 'ADMIN' && resource.data.restaurantId == getUserRestaurantId())
+      );
       allow create: if isAuthenticated() && (
         isAdmin() || 
-        (isOwner(userId) && 
+        (isOwner(uid) && 
          !request.resource.data.keys().hasAny(['permissions', 'isAdmin']) &&
-         (!('role' in request.resource.data) || request.resource.data.role == 'owner' || request.resource.data.role == 'user')
-        )
+         (!('role' in request.resource.data) || request.resource.data.role in ['owner', 'user', 'ADMIN', 'CASHIER', 'WAITER', 'KITCHEN']))
       );
       allow update: if isAuthenticated() && (
         isAdmin() || 
-        request.auth.token.email == 'bhojanos26@gmail.com' ||
-        request.auth.token.email == 'manaintibojanamtpt@gmail.com' ||
-        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'ownedTenantIds', 'permissions', 'isAdmin']))
+        (isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'ownedTenantIds', 'permissions', 'isAdmin'])) ||
+        (getUserRole() == 'ADMIN' && resource.data.restaurantId == getUserRestaurantId())
       );
+      allow delete: if isAuthenticated() && (isAdmin() || (getUserRole() == 'ADMIN' && resource.data.restaurantId == getUserRestaurantId()));
     }
 
+    // BhojanOS Storefront & Catalog Menu
     match /menu/{itemId} {
       allow read: if true;
       allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId);
@@ -125,53 +346,96 @@ service cloud.firestore {
       allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId);
     }
 
+    // Unified Orders Collection (BhojanOS + OrderBhojan + POS Customer Orders)
     match /orders/{orderId} {
-      allow read: if isAuthenticated() && (
+      allow read: if (isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
+        resource.data.customerUid == request.auth.uid ||
         isAdmin() ||
-        isTenantOwner(resource.data.tenantId)
-      );
-      allow create: if (isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid)) || (!isAuthenticated() && request.resource.data.userId == null);
-      allow update: if isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && allowsClientPaymentStatusChange() && protectsServerPaymentFields() && (
-        (isAdmin() && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
-        (isTenantOwner(resource.data.tenantId) && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
+        isTenantOwner(tenantOf(resource.data)) ||
+        isTenantStaff(tenantOf(resource.data))
+      )) ||
+      // Guest tracking lookup by an order id the caller already holds. A document
+      // that is not addressed by its own id or its tracking id is not public,
+      // so this cannot be used to enumerate the collection.
+      (!isAuthenticated() && orderId != '' && (
+        resource.data.id == orderId || resource.data.onlineOrderId == orderId
+      ));
+
+      allow create: if
+        /**
+         * 1. BhojanOS platform create rules.
+         *
+         * The guest half of this branch is what storefront checkout uses. It is
+         * gated on `userId == null` and nothing else, so before the settlement
+         * guards below were added to it an anonymous caller could create an order
+         * in any tenant that already declared itself PAID. An unattributed order
+         * is junk; an attributed, already-settled one is forged revenue.
+         */
+        ((isAuthenticated() && (isAdmin() || request.resource.data.userId == request.auth.uid))
+          || (!isAuthenticated() && request.resource.data.userId == null
+              && createDoesNotAssertSettlement(request.resource.data)
+              && createHasNoServerPaymentProvenance(request.resource.data))) ||
+        // 2. POS / Customer Menu create rules
         (
-          resource.data.userId == request.auth.uid &&
+          hasTenantScope(request.resource.data.tenantId) &&
+          createDoesNotAssertSettlement(request.resource.data) &&
+          createHasNoServerPaymentProvenance(request.resource.data) &&
+          request.resource.data.status in ['NEW', 'ORDER_PLACED', 'PLACED', 'RECEIVED', 'DELIVERY_REQUESTED', 'PENDING'] &&
+          request.resource.data.total >= 0
+        ) ||
+        isTenantStaff(tenantOf(request.resource.data));
+
+      allow update: if
+        // POS staff update: lifecycle and operational fields only. Settlement and
+        // audit fields stay server-owned.
+        (isTenantStaff(tenantOf(resource.data)) &&
+          staffOrderUpdateIsScoped() &&
+          clientCannotSettlePayment() &&
+          protectsServerPaymentFields()) ||
+        // BhojanOS owner & transitions
+        (isAuthenticated() && isUnmodified(['tenantId', 'userId', 'id', 'createdAt']) && allowsClientPaymentStatusChange() && protectsServerPaymentFields() && (
+          (isAdmin() && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
+          (isTenantOwner(tenantOf(resource.data)) && isValidOrderStatusTransition(resource.data.status, request.resource.data.status)) ||
           (
+            resource.data.userId == request.auth.uid &&
             (
-              request.resource.data.status == 'CANCELLED' &&
-              resource.data.status in ['PLACED', 'PENDING'] &&
-              isWithinCancellationWindow(resource) &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'timeline'])
-            )
-            ||
-            (
-              request.resource.data.status == resource.data.status &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'rating',
-                'feedback',
-                'reviewed',
-                'feedbackStatus',
-                'feedbackSubmittedAt',
-                'updatedAt',
-                'timeline'
-              ])
-            )
-            ||
-            (
-              request.resource.data.status == resource.data.status &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'paymentSubmittedAt',
-                'paymentProofType',
-                'paymentProofValue',
-                'paymentReferenceNumber',
-                'updatedAt',
-                'timeline'
-              ])
+              (
+                request.resource.data.status == 'CANCELLED' &&
+                resource.data.status in ['PLACED', 'PENDING'] &&
+                isWithinCancellationWindow(resource) &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'timeline'])
+              )
+              ||
+              (
+                request.resource.data.status == resource.data.status &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'rating',
+                  'feedback',
+                  'reviewed',
+                  'feedbackStatus',
+                  'feedbackSubmittedAt',
+                  'updatedAt',
+                  'timeline'
+                ])
+              )
+              ||
+              (
+                request.resource.data.status == resource.data.status &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'paymentSubmittedAt',
+                  'paymentProofType',
+                  'paymentProofValue',
+                  'paymentReferenceNumber',
+                  'updatedAt',
+                  'timeline'
+                ])
+              )
             )
           )
-        )
-      );
+        ));
+
+      allow delete: if isAdmin() || isTenantAdmin(tenantOf(resource.data));
     }
 
     match /payment_verifications/{verificationId} {
@@ -220,23 +484,17 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if true;
-      // Platform admins manage all categories; kitchen owners manage their own tenant docs.
-      allow create: if isAdmin() || (
-        isTenantOwner(request.resource.data.tenantId) &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0
-      );
-      allow update: if isAdmin() || (
-        isTenantOwner(resource.data.tenantId) &&
-        isTenantOwner(request.resource.data.tenantId)
-      );
-      allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId);
+      allow create: if isAdmin() || isTenantOwner(request.resource.data.tenantId) ||
+        isTenantAdmin(request.resource.data.tenantId);
+      allow update: if isAdmin() || 
+        (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId)) ||
+        isTenantAdmin(resource.data.tenantId);
+      allow delete: if isAdmin() || isTenantOwner(resource.data.tenantId) ||
+        isTenantAdmin(resource.data.tenantId);
     }
 
     match /supportTickets/{ticketId} {
-      // Customers can create tickets for support
       allow create: if isAuthenticated();
-      // Admin-only visibility and moderation
       allow read, update, delete: if isAdmin();
     }
 
@@ -269,7 +527,6 @@ service cloud.firestore {
     }
 
     match /referrals/{refId} {
-      // Read: authenticated users can resolve referral codes (query by referralCode).
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
         && refId == request.auth.uid
@@ -318,15 +575,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() && !isReservedSlug(tenantId) && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug));
       allow update: if isAuthenticated() && (!('slug' in request.resource.data) || !isReservedSlug(request.resource.data.slug)) && (
         isAdmin() ||
-        request.auth.token.email == 'bhojanos26@gmail.com' ||
-        request.auth.token.email == 'manaintibojanamtpt@gmail.com' ||
         isTenantOwner(tenantId)
       );
       
       match /analytics/{docId} {
         allow read: if isAdmin() || isTenantOwner(tenantId);
-        // Allowing create/update for the frontend AnalyticsService for now.
-        // In a strict environment, this should only be writeable by Cloud Functions.
         allow write: if isAdmin() || isTenantOwner(tenantId) || isAuthenticated();
       }
 
@@ -335,7 +588,6 @@ service cloud.firestore {
         allow write: if isAdmin() || isTenantOwner(tenantId);
       }
 
-      // Delivery provider secrets + connection docs — Admin SDK / server routes only.
       match /deliveryProviderSecrets/{providerId} {
         allow read, write: if false;
       }
@@ -360,9 +612,9 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || (isTenantOwner(resource.data.tenantId) && isTenantOwner(request.resource.data.tenantId));
     }
 
-    match /audit_logs/{docId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated();
+    match /audit_logs/{logId} {
+      allow read: if isTenantAdmin(tenantOf(resource.data)) || isAdmin();
+      allow create: if isTenantStaff(tenantOf(request.resource.data)) || isAuthenticated();
       allow update, delete: if false; // Immutable
     }
 
@@ -386,6 +638,149 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isAdmin() || isTenantOwner(resource.data.tenantId));
       allow create: if isAuthenticated() && isTenantOwner(request.resource.data.tenantId);
       allow update, delete: if isAdmin();
+    }
+
+    // ===============================================================
+    // POS-Specific Collections (Inti Bojanam POS)
+    // ===============================================================
+
+    // Restaurant Tenant Metadata & Subcollections
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow write: if isTenantAdmin(restaurantId);
+
+      match /counters/{counterId} {
+        allow read, write: if isTenantStaff(restaurantId);
+      }
+
+      match /{allSubcollections=**} {
+        allow read, write: if isTenantStaff(restaurantId);
+      }
+    }
+
+    // POS Internal Orders (/pos_orders/{orderId})
+    match /pos_orders/{orderId} {
+      allow get: if isTenantStaff(tenantOf(resource.data));
+      allow list: if isTenantStaff(tenantOf(resource.data));
+      allow create: if isTenantStaff(tenantOf(request.resource.data)) &&
+        clientCannotSettlePayment() &&
+        protectsServerPaymentFields() &&
+        createDoesNotAssertSettlement(request.resource.data) &&
+        createHasNoServerPaymentProvenance(request.resource.data);
+      allow update: if isTenantStaff(tenantOf(resource.data)) &&
+        clientCannotSettlePayment() &&
+        protectsServerPaymentFields();
+      allow delete: if isTenantAdmin(tenantOf(resource.data));
+    }
+
+    // Independent Payments (/payments/{paymentId})
+    //
+    // This block previously opened with
+    //   allow read, write: if isTenantStaff(resource != null ? … : …);
+    // whose condition evaluated to a *tenant id string* rather than a bool. A
+    // non-boolean rule condition is a type error, and a type error denies — so
+    // every read and write below was refused, including the legitimate ones the
+    // per-operation rules were written to allow. The blanket line is gone; the
+    // per-operation rules below are the whole policy.
+    match /payments/{paymentId} {
+      allow get: if isTenantStaff(tenantOf(resource.data));
+      // No `list`: a collection query has no `resource`, so a rule cannot prove
+      // every document in the result belongs to the caller's tenant, and rules v2
+      // cannot read the query's own filters. Denying by default is the only
+      // fail-closed option. Payment documents are read by id.
+      allow create: if isTenantStaff(tenantOf(request.resource.data)) &&
+        clientCannotSettlePayment() &&
+        protectsServerPaymentFields() &&
+        createDoesNotAssertSettlement(request.resource.data) &&
+        createHasNoServerPaymentProvenance(request.resource.data) &&
+        clientCannotDeclarePaymentSettled(request.resource.data);
+      allow update: if isTenantStaff(tenantOf(resource.data)) &&
+        clientCannotSettlePayment() &&
+        protectsServerPaymentFields() &&
+        clientCannotDeclarePaymentSettled(request.resource.data);
+      allow delete: if isTenantAdmin(tenantOf(resource.data));
+    }
+
+    // Atomic Order Sequence Counters (/order_counters/{counterId})
+    match /order_counters/{counterId} {
+      allow read: if isTenantStaff(counterId.split('_')[0]);
+      allow write: if isTenantStaff(counterId.split('_')[0]);
+    }
+
+    // Deliveries (/deliveries/{deliveryId})
+    match /deliveries/{deliveryId} {
+      allow get, list: if isTenantStaff(tenantOf(resource.data)) ||
+        (resource.data.trackingToken != null && request.auth == null);
+      allow create, update: if isTenantStaff(tenantOf(request.resource.data));
+      allow delete: if isTenantAdmin(tenantOf(resource.data));
+    }
+
+    match /deliveryEvents/{eventId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // POS Menu Items Catalog (/menu_items/{itemId})
+    match /menu_items/{itemId} {
+      allow read: if true;
+      allow create, update: if isTenantAdmin(request.resource.data.tenantId);
+      allow delete: if isTenantAdmin(resource.data.tenantId);
+    }
+
+    // Dining Tables & Floor Plan (/dining_tables/{tableId})
+    match /dining_tables/{tableId} {
+      allow read: if true;
+      allow create, update: if isTenantStaff(request.resource.data.tenantId);
+      allow delete: if isTenantAdmin(resource.data.tenantId);
+    }
+
+    // Cross-Device PIN Synchronization (/pins/{pinId})
+    match /pins/{pinId} {
+      allow read: if isTenantStaff(pinId);
+      allow write: if isTenantAdmin(pinId);
+    }
+
+    // ===============================================================
+    // Order Command API (server-owned)
+    // ===============================================================
+    //
+    // The Command API applies order changes inside a transaction together with
+    // its receipt and outbox event. These collections are that receipt trail:
+    // they must never be writable from a client, or a caller could forge an
+    // outcome for a command it never sent and suppress the real one.
+
+    match /order_commands/{commandId} {
+      allow read: if isAdmin() ||
+        (isTenantStaff(tenantOf(resource.data)) && isTenantOwner(tenantOf(resource.data)));
+      allow write: if false;
+    }
+
+    match /outbox/{eventId} {
+      allow read: if isAdmin() ||
+        (isTenantStaff(tenantOf(resource.data)) && isTenantOwner(tenantOf(resource.data)));
+      allow write: if false;
+    }
+
+    match /outbox_receipts/{receiptId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Dead letters are part of the same receipt trail. `replayDeadLetter` is a
+    // server function, so the only correct client permission is to read them.
+    // This block used to allow admin *writes*, which would let an admin client
+    // fabricate a dead letter, or clear a real one and have it re-dispatched
+    // after its retries were exhausted.
+    match /outbox_dead_letter/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /order_lifecycle_projection/{orderId} {
+      allow read: if isAdmin() ||
+        isTenantStaff(tenantOf(resource.data)) ||
+        (!isAuthenticated() && resource.data.publicTrackingEnabled == true);
+      allow write: if false;
     }
   }
 }
