@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Build marketplace contracts
-        run: npm run build --prefix packages/marketplace-contracts
+        run: npm run build:contracts
 
       - name: Relocated Operator & Unit Tests
         run: npm run test:unit
