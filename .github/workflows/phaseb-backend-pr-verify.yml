@@ -1,0 +1,42 @@
+name: Phase B Backend Review Verification
+
+on:
+  push:
+    branches: [review/phaseb-projection-grants]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Backend Phase B Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build marketplace contracts
+        run: npm run build --prefix packages/marketplace-contracts
+
+      - name: Relocated Operator & Unit Tests
+        run: npm run test:unit
+
+      - name: Order, Projection & Grant SDK Tests
+        run: npm run test:sdk
+
+      - name: API Security Matrix Tests
+        run: npm run test:api-security
+
+      - name: Firestore Security Rules Tests
+        run: npm run test:rules
+
+      - name: Baseline TypeScript Check (Known Debt)
+        run: npm run lint
+        continue-on-error: true
