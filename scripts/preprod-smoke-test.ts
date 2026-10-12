@@ -297,7 +297,7 @@ async function testBuildArtifacts() {
   const dist = path.join(process.cwd(), 'dist');
   assert('dist/ exists', fs.existsSync(dist));
   assert('dist/index.html exists', fs.existsSync(path.join(dist, 'index.html')));
-  assert('dist/server.cjs exists', fs.existsSync(path.join(dist, 'server.cjs')));
+  assert('dist-server/server.cjs exists', fs.existsSync(path.join(process.cwd(), 'dist-server', 'server.cjs')));
 
   const assetsDir = path.join(dist, 'assets');
   if (fs.existsSync(assetsDir)) {
@@ -327,7 +327,7 @@ async function main() {
   if (!resolved) {
     failures += 1;
     console.error('\n[WARN] No healthy server found — skipping HTTP/load tests');
-    console.error('       Start with: npm run build && PORT=8081 node dist/server.cjs');
+    console.error('       Start with: npm run build && PORT=8081 node dist-server/server.cjs');
   } else {
     await testHttpSmoke();
     await testLoad();

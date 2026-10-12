@@ -6,7 +6,9 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "**/server.cjs*",
+        "dist-server/**"
       ],
       "rewrites": [
         {
@@ -156,7 +158,9 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "**/server.cjs*",
+        "dist-server/**"
       ],
       "rewrites": [
         {
@@ -270,7 +274,9 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "**/server.cjs*",
+        "dist-server/**"
       ],
       "rewrites": [
         {
@@ -384,7 +390,9 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "**/server.cjs*",
+        "dist-server/**"
       ],
       "rewrites": [
         {

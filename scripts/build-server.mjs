@@ -10,7 +10,7 @@ await esbuild.build({
   bundle: true,
   platform: 'node',
   target: 'node20',
-  outfile: path.join(root, 'dist/server.cjs'),
+  outfile: path.join(root, 'dist-server/server.cjs'),
   format: 'cjs',
   external: [
     'express',

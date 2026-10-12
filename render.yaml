@@ -3,7 +3,7 @@ services:
     name: bhojanos-prod-api
     runtime: node
     buildCommand: npm ci && npm run build
-    startCommand: node dist/server.cjs
+    startCommand: node dist-server/server.cjs
     envVars:
       - key: NODE_ENV
         value: production
