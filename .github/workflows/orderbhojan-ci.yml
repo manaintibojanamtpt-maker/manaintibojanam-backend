@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    paths:
+      - 'orderbhojan/**'
+      - 'packages/marketplace-contracts/**'
+      - 'packages/design-system/**'
+      - 'packages/location-core/**'
+      - '.github/workflows/orderbhojan-ci.yml'
 
 jobs:
   gate-prod:
