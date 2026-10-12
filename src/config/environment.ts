@@ -118,6 +118,16 @@ export const EnvironmentConfig = {
     return this.getOrderBhojanBaseUrl();
   },
 
+  /**
+   * Canonical Point of Sale (POS) application URL on OrderBhojan.
+   * Never appends auth tokens to URL; restaurant context passed via ?tenantId= query param.
+   */
+  getPosUrl(tenantId?: string): string {
+    const base = `${this.getOrderBhojanBaseUrl()}/pos`;
+    const trimmed = tenantId?.trim();
+    return trimmed ? `${base}?tenantId=${encodeURIComponent(trimmed)}` : base;
+  },
+
   getOwnerUrl(): string {
     return `${this.getBaseUrl()}/owner`;
   },

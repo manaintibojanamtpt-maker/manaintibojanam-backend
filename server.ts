@@ -3620,16 +3620,60 @@ const getTenantMembershipsForUser = async (
     addCandidate(tenantId, role);
   }
 
-  // Tenant ownership recorded on the tenant document itself.
-  for (const membership of [...memberships.values()]) {
-    if (membership.role) continue;
-    const tenantDoc = await db.collection('tenants').doc(membership.tenantId).get();
-    if (tenantDoc.exists && tenantDoc.data()?.ownerId === uid) {
-      membership.role = 'owner';
+  // If user has no memberships yet, check if any tenant lists them as ownerId
+  if (memberships.size === 0) {
+    try {
+      const ownedSnaps = await db.collection('tenants').where('ownerId', '==', uid).limit(20).get();
+      for (const doc of ownedSnaps.docs) {
+        addCandidate(doc.id, 'owner');
+      }
+    } catch {
+      /* index or permission fallback */
     }
   }
 
-  return [...memberships.values()];
+  // Verify all candidates against the tenant document:
+  // 1. Enforce posEnabled !== false (disabled POS turns off terminal access via direct API)
+  // 2. Enforce ownerId === uid for owner roles (drops revoked ownership if user doc is stale)
+  const verified: Array<{ tenantId: string; role?: string }> = [];
+  for (const membership of memberships.values()) {
+    try {
+      const tenantDoc = await db.collection('tenants').doc(membership.tenantId).get();
+      if (!tenantDoc.exists) continue;
+      const tData = tenantDoc.data() || {};
+
+      // If POS is explicitly disabled by the restaurant owner, exclude from POS memberships
+      if (tData.features?.posEnabled === false) {
+        continue;
+      }
+
+      // If claimed role is owner, verify ownerId === uid on the tenant document
+      if (membership.role === 'owner') {
+        if (tData.ownerId !== uid) {
+          // Ownership was revoked or transferred: check if a valid non-owner role exists
+          const staffRole = perTenant[membership.tenantId];
+          const normalizedStaff = staffRole ? POS_ROLE_ALIASES[String(staffRole).trim().toLowerCase()] : null;
+          if (normalizedStaff) {
+            verified.push({ tenantId: membership.tenantId, role: normalizedStaff });
+          }
+          continue;
+        }
+      } else if (!membership.role) {
+        if (tData.ownerId === uid) {
+          membership.role = 'owner';
+        } else {
+          continue;
+        }
+      }
+
+      verified.push(membership);
+    } catch {
+      // If tenant lookup fails transiently, keep membership if it already had an assigned role
+      if (membership.role) verified.push(membership);
+    }
+  }
+
+  return verified;
 };
 
 /**

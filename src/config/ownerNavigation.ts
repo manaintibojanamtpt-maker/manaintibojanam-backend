@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Settings,
   GitBranch,
+  MonitorSmartphone,
   LucideIcon,
 } from 'lucide-react';
 
@@ -40,6 +41,7 @@ export const ownerNavGroups: Record<OwnerNavItem['group'], string> = {
 export const ownerNavItems: OwnerNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', path: '/owner/dashboard', icon: LayoutDashboard, group: 'run', mobileBar: true },
   { id: 'orders', label: 'Orders', shortLabel: 'Orders', path: '/owner/orders', icon: ShoppingBag, group: 'run', mobileBar: true },
+  { id: 'pos', label: 'Point of Sale (POS)', shortLabel: 'POS', path: '/owner/pos', icon: MonitorSmartphone, group: 'run' },
   { id: 'menu', label: 'Menu', shortLabel: 'Menu', path: '/owner/menu', icon: MenuIcon, group: 'run', mobileBar: true },
   { id: 'storefront', label: 'Storefront', shortLabel: 'Store', path: '/owner/settings', icon: Store, group: 'store', mobileBar: true },
   { id: 'branches', label: 'Branches', shortLabel: 'Branches', path: '/owner/branches', icon: GitBranch, group: 'store', hideOnMobile: true, ownerBranchFlag: true },
@@ -57,6 +59,7 @@ export const ownerNavItems: OwnerNavItem[] = [
 export const getOwnerPageTitle = (pathname: string): string => {
   const match = ownerNavItems.find((item) => item.path === pathname);
   if (match) return match.label;
+  if (pathname === '/owner/pos') return 'Point of Sale (POS)';
   if (pathname === '/owner/operations') return 'Reports';
   if (pathname === '/owner/import-data') return 'Import data';
   if (pathname === '/owner/setup') return 'Store setup';

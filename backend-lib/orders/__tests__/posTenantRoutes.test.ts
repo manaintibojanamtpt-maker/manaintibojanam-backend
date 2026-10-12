@@ -10,7 +10,7 @@
 import { it, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { POS_TENANT_ROLES, selectPosTenants } from '../../domain/posTenantRoutes';
+import { POS_TENANT_ROLES, selectPosTenants, registerPosTenantRoutes } from '../../domain/posTenantRoutes';
 
 describe('POS tenant selection', () => {
   it('keeps memberships whose role is meaningful at a counter', () => {
@@ -109,5 +109,132 @@ describe('POS tenant selection', () => {
     // yields nothing at all.
     assert.deepEqual(selectPosTenants([]), []);
     assert.ok(POS_TENANT_ROLES.size >= 1);
+  });
+});
+
+describe('POS tenant route handlers and membership isolation', () => {
+  const setupApp = (options: {
+    user?: { uid: string; email?: string; admin?: boolean; role?: string };
+    memberships?: Array<{ tenantId: string; role?: string }>;
+    names?: Record<string, string>;
+  }) => {
+    const routes: Record<string, (req: any, res: any) => Promise<any>> = {};
+    const mockApp = {
+      get: (path: string, handler: any) => {
+        routes[path] = handler;
+      },
+    } as any;
+
+    registerPosTenantRoutes(mockApp, {
+      verifyFirebaseToken: async (token: string) => {
+        if (token === 'valid-token') {
+          return options.user ?? { uid: 'user_1', email: 'user@example.com' };
+        }
+        throw new Error('invalid token');
+      },
+      getTenantMemberships: async (uid: string) => {
+        if (uid === (options.user?.uid ?? 'user_1')) {
+          return options.memberships ?? [];
+        }
+        return [];
+      },
+      getTenantName: async (tenantId: string) => options.names?.[tenantId] ?? null,
+    });
+
+    const dispatch = async (path: string, params: Record<string, string> = {}, authHeader?: string) => {
+      let statusCode = 200;
+      let body: any = null;
+      const res = {
+        status: (code: number) => {
+          statusCode = code;
+          return res;
+        },
+        json: (data: any) => {
+          body = data;
+          return res;
+        },
+      };
+      const req = {
+        headers: authHeader ? { authorization: authHeader } : {},
+        params,
+      };
+
+      const handler = routes[path];
+      if (!handler) throw new Error(`Route ${path} not registered`);
+      await handler(req, res);
+      return { status: statusCode, body };
+    };
+
+    return { dispatch };
+  };
+
+  it('rejects unauthenticated requests with 401', async () => {
+    const { dispatch } = setupApp({});
+    const res = await dispatch('/api/v1/pos/tenants');
+    assert.equal(res.status, 401);
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error.code, 'UNAUTHENTICATED');
+  });
+
+  it('returns empty tenants list for unrelated user with no memberships', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'unrelated_user', email: 'stranger@example.com' },
+      memberships: [],
+    });
+    const res = await dispatch('/api/v1/pos/tenants', {}, 'Bearer valid-token');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.uid, 'unrelated_user');
+    assert.deepEqual(res.body.tenants, []);
+  });
+
+  it('returns authorized tenants for legitimate staff and owners', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'owner_user', email: 'owner@example.com' },
+      memberships: [
+        { tenantId: 'kitchen_1', role: 'owner' },
+        { tenantId: 'kitchen_2', role: 'cashier' },
+      ],
+      names: { kitchen_1: 'Biryani Express', kitchen_2: 'Dosa Corner' },
+    });
+    const res = await dispatch('/api/v1/pos/tenants', {}, 'Bearer valid-token');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.tenants.length, 2);
+    assert.equal(res.body.tenants[0].name, 'Biryani Express');
+    assert.equal(res.body.tenants[0].role, 'owner');
+    assert.equal(res.body.tenants[1].name, 'Dosa Corner');
+    assert.equal(res.body.tenants[1].role, 'cashier');
+  });
+
+  it('confirms authorization for an authorized tenant', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'cashier_user', email: 'cashier@example.com' },
+      memberships: [{ tenantId: 'kitchen_1', role: 'cashier' }],
+    });
+    const res = await dispatch(
+      '/api/v1/pos/tenants/:tenantId/authorized',
+      { tenantId: 'kitchen_1' },
+      'Bearer valid-token'
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.body.authorized, true);
+    assert.equal(res.body.tenantId, 'kitchen_1');
+    assert.equal(res.body.role, 'cashier');
+  });
+
+  it('denies authorization with 403 when user does not belong to the requested tenant', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'user_a', email: 'usera@example.com' },
+      memberships: [{ tenantId: 'kitchen_mine', role: 'owner' }],
+    });
+    const res = await dispatch(
+      '/api/v1/pos/tenants/:tenantId/authorized',
+      { tenantId: 'kitchen_foreign' },
+      'Bearer valid-token'
+    );
+    assert.equal(res.status, 403);
+    assert.equal(res.body.authorized, false);
+    assert.equal(res.body.error.code, 'FORBIDDEN_TENANT');
   });
 });
