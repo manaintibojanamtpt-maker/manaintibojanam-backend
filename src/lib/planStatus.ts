@@ -122,7 +122,11 @@ export function ownerPlanRequiresPayment(
 ): boolean {
   if (!tenant || planId === 'enterprise' || planId === 'starter') return false;
   const effectivePlanId = getEffectivePlanId(tenant);
-  if (planId === effectivePlanId) return false;
+  if (planId === effectivePlanId) {
+    if (planId === 'growth' && isGrowthTrialExpired(tenant)) return true;
+    if (planId === 'pro' && isProTrialExpired(tenant)) return true;
+    return false;
+  }
 
   // Create a minimal subscription state for canonical function
   const subState: SubscriptionState = {
