@@ -1,4 +1,4 @@
-﻿import React, { useEffect, Suspense, lazy, useState } from 'react';
+import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import { EnvironmentConfig } from './config/environment';
@@ -52,6 +52,7 @@ import { EntitlementGate } from './components/owner/EntitlementGate';
 const OwnerFeedback = lazy(() => import('./pages/owner/OwnerFeedback'));
 const OwnerBranchManagement = lazy(() => import('./pages/owner/OwnerBranchManagement'));
 const NotificationCenter = lazy(() => import('./modules/notifications/NotificationCenter'));
+const OwnerPosPage = lazy(() => import('./pages/owner/OwnerPosPage'));
 
 // Dev-only DB helpers — not exposed in production builds (M1 PR-1)
 if (import.meta.env.DEV) {
@@ -587,6 +588,7 @@ const AppContent: React.FC = () => {
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
               <Route path="/admin/system-health" element={<ProtectedRoute adminOnly><SystemHealth /></ProtectedRoute>} />
               <Route path="/owner/dashboard" element={<OwnerRoute><OwnerLayout><OwnerDashboard /></OwnerLayout></OwnerRoute>} />
+              <Route path="/owner/pos" element={<OwnerRoute><OwnerLayout><OwnerPosPage /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/import-data" element={<OwnerRoute><OwnerLayout><DataImporter /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/operations" element={<OwnerRoute><OwnerLayout><ForecastDashboard /></OwnerLayout></OwnerRoute>} />
               <Route path="/owner/kyc" element={<OwnerRoute><OwnerLayout><OwnerKYC /></OwnerLayout></OwnerRoute>} />

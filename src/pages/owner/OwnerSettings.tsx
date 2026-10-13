@@ -5,7 +5,7 @@ import { useTenant } from '../../context/TenantContext';
 import { useOwnerTenantId } from '../../hooks/useOwnerTenantId';
 import { fetchOwnerStorefront, updateOwnerStorefront } from '../../lib/ownerStorefrontApi';
 import { app } from '../../firebase';
-import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Truck, Navigation, Settings, Clock, Bell, Palette, Link2 } from 'lucide-react';
+import { Store, Phone, FileText, Image as ImageIcon, Save, Upload, Loader2, MapPin, Truck, Navigation, Settings, Clock, Bell, Palette, Link2, MonitorSmartphone, ExternalLink, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import logo from '../../assets/bhojan-os-logo.png';
 import { StoreLiveControl } from '../../components/owner/StoreLiveControl';
@@ -16,6 +16,7 @@ import OwnerPromotionsPanel from './OwnerPromotionsPanel';
 import OwnerFestivalOffersPanel from '../../components/owner/OwnerFestivalOffersPanel';
 import { KITCHEN_FORMAT_OPTIONS, type KitchenFormat } from '../../lib/kitchenFormat';
 import { isValidUpiId, normalizeUpiId } from '../../lib/upiValidation';
+import { EnvironmentConfig } from '../../config/environment';
 
 const OwnerSettings: React.FC = () => {
   const { userProfile, loading: authLoading } = useAuth();
@@ -24,7 +25,7 @@ const OwnerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'delivery_partners' | 'promotions' | 'notifications' | 'brand'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'hours' | 'location' | 'payments' | 'delivery_partners' | 'promotions' | 'notifications' | 'brand' | 'pos'>('general');
   const [fetchingCoords, setFetchingCoords] = useState(false);
   const [searchParams] = useSearchParams();
 
@@ -40,6 +41,8 @@ const OwnerSettings: React.FC = () => {
       setActiveTab('brand');
     } else if (tab === 'delivery_partners' || tab === 'delivery-partners') {
       setActiveTab('delivery_partners');
+    } else if (tab === 'pos') {
+      setActiveTab('pos');
     }
   }, [searchParams]);
   
@@ -69,6 +72,7 @@ const OwnerSettings: React.FC = () => {
     razorpayEnabled: false,
     upiEnabled: false,
     upiId: '',
+    posEnabled: true,
   });
 
   useEffect(() => {
@@ -95,6 +99,7 @@ const OwnerSettings: React.FC = () => {
           logoUrl: typeof branding.logoUrl === 'string' ? branding.logoUrl : '',
           dietaryPreference: (data as any).dietaryPreference || 'both',
           subscriptionEnabled: data.features?.subscriptionEnabled === true,
+          posEnabled: data.features?.posEnabled !== false,
           address: typeof data.location?.address === 'string' ? data.location.address : '',
           city: typeof data.location?.city === 'string' ? data.location.city : '',
           state: typeof data.location?.state === 'string' ? data.location.state : '',
@@ -154,7 +159,7 @@ const OwnerSettings: React.FC = () => {
         deliveryNotes: formData.deliveryNotes,
         branding: { logoUrl: formData.logoUrl },
         dietaryPreference: formData.dietaryPreference,
-        features: { subscriptionEnabled: formData.subscriptionEnabled },
+        features: { subscriptionEnabled: formData.subscriptionEnabled, posEnabled: formData.posEnabled },
         location: {
           address: formData.address,
           city: formData.city,
@@ -359,6 +364,10 @@ const OwnerSettings: React.FC = () => {
             <Bell size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">Alerts</span>
           </button>
+          <button onClick={() => setActiveTab('pos')} className={`flex shrink-0 items-center gap-1.5 sm:gap-2 pb-3 border-b-2 px-2 sm:px-3 transition-colors whitespace-nowrap ${activeTab === 'pos' ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-white/50 hover:text-white/80'}`}>
+            <MonitorSmartphone size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="font-bold tracking-wide sm:tracking-widest text-[11px] sm:text-xs uppercase">POS</span>
+          </button>
         </div>
 
         <div className="bg-[#0f0f11] rounded-xl shadow-sm border border-white/10">
@@ -379,6 +388,68 @@ const OwnerSettings: React.FC = () => {
             </div>
           ) : activeTab === 'brand' ? (
             <OwnerGalleryThemePanel />
+          ) : activeTab === 'pos' ? (
+            <div className="p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-white/10 bg-white/[0.02]">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-base">POS Billing Terminal</span>
+                    {formData.posEnabled ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle2 size={12} />
+                        Enabled
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/50 max-w-md">
+                    Enable or disable the in-store billing register for this restaurant.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.posEnabled}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, posEnabled: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF6B00]"></div>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (tenantId) {
+                        window.open(EnvironmentConfig.getPosUrl(tenantId), '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#FF6B00] hover:bg-[#FF6B00]/90 text-white font-bold text-xs uppercase rounded-xl flex items-center gap-1.5 transition-colors"
+                  >
+                    <span>Open POS</span>
+                    <ExternalLink size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-xs text-white/40 leading-relaxed p-4 rounded-xl border border-white/5 bg-white/[0.01]">
+                Launch opens the secure OrderBhojan POS at <code className="text-white/60">/pos?tenantId={tenantId}</code>. Authentication is verified server-side; credentials are never passed in the URL.
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={(e) => handleSubmit(e as any)}
+                  className="px-6 py-3 bg-[#FF6B00] text-white font-bold rounded-xl flex items-center gap-2 text-sm hover:bg-[#FF6B00]/90 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </div>
           ) : (
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             
