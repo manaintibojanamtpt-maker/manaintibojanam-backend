@@ -3631,6 +3631,7 @@ registerOrderCommandRoutes(app, {
   // authenticates from its own Authorization header and enforces tenant scope.
   verifyFirebaseToken: verifyFirebaseAuthUser,
   getTenantMemberships: getTenantMembershipsForUser,
+  isPosEnabled: isPosEnabledForTenant,
 });
 registerPricingReviewRoutes(app, {
   db,

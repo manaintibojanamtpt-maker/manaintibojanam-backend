@@ -12,6 +12,8 @@ import assert from 'node:assert/strict';
 
 import { POS_TENANT_ROLES, selectPosTenants, registerPosTenantRoutes } from '../../domain/posTenantRoutes';
 import { resolveTenantMembershipsForUser } from '../../domain/tenantMembershipResolver';
+import { registerOrderCommandRoutes } from '../registerOrderCommandRoutes';
+import { createFakeFirestore, mockFieldValue } from './fakeFirestore';
 
 describe('POS tenant selection', () => {
   it('keeps memberships whose role is meaningful at a counter', () => {
@@ -414,5 +416,199 @@ describe('Tenant membership resolver and isolation', () => {
       [{ tenantId: 't_disabled_pos', role: 'owner' }],
       'general membership resolver must preserve membership for order commands and settings'
     );
+  });
+});
+
+describe('POS disablement and server-side command lifecycle on open terminal', () => {
+  const setupCommandApp = (initialPosEnabled = true) => {
+    let posEnabled = initialPosEnabled;
+    const routes: Record<string, (req: any, res: any) => Promise<any>> = {};
+    const mockApp = {
+      post: (path: string, handler: any) => {
+        routes[path] = handler;
+      },
+      get: (path: string, handler: any) => {
+        routes[path] = handler;
+      },
+    } as any;
+
+    const fakeDb = createFakeFirestore() as any;
+
+    registerOrderCommandRoutes(mockApp, {
+      db: fakeDb,
+      fieldValue: mockFieldValue as any,
+      verifyFirebaseToken: async (token: string) => {
+        if (token === 'valid-token') {
+          return { uid: 'user_cashier', email: 'cashier@example.com' };
+        }
+        throw new Error('invalid token');
+      },
+      getTenantMemberships: async () => [{ tenantId: 'tenant_1', role: 'cashier' }],
+      isPosEnabled: async () => posEnabled,
+    });
+
+    const dispatchPost = async (
+      path: string,
+      params: Record<string, string>,
+      body: any,
+      headers: Record<string, string> = {}
+    ) => {
+      let statusCode = 200;
+      let responseBody: any = null;
+      const res = {
+        status: (code: number) => {
+          statusCode = code;
+          return res;
+        },
+        json: (data: any) => {
+          responseBody = data;
+          return res;
+        },
+      };
+      const req = {
+        headers: {
+          authorization: 'Bearer valid-token',
+          ...headers,
+        },
+        params,
+        body,
+      };
+
+      const handler = routes[path];
+      if (!handler) throw new Error(`Route ${path} not registered`);
+      await handler(req, res);
+      return { status: statusCode, body: responseBody };
+    };
+
+    return {
+      dispatchPost,
+      fakeDb,
+      setPosEnabled: (val: boolean) => {
+        posEnabled = val;
+      },
+    };
+  };
+
+  const sampleCreateOrderBody = (commandId: string, orderId: string) => ({
+    commandId,
+    type: 'CreateOrder',
+    tenantId: 'tenant_1',
+    orderId,
+    deviceId: 'pos_1',
+    clientSequence: 1,
+    clientTime: '2026-01-01T00:00:00.000Z',
+    payload: {
+      orderId,
+      orderType: 'DINE_IN',
+      paymentMethod: 'CASH',
+      customer: { name: 'Walk-in', phone: '9000000000', tableNo: 'T1' },
+      items: [{ itemId: 'item_1', name: 'Dosa', unitPrice: 100, quantity: 1 }],
+      discountPercent: 0,
+      gstPercent: 0,
+    },
+  });
+
+  it('rejects CreateOrder with 503 POS_DISABLED when POS is disabled, but keeps error retryable', async () => {
+    const { dispatchPost, setPosEnabled } = setupCommandApp(false);
+
+    const cmdId = 'cmd_offline_create_1';
+    const orderId = 'order_offline_1';
+    const res = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId },
+      sampleCreateOrderBody(cmdId, orderId),
+      { 'idempotency-key': cmdId }
+    );
+
+    assert.equal(res.status, 503);
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error.code, 'POS_DISABLED');
+    assert.equal(res.body.error.retryable, true);
+  });
+
+  it('preserves non-POS order lifecycle operations even when POS is disabled', async () => {
+    const { dispatchPost, fakeDb, setPosEnabled } = setupCommandApp(true);
+
+    // 1. Create order while POS is enabled (representing an accepted order prior to disablement)
+    const cmd1 = 'cmd_prior_create_1';
+    const order1 = 'order_prior_1';
+    const res1 = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId: order1 },
+      sampleCreateOrderBody(cmd1, order1),
+      { 'idempotency-key': cmd1 }
+    );
+    assert.equal(res1.status, 200);
+    assert.equal(res1.body.success, true);
+
+    // 2. Disable POS via owner toggle
+    setPosEnabled(false);
+
+    // 3. Mark preparing / update status (non-POS lifecycle operation) on the accepted order
+    const cmd2 = 'cmd_status_update_2';
+    const res2 = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId: order1 },
+      {
+        commandId: cmd2,
+        type: 'UpdateOrderStatus',
+        tenantId: 'tenant_1',
+        orderId: order1,
+        deviceId: 'pos_1',
+        clientSequence: 2,
+        clientTime: '2026-01-01T00:01:00.000Z',
+        payload: {
+          status: 'PREPARING',
+          notes: 'Kitchen working on accepted order',
+        },
+      },
+      { 'idempotency-key': cmd2 }
+    );
+
+    assert.equal(res2.status, 200, 'non-POS lifecycle operation must succeed while POS is disabled');
+    assert.equal(res2.body.success, true);
+  });
+
+  it('re-enabling POS allows queued command to flush with identical idempotencyKey and no duplicate execution', async () => {
+    const { dispatchPost, setPosEnabled } = setupCommandApp(true);
+
+    // Step A: Queue command while POS is disabled
+    setPosEnabled(false);
+    const cmdId = 'cmd_queued_reconnect';
+    const orderId = 'order_queued_reconnect';
+
+    // Flush attempt while disabled -> 503 retryable
+    const attempt1 = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId },
+      sampleCreateOrderBody(cmdId, orderId),
+      { 'idempotency-key': cmdId }
+    );
+    assert.equal(attempt1.status, 503);
+    assert.equal(attempt1.body.error.retryable, true);
+
+    // Step B: Owner re-enables POS in portal
+    setPosEnabled(true);
+
+    // Step C: Terminal flushes queued command with identical idempotency key
+    const attempt2 = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId },
+      sampleCreateOrderBody(cmdId, orderId),
+      { 'idempotency-key': cmdId }
+    );
+    assert.equal(attempt2.status, 200);
+    assert.equal(attempt2.body.success, true);
+    assert.equal(attempt2.body.orderId, orderId);
+
+    // Step D: Replay / duplicate flush attempt with same idempotency key
+    const attempt3 = await dispatchPost(
+      '/api/v1/tenants/:tenantId/orders/:orderId/commands',
+      { tenantId: 'tenant_1', orderId },
+      sampleCreateOrderBody(cmdId, orderId),
+      { 'idempotency-key': cmdId }
+    );
+    assert.equal(attempt3.status, 200);
+    assert.equal(attempt3.body.replayed, true, 'server must return receipt with no duplicate execution');
   });
 });
