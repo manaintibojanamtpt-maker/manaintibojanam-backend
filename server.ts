@@ -69,6 +69,7 @@ import { registerPricingReviewRoutes } from "./backend-lib/orders/registerPricin
 import { registerSupervisorRoutes } from "./backend-lib/orders/registerSupervisorRoutes.js";
 import { registerBusinessDayRoutes } from "./backend-lib/orders/registerBusinessDayRoutes.js";
 import { registerPosTenantRoutes } from "./backend-lib/domain/posTenantRoutes.js";
+import { resolveTenantMembershipsForUser } from "./backend-lib/domain/tenantMembershipResolver.js";
 import {
   dispatchOutboxBatch,
   listOrderOutboxSubscriptions,
@@ -3576,104 +3577,10 @@ registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess,
  * a tenant is refused rather than upgraded, because the default grant would let
  * any authenticated user record payments in that tenant.
  */
-const POS_ROLE_ALIASES: Record<string, string> = {
-  owner: 'owner',
-  founder: 'owner',
-  manager: 'manager',
-  admin: 'manager',
-  superadmin: 'manager',
-  cashier: 'cashier',
-  counter: 'cashier',
-  kitchen: 'kitchen',
-  chef: 'kitchen',
-};
-
 const getTenantMembershipsForUser = async (
   uid: string
 ): Promise<Array<{ tenantId: string; role?: string }>> => {
-  const userDoc = await db.collection('users').doc(uid).get();
-  const data = (userDoc.exists ? userDoc.data() : {}) as Record<string, any>;
-  const memberships = new Map<string, { tenantId: string; role?: string }>();
-
-  const addCandidate = (tenantId: unknown, role: unknown) => {
-    const id = typeof tenantId === 'string' ? tenantId.trim() : '';
-    if (!id) return;
-    const normalized = POS_ROLE_ALIASES[String(role ?? '').trim().toLowerCase()];
-    const existing = memberships.get(id);
-    if (!existing) {
-      memberships.set(id, normalized ? { tenantId: id, role: normalized } : { tenantId: id });
-      return;
-    }
-    // Keep the most specific role seen for the tenant.
-    if (!existing.role && normalized) existing.role = normalized;
-  };
-
-  for (const key of ['tenantId', 'restaurantId']) addCandidate(data[key], data.posRole ?? data.role);
-  for (const key of ['ownedTenantIds', 'ownedTenants']) {
-    const list = Array.isArray(data[key]) ? data[key] : [];
-    for (const tenantId of list) addCandidate(tenantId, 'owner');
-  }
-
-  // Per-tenant overrides, e.g. tenantRoles: { tenant_x: 'cashier' }.
-  const perTenant = data.tenantRoles && typeof data.tenantRoles === 'object' ? data.tenantRoles : {};
-  for (const [tenantId, role] of Object.entries(perTenant as Record<string, unknown>)) {
-    addCandidate(tenantId, role);
-  }
-
-  // If user has no memberships yet, check if any tenant lists them as ownerId
-  if (memberships.size === 0) {
-    try {
-      const ownedSnaps = await db.collection('tenants').where('ownerId', '==', uid).limit(20).get();
-      for (const doc of ownedSnaps.docs) {
-        addCandidate(doc.id, 'owner');
-      }
-    } catch {
-      /* index or permission fallback */
-    }
-  }
-
-  // Verify all candidates against the tenant document:
-  // 1. Enforce posEnabled !== false (disabled POS turns off terminal access via direct API)
-  // 2. Enforce ownerId === uid for owner roles (drops revoked ownership if user doc is stale)
-  const verified: Array<{ tenantId: string; role?: string }> = [];
-  for (const membership of memberships.values()) {
-    try {
-      const tenantDoc = await db.collection('tenants').doc(membership.tenantId).get();
-      if (!tenantDoc.exists) continue;
-      const tData = tenantDoc.data() || {};
-
-      // If POS is explicitly disabled by the restaurant owner, exclude from POS memberships
-      if (tData.features?.posEnabled === false) {
-        continue;
-      }
-
-      // If claimed role is owner, verify ownerId === uid on the tenant document
-      if (membership.role === 'owner') {
-        if (tData.ownerId !== uid) {
-          // Ownership was revoked or transferred: check if a valid non-owner role exists
-          const staffRole = perTenant[membership.tenantId];
-          const normalizedStaff = staffRole ? POS_ROLE_ALIASES[String(staffRole).trim().toLowerCase()] : null;
-          if (normalizedStaff) {
-            verified.push({ tenantId: membership.tenantId, role: normalizedStaff });
-          }
-          continue;
-        }
-      } else if (!membership.role) {
-        if (tData.ownerId === uid) {
-          membership.role = 'owner';
-        } else {
-          continue;
-        }
-      }
-
-      verified.push(membership);
-    } catch {
-      // If tenant lookup fails transiently, keep membership if it already had an assigned role
-      if (membership.role) verified.push(membership);
-    }
-  }
-
-  return verified;
+  return resolveTenantMembershipsForUser(uid, db);
 };
 
 /**
@@ -3694,10 +3601,27 @@ const getTenantDisplayName = async (tenantId: string): Promise<string | null> =>
   }
 };
 
+/**
+ * Whether Point of Sale is enabled for a tenant.
+ * Missing features.posEnabled defaults to true.
+ * Explicit posEnabled === false disables terminal access at the POS authorization boundary.
+ */
+const isPosEnabledForTenant = async (tenantId: string): Promise<boolean> => {
+  try {
+    const snap = await db.collection('tenants').doc(tenantId).get();
+    if (!snap.exists) return false;
+    const data = snap.data() as Record<string, any>;
+    return data?.features?.posEnabled !== false;
+  } catch {
+    return false;
+  }
+};
+
 registerPosTenantRoutes(app, {
   verifyFirebaseToken: verifyFirebaseAuthUser,
   getTenantMemberships: getTenantMembershipsForUser,
   getTenantName: getTenantDisplayName,
+  isPosEnabled: isPosEnabledForTenant,
 });
 
 registerOrderCommandRoutes(app, {

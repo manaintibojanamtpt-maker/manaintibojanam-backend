@@ -62,4 +62,41 @@ describe('Firestore Rules - Tenants IDOR Mitigation', () => {
       })
     );
   });
+
+  it('prevents User A from writing or hijacking ownerId on User B\'s tenant', async () => {
+    const userAContext = testEnv.authenticatedContext('user-a-id', { email: 'usera@example.com' });
+    const userADb = userAContext.firestore();
+
+    // User A attempts to overwrite ownerId on tenant-b to usurp ownership
+    await assertFails(
+      userADb.collection('tenants').doc('tenant-b').update({
+        ownerId: 'user-a-id',
+      })
+    );
+  });
+
+  it('prevents an ordinary user from adding or mutating ownedTenantIds on their user document', async () => {
+    const userAContext = testEnv.authenticatedContext('user-a-id', { email: 'usera@example.com' });
+    const userADb = userAContext.firestore();
+
+    // User A attempts to self-grant ownedTenantIds on users/user-a-id
+    await assertFails(
+      userADb.collection('users').doc('user-a-id').update({
+        ownedTenantIds: ['tenant-b'],
+      })
+    );
+  });
+
+  it('prevents creating a tenant with a reserved slug to usurp system routes', async () => {
+    const userAContext = testEnv.authenticatedContext('user-a-id', { email: 'usera@example.com' });
+    const userADb = userAContext.firestore();
+
+    await assertFails(
+      userADb.collection('tenants').doc('admin').set({
+        name: 'Fake Admin Tenant',
+        slug: 'admin',
+        ownerId: 'user-a-id',
+      })
+    );
+  });
 });

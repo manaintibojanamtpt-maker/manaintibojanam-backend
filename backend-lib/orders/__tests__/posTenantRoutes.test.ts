@@ -11,6 +11,7 @@ import { it, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { POS_TENANT_ROLES, selectPosTenants, registerPosTenantRoutes } from '../../domain/posTenantRoutes';
+import { resolveTenantMembershipsForUser } from '../../domain/tenantMembershipResolver';
 
 describe('POS tenant selection', () => {
   it('keeps memberships whose role is meaningful at a counter', () => {
@@ -117,6 +118,7 @@ describe('POS tenant route handlers and membership isolation', () => {
     user?: { uid: string; email?: string; admin?: boolean; role?: string };
     memberships?: Array<{ tenantId: string; role?: string }>;
     names?: Record<string, string>;
+    posEnabledMap?: Record<string, boolean>;
   }) => {
     const routes: Record<string, (req: any, res: any) => Promise<any>> = {};
     const mockApp = {
@@ -139,6 +141,7 @@ describe('POS tenant route handlers and membership isolation', () => {
         return [];
       },
       getTenantName: async (tenantId: string) => options.names?.[tenantId] ?? null,
+      isPosEnabled: async (tenantId: string) => options.posEnabledMap?.[tenantId] !== false,
     });
 
     const dispatch = async (path: string, params: Record<string, string> = {}, authHeader?: string) => {
@@ -236,5 +239,180 @@ describe('POS tenant route handlers and membership isolation', () => {
     assert.equal(res.status, 403);
     assert.equal(res.body.authorized, false);
     assert.equal(res.body.error.code, 'FORBIDDEN_TENANT');
+  });
+
+  it('filters out POS-disabled tenants at the POS route boundary', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'owner_user', email: 'owner@example.com' },
+      memberships: [
+        { tenantId: 'kitchen_enabled', role: 'owner' },
+        { tenantId: 'kitchen_disabled', role: 'owner' },
+      ],
+      posEnabledMap: {
+        kitchen_enabled: true,
+        kitchen_disabled: false,
+      },
+      names: {
+        kitchen_enabled: 'Kitchen Enabled',
+        kitchen_disabled: 'Kitchen Disabled',
+      },
+    });
+    const res = await dispatch('/api/v1/pos/tenants', {}, 'Bearer valid-token');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.tenants.length, 1, 'disabled tenant must be excluded from POS list');
+    assert.equal(res.body.tenants[0].tenantId, 'kitchen_enabled');
+  });
+
+  it('defaults missing features.posEnabled to true', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'owner_user', email: 'owner@example.com' },
+      memberships: [{ tenantId: 'kitchen_default', role: 'owner' }],
+      // kitchen_default is not in posEnabledMap, so defaults to true
+      posEnabledMap: {},
+      names: { kitchen_default: 'Kitchen Default' },
+    });
+    const res = await dispatch('/api/v1/pos/tenants', {}, 'Bearer valid-token');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.tenants.length, 1);
+    assert.equal(res.body.tenants[0].tenantId, 'kitchen_default');
+  });
+
+  it('denies /api/v1/pos/tenants/:tenantId/authorized with 403 POS_DISABLED when pos is disabled', async () => {
+    const { dispatch } = setupApp({
+      user: { uid: 'owner_user', email: 'owner@example.com' },
+      memberships: [{ tenantId: 'kitchen_closed_pos', role: 'owner' }],
+      posEnabledMap: { kitchen_closed_pos: false },
+    });
+    const res = await dispatch(
+      '/api/v1/pos/tenants/:tenantId/authorized',
+      { tenantId: 'kitchen_closed_pos' },
+      'Bearer valid-token'
+    );
+    assert.equal(res.status, 403);
+    assert.equal(res.body.authorized, false);
+    assert.equal(res.body.error.code, 'POS_DISABLED');
+    assert.match(res.body.error.message, /Point of Sale is currently disabled/);
+  });
+});
+
+describe('Tenant membership resolver and isolation', () => {
+  const createMockDb = (config: {
+    users?: Record<string, Record<string, any>>;
+    tenants?: Record<string, Record<string, any>>;
+    tenantsByOwnerId?: Record<string, Array<{ id: string; data: Record<string, any> }>>;
+  }) => ({
+    collection: (name: string) => ({
+      doc: (id: string) => ({
+        get: async () => {
+          const store = name === 'users' ? config.users : config.tenants;
+          const data = store?.[id];
+          return {
+            exists: Boolean(data),
+            data: () => data,
+          };
+        },
+      }),
+      where: (field: string, _op: string, value: any) => ({
+        limit: (_n: number) => ({
+          get: async () => {
+            if (name === 'tenants' && field === 'ownerId') {
+              const matches = config.tenantsByOwnerId?.[String(value)] ?? [];
+              return {
+                docs: matches.map((m) => ({
+                  id: m.id,
+                  data: () => m.data,
+                })),
+              };
+            }
+            return { docs: [] };
+          },
+        }),
+      }),
+    }),
+  });
+
+  it('resolves legitimate owner membership when tenantDoc.ownerId matches', async () => {
+    const db = createMockDb({
+      users: {
+        user_owner: { ownedTenantIds: ['t_mine'] },
+      },
+      tenants: {
+        t_mine: { ownerId: 'user_owner', name: 'My Kitchen' },
+      },
+    });
+
+    const memberships = await resolveTenantMembershipsForUser('user_owner', db);
+    assert.deepEqual(memberships, [{ tenantId: 't_mine', role: 'owner' }]);
+  });
+
+  it('falls back to querying tenants.where(ownerId == uid) when user doc has no memberships', async () => {
+    const db = createMockDb({
+      users: {
+        user_fallback: {}, // empty memberships
+      },
+      tenants: {
+        t_discovered: { ownerId: 'user_fallback', name: 'Discovered Kitchen' },
+      },
+      tenantsByOwnerId: {
+        user_fallback: [{ id: 't_discovered', data: { ownerId: 'user_fallback' } }],
+      },
+    });
+
+    const memberships = await resolveTenantMembershipsForUser('user_fallback', db);
+    assert.deepEqual(memberships, [{ tenantId: 't_discovered', role: 'owner' }]);
+  });
+
+  it('drops candidate when claimed ownership was revoked on the tenant document', async () => {
+    const db = createMockDb({
+      users: {
+        user_stale: { ownedTenantIds: ['t_transferred'] },
+      },
+      tenants: {
+        t_transferred: { ownerId: 'new_owner', name: 'Transferred Kitchen' },
+      },
+    });
+
+    const memberships = await resolveTenantMembershipsForUser('user_stale', db);
+    assert.deepEqual(memberships, [], 'stale owner claiming transferred tenant must be dropped');
+  });
+
+  it('preserves retained staff role when ownership was revoked', async () => {
+    const db = createMockDb({
+      users: {
+        user_demoted: {
+          ownedTenantIds: ['t_store'],
+          tenantRoles: { t_store: 'cashier' }, // legitimate retained staff role
+        },
+      },
+      tenants: {
+        t_store: { ownerId: 'new_owner', name: 'Store' },
+      },
+    });
+
+    const memberships = await resolveTenantMembershipsForUser('user_demoted', db);
+    assert.deepEqual(memberships, [{ tenantId: 't_store', role: 'cashier' }]);
+  });
+
+  it('does NOT filter out memberships when posEnabled === false (preserves general tenant access)', async () => {
+    const db = createMockDb({
+      users: {
+        user_owner: { ownedTenantIds: ['t_disabled_pos'] },
+      },
+      tenants: {
+        t_disabled_pos: {
+          ownerId: 'user_owner',
+          name: 'Closed POS Kitchen',
+          features: { posEnabled: false }, // POS is turned off
+        },
+      },
+    });
+
+    const memberships = await resolveTenantMembershipsForUser('user_owner', db);
+    assert.deepEqual(
+      memberships,
+      [{ tenantId: 't_disabled_pos', role: 'owner' }],
+      'general membership resolver must preserve membership for order commands and settings'
+    );
   });
 });
