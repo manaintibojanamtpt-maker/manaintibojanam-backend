@@ -16,6 +16,7 @@ import {
   isRazorpayDraftBindEnforced,
 } from '../../backend-lib/orderAccess';
 import {
+  getGuestTokenSecret,
   signGuestOrderToken,
   verifyGuestOrderToken,
 } from '../../backend-lib/guestOrderToken';
@@ -177,5 +178,48 @@ describe('optional live API probes', { skip: !LIVE_BASE }, () => {
       assert.equal(data.success, false);
       assert.equal(data.error, 'Invalid Tenant ID');
     });
+
+    it('mutating POST on catalog route with invalid tenantId is NOT exempted and returns 400', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/restaurants/demo-biryani-house/menu?tenantId=nonexistent-tenant-xyz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Malicious Item' }),
+      });
+      assert.equal(response.status, 400);
+      const data = await response.json() as any;
+      assert.equal(data.success, false);
+      assert.equal(data.error, 'Invalid Tenant ID');
+    });
+
+    it('guest tracking without Authorization header returns 401 GUEST_TOKEN_REQUIRED', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders/test-order/guest-tracking?phone=9876543210`);
+      assert.equal(response.status, 401);
+      const data = await response.json() as any;
+      assert.equal(data.ok, false);
+      assert.equal(data.error?.code, 'GUEST_TOKEN_REQUIRED');
+    });
+
+    it('guest tracking with forged/invalid token returns 401 INVALID_TOKEN', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders/test-order/guest-tracking?phone=9876543210`, {
+        headers: { Authorization: 'Guest forged-invalid-guest-token' },
+      });
+      assert.equal(response.status, 401);
+      const data = await response.json() as any;
+      assert.equal(data.ok, false);
+      assert.ok(['INVALID_TOKEN', 'GUEST_TOKEN_REQUIRED'].includes(data.error?.code));
+    });
+
+    it('guest tracking with valid signed token enforces order and phone verification', async () => {
+      const { token } = signGuestOrderToken('valid-order-123', { secret: getGuestTokenSecret() });
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders/valid-order-123/guest-tracking?phone=9876543210`, {
+        headers: { Authorization: `Guest ${token}` },
+      });
+      // Order doesn't exist in emulator, so token passes cryptographic verification and returns 404
+      assert.equal(response.status, 404);
+      const data = await response.json() as any;
+      assert.equal(data.ok, false);
+      assert.equal(data.error?.code, 'NOT_FOUND');
+    });
   });
 });
+

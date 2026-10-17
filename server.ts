@@ -1564,27 +1564,41 @@ const tenantLookupInflight = new Map<string, Promise<{ exists: boolean; status?:
 let lastTenantValidationErrorLogAt = 0;
 const TENANT_CACHE_MS = Number(process.env.TENANT_CACHE_MS || 10 * 60 * 1000);
 
-const shouldBypassTenantValidation = (path: string) =>
-  path.startsWith("/api/health") ||
-  path.startsWith("/api/server-time") ||
-  path.startsWith("/api/env-debug") ||
-  path.startsWith("/api/firestore-") ||
-  path.startsWith("/api/cron/") ||
-  path.startsWith("/api/admin/") ||
-  path.startsWith("/api/webhooks/") ||
-  path.startsWith("/api/monitoring/") ||
-  path.startsWith("/api/client-errors") ||
-  path.startsWith("/api/client-config") ||
-  path.startsWith("/api/notifications/") ||
-  path.startsWith("/api/owner/") ||
-  path.startsWith("/api/platform/") ||
-  path.startsWith("/api/auth/") ||
-  path.startsWith("/api/marketplace/restaurants/") ||
-  path.startsWith("/api/marketplace/discovery") ||
-  path.startsWith("/api/marketplace/discover") ||
-  path.startsWith("/api/marketplace/search") ||
-  path.startsWith("/api/marketplace/health") ||
-  path.startsWith("/api/ai/");
+const shouldBypassTenantValidation = (path: string, method = "GET") => {
+  const isSafeRead = method === "GET" || method === "HEAD";
+  const isMarketplaceCatalogRead =
+    isSafeRead && (
+      path.startsWith("/api/marketplace/restaurants/") ||
+      path.startsWith("/api/marketplace/discovery") ||
+      path.startsWith("/api/marketplace/discover") ||
+      path.startsWith("/api/marketplace/search") ||
+      path.startsWith("/api/marketplace/health") ||
+      path.startsWith("/api/marketplace/sync/")
+    );
+  const isMarketplaceCustomerRoute =
+    path.startsWith("/api/marketplace/checkout/") ||
+    path.startsWith("/api/marketplace/orders");
+
+  return (
+    path.startsWith("/api/health") ||
+    path.startsWith("/api/server-time") ||
+    path.startsWith("/api/env-debug") ||
+    path.startsWith("/api/firestore-") ||
+    path.startsWith("/api/cron/") ||
+    path.startsWith("/api/admin/") ||
+    path.startsWith("/api/webhooks/") ||
+    path.startsWith("/api/monitoring/") ||
+    path.startsWith("/api/client-errors") ||
+    path.startsWith("/api/client-config") ||
+    path.startsWith("/api/notifications/") ||
+    path.startsWith("/api/owner/") ||
+    path.startsWith("/api/platform/") ||
+    path.startsWith("/api/auth/") ||
+    isMarketplaceCatalogRead ||
+    isMarketplaceCustomerRoute ||
+    path.startsWith("/api/ai/")
+  );
+};
 
 const loadTenantRecord = async (tenantId: string) => {
   if (tenantLookupInflight.has(tenantId)) {
@@ -1617,7 +1631,7 @@ app.use(async (req: any, res, next) => {
 
   const tenantId = String(defaultTenantId);
 
-  if (shouldBypassTenantValidation(req.path)) {
+  if (shouldBypassTenantValidation(req.path, req.method)) {
     req.tenantId = tenantId;
     return next();
   }
