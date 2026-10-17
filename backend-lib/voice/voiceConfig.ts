@@ -53,7 +53,7 @@ export function normalizeTtsModel(raw?: string): string {
   if (clean && clean.includes('v4')) return 'bulbul:v4';
   if (clean && clean.includes('v2')) return 'bulbul:v2';
   if (clean && clean.includes('v3')) return 'bulbul:v3';
-  return 'bulbul:v3';
+  return 'bulbul:v4-flash';
 }
 
 /**

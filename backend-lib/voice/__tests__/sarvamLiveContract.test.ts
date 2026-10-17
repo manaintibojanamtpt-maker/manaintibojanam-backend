@@ -19,12 +19,12 @@ describe('Sarvam Mocked Contract & Parameter Serialization Tests (Mocked Fetch)'
   });
 
   describe('Configuration & Speaker Resolution Contracts', () => {
-    it('normalizes tts models with bulbul:v3 as stable default', () => {
+    it('normalizes tts models with bulbul:v4-flash as candidate default and bulbul:v3 for rollback', () => {
       assert.equal(normalizeTtsModel('bulbul:v3'), 'bulbul:v3');
       assert.equal(normalizeTtsModel('bulbul:v4-flash'), 'bulbul:v4-flash');
       assert.equal(normalizeTtsModel('bulbul:v4'), 'bulbul:v4');
       assert.equal(normalizeTtsModel('bulbul:v2'), 'bulbul:v2');
-      assert.equal(normalizeTtsModel(undefined), 'bulbul:v3');
+      assert.equal(normalizeTtsModel(undefined), 'bulbul:v4-flash');
     });
 
     it('resolves official Bulbul v3 legacy speaker names', () => {

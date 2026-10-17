@@ -15,6 +15,7 @@
     "hotfix:marketplace": "tsx scripts/check-firestore-auth.ts && tsx scripts/hotfix/p0-marketplace-repair.ts",
     "harness:e2e-update-menu": "tsx scripts/check-firestore-auth.ts && tsx scripts/e2e/e2eSyncLabHarness.ts update-menu-options",
     "test:e2e:owner-sync": "cd orderbhojan && npm run test:e2e:owner-sync",
+    "smoke:sarvam": "node --import tsx scripts/smokeLiveSarvam.ts",
     "sync:orderbhojan-repo": "node scripts/sync-orderbhojan-repo.mjs",
     "sync:orderbhojan-repo:push": "node scripts/sync-orderbhojan-repo.mjs --push",
     "build:contracts": "node packages/marketplace-contracts/scripts/build.mjs",
