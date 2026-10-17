@@ -583,6 +583,143 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       assert.ok(turn2.reply.includes('1,047') || turn2.reply.includes('1047'));
       assert.ok(turn2.reply.includes('2 Hyderabadi Chicken Biryani (Jumbo)'));
       assert.ok(turn2.reply.includes('1 Special Raita'));
+      assert.ok(turn2.reply.startsWith('Your proposed order is'));
+      assert.ok(turn2.reply.endsWith('Confirm to add these to your cart.'));
+      assert.ok(!turn2.reply.includes("I've added"));
+    });
+
+    it('Telugu: pre-confirmation proposal wording with multi-item and variant resolution', async () => {
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_multi',
+        transcript: 'నాకు రెండు చికెన్ బిర్యానీలు మరియు ఒక స్పెషల్ రైతా కావాలి',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.equal(turn1.language, 'te-IN');
+      assert.equal(turn1.intent, 'clarify_dish_choice');
+      assert.ok(turn1.pendingClarification);
+
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_multi',
+        transcript: 'జంబో',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.language, 'te-IN');
+      assert.equal(turn2.intent, 'cart_add_plan');
+      assert.ok(turn2.reply.startsWith('మీ ప్రతిపాదిత ఆర్డర్:'));
+      assert.ok(turn2.reply.includes('వీటిని మీ కార్ట్‌కి చేర్చడానికి నిర్ధారించండి.'));
+      assert.ok(!turn2.reply.includes('చేసాము'));
+      assert.ok(turn2.reply.includes('1,047'));
+    });
+
+    it('Hindi: pre-confirmation proposal wording with multi-item and variant resolution', async () => {
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_multi',
+        transcript: 'मुझे दो चिकन बिरयानी और एक स्पेशल रायता चाहिए',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.equal(turn1.language, 'hi-IN');
+      assert.equal(turn1.intent, 'clarify_dish_choice');
+      assert.ok(turn1.pendingClarification);
+
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_multi',
+        transcript: 'जंबो',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.language, 'hi-IN');
+      assert.equal(turn2.intent, 'cart_add_plan');
+      assert.ok(turn2.reply.startsWith('आपका प्रस्तावित ऑर्डर है:'));
+      assert.ok(turn2.reply.includes('इन्हें अपने कार्ट में जोड़ने के लिए कन्फर्म करें।'));
+      assert.ok(!turn2.reply.includes('जोड़ दिए'));
+      assert.ok(turn2.reply.includes('1,047'));
+    });
+
+    it('Cancellation clears pendingClarification and prevents "Jumbo" from reviving cancelled order', async () => {
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_cancel_test',
+        transcript: 'I want two chicken biryanis and one special raita',
+        restaurantId: 'obr_demo_biryani_001',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.ok(turn1.pendingClarification);
+
+      // Explicit cancellation turn
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_cancel_test',
+        transcript: 'cancel order',
+        restaurantId: 'obr_demo_biryani_001',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.intent, 'cancel_order');
+      assert.equal(turn2.pendingClarification, null);
+      assert.deepEqual(turn2.proposedActions, [{ type: 'clear_proposal' }]);
+
+      // Subsequent turn saying "Jumbo" must NOT produce a cart proposal
+      const turn3 = await processVoiceAssistantTurn({
+        sessionId: 'sess_cancel_test',
+        transcript: 'Jumbo',
+        restaurantId: 'obr_demo_biryani_001',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn2.pendingClarification,
+        },
+      });
+      assert.notEqual(turn3.intent, 'cart_add_plan');
+      assert.equal(turn3.proposedActions, undefined);
+    });
+
+    it('Scope isolation: pendingClarification is dropped if restaurantId or userId changes', async () => {
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_scope_1',
+        restaurantId: 'obr_demo_biryani_001',
+        userId: 'user_alpha',
+        transcript: 'two chicken biryanis',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.ok(turn1.pendingClarification);
+      assert.equal(turn1.pendingClarification.restaurantId, 'obr_demo_biryani_001');
+      assert.equal(turn1.pendingClarification.userId, 'user_alpha');
+
+      // Attempt turn 2 with mismatched restaurantId
+      const turn2DiffRestaurant = await processVoiceAssistantTurn({
+        sessionId: 'sess_scope_1',
+        restaurantId: 'obr_other_kitchen',
+        userId: 'user_alpha',
+        transcript: 'Jumbo',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_other_kitchen',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.notEqual(turn2DiffRestaurant.intent, 'cart_add_plan');
+
+      // Attempt turn 2 with mismatched userId
+      const turn2DiffUser = await processVoiceAssistantTurn({
+        sessionId: 'sess_scope_1',
+        restaurantId: 'obr_demo_biryani_001',
+        userId: 'user_beta',
+        transcript: 'Jumbo',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.notEqual(turn2DiffUser.intent, 'cart_add_plan');
     });
   });
 });

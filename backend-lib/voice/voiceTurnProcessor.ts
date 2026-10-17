@@ -30,6 +30,9 @@ export interface PendingClarification {
   type: 'variant' | 'dish';
   pendingItems: PendingClarificationItem[];
   clarifyingIndex: number;
+  restaurantId?: string;
+  userId?: string;
+  sessionId?: string;
 }
 
 export interface VoiceTurnParams {
@@ -463,9 +466,45 @@ export async function processVoiceAssistantTurn(
   const cartItems = params.context?.cart?.items || [];
   const lastProposedItem = params.context?.lastProposedItem;
 
-  // 0. Multi-Turn: Variant / Dish Clarification Resolution
+  // Cancellation & Reset Intent ("cancel", "never mind", "stop", "vaddu", "nahi chahiye", "reset")
+  const isCancellation =
+    /^(cancel|never mind|stop|reset|start over|vaddu|vaddhu|avsaram ledu|raddhu cheyyandi|nahi chahiye|mat karo|radd karo)$/i.test(lower) ||
+    lower.includes('cancel order') ||
+    lower.includes('order vaddu') ||
+    lower.includes('order cancel') ||
+    lower.includes('order nahi chahiye') ||
+    lower.includes('cancel kar');
+
+  if (isCancellation) {
+    const reply =
+      lang === 'te-IN'
+        ? 'రద్దు చేయబడింది. నేను మీకు ఇంకా ఎలా సహాయపడగలను?'
+        : lang === 'hi-IN'
+          ? 'रद्द कर दिया गया है। मैं आपकी और क्या सहायता कर सकता हूँ?'
+          : 'Cancelled. How else may I assist you with your order today?';
+
+    return {
+      reply,
+      language: lang,
+      intent: 'cancel_order',
+      proposedActions: [{ type: 'clear_proposal' }],
+      correlationId,
+      latencyMs: Date.now() - startedAt,
+      authorized: true,
+      pendingClarification: null,
+    };
+  }
+
+  // 0. Multi-Turn: Variant / Dish Clarification Resolution with Scope Isolation
   const pendingClarification = params.context?.pendingClarification;
+  const isSameScope =
+    pendingClarification &&
+    (!pendingClarification.restaurantId || !params.restaurantId || pendingClarification.restaurantId === params.restaurantId) &&
+    (!pendingClarification.userId || !params.userId || pendingClarification.userId === params.userId) &&
+    (!pendingClarification.sessionId || !params.sessionId || pendingClarification.sessionId === params.sessionId);
+
   if (
+    isSameScope &&
     pendingClarification &&
     pendingClarification.type === 'variant' &&
     pendingClarification.pendingItems?.length > 0
@@ -537,10 +576,10 @@ export async function processVoiceAssistantTurn(
 
         const reply =
           lang === 'te-IN'
-            ? `తప్పకుండా, ${summaryText} (మొత్తం ₹${totalAmount.toLocaleString('en-IN')}) కార్ట్‌కి సిద్ధం చేసాము. కన్ఫర్మ్ చేయమంటారా?`
+            ? `మీ ప్రతిపాదిత ఆర్డర్: ${summaryText}, మొత్తం ₹${totalAmount.toLocaleString('en-IN')}. వీటిని మీ కార్ట్‌కి చేర్చడానికి నిర్ధారించండి.`
             : lang === 'hi-IN'
-              ? `जी बिल्कुल, ${summaryText} (कुल ₹${totalAmount.toLocaleString('en-IN')}) आपके कार्ट के लिए तैयार कर दिया है। क्या कन्फर्म करें?`
-              : `Sure, I've added ${summaryText} to your cart for ₹${totalAmount.toLocaleString('en-IN')}. Would you like to confirm?`;
+              ? `आपका प्रस्तावित ऑर्डर है: ${summaryText}, कुल ₹${totalAmount.toLocaleString('en-IN')}। इन्हें अपने कार्ट में जोड़ने के लिए कन्फर्म करें।`
+              : `Your proposed order is ${summaryText}, totaling ₹${totalAmount.toLocaleString('en-IN')}. Confirm to add these to your cart.`;
 
         const proposedActions = pendingClarification.pendingItems.map((pi) => ({
           type: 'cart_add_plan',
@@ -1010,6 +1049,9 @@ export async function processVoiceAssistantTurn(
       // Create pending clarification for multi-turn variant selection
       const pendingClarification: PendingClarification = {
         type: 'variant',
+        restaurantId: params.restaurantId,
+        userId: params.userId,
+        sessionId: params.sessionId,
         pendingItems: parsedCandidates.map((c) => ({
           foodId: c.matchedItem.id,
           name: c.specifiedVariant
@@ -1072,10 +1114,10 @@ export async function processVoiceAssistantTurn(
 
     const reply =
       lang === 'te-IN'
-        ? `తప్పకుండా, ${summaryText} కార్ట్‌కి యాడ్ చేసాము. కన్ఫర్మ్ చేయమంటారా?`
+        ? `మీ ప్రతిపాదిత ఆర్డర్: ${summaryText}, మొత్తం ₹${totalAmount.toLocaleString('en-IN')}. వీటిని మీ కార్ట్‌కి చేర్చడానికి నిర్ధారించండి.`
         : lang === 'hi-IN'
-          ? `जी बिल्कुल, ${summaryText} आपके कार्ट में जोड़ दिए हैं। क्या कन्फर्म करें?`
-          : `Sure, I've added ${summaryText} to your cart. Would you like to confirm?`;
+          ? `आपका प्रस्तावित ऑर्डर है: ${summaryText}, कुल ₹${totalAmount.toLocaleString('en-IN')}। इन्हें अपने कार्ट में जोड़ने के लिए कन्फर्म करें।`
+          : `Your proposed order is ${summaryText}, totaling ₹${totalAmount.toLocaleString('en-IN')}. Confirm to add these to your cart.`;
 
     const proposedActions = parsedCandidates.map((c) => ({
       type: 'cart_add_plan',
