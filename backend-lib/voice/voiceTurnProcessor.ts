@@ -205,10 +205,10 @@ export async function processVoiceAssistantTurn(
 
       const reply =
         lang === 'te-IN'
-          ? `ఈరోజు నిర్ధారించబడిన అమ్మకాలు ₹${salesSummary.totalRevenue.toLocaleString('en-IN')}, మొత్తం ${salesSummary.paidOrderCount} చెల్లించిన ఆర్డర్లు.${salesSummary.unpaidOrderCount > 0 ? ` ఇంకా ${salesSummary.unpaidOrderCount} ఆర్డర్లు చెల్లింపు కోసం పెండింగ్‌లో ఉన్నాయి.` : ''}`
+          ? `ఈరోజు వసూళ్లు ₹${salesSummary.totalRevenue.toLocaleString('en-IN')}, మొత్తం ${salesSummary.paidOrderCount} చెల్లించిన ఆర్డర్లు.${salesSummary.unpaidOrderCount > 0 ? ` ఇంకా ${salesSummary.unpaidOrderCount} ఆర్డర్లు చెల్లింపు కోసం పెండింగ్‌లో ఉన్నాయి.` : ''}`
           : lang === 'hi-IN'
-            ? `आज की शुद्ध बिक्री ₹${salesSummary.totalRevenue.toLocaleString('en-IN')} है, जिसमें ${salesSummary.paidOrderCount} भुगतान प्राप्त ऑर्डर्स हैं।${salesSummary.unpaidOrderCount > 0 ? ` ${salesSummary.unpaidOrderCount} ऑर्डर्स अभी अनपेड हैं।` : ''}`
-            : `Today's net sales are ₹${salesSummary.totalRevenue.toLocaleString('en-IN')} across ${salesSummary.paidOrderCount} paid orders.${salesSummary.unpaidOrderCount > 0 ? ` ${salesSummary.unpaidOrderCount} orders are pending payment.` : ''}`;
+            ? `आज का कुल कलेक्शन ₹${salesSummary.totalRevenue.toLocaleString('en-IN')} है, जिसमें ${salesSummary.paidOrderCount} भुगतान प्राप्त ऑर्डर्स हैं।${salesSummary.unpaidOrderCount > 0 ? ` ${salesSummary.unpaidOrderCount} ऑर्डर्स अभी अनपेड हैं।` : ''}`
+            : `Today's net collections are ₹${salesSummary.totalRevenue.toLocaleString('en-IN')} across ${salesSummary.paidOrderCount} paid orders.${salesSummary.unpaidOrderCount > 0 ? ` ${salesSummary.unpaidOrderCount} orders are pending payment.` : ''}`;
 
       return {
         reply,
