@@ -192,6 +192,11 @@ export function setupVoiceGatewayWebSocket(
 
         if (turnSignal.aborted) return;
 
+        if (outcome.pendingClarification !== undefined) {
+          if (!clientContext.context) clientContext.context = {};
+          clientContext.context.pendingClarification = outcome.pendingClarification;
+        }
+
         const turnLatency = Date.now() - turnStart;
         socket.emit('voice:turn:result', {
           reply: outcome.reply,
@@ -200,6 +205,7 @@ export function setupVoiceGatewayWebSocket(
           language: outcome.language || lang,
           correlationId: outcome.correlationId,
           latencyMs: turnLatency,
+          pendingClarification: outcome.pendingClarification,
         });
 
         // Progressive Streaming TTS
@@ -309,7 +315,10 @@ export function setupVoiceGatewayWebSocket(
     });
 
     // Direct conversational text turn over WebSocket
-    socket.on('voice:turn', async (data: { transcript: string; language?: string }) => {
+    socket.on('voice:turn', async (data: { transcript: string; language?: string; context?: any; mode?: any }) => {
+      if (data?.context) {
+        clientContext = { ...clientContext, ...data.context, context: data.context };
+      }
       if (data?.transcript) {
         await handleFinalTranscript(data.transcript, data.language || language);
       }

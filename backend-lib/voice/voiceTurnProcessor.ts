@@ -16,6 +16,22 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getAuthoritativeDailySalesSummary } from './authoritativeReporting.js';
 import { verifyGuestOrderToken } from '../guestOrderToken.js';
 
+export interface PendingClarificationItem {
+  foodId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  needsVariant?: boolean;
+  variantId?: string;
+  variantOptions?: Array<{ id: string; name: string; price: number }>;
+}
+
+export interface PendingClarification {
+  type: 'variant' | 'dish';
+  pendingItems: PendingClarificationItem[];
+  clarifyingIndex: number;
+}
+
 export interface VoiceTurnParams {
   sessionId: string;
   transcript: string;
@@ -23,14 +39,25 @@ export interface VoiceTurnParams {
   userId?: string;
   tenantId?: string;
   restaurantId?: string;
-  mode?: 'consumer_ordering' | 'merchant_ops' | 'merchant_marketing';
+  mode?: 'consumer_ordering' | 'merchant_ops' | 'merchant_marketing' | 'customer';
   channel?: 'orderbhojan_web' | 'orderbhojan_android' | 'bhojanos_owner' | 'unknown';
   orderTrackingToken?: string;
   context?: {
     cart?: { items?: Array<{ id: string; name: string; quantity: number; price?: number; notes?: string }> };
-    menuItems?: Array<{ id: string; name: string; price: number; isAvailable?: boolean; isVeg?: boolean; category?: string }>;
+    menuItems?: Array<{
+      id: string;
+      name: string;
+      price: number;
+      isAvailable?: boolean;
+      isVeg?: boolean;
+      category?: string;
+      variants?: Array<{ id?: string; variantId?: string; name?: string; displayName?: string; price?: number; offerPrice?: number }>;
+    }>;
     restaurantName?: string;
+    restaurantSlug?: string;
+    restaurantId?: string;
     lastProposedItem?: { id: string; name: string; quantity: number; price: number };
+    pendingClarification?: PendingClarification | null;
   };
 }
 
@@ -42,6 +69,7 @@ export interface VoiceTurnOutcome {
   correlationId: string;
   latencyMs: number;
   authorized?: boolean;
+  pendingClarification?: PendingClarification | null;
 }
 
 export interface VoiceTurnProcessorDeps {
@@ -86,20 +114,94 @@ export function detectLanguage(text: string, preferred?: string): 'te-IN' | 'hi-
   return 'en-IN';
 }
 
-/** Parse quantity from Indic or English speech */
+/** Parse quantity from Indic scripts, romanized Indic, or English speech */
 export function extractQuantity(text: string): number {
   const lower = text.toLowerCase();
-  if (/\b(one|okati|ek|single)\b/i.test(lower)) return 1;
+
+  // Telugu script numbers
+  if (/(ఒకటి|ఒక|౧)/.test(text)) return 1;
+  if (/(రెండు|౨)/.test(text)) return 2;
+  if (/(మూడు|౩)/.test(text)) return 3;
+  if (/(నాలుగు|౪)/.test(text)) return 4;
+  if (/(ఐదు|౫)/.test(text)) return 5;
+
+  // Hindi / Devanagari script numbers
+  if (/(एक|१)/.test(text)) return 1;
+  if (/(दो|२)/.test(text)) return 2;
+  if (/(तीन|३)/.test(text)) return 3;
+  if (/(चार|४)/.test(text)) return 4;
+  if (/(पाँच|पांच|५)/.test(text)) return 5;
+
+  // Romanized & English numbers
+  if (/\b(one|okati|oka|ek|single)\b/i.test(lower)) return 1;
   if (/\b(two|rendu|do|double)\b/i.test(lower)) return 2;
-  if (/\b(three|moodu|teen)\b/i.test(lower)) return 3;
-  if (/\b(four|nalugu|char)\b/i.test(lower)) return 4;
-  if (/\b(five|aidu|paanch)\b/i.test(lower)) return 5;
+  if (/\b(three|moodu|teen|triple)\b/i.test(lower)) return 3;
+  if (/\b(four|nalugu|naalugu|char|chaar)\b/i.test(lower)) return 4;
+  if (/\b(five|aidu|paanch|panch)\b/i.test(lower)) return 5;
+
   const match = lower.match(/\b(\d+)\b/);
   if (match) {
     const val = parseInt(match[1], 10);
     if (!Number.isNaN(val) && val > 0 && val <= 50) return val;
   }
   return 1;
+}
+
+/** Normalize spoken dish queries across Indic scripts & romanized variants */
+export function normalizeSpokenDishQuery(text: string): string {
+  let s = text.toLowerCase();
+
+  // Telugu script food terms -> standard English tokens
+  s = s.replace(/చికెన్/g, 'chicken ');
+  s = s.replace(/బిర్యానీలు?|బిరియానీలు?|బిరియాని|బిర్యాని/g, 'biryani ');
+  s = s.replace(/మటన్/g, 'mutton ');
+  s = s.replace(/పన్నీర్|పనీర్/g, 'paneer ');
+  s = s.replace(/దోశలు?|దోసలు?|దోశ|దోస/g, 'dosa ');
+  s = s.replace(/ఇడ్లీలు?|ఇడ్లీ/g, 'idli ');
+  s = s.replace(/వడలు?|వడ/g, 'vada ');
+  s = s.replace(/రైతా|రైత/g, 'raita ');
+  s = s.replace(/సాంబారు?|సాంబార్/g, 'sambar ');
+  s = s.replace(/చట్నీ|చట్ని/g, 'chutney ');
+  s = s.replace(/పూరీలు?|పూరి/g, 'puri ');
+  s = s.replace(/రొట్టెలు?|రొట్టె|రోటీ|చపాతీ/g, 'roti ');
+  s = s.replace(/స్పెషల్/g, 'special ');
+  s = s.replace(/జంబో/g, 'jumbo ');
+  s = s.replace(/సింగిల్/g, 'single ');
+  s = s.replace(/హాఫ్/g, 'half ');
+  s = s.replace(/ఫుల్/g, 'full ');
+
+  // Hindi / Devanagari food terms -> standard English tokens
+  s = s.replace(/चिकन/g, 'chicken ');
+  s = s.replace(/बिरयानी|बिरियानी/g, 'biryani ');
+  s = s.replace(/मटन/g, 'mutton ');
+  s = s.replace(/पनीर/g, 'paneer ');
+  s = s.replace(/डोसा|दोसा/g, 'dosa ');
+  s = s.replace(/इडली/g, 'idli ');
+  s = s.replace(/वड़ा|बड़ा/g, 'vada ');
+  s = s.replace(/रायता/g, 'raita ');
+  s = s.replace(/सांभर|साम्भर/g, 'sambar ');
+  s = s.replace(/चटनी/g, 'chutney ');
+  s = s.replace(/पूरी/g, 'puri ');
+  s = s.replace(/रोटी|चपाती/g, 'roti ');
+  s = s.replace(/स्पेशल/g, 'special ');
+  s = s.replace(/जंबो/g, 'jumbo ');
+  s = s.replace(/सिंगल/g, 'single ');
+  s = s.replace(/हाफ/g, 'half ');
+  s = s.replace(/फुल/g, 'full ');
+
+  // Common verbs and filler words to clean out
+  s = s.replace(/\b(add|want|give|please|kavali|kavale|ivvandi|cheyyandi|chahiye|do|dijiye|plate|plates|two|three|four|five|rendu|moodu|nalugu|ek|teen)\b/gi, ' ');
+  s = s.replace(/(కావాలి|కావాలె|ఇవ్వండి|తీసుకోండి|చేయండి|చేయి|పెట్టండి|ఆర్డర్|ప్లేట్లు?|ఒకటి|రెండు|మూడు|నాలుగు|ఐదు)/g, ' ');
+  s = s.replace(/(चाहिए|चाहिये|दीजिए|देना|लाओ|लगाओ|करो|कर\s*दो|डालो|ऑर्डर|प्लेट|एक|दो|तीन|चार|पाँच|पांच)/g, ' ');
+
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+/** Split multi-item utterances by conjunctions */
+export function splitMultiItemUtterance(text: string): string[] {
+  const clauses = text.split(/\s*(?:and|plus|with|along with|మరియు|తో పాటు|ఇంకా|और|तथा|साथ में|,)\s*/i);
+  const cleaned = clauses.map((c) => c.trim()).filter((c) => c.length > 0);
+  return cleaned.length > 0 ? cleaned : [text.trim()];
 }
 
 export async function processVoiceAssistantTurn(
@@ -360,6 +462,112 @@ export async function processVoiceAssistantTurn(
   const menuItems = params.context?.menuItems || [];
   const cartItems = params.context?.cart?.items || [];
   const lastProposedItem = params.context?.lastProposedItem;
+
+  // 0. Multi-Turn: Variant / Dish Clarification Resolution
+  const pendingClarification = params.context?.pendingClarification;
+  if (
+    pendingClarification &&
+    pendingClarification.type === 'variant' &&
+    pendingClarification.pendingItems?.length > 0
+  ) {
+    const clarifyingIdx = pendingClarification.clarifyingIndex ?? 0;
+    const clarifyingItem = pendingClarification.pendingItems[clarifyingIdx];
+
+    if (clarifyingItem && clarifyingItem.variantOptions && clarifyingItem.variantOptions.length > 0) {
+      const normUtterance = normalizeSpokenDishQuery(transcript);
+      const matchedOption = clarifyingItem.variantOptions.find((opt) => {
+        const optNorm = opt.name.toLowerCase();
+        const optId = (opt.id || '').toLowerCase();
+        return (
+          normUtterance.includes(optNorm) ||
+          normUtterance.includes(optId) ||
+          lower.includes(optNorm) ||
+          lower.includes(optId) ||
+          (optNorm.includes('jumbo') && (lower.includes('jumbo') || lower.includes('జంబో') || lower.includes('जंबो'))) ||
+          (optNorm.includes('single') && (lower.includes('single') || lower.includes('సింగిల్') || lower.includes('सिंगल'))) ||
+          (optNorm.includes('full') && (lower.includes('full') || lower.includes('ఫుల్') || lower.includes('फुल'))) ||
+          (optNorm.includes('half') && (lower.includes('half') || lower.includes('హాఫ్') || lower.includes('हाफ')))
+        );
+      });
+
+      if (matchedOption) {
+        clarifyingItem.needsVariant = false;
+        clarifyingItem.variantId = matchedOption.id;
+        clarifyingItem.name = `${clarifyingItem.name} (${matchedOption.name})`;
+        clarifyingItem.price = matchedOption.price;
+
+        // Check if other items still need variant clarification
+        const nextIndex = pendingClarification.pendingItems.findIndex((pi) => pi.needsVariant);
+        if (nextIndex >= 0) {
+          pendingClarification.clarifyingIndex = nextIndex;
+          const nextItem = pendingClarification.pendingItems[nextIndex];
+          const optionsText = nextItem.variantOptions?.map((o) => o.name).join(' or ') || '';
+          const reply =
+            lang === 'te-IN'
+              ? `${sanitizeTechnicalIds(nextItem.name)} కొరకు మీకు ${optionsText} కావాలా?`
+              : lang === 'hi-IN'
+                ? `${sanitizeTechnicalIds(nextItem.name)} के लिए आप ${optionsText} लेना चाहेंगे?`
+                : `Would you like ${optionsText} for the ${sanitizeTechnicalIds(nextItem.name)}?`;
+
+          return {
+            reply,
+            language: lang,
+            intent: 'clarify_dish_choice',
+            correlationId,
+            latencyMs: Date.now() - startedAt,
+            authorized: true,
+            pendingClarification,
+          };
+        }
+
+        // All items in the multi-item order are resolved! Construct complete proposal with authoritative prices!
+        const totalAmount = pendingClarification.pendingItems.reduce(
+          (acc, pi) => acc + pi.price * pi.quantity,
+          0,
+        );
+        const itemSummaries = pendingClarification.pendingItems.map(
+          (pi) => `${pi.quantity} ${sanitizeTechnicalIds(pi.name)}`,
+        );
+        const summaryText =
+          itemSummaries.length === 1
+            ? itemSummaries[0]
+            : itemSummaries.slice(0, -1).join(', ') +
+              (lang === 'te-IN' ? ' మరియు ' : lang === 'hi-IN' ? ' और ' : ' and ') +
+              itemSummaries[itemSummaries.length - 1];
+
+        const reply =
+          lang === 'te-IN'
+            ? `తప్పకుండా, ${summaryText} (మొత్తం ₹${totalAmount.toLocaleString('en-IN')}) కార్ట్‌కి సిద్ధం చేసాము. కన్ఫర్మ్ చేయమంటారా?`
+            : lang === 'hi-IN'
+              ? `जी बिल्कुल, ${summaryText} (कुल ₹${totalAmount.toLocaleString('en-IN')}) आपके कार्ट के लिए तैयार कर दिया है। क्या कन्फर्म करें?`
+              : `Sure, I've added ${summaryText} to your cart for ₹${totalAmount.toLocaleString('en-IN')}. Would you like to confirm?`;
+
+        const proposedActions = pendingClarification.pendingItems.map((pi) => ({
+          type: 'cart_add_plan',
+          payload: {
+            foodId: pi.foodId,
+            name: pi.name,
+            quantity: pi.quantity,
+            price: pi.price,
+            variantId: pi.variantId,
+            restaurantId: params.restaurantId,
+            requiresConfirmation: true,
+          },
+        }));
+
+        return {
+          reply,
+          language: lang,
+          intent: 'cart_add_plan',
+          proposedActions,
+          correlationId,
+          latencyMs: Date.now() - startedAt,
+          authorized: true,
+          pendingClarification: null,
+        };
+      }
+    }
+  }
 
   // 1. Order Status Check with Ownership Guard
   if (
@@ -710,80 +918,224 @@ export async function processVoiceAssistantTurn(
     };
   }
 
-  // 6. Search & Add Dish to Cart (with explicit quantity extraction and ambiguity clarification)
-  const qty = extractQuantity(transcript);
-  const cleanTranscriptWords = lower
-    .replace(/\b(add|want|give|please|kavali|ivvandi|cheyyandi|chahiye|do|plate|plates|two|three|four|five|rendu|moodu|nalugu|ek|teen)\b/gi, '')
-    .trim();
+  // 6. Search & Add Dish to Cart (Multi-item, Multilingual & Variant Aware)
+  const clauses = splitMultiItemUtterance(transcript);
 
-  // Search candidate dishes from menu
-  const matchingDishes = menuItems.filter((item) => {
-    const itemNameLower = item.name.toLowerCase();
-    return (
-      itemNameLower.includes(cleanTranscriptWords) ||
-      cleanTranscriptWords.includes(itemNameLower) ||
-      (cleanTranscriptWords.length >= 3 && itemNameLower.split(' ').some((w) => cleanTranscriptWords.includes(w)))
-    );
-  });
-
-  // Check if there is an exact match first
-  const exactMatch = matchingDishes.find(
-    (item) =>
-      item.name.toLowerCase() === cleanTranscriptWords ||
-      cleanTranscriptWords.split(/\s+/).join(' ') === item.name.toLowerCase(),
-  );
-
-  // Ambiguity Clarification: If multiple different dishes match and no exact match, ask user to clarify!
-  if (!exactMatch && matchingDishes.length > 1 && cleanTranscriptWords.length >= 3) {
-    const dishNames = matchingDishes.slice(0, 3).map((d) => sanitizeTechnicalIds(d.name)).join(', ');
-    const reply =
-      lang === 'te-IN'
-        ? `మా వద్ద ${dishNames} ఉన్నాయి. మీకు ఏది కావాలో స్పష్టంగా చెప్పండి.`
-        : lang === 'hi-IN'
-          ? `हमारे पास ${dishNames} उपलब्ध हैं। आप कौन सा लेना चाहेंगे?`
-          : `We have multiple options: ${dishNames}. Which one would you prefer?`;
-
-    return {
-      reply,
-      language: lang,
-      intent: 'clarify_dish_choice',
-      correlationId,
-      latencyMs: Date.now() - startedAt,
-      authorized: true,
-    };
+  interface ParsedCandidate {
+    clause: string;
+    qty: number;
+    matchedItem: any;
+    needsVariant: boolean;
+    specifiedVariant?: any;
+    variantOptions?: Array<{ id: string; name: string; price: number }>;
   }
 
-  const matchedItem = exactMatch || matchingDishes[0] || null;
+  const parsedCandidates: ParsedCandidate[] = [];
 
-  if (matchedItem) {
-    const cleanName = sanitizeTechnicalIds(matchedItem.name);
+  for (const clause of clauses) {
+    const clauseQty = extractQuantity(clause);
+    const normClause = normalizeSpokenDishQuery(clause);
+    if (!normClause || normClause.length < 2) continue;
+
+    // Search candidate dishes from menu
+    let match = menuItems.find((m) => m.name.toLowerCase() === normClause);
+
+    if (!match) {
+      const queryTokens = normClause.split(/\s+/).filter((t) => t.length >= 3);
+      const candidates = menuItems.filter((item) => {
+        const itemLower = item.name.toLowerCase();
+        if (itemLower.includes(normClause) || normClause.includes(itemLower)) return true;
+        const itemTokens = itemLower.split(/\s+/);
+        const overlap = queryTokens.filter((qt) => itemTokens.some((it) => it.includes(qt) || qt.includes(it)));
+        return overlap.length >= Math.min(queryTokens.length, 2);
+      });
+
+      // Prefer exact match if any, otherwise first candidate if not overly ambiguous
+      if (candidates.length === 1 || (candidates.length > 1 && queryTokens.length >= 2)) {
+        match = candidates[0];
+      }
+    }
+
+    if (match) {
+      const variants =
+        match.variants && Array.isArray(match.variants) && match.variants.length > 1
+          ? match.variants
+          : null;
+
+      let needsVariant = false;
+      let specifiedVariant: any = null;
+      let variantOptions: Array<{ id: string; name: string; price: number }> | undefined = undefined;
+
+      if (variants) {
+        // Check if clause already specifies one of the variants
+        const lowerClause = clause.toLowerCase();
+        specifiedVariant = variants.find((v: any) => {
+          const vName = (v.displayName || v.name || v.id || '').toLowerCase();
+          return (
+            normClause.includes(vName) ||
+            lowerClause.includes(vName) ||
+            (vName.includes('jumbo') && (lowerClause.includes('jumbo') || lowerClause.includes('జంబో') || lowerClause.includes('जंबो'))) ||
+            (vName.includes('single') && (lowerClause.includes('single') || lowerClause.includes('సింగిల్') || lowerClause.includes('सिंगल'))) ||
+            (vName.includes('full') && (lowerClause.includes('full') || lowerClause.includes('ఫుల్') || lowerClause.includes('फुल'))) ||
+            (vName.includes('half') && (lowerClause.includes('half') || lowerClause.includes('హాఫ్') || lowerClause.includes('हाफ')))
+          );
+        });
+
+        if (!specifiedVariant) {
+          needsVariant = true;
+          variantOptions = variants.map((v: any) => ({
+            id: v.variantId || v.id || `var_${v.name}`,
+            name: v.displayName || v.name,
+            price: v.price || v.offerPrice || match.price,
+          }));
+        }
+      }
+
+      parsedCandidates.push({
+        clause,
+        qty: clauseQty,
+        matchedItem: match,
+        needsVariant,
+        specifiedVariant,
+        variantOptions,
+      });
+    }
+  }
+
+  // If candidate items were resolved from the utterance
+  if (parsedCandidates.length > 0) {
+    const hasUnresolvedVariant = parsedCandidates.some((c) => c.needsVariant);
+
+    if (hasUnresolvedVariant) {
+      // Create pending clarification for multi-turn variant selection
+      const pendingClarification: PendingClarification = {
+        type: 'variant',
+        pendingItems: parsedCandidates.map((c) => ({
+          foodId: c.matchedItem.id,
+          name: c.specifiedVariant
+            ? `${c.matchedItem.name} (${c.specifiedVariant.displayName || c.specifiedVariant.name})`
+            : c.matchedItem.name,
+          quantity: c.qty,
+          price: c.specifiedVariant
+            ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
+            : c.matchedItem.price,
+          needsVariant: c.needsVariant,
+          variantId: c.specifiedVariant ? (c.specifiedVariant.variantId || c.specifiedVariant.id) : undefined,
+          variantOptions: c.variantOptions,
+        })),
+        clarifyingIndex: parsedCandidates.findIndex((c) => c.needsVariant),
+      };
+
+      const clarifyingItem = pendingClarification.pendingItems[pendingClarification.clarifyingIndex];
+      const optionsText = clarifyingItem.variantOptions?.map((o) => o.name).join(' or ') || '';
+      const cleanItemName = sanitizeTechnicalIds(clarifyingItem.name);
+
+      const reply =
+        lang === 'te-IN'
+          ? `${cleanItemName} కొరకు మీకు ${optionsText} కావాలా?`
+          : lang === 'hi-IN'
+            ? `${cleanItemName} के लिए आप ${optionsText} लेना चाहेंगे?`
+            : `Would you like ${optionsText} for the ${cleanItemName}?`;
+
+      return {
+        reply,
+        language: lang,
+        intent: 'clarify_dish_choice',
+        correlationId,
+        latencyMs: Date.now() - startedAt,
+        authorized: true,
+        pendingClarification,
+      };
+    }
+
+    // All items are resolved! Construct full proposal
+    const totalAmount = parsedCandidates.reduce((acc, c) => {
+      const unitPrice = c.specifiedVariant
+        ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
+        : c.matchedItem.price;
+      return acc + unitPrice * c.qty;
+    }, 0);
+
+    const itemSummaries = parsedCandidates.map((c) => {
+      const itemName = c.specifiedVariant
+        ? `${c.matchedItem.name} (${c.specifiedVariant.displayName || c.specifiedVariant.name})`
+        : c.matchedItem.name;
+      return `${c.qty} ${sanitizeTechnicalIds(itemName)}`;
+    });
+
+    const summaryText =
+      itemSummaries.length === 1
+        ? itemSummaries[0]
+        : itemSummaries.slice(0, -1).join(', ') +
+          (lang === 'te-IN' ? ' మరియు ' : lang === 'hi-IN' ? ' और ' : ' and ') +
+          itemSummaries[itemSummaries.length - 1];
+
     const reply =
       lang === 'te-IN'
-        ? `తప్పకుండా, ${qty} ${cleanName} కార్ట్‌కి యాడ్ చేసాము. కన్ఫర్మ్ చేయమంటారా?`
+        ? `తప్పకుండా, ${summaryText} కార్ట్‌కి యాడ్ చేసాము. కన్ఫర్మ్ చేయమంటారా?`
         : lang === 'hi-IN'
-          ? `जी बिल्कुल, ${qty} ${cleanName} आपके कार्ट में जोड़ दिए हैं। क्या कन्फर्म करें?`
-          : `Sure, I've added ${qty} ${cleanName} to your cart. Would you like to confirm?`;
+          ? `जी बिल्कुल, ${summaryText} आपके कार्ट में जोड़ दिए हैं। क्या कन्फर्म करें?`
+          : `Sure, I've added ${summaryText} to your cart. Would you like to confirm?`;
+
+    const proposedActions = parsedCandidates.map((c) => ({
+      type: 'cart_add_plan',
+      payload: {
+        foodId: c.matchedItem.id,
+        name: c.specifiedVariant
+          ? `${c.matchedItem.name} (${c.specifiedVariant.displayName || c.specifiedVariant.name})`
+          : c.matchedItem.name,
+        quantity: c.qty,
+        price: c.specifiedVariant
+          ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
+          : c.matchedItem.price,
+        variantId: c.specifiedVariant ? (c.specifiedVariant.variantId || c.specifiedVariant.id) : undefined,
+        restaurantId: params.restaurantId,
+        requiresConfirmation: true,
+      },
+    }));
 
     return {
       reply,
       language: lang,
       intent: 'cart_add_plan',
-      proposedActions: [
-        {
-          type: 'cart_add_plan',
-          payload: {
-            foodId: matchedItem.id,
-            name: matchedItem.name,
-            quantity: qty,
-            price: matchedItem.price,
-            restaurantId: params.restaurantId,
-          },
-        },
-      ],
+      proposedActions,
       correlationId,
       latencyMs: Date.now() - startedAt,
       authorized: true,
+      pendingClarification: null,
     };
+  }
+
+  // Ambiguity Clarification: If multiple different dishes match and no exact match, ask user to clarify!
+  const genericClean = normalizeSpokenDishQuery(transcript);
+  if (genericClean.length >= 3) {
+    const matchingDishes = menuItems.filter((item) => {
+      const itemNameLower = item.name.toLowerCase();
+      return (
+        itemNameLower.includes(genericClean) ||
+        genericClean.includes(itemNameLower) ||
+        itemNameLower.split(' ').some((w) => w.length >= 3 && genericClean.includes(w))
+      );
+    });
+
+    if (matchingDishes.length > 1) {
+      const dishNames = matchingDishes.slice(0, 3).map((d) => sanitizeTechnicalIds(d.name)).join(', ');
+      const reply =
+        lang === 'te-IN'
+          ? `మా వద్ద ${dishNames} ఉన్నాయి. మీకు ఏది కావాలో స్పష్టంగా చెప్పండి.`
+          : lang === 'hi-IN'
+            ? `हमारे पास ${dishNames} उपलब्ध हैं। आप कौन सा लेना चाहेंगे?`
+            : `We have multiple options: ${dishNames}. Which one would you prefer?`;
+
+      return {
+        reply,
+        language: lang,
+        intent: 'clarify_dish_choice',
+        correlationId,
+        latencyMs: Date.now() - startedAt,
+        authorized: true,
+      };
+    }
   }
 
   // 7. Dietary or Vegetarian Filter / Inquiry

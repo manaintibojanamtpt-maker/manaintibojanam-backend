@@ -239,36 +239,49 @@ async function run() {
   // =========================================================================
   console.log('\n--- [SECTION 3] PIPELINE TURN PROCESSING (Customer Journey) ---');
   const seededMenu = [
-    { id: 'hyderabadi_chicken_biryani', name: 'Hyderabadi Chicken Biryani', price: 299, isAvailable: true },
+    {
+      id: 'hyderabadi_chicken_biryani',
+      name: 'Hyderabadi Chicken Biryani',
+      price: 299,
+      isAvailable: true,
+      variants: [
+        { id: 'single', name: 'Single', price: 299 },
+        { id: 'jumbo', name: 'Jumbo', price: 499 },
+      ],
+    },
     { id: 'paneer_biryani', name: 'Paneer Biryani', price: 219, isAvailable: true },
     { id: 'special_raita', name: 'Special Raita', price: 49, isAvailable: true },
   ];
 
-  const pipelineTurns = [
+  const pipelineJourneys = [
     {
       lang: 'te-IN',
-      label: 'Telugu',
-      transcript: 'రెండు చికెన్ బిర్యానీలు కావాలి',
+      label: 'Telugu (2 Chicken Biryanis -> Variant Choice -> 2 Jumbo Biryanis)',
+      turn1: 'రెండు చికెన్ బిర్యానీలు కావాలి',
+      turn2: 'జంబో',
     },
     {
       lang: 'hi-IN',
-      label: 'Hindi',
-      transcript: 'दो चिकन बिरयानी चाहिए',
+      label: 'Hindi (2 Chicken Biryanis -> Variant Choice -> 2 Jumbo Biryanis)',
+      turn1: 'दो चिकन बिरयानी चाहिए',
+      turn2: 'जंबो',
     },
     {
       lang: 'en-IN',
-      label: 'English',
-      transcript: 'I want two chicken biryanis and one special raita',
+      label: 'English Multi-Item (2 Biryanis + 1 Raita -> Variant Choice -> Complete Proposal)',
+      turn1: 'I want two chicken biryanis and one special raita',
+      turn2: 'Jumbo',
     },
   ];
 
-  for (const turn of pipelineTurns) {
+  for (const journey of pipelineJourneys) {
     const t0 = Date.now();
-    console.log(`\nTesting Pipeline Turn [${turn.label}]: "${turn.transcript}"`);
+    console.log(`\nTesting Pipeline Journey [${journey.label}]:`);
+    console.log(`  Turn 1 Input: "${journey.turn1}"`);
     try {
-      const outcome = await processVoiceAssistantTurn({
-        sessionId: `turn_test_${turn.lang}`,
-        transcript: turn.transcript,
+      const outcome1 = await processVoiceAssistantTurn({
+        sessionId: `turn_test_${journey.lang}`,
+        transcript: journey.turn1,
         mode: 'customer',
         context: {
           restaurantSlug: 'demo-biryani-house',
@@ -277,23 +290,43 @@ async function run() {
         },
       });
 
-      const turnLatency = Date.now() - t0;
-      console.log(`  Detected Intent: ${outcome.intent}, Language: ${outcome.language}`);
-      console.log(`  Assistant Reply: "${outcome.reply}"`);
-      console.log(`  Proposed Actions: ${JSON.stringify(outcome.proposedActions)}`);
-      console.log(`  Turn Engine Latency: ${turnLatency}ms`);
+      console.log(`  Turn 1 Intent: ${outcome1.intent}, Language: ${outcome1.language}`);
+      console.log(`  Turn 1 Reply: "${outcome1.reply}"`);
+      console.log(`  Turn 1 Pending Clarification: ${JSON.stringify(outcome1.pendingClarification)}`);
 
-      testResults.pipeline[turn.lang] = {
+      // Turn 2: User clarifies variant choice ("Jumbo")
+      console.log(`  Turn 2 Input: "${journey.turn2}"`);
+      const outcome2 = await processVoiceAssistantTurn({
+        sessionId: `turn_test_${journey.lang}`,
+        transcript: journey.turn2,
+        mode: 'customer',
+        context: {
+          restaurantSlug: 'demo-biryani-house',
+          restaurantId: 'obr_demo_biryani_001',
+          menuItems: seededMenu,
+          pendingClarification: outcome1.pendingClarification,
+        },
+      });
+
+      const journeyLatency = Date.now() - t0;
+      console.log(`  Turn 2 Intent: ${outcome2.intent}, Language: ${outcome2.language}`);
+      console.log(`  Turn 2 Reply: "${outcome2.reply}"`);
+      console.log(`  Turn 2 Proposed Actions: ${JSON.stringify(outcome2.proposedActions)}`);
+      console.log(`  Journey Total Latency: ${journeyLatency}ms`);
+
+      testResults.pipeline[journey.lang] = {
         status: 'PASS',
-        language: outcome.language,
-        intent: outcome.intent,
-        reply: outcome.reply,
-        proposedActions: outcome.proposedActions,
-        turnLatencyMs: turnLatency,
+        language: outcome2.language,
+        turn1Intent: outcome1.intent,
+        turn1Reply: outcome1.reply,
+        turn2Intent: outcome2.intent,
+        turn2Reply: outcome2.reply,
+        proposedActions: outcome2.proposedActions,
+        journeyLatencyMs: journeyLatency,
       };
     } catch (err: any) {
-      console.log(`  [FAIL] Pipeline turn failed: ${err.message || err}`);
-      testResults.pipeline[turn.lang] = {
+      console.log(`  [FAIL] Pipeline journey failed: ${err.message || err}`);
+      testResults.pipeline[journey.lang] = {
         status: 'FAIL',
         error: err.message || String(err),
       };

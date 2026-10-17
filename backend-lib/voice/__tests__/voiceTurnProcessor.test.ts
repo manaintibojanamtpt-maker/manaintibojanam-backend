@@ -442,4 +442,147 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       }
     });
   });
+
+  describe('Multilingual Ordering Intent & Multi-Item Clarification Preservation', () => {
+    const biryaniMenu = [
+      {
+        id: 'hyderabadi_chicken_biryani',
+        name: 'Hyderabadi Chicken Biryani',
+        price: 299,
+        isAvailable: true,
+        variants: [
+          { id: 'single', name: 'Single', price: 299 },
+          { id: 'jumbo', name: 'Jumbo', price: 499 },
+        ],
+      },
+      {
+        id: 'paneer_biryani',
+        name: 'Paneer Biryani',
+        price: 219,
+        isAvailable: true,
+      },
+      {
+        id: 'special_raita',
+        name: 'Special Raita',
+        price: 49,
+        isAvailable: true,
+      },
+    ];
+
+    it('Telugu: "రెండు చికెన్ బిర్యానీలు కావాలి" successfully triggers ordering intent and variant choice', async () => {
+      const outcome = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_order',
+        transcript: 'రెండు చికెన్ బిర్యానీలు కావాలి',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+
+      assert.equal(outcome.language, 'te-IN');
+      assert.equal(outcome.intent, 'clarify_dish_choice');
+      assert.ok(outcome.reply.includes('సింగిల్') || outcome.reply.includes('Single') || outcome.reply.includes('Jumbo'));
+      assert.ok(outcome.pendingClarification);
+      assert.equal(outcome.pendingClarification.pendingItems.length, 1);
+      assert.equal(outcome.pendingClarification.pendingItems[0].quantity, 2);
+      assert.equal(outcome.pendingClarification.pendingItems[0].foodId, 'hyderabadi_chicken_biryani');
+    });
+
+    it('Telugu flat item: "రెండు పన్నీర్ బిర్యానీలు కావాలి" directly proposes cart_add_plan with qty 2', async () => {
+      const outcome = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_paneer',
+        transcript: 'రెండు పన్నీర్ బిర్యానీలు కావాలి',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+
+      assert.equal(outcome.language, 'te-IN');
+      assert.equal(outcome.intent, 'cart_add_plan');
+      assert.equal(outcome.proposedActions?.length, 1);
+      assert.equal((outcome.proposedActions![0].payload as any).quantity, 2);
+      assert.equal((outcome.proposedActions![0].payload as any).foodId, 'paneer_biryani');
+      assert.ok(outcome.reply.includes('2 Paneer Biryani'));
+    });
+
+    it('Hindi: "दो चिकन बिरयानी चाहिए" successfully triggers ordering intent and variant choice', async () => {
+      const outcome = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_order',
+        transcript: 'दो चिकन बिरयानी चाहिए',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+
+      assert.equal(outcome.language, 'hi-IN');
+      assert.equal(outcome.intent, 'clarify_dish_choice');
+      assert.ok(outcome.reply.includes('Single') || outcome.reply.includes('Jumbo'));
+      assert.ok(outcome.pendingClarification);
+      assert.equal(outcome.pendingClarification.pendingItems.length, 1);
+      assert.equal(outcome.pendingClarification.pendingItems[0].quantity, 2);
+      assert.equal(outcome.pendingClarification.pendingItems[0].foodId, 'hyderabadi_chicken_biryani');
+    });
+
+    it('Hindi flat item: "दो पनीर बिरयानी चाहिए" directly proposes cart_add_plan with qty 2', async () => {
+      const outcome = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_paneer',
+        transcript: 'दो पनीर बिरयानी चाहिए',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+
+      assert.equal(outcome.language, 'hi-IN');
+      assert.equal(outcome.intent, 'cart_add_plan');
+      assert.equal(outcome.proposedActions?.length, 1);
+      assert.equal((outcome.proposedActions![0].payload as any).quantity, 2);
+      assert.equal((outcome.proposedActions![0].payload as any).foodId, 'paneer_biryani');
+      assert.ok(outcome.reply.includes('2 Paneer Biryani'));
+    });
+
+    it('Multi-item clarification retention: "I want two chicken biryanis and one special raita" -> asks Single vs Jumbo -> "Jumbo" produces proposal with both items', async () => {
+      // Turn 1: Initial multi-item request
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_multi_clarify',
+        transcript: 'I want two chicken biryanis and one special raita',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+
+      assert.equal(turn1.intent, 'clarify_dish_choice');
+      assert.ok(turn1.reply.includes('Single or Jumbo') || turn1.reply.includes('Single') && turn1.reply.includes('Jumbo'));
+      assert.ok(turn1.pendingClarification);
+      assert.equal(turn1.pendingClarification.pendingItems.length, 2);
+      // Item 0: Chicken Biryani (needs variant, qty 2)
+      assert.equal(turn1.pendingClarification.pendingItems[0].foodId, 'hyderabadi_chicken_biryani');
+      assert.equal(turn1.pendingClarification.pendingItems[0].quantity, 2);
+      assert.equal(turn1.pendingClarification.pendingItems[0].needsVariant, true);
+      // Item 1: Special Raita (preserved with qty 1)
+      assert.equal(turn1.pendingClarification.pendingItems[1].foodId, 'special_raita');
+      assert.equal(turn1.pendingClarification.pendingItems[1].quantity, 1);
+      assert.equal(turn1.pendingClarification.pendingItems[1].needsVariant, false);
+
+      // Turn 2: User answers "Jumbo"
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_multi_clarify',
+        transcript: 'Jumbo',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+
+      assert.equal(turn2.intent, 'cart_add_plan');
+      assert.equal(turn2.proposedActions?.length, 2);
+
+      // Action 0: 2x Jumbo Chicken Biryani @ ₹499 = ₹998
+      const biryaniAction = turn2.proposedActions![0].payload as any;
+      assert.equal(biryaniAction.foodId, 'hyderabadi_chicken_biryani');
+      assert.equal(biryaniAction.quantity, 2);
+      assert.equal(biryaniAction.price, 499);
+      assert.ok(biryaniAction.name.includes('Jumbo'));
+
+      // Action 1: 1x Special Raita @ ₹49
+      const raitaAction = turn2.proposedActions![1].payload as any;
+      assert.equal(raitaAction.foodId, 'special_raita');
+      assert.equal(raitaAction.quantity, 1);
+      assert.equal(raitaAction.price, 49);
+
+      // Total ₹1,047 verified in reply
+      assert.ok(turn2.reply.includes('1,047') || turn2.reply.includes('1047'));
+      assert.ok(turn2.reply.includes('2 Hyderabadi Chicken Biryani (Jumbo)'));
+      assert.ok(turn2.reply.includes('1 Special Raita'));
+    });
+  });
 });
