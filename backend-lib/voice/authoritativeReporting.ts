@@ -18,7 +18,8 @@ import { isPaymentVerified, isCodOrder, normalizePaymentStatus } from '../paymen
 
 export interface AuthoritativeDailySales {
   totalRevenue: number;          // Canonical net collections (verifiedCollections + recordedCollections - refundAmount)
-  grossSales: number;            // Total value of non-cancelled/non-failed orders placed
+  grossSales: number;            // Total value of non-cancelled/non-failed orders placed (before discounts)
+  totalDiscounts: number;        // Total promotional, coupon, or item discounts applied
   netSales: number;              // Gross sales minus discounts and refunds
   totalCollections: number;      // Total payments received (verified + recorded)
   verifiedCollections: number;   // Payments verified via payment gateway / verified UPI
@@ -181,13 +182,32 @@ export async function getAuthoritativeDailySalesSummary(
   targetDate = new Date(),
   options: ReportingOptions = {},
 ): Promise<AuthoritativeDailySales> {
-  const businessDayStartHour = options.businessDayStartHour ?? 4;
+  let businessDayStartHour = options.businessDayStartHour;
+  if (businessDayStartHour === undefined) {
+    try {
+      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+      if (tenantDoc.exists) {
+        const tData = tenantDoc.data() as Record<string, any>;
+        businessDayStartHour =
+          tData?.businessDayStartHour ??
+          tData?.storeTiming?.businessDayStartHour ??
+          tData?.storeOperations?.businessDayStartHour ??
+          4;
+      } else {
+        businessDayStartHour = 4;
+      }
+    } catch {
+      businessDayStartHour = 4;
+    }
+  }
+
   const { start: rangeStart, end: rangeEnd, businessDate } = getIstBusinessDayRange(
     targetDate,
     businessDayStartHour,
   );
 
   let grossSales = 0;
+  let totalDiscounts = 0;
   let verifiedCollections = 0;
   let recordedCollections = 0;
   let refundAmount = 0;
@@ -212,7 +232,11 @@ export async function getAuthoritativeDailySalesSummary(
       return;
     }
 
-    grossSales += amount;
+    // Gross sales is item value before discounts; ensure discount is never double-deducted
+    const subtotal = data.subtotal != null ? Number(data.subtotal) : null;
+    const orderGross = subtotal != null ? subtotal : amount + discount;
+    grossSales += orderGross;
+    totalDiscounts += discount;
 
     // 2. Refund handling
     if (paymentStatus === 'refunded' || status === 'REFUNDED' || orderRefund > 0) {
@@ -222,43 +246,79 @@ export async function getAuthoritativeDailySalesSummary(
       return;
     }
 
-    // 3. Check Verified vs Staff-Recorded payment
-    let verified = isPaymentVerified(data);
-    if (isCodOrder(data)) {
-      const pStatus = normalizePaymentStatus(data.paymentStatus);
-      if (
-        pStatus === 'pending' ||
-        pStatus === 'unpaid' ||
-        ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(status)
-      ) {
-        verified = false;
-      }
-    }
-    const recorded = isStaffRecordedPayment(data);
+    // 3. Payment collection & status tracking
+    if (Array.isArray(data.payments) && data.payments.length > 0) {
+      let orderPaid = 0;
+      for (const entry of data.payments) {
+        const p = entry as Record<string, unknown>;
+        const pAmt = Number(p.amount ?? 0);
+        if (!Number.isFinite(pAmt) || pAmt <= 0) continue;
+        const pStatus = String(p.status || '').toUpperCase().trim();
+        const pMethod = String(p.method || p.paymentMethod || '').toUpperCase().trim();
 
-    if (verified || recorded) {
-      paidOrderCount += 1;
-      if (verified) {
-        verifiedCollections += amount;
-      } else {
-        recordedCollections += amount;
+        if (pStatus === 'VERIFIED' || pStatus === 'SUCCESS') {
+          verifiedCollections += pAmt;
+          orderPaid += pAmt;
+        } else if (pStatus === 'RECORDED' || pStatus === 'PAID') {
+          recordedCollections += pAmt;
+          orderPaid += pAmt;
+        }
+
+        if (pMethod.includes('CASH')) {
+          cashAmount += pAmt;
+        } else if (pMethod.includes('UPI') || pMethod.includes('PAYTM') || pMethod.includes('QR')) {
+          upiAmount += pAmt;
+        } else {
+          otherAmount += pAmt;
+        }
       }
 
-      if (paymentMethod.includes('CASH')) {
-        cashAmount += amount;
-      } else if (
-        paymentMethod.includes('UPI') ||
-        paymentMethod.includes('PAYTM') ||
-        paymentMethod.includes('QR')
-      ) {
-        upiAmount += amount;
+      if (orderPaid >= amount - 0.01) {
+        paidOrderCount += 1;
       } else {
-        otherAmount += amount;
+        unpaidOrderCount += 1;
+        const balance = Math.max(0, Math.round((amount - orderPaid) * 100) / 100);
+        receivables += balance;
       }
     } else {
-      // Unverified, unrecorded, pending, or failed retry
-      unpaidOrderCount += 1;
-      receivables += amount;
+      // Legacy single-payment handling
+      let verified = isPaymentVerified(data);
+      if (isCodOrder(data)) {
+        const pStatus = normalizePaymentStatus(data.paymentStatus);
+        if (
+          pStatus === 'pending' ||
+          pStatus === 'unpaid' ||
+          ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(status)
+        ) {
+          verified = false;
+        }
+      }
+      const recorded = isStaffRecordedPayment(data);
+
+      if (verified || recorded) {
+        paidOrderCount += 1;
+        if (verified) {
+          verifiedCollections += amount;
+        } else {
+          recordedCollections += amount;
+        }
+
+        if (paymentMethod.includes('CASH')) {
+          cashAmount += amount;
+        } else if (
+          paymentMethod.includes('UPI') ||
+          paymentMethod.includes('PAYTM') ||
+          paymentMethod.includes('QR')
+        ) {
+          upiAmount += amount;
+        } else {
+          otherAmount += amount;
+        }
+      } else {
+        // Unverified, unrecorded, pending, or failed retry
+        unpaidOrderCount += 1;
+        receivables += amount;
+      }
     }
   };
 
@@ -295,12 +355,14 @@ export async function getAuthoritativeDailySalesSummary(
 
   const totalCollections = verifiedCollections + recordedCollections;
   const totalRevenue = Math.max(0, totalCollections - refundAmount);
-  const netSales = Math.max(0, grossSales - refundAmount);
+  // Net sales is Gross Sales minus Discounts minus Refunds (never double-deducting discounts)
+  const netSales = Math.max(0, grossSales - totalDiscounts - refundAmount);
   const averageOrderValue = paidOrderCount > 0 ? Math.round(totalRevenue / paidOrderCount) : 0;
 
   return {
     totalRevenue,
     grossSales,
+    totalDiscounts,
     netSales,
     totalCollections,
     verifiedCollections,

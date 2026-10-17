@@ -451,10 +451,10 @@ export async function processVoiceAssistantTurn(
       const cleanName = sanitizeTechnicalIds(targetItem.name);
       const reply =
         lang === 'te-IN'
-          ? `సరే, ${cleanName} సంఖ్యను ${targetQty} కి మార్చాము. కన్ఫర్మ్ చేయమంటారా?`
+          ? `నేను ${cleanName} సంఖ్యను ${targetQty} కి మార్చగలను. కన్ఫర్మ్ చేయమంటారా?`
           : lang === 'hi-IN'
-            ? `ठीक है, ${cleanName} की संख्या ${targetQty} कर दी गई है। क्या कन्फर्म करें?`
-            : `Updated ${cleanName} to ${targetQty}. Would you like to confirm?`;
+            ? `मैं ${cleanName} की संख्या ${targetQty} कर सकता हूँ। क्या कन्फर्म करें?`
+            : `I can change ${cleanName} to ${targetQty}. Would you like to confirm?`;
 
       return {
         reply,
@@ -496,10 +496,10 @@ export async function processVoiceAssistantTurn(
         const regularQty = currentQty - specifiedUnits;
         const reply =
           lang === 'te-IN'
-            ? `మొత్తం ${currentQty} ${cleanName}: ${regularQty} సాధారణం మరియు ${specifiedUnits} "${note}" సిద్ధం చేశాము. కన్ఫర్మ్ చేయమంటారా?`
+            ? `నేను మొత్తం ${currentQty} ${cleanName}: ${regularQty} సాధారణం మరియు ${specifiedUnits} "${note}" సిద్ధం చేయగలను. కన్ఫర్మ్ చేయమంటారా?`
             : lang === 'hi-IN'
-              ? `कुल ${currentQty} ${cleanName}: ${regularQty} सामान्य और ${specifiedUnits} "${note}" तैयार हैं। क्या कन्फर्म करें?`
-              : `Updated to ${currentQty} ${cleanName} total: ${regularQty} regular and ${specifiedUnits} with "${note}". Would you like to confirm?`;
+              ? `मैं कुल ${currentQty} ${cleanName}: ${regularQty} सामान्य और ${specifiedUnits} "${note}" तैयार कर सकता हूँ। क्या कन्फर्म करें?`
+              : `I can prepare ${currentQty} ${cleanName} total: ${regularQty} regular and ${specifiedUnits} with "${note}". Would you like to confirm?`;
 
         return {
           reply,
