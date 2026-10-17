@@ -1579,7 +1579,11 @@ const shouldBypassTenantValidation = (path: string) =>
   path.startsWith("/api/owner/") ||
   path.startsWith("/api/platform/") ||
   path.startsWith("/api/auth/") ||
-  path.startsWith("/api/marketplace/") ||
+  path.startsWith("/api/marketplace/restaurants/") ||
+  path.startsWith("/api/marketplace/discovery") ||
+  path.startsWith("/api/marketplace/discover") ||
+  path.startsWith("/api/marketplace/search") ||
+  path.startsWith("/api/marketplace/health") ||
   path.startsWith("/api/ai/");
 
 const loadTenantRecord = async (tenantId: string) => {

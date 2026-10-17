@@ -117,8 +117,10 @@ describe('M0 API security matrix (order access)', () => {
 });
 
 describe('optional live API probes', { skip: !LIVE_BASE }, () => {
+  const tenantHeaders = { 'x-tenant-id': 'demo-biryani-house' };
+
   it('GET /api/orders/:id without auth respects enforce flag', async () => {
-    const response = await fetch(`${LIVE_BASE}/api/orders/does-not-exist`);
+    const response = await fetch(`${LIVE_BASE}/api/orders/does-not-exist`, { headers: tenantHeaders });
     if (isOrderAuthEnforced()) {
       assert.ok([401, 403, 404].includes(response.status));
     } else {
@@ -129,14 +131,51 @@ describe('optional live API probes', { skip: !LIVE_BASE }, () => {
   it('POST /api/orders/:id/notify-status without auth returns 401', async () => {
     const response = await fetch(`${LIVE_BASE}/api/orders/test-order/notify-status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...tenantHeaders },
       body: JSON.stringify({ status: 'PLACED' }),
     });
     assert.equal(response.status, 401);
   });
 
   it('GET /api/orders/user/:userId without auth returns 401', async () => {
-    const response = await fetch(`${LIVE_BASE}/api/orders/user/some-user-id`);
+    const response = await fetch(`${LIVE_BASE}/api/orders/user/some-user-id`, { headers: tenantHeaders });
     assert.equal(response.status, 401);
+  });
+
+  describe('Marketplace Tenant Middleware & Authorization Boundaries', () => {
+    it('public menu endpoint is accessible without x-tenant-id header', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/restaurants/demo-biryani-house/menu`);
+      assert.equal(response.status, 200);
+      const data = await response.json() as any;
+      assert.equal(data.ok, true);
+      assert.ok(Array.isArray(data.value?.items));
+      assert.ok(data.value.items.length >= 1);
+    });
+
+    it('public restaurant endpoint with unknown slug returns 404', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/restaurants/nonexistent-kitchen-xyz/menu`);
+      assert.equal(response.status, 404);
+      const data = await response.json() as any;
+      assert.equal(data.ok, false);
+      assert.equal(data.error?.code, 'NOT_FOUND');
+    });
+
+    it('protected marketplace orders endpoint strictly returns 401 without auth token', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders`);
+      assert.equal(response.status, 401);
+    });
+
+    it('protected checkout capabilities endpoint strictly returns 401 without auth token', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/checkout/capabilities`);
+      assert.equal(response.status, 401);
+    });
+
+    it('non-exempt API route with invalid tenantId strictly returns 400 "Invalid Tenant ID"', async () => {
+      const response = await fetch(`${LIVE_BASE}/api/menu?tenantId=nonexistent-tenant-xyz`);
+      assert.equal(response.status, 400);
+      const data = await response.json() as any;
+      assert.equal(data.success, false);
+      assert.equal(data.error, 'Invalid Tenant ID');
+    });
   });
 });
