@@ -11,14 +11,10 @@ import { readVoiceConfig } from './voiceConfig.js';
 import { SarvamStreamingSttProvider } from './providers/sarvamStreamingSttProvider.js';
 import { SarvamStreamingTtsProvider } from './providers/sarvamStreamingTtsProvider.js';
 import type { IStreamingSttSession } from './providers/types.js';
+import { processVoiceAssistantTurn, type VoiceTurnParams, type VoiceTurnOutcome } from './voiceTurnProcessor.js';
 
 export interface VoiceGatewayDependencies {
-  readonly onTranscriptReceived?: (params: {
-    sessionId: string;
-    transcript: string;
-    language?: string;
-    userId?: string;
-  }) => Promise<{ reply?: string; proposedActions?: any[] }>;
+  readonly onTranscriptReceived?: (params: VoiceTurnParams) => Promise<Partial<VoiceTurnOutcome>>;
   readonly verifyToken?: (token: string) => Promise<{ uid: string } | null>;
   readonly sttProvider?: SarvamStreamingSttProvider;
   readonly ttsProvider?: SarvamStreamingTtsProvider;
@@ -157,59 +153,98 @@ export function setupVoiceGatewayWebSocket(
       }
     };
 
+    let clientContext: Record<string, any> = {
+      tenantId: socket.handshake.query.tenantId as string,
+      restaurantId: socket.handshake.query.restaurantId as string,
+      mode: socket.handshake.query.mode as any,
+      channel: socket.handshake.query.channel as any,
+    };
+
+    socket.on('voice:context', (update: any) => {
+      if (update && typeof update === 'object') {
+        clientContext = { ...clientContext, ...update };
+      }
+    });
+
     const handleFinalTranscript = async (transcript: string, lang: string) => {
       if (!transcript.trim() || isProcessingTurn) return;
       isProcessingTurn = true;
+      const turnStart = Date.now();
       activeTurnAbortController = new AbortController();
       const turnSignal = activeTurnAbortController.signal;
 
       try {
-        if (deps.onTranscriptReceived) {
-          const outcome = await deps.onTranscriptReceived({
-            sessionId,
-            transcript,
-            language: lang,
-            userId,
-          });
+        const turnParams: VoiceTurnParams = {
+          sessionId,
+          transcript,
+          language: lang,
+          userId,
+          tenantId: clientContext.tenantId,
+          restaurantId: clientContext.restaurantId,
+          mode: clientContext.mode,
+          channel: clientContext.channel,
+          context: clientContext.context || clientContext,
+        };
 
-          if (turnSignal.aborted) return;
+        const outcome = deps.onTranscriptReceived
+          ? await deps.onTranscriptReceived(turnParams)
+          : await processVoiceAssistantTurn(turnParams);
 
-          socket.emit('voice:turn:result', {
-            reply: outcome.reply,
-            proposedActions: outcome.proposedActions,
-          });
+        if (turnSignal.aborted) return;
 
-          // Progressive Streaming TTS
-          if (outcome.reply && ttsProvider && !turnSignal.aborted) {
-            cancelActiveTts();
-            activeTtsAbortController = new AbortController();
-            const signal = activeTtsAbortController.signal;
+        const turnLatency = Date.now() - turnStart;
+        socket.emit('voice:turn:result', {
+          reply: outcome.reply,
+          proposedActions: outcome.proposedActions,
+          intent: outcome.intent,
+          language: outcome.language || lang,
+          correlationId: outcome.correlationId,
+          latencyMs: turnLatency,
+        });
 
-            socket.emit('voice:tts:start', { sessionId });
+        // Progressive Streaming TTS
+        if (outcome.reply && ttsProvider && !turnSignal.aborted) {
+          cancelActiveTts();
+          activeTtsAbortController = new AbortController();
+          const signal = activeTtsAbortController.signal;
 
-            let chunkIndex = 0;
-            try {
-              for await (const chunk of ttsProvider.generateSpeechStream(
-                { text: outcome.reply, language: lang },
-                signal,
-              )) {
-                if (signal.aborted || turnSignal.aborted) break;
-                socket.emit('voice:tts:chunk', {
-                  chunkBase64: chunk.toString('base64'),
-                  index: chunkIndex++,
+          socket.emit('voice:tts:start', { sessionId, turnId: outcome.correlationId });
+
+          let chunkIndex = 0;
+          let firstAudioEmittedAt: number | null = null;
+          try {
+            for await (const chunk of ttsProvider.generateSpeechStream(
+              { text: outcome.reply, language: outcome.language || lang },
+              signal,
+            )) {
+              if (signal.aborted || turnSignal.aborted) break;
+              if (firstAudioEmittedAt === null) {
+                firstAudioEmittedAt = Date.now();
+                socket.emit('voice:timing', {
+                  correlationId: outcome.correlationId,
+                  turnToFirstAudioMs: firstAudioEmittedAt - turnStart,
                 });
               }
+              socket.emit('voice:tts:chunk', {
+                turnId: outcome.correlationId,
+                chunkBase64: chunk.toString('base64'),
+                index: chunkIndex++,
+              });
+            }
 
-              if (!signal.aborted && !turnSignal.aborted) {
-                socket.emit('voice:tts:end', { sessionId, totalChunks: chunkIndex });
-              }
-            } catch (ttsErr: any) {
-              if (!signal.aborted && !turnSignal.aborted) {
-                socket.emit('voice:error', {
-                  code: 'TTS_PROVIDER_ERROR',
-                  message: ttsErr?.message || 'TTS streaming error',
-                });
-              }
+            if (!signal.aborted && !turnSignal.aborted) {
+              socket.emit('voice:tts:end', {
+                sessionId,
+                turnId: outcome.correlationId,
+                totalChunks: chunkIndex,
+              });
+            }
+          } catch (ttsErr: any) {
+            if (!signal.aborted && !turnSignal.aborted) {
+              socket.emit('voice:error', {
+                code: 'TTS_PROVIDER_ERROR',
+                message: ttsErr?.message || 'TTS streaming error',
+              });
             }
           }
         }
@@ -226,11 +261,11 @@ export function setupVoiceGatewayWebSocket(
       }
     };
 
-    const cancelActiveTts = () => {
+    const cancelActiveTts = (turnId?: string) => {
       if (activeTtsAbortController) {
         activeTtsAbortController.abort();
         activeTtsAbortController = null;
-        socket.emit('voice:tts:cancelled', { sessionId });
+        socket.emit('voice:tts:cancelled', { sessionId, turnId });
       }
     };
 

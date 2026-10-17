@@ -31,10 +31,11 @@ const VALID_STT_MODELS = new Set([
 ]);
 
 const VALID_TTS_MODELS = new Set([
+  'bulbul:v4-flash',
+  'bulbul:v4',
   'bulbul:v3',
   'bulbul:v2',
   'bulbul:v3-beta',
-  'bulbul:v4',
 ]);
 
 export function normalizeSttModel(raw?: string): string {
@@ -48,9 +49,22 @@ export function normalizeSttModel(raw?: string): string {
 export function normalizeTtsModel(raw?: string): string {
   const clean = cleanEnvString(raw);
   if (clean && VALID_TTS_MODELS.has(clean)) return clean;
-  if (clean && clean.includes('v2')) return 'bulbul:v2';
+  if (clean && clean.includes('v4-flash')) return 'bulbul:v4-flash';
   if (clean && clean.includes('v4')) return 'bulbul:v4';
-  return 'bulbul:v3';
+  if (clean && clean.includes('v2')) return 'bulbul:v2';
+  if (clean && clean.includes('v3')) return 'bulbul:v3';
+  return 'bulbul:v4-flash';
+}
+
+export function resolveRecommendedSpeaker(languageCode?: string, requestedSpeaker?: string): string {
+  if (requestedSpeaker && requestedSpeaker !== 'aditya' && requestedSpeaker.trim()) {
+    return requestedSpeaker.trim().toLowerCase();
+  }
+  const lang = (languageCode || 'en-IN').toLowerCase();
+  if (lang.startsWith('te')) return 'meera'; // Natural Telugu female voice
+  if (lang.startsWith('hi')) return 'shubh'; // Natural Hindi voice
+  if (lang.startsWith('ta') || lang.startsWith('kn')) return 'pavithra';
+  return 'aditya'; // English / default
 }
 
 export function normalizeStreamingSttModel(raw?: string): string {

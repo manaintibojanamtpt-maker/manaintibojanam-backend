@@ -6,7 +6,7 @@
 
 import type { IStreamingTtsProvider, TtsRequest } from './types.js';
 import { VoiceProviderError } from './types.js';
-import { normalizeTtsModel } from '../voiceConfig.js';
+import { normalizeTtsModel, resolveRecommendedSpeaker } from '../voiceConfig.js';
 
 export interface SarvamStreamingTtsOptions {
   readonly apiKey: string;
@@ -46,7 +46,6 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       });
     }
 
-    const speaker = request.voiceId || this.defaultVoice;
     let languageCode = request.language?.trim() || 'en-IN';
     if (languageCode === 'te') languageCode = 'te-IN';
     else if (languageCode === 'hi') languageCode = 'hi-IN';
@@ -66,6 +65,7 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       }
     }
 
+    const speaker = resolveRecommendedSpeaker(languageCode, request.voiceId || this.defaultVoice);
     const isBulbulV3OrV4 = this.model.startsWith('bulbul:v3') || this.model.startsWith('bulbul:v4');
     const payload: Record<string, any> = {
       text,
@@ -114,8 +114,8 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
     }
 
     if (!response.ok) {
-      // If /text-to-speech/stream returns 404/not implemented on test/mock environments, fallback to batch endpoint
-      if (response.status === 404) {
+      // If /text-to-speech/stream returns 404/400/422/502, fallback to batch endpoint
+      if (response.status === 404 || response.status === 400 || response.status === 422 || response.status === 502) {
         yield* this.fallbackToBatch(payload, signal);
         return;
       }
@@ -174,7 +174,7 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
   }
 
   private async *fallbackToBatch(payload: any, signal?: AbortSignal): AsyncIterable<Buffer> {
-    const res = await fetch(`${this.baseUrl}/text-to-speech`, {
+    let res = await fetch(`${this.baseUrl}/text-to-speech`, {
       method: 'POST',
       headers: {
         'api-subscription-key': this.apiKey,
@@ -182,11 +182,28 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       },
       body: JSON.stringify(payload),
       signal,
-    });
+    }).catch(() => null);
 
-    if (!res.ok) {
+    // If initial payload failed (e.g. v4-flash or invalid speaker), retry with bulbul:v3
+    if (!res || !res.ok) {
+      const fallbackPayload = {
+        ...payload,
+        model: 'bulbul:v3',
+      };
+      res = await fetch(`${this.baseUrl}/text-to-speech`, {
+        method: 'POST',
+        headers: {
+          'api-subscription-key': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fallbackPayload),
+        signal,
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) {
       throw new VoiceProviderError({
-        message: `Sarvam batch TTS fallback failed (${res.status})`,
+        message: `Sarvam batch TTS fallback failed (${res?.status || 502})`,
         code: 'TTS_PROVIDER_ERROR',
         statusCode: 502,
       });

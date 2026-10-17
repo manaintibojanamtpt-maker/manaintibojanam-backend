@@ -105,6 +105,7 @@ import { createServer } from "http";
 import { createVoiceTtsRoute } from "./backend-lib/api/routes/voiceTtsRoute.js";
 import { createVoiceSttRoute } from "./backend-lib/voice/voiceSttRoute.js";
 import { setupVoiceGatewayWebSocket } from "./backend-lib/voice/voiceGatewayWs.js";
+import { processVoiceAssistantTurn } from "./backend-lib/voice/voiceTurnProcessor.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
@@ -5876,6 +5877,12 @@ async function startServer() {
       } catch {
         return null;
       }
+    },
+    onTranscriptReceived: async (params) => {
+      return processVoiceAssistantTurn(params, {
+        db,
+        assertOwnerTenantAccess,
+      });
     },
   });
 
