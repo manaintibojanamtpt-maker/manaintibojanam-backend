@@ -28,13 +28,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// 1. Explicitly load .env.local before initializing any provider
+// 1. Load base .env first
+const envPath = path.join(rootDir, '.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
+// 2. Load .env.local with override: true so local dev values override base .env
 const envLocalPath = path.join(rootDir, '.env.local');
 if (fs.existsSync(envLocalPath)) {
-  dotenv.config({ path: envLocalPath });
+  dotenv.config({ path: envLocalPath, override: true });
 }
-// Also load standard .env fallback
-dotenv.config({ path: path.join(rootDir, '.env') });
 
 const apiKey = process.env.SARVAM_API_KEY?.trim()?.replace(/^["']|["']$/g, '');
 const hasApiKey = Boolean(apiKey && apiKey.length > 5);
