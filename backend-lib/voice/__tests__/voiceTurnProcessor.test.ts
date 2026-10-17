@@ -721,5 +721,93 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       });
       assert.notEqual(turn2DiffUser.intent, 'cart_add_plan');
     });
+
+    it('Interruption: "stop speaking" / "stop" halts speech but preserves proposal and pendingClarification', async () => {
+      // Turn 1: Ask for biryani
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_stop_test',
+        transcript: 'I want two chicken biryanis and one special raita',
+        restaurantId: 'obr_demo_biryani_001',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.ok(turn1.pendingClarification);
+
+      // Turn 2: User says "stop speaking" (interruption)
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_stop_test',
+        transcript: 'stop speaking',
+        restaurantId: 'obr_demo_biryani_001',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.intent, 'stop_speaking');
+      assert.equal(turn2.reply, '');
+      assert.equal(turn2.proposedActions, undefined); // Does NOT clear proposal!
+      assert.ok(turn2.pendingClarification); // Preserves clarification!
+
+      // Turn 3: User answers "Jumbo" -> MUST resolve successfully into cart proposal!
+      const turn3 = await processVoiceAssistantTurn({
+        sessionId: 'sess_stop_test',
+        transcript: 'Jumbo',
+        restaurantId: 'obr_demo_biryani_001',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: turn2.pendingClarification,
+        },
+      });
+      assert.equal(turn3.intent, 'cart_add_plan');
+      assert.equal(turn3.proposedActions?.length, 2);
+      assert.ok(turn3.reply.includes('1,047'));
+    });
+
+    it('Native script cancellation: Telugu "వద్దు" and Hindi "नहीं चाहिए" clear proposal and clarification', async () => {
+      // Telugu native cancellation
+      const teTurn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_native_cancel',
+        transcript: 'రెండు చికెన్ బిర్యానీలు కావాలి',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.ok(teTurn1.pendingClarification);
+
+      const teTurn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_native_cancel',
+        transcript: 'వద్దు',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: teTurn1.pendingClarification,
+        },
+      });
+      assert.equal(teTurn2.intent, 'cancel_order');
+      assert.equal(teTurn2.pendingClarification, null);
+      assert.deepEqual(teTurn2.proposedActions, [{ type: 'clear_proposal' }]);
+      assert.ok(teTurn2.reply.includes('రద్దు చేయబడింది'));
+
+      // Hindi native cancellation
+      const hiTurn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_native_cancel',
+        transcript: 'दो चिकन बिरयानी चाहिए',
+        context: { menuItems: biryaniMenu, restaurantId: 'obr_demo_biryani_001' },
+      });
+      assert.ok(hiTurn1.pendingClarification);
+
+      const hiTurn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_hi_native_cancel',
+        transcript: 'नहीं चाहिए',
+        context: {
+          menuItems: biryaniMenu,
+          restaurantId: 'obr_demo_biryani_001',
+          pendingClarification: hiTurn1.pendingClarification,
+        },
+      });
+      assert.equal(hiTurn2.intent, 'cancel_order');
+      assert.equal(hiTurn2.pendingClarification, null);
+      assert.deepEqual(hiTurn2.proposedActions, [{ type: 'clear_proposal' }]);
+      assert.ok(hiTurn2.reply.includes('रद्द कर दिया गया है'));
+    });
   });
 });

@@ -467,21 +467,83 @@ export async function processVoiceAssistantTurn(
   const lastProposedItem = params.context?.lastProposedItem;
 
   // Cancellation & Reset Intent ("cancel", "never mind", "stop", "vaddu", "nahi chahiye", "reset")
+  // 1. Interruption / Stop Speaking Intent ("stop speaking", "stop talking", "be quiet", "stop", "aapu", "bolna band karo")
+  // Halts audio playback while strictly PRESERVING the pending proposal, pending clarification, and committed cart!
+  const isStopSpeaking =
+    /^(stop|stop speaking|stop talking|be quiet|quiet|shh|shut up|pause|pause audio|stop audio|mute)$/i.test(lower) ||
+    lower.includes('stop speaking') ||
+    lower.includes('stop talking') ||
+    lower.includes('audio aapu') ||
+    lower.includes('voice aapu') ||
+    lower.includes('sound aapu') ||
+    lower.includes('మాట్లాడటం ఆపు') ||
+    lower.includes('చెప్పడం ఆపు') ||
+    lower.includes('ఆపండి') ||
+    (transcript.trim() === 'ఆపు' || lower === 'aapu') ||
+    lower.includes('बोलना बंद') ||
+    lower.includes('बात मत करो') ||
+    lower.includes('चुप रहो') ||
+    lower.includes('शांत रहो') ||
+    lower.includes('आवाज़ बंद') ||
+    lower === 'chup' ||
+    lower === 'roko';
+
+  if (isStopSpeaking) {
+    return {
+      reply: '',
+      language: lang,
+      intent: 'stop_speaking',
+      // Strictly preserve proposal and clarification context without cancelling
+      correlationId,
+      latencyMs: Date.now() - startedAt,
+      authorized: true,
+      pendingClarification: params.context?.pendingClarification || null,
+    };
+  }
+
+  // 2. Proposal / Order Cancellation Intent ("cancel order", "cancel proposal", "never mind", "reset", "vaddu", "nahi chahiye")
+  // Clears the active draft proposal and clarification state WITHOUT deleting committed cart items or cancelling a placed order!
   const isCancellation =
-    /^(cancel|never mind|stop|reset|start over|vaddu|vaddhu|avsaram ledu|raddhu cheyyandi|nahi chahiye|mat karo|radd karo)$/i.test(lower) ||
+    /^(cancel|cancel order|cancel this order|cancel proposal|cancel this proposal|clear proposal|never mind|reset|reset order|start over)$/i.test(lower) ||
     lower.includes('cancel order') ||
-    lower.includes('order vaddu') ||
+    lower.includes('cancel this order') ||
+    lower.includes('cancel proposal') ||
+    lower.includes('clear proposal') ||
     lower.includes('order cancel') ||
+    // Telugu Romanized
+    /^(vaddu|vaddhu|avsaram ledu|raddhu cheyyandi|raddu cheyyandi|order vaddu|naaku vaddu)$/i.test(lower) ||
+    lower.includes('order vaddu') ||
+    lower.includes('avsaram ledu') ||
+    lower.includes('raddhu cheyyandi') ||
+    lower.includes('raddu cheyyandi') ||
+    // Telugu Native Script
+    /^(వద్దు|నాకు వద్దు|అవసరం లేదు|రద్దు చేయండి|ఆర్డర్ రద్దు చేయండి|ఆర్డర్ వద్దు)$/u.test(transcript.trim()) ||
+    transcript.includes('రద్దు చేయండి') ||
+    transcript.includes('ఆర్డర్ వద్దు') ||
+    transcript.includes('నాకు వద్దు') ||
+    transcript.includes('అవసరం లేదు') ||
+    // Hindi Romanized
+    /^(nahi chahiye|mujhe nahi chahiye|mat karo|radd karo|cancel kar|order nahi chahiye)$/i.test(lower) ||
+    lower.includes('nahi chahiye') ||
+    lower.includes('mat karo') ||
+    lower.includes('radd karo') ||
     lower.includes('order nahi chahiye') ||
-    lower.includes('cancel kar');
+    lower.includes('cancel kar') ||
+    // Hindi Native Script
+    /^(नहीं चाहिए|मुझे नहीं चाहिए|मत करो|रद्द करो|ऑर्डर रद्द करें|ऑर्डर रद्द करो|कैंसिल करो|ऑर्डर मत करो)$/u.test(transcript.trim()) ||
+    transcript.includes('रद्द करो') ||
+    transcript.includes('रद्द करें') ||
+    transcript.includes('नहीं चाहिए') ||
+    transcript.includes('कैंसिल करो') ||
+    transcript.includes('मत करो');
 
   if (isCancellation) {
     const reply =
       lang === 'te-IN'
-        ? 'రద్దు చేయబడింది. నేను మీకు ఇంకా ఎలా సహాయపడగలను?'
+        ? 'ప్రతిపాదన రద్దు చేయబడింది. మీ మునుపటి కార్ట్ అలాగే ఉంది. నేను మీకు ఇంకా ఎలా సహాయపడగలను?'
         : lang === 'hi-IN'
-          ? 'रद्द कर दिया गया है। मैं आपकी और क्या सहायता कर सकता हूँ?'
-          : 'Cancelled. How else may I assist you with your order today?';
+          ? 'प्रस्ताव रद्द कर दिया गया है। आपका मौजूदा कार्ट सुरक्षित है। मैं आपकी और क्या सहायता कर सकता हूँ?'
+          : 'Proposal cancelled. Your existing cart is unchanged. How else may I assist you?';
 
     return {
       reply,

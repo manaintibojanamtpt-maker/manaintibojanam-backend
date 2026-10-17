@@ -208,6 +208,10 @@ export function setupVoiceGatewayWebSocket(
           pendingClarification: outcome.pendingClarification,
         });
 
+        if (outcome.intent === 'stop_speaking') {
+          cancelActiveTts();
+        }
+
         // Progressive Streaming TTS
         if (outcome.reply && ttsProvider && !turnSignal.aborted) {
           cancelActiveTts();
