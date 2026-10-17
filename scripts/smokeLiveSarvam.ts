@@ -6,8 +6,10 @@
  *    node --import tsx scripts/smokeLiveSarvam.ts --stt
  * 2. Live Bulbul v4 Flash Streaming TTS with explicit codec and decoded verification:
  *    node --import tsx scripts/smokeLiveSarvam.ts --tts
- * 3. End-to-End Application Gateway (STT -> Assistant Turn Processing -> Streaming TTS):
+ * 3. Direct Pipeline Integration Test (STT transcript -> processVoiceAssistantTurn -> Bulbul v4 Flash streaming TTS):
  *    node --import tsx scripts/smokeLiveSarvam.ts --gateway
+ *    (Note: Exercises the core turn & synthesis pipeline directly. The full authenticated Socket.IO
+ *     WebSocket gateway server and message protocol are exercised in backend-lib/voice/__tests__/sarvamStreamingVoice.test.ts)
  * 4. All checks:
  *    npm run smoke:sarvam
  * 
@@ -269,7 +271,7 @@ async function executeChecks() {
 
   // Check 3: Application Gateway End-to-End
   if (runGateway) {
-    console.log('\n--- [CHECK 3] Application Gateway End-to-End Pipeline ---');
+    console.log('\n--- [CHECK 3] Direct Pipeline Integration Test (Turn Engine + Bulbul v4 Flash TTS) ---');
     const start = Date.now();
     try {
       // Step A: Conversation Turn Processing (Cart Intent)
