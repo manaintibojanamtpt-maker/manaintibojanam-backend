@@ -68,14 +68,18 @@ export function resolveRecommendedSpeaker(
 ): string {
   const normModel = normalizeTtsModel(model);
   const lang = (languageCode || 'en-IN').toLowerCase();
-
-  // If client provided a non-default custom speaker, use it directly
-  if (requestedSpeaker && requestedSpeaker !== 'aditya' && requestedSpeaker.trim()) {
-    return requestedSpeaker.trim().toLowerCase();
-  }
+  const req = requestedSpeaker?.trim()?.toLowerCase();
 
   // Bulbul v4 Flash Persona IDs
   if (normModel === 'bulbul:v4-flash' || normModel === 'bulbul:v4') {
+    if (req && req.includes('_') && req !== 'aditya') {
+      return req;
+    }
+    if (req === 'meera') return 'kavitha_te_conversation';
+    if (req === 'aditi' || req === 'shubh') return 'ishita_enhi_customer';
+    if (req === 'aravind') return lang.startsWith('ta') ? 'aravind_ta_ads' : 'simran_en_customer';
+    if (req && req !== 'aditya') return req;
+
     if (lang.startsWith('en')) return 'simran_en_customer';
     if (lang.startsWith('hi')) return 'ishita_enhi_customer';
     // For Telugu on v4-flash, if regional persona is not explicitly configured, use default persona
@@ -84,6 +88,9 @@ export function resolveRecommendedSpeaker(
   }
 
   // Bulbul v3 Legacy flat speaker names
+  if (req && req !== 'aditya') {
+    return req;
+  }
   if (lang.startsWith('te')) return 'meera';
   if (lang.startsWith('hi')) return 'shubh';
   if (lang.startsWith('ta') || lang.startsWith('kn')) return 'pavithra';

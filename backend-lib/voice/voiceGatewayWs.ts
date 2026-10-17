@@ -308,6 +308,13 @@ export function setupVoiceGatewayWebSocket(
       }
     });
 
+    // Direct conversational text turn over WebSocket
+    socket.on('voice:turn', async (data: { transcript: string; language?: string }) => {
+      if (data?.transcript) {
+        await handleFinalTranscript(data.transcript, data.language || language);
+      }
+    });
+
     // Barge-in: user began speaking while TTS was still playing
     socket.on('voice:barge_in', () => {
       cancelActiveTurn();

@@ -68,6 +68,7 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
     const speaker = resolveRecommendedSpeaker(languageCode, request.voiceId || this.defaultVoice, this.model);
     const isBulbulV3OrV4 = this.model.startsWith('bulbul:v3') || this.model.startsWith('bulbul:v4');
     const payload: Record<string, any> = {
+      text,
       inputs: [text],
       target_language_code: languageCode,
       speaker: speaker.toLowerCase(),
