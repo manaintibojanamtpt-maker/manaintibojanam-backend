@@ -338,6 +338,10 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       assert.equal(outcome.proposedActions![0].type, 'menu_stock_proposal');
       assert.equal((outcome.proposedActions![0].payload as any).isAvailable, false);
       assert.equal((outcome.proposedActions![0].payload as any).requiresConfirmation, true);
+      assert.equal(
+        (outcome.proposedActions![0].payload as any).navigationPath,
+        '/owner/menu?tenantId=tenant_my_restaurant',
+      );
       assert.ok(outcome.reply.includes('Proposal created'));
       assert.ok(outcome.reply.includes('proposal-only'));
       assert.ok(outcome.reply.includes('inventory screen'));

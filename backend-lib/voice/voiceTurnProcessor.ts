@@ -291,6 +291,7 @@ export async function processVoiceAssistantTurn(
               isAvailable: isMakeAvailable,
               tenantId,
               requiresConfirmation: true,
+              navigationPath: `/owner/menu?tenantId=${encodeURIComponent(tenantId)}`,
             },
           },
         ],
