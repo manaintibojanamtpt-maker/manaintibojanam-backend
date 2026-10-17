@@ -1,10 +1,16 @@
+/**
+ * Purpose: Mocked contract validation for Sarvam AI provider integrations.
+ * NOTE: All tests in this file use MOCKED fetch and WebSocket handlers.
+ * No live network calls or credentials are used in these unit tests.
+ */
+
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { SarvamTtsProvider } from '../providers/sarvamTtsProvider.js';
 import { SarvamStreamingTtsProvider } from '../providers/sarvamStreamingTtsProvider.js';
 import { resolveRecommendedSpeaker, normalizeTtsModel } from '../voiceConfig.js';
 
-describe('Sarvam Contract & Provider Tests', () => {
+describe('Sarvam Mocked Contract & Parameter Serialization Tests (Mocked Fetch)', () => {
   const mockApiKey = 'sk_test_mock_sarvam_key_12345';
   const originalFetch = globalThis.fetch;
 
@@ -12,28 +18,34 @@ describe('Sarvam Contract & Provider Tests', () => {
     globalThis.fetch = originalFetch;
   });
 
-  describe('Configuration & Speaker Resolution', () => {
-    it('normalizes tts models correctly with bulbul:v4-flash default', () => {
-      assert.equal(normalizeTtsModel('bulbul:v4-flash'), 'bulbul:v4-flash');
+  describe('Configuration & Speaker Resolution Contracts', () => {
+    it('normalizes tts models with bulbul:v3 as stable default', () => {
       assert.equal(normalizeTtsModel('bulbul:v3'), 'bulbul:v3');
+      assert.equal(normalizeTtsModel('bulbul:v4-flash'), 'bulbul:v4-flash');
+      assert.equal(normalizeTtsModel('bulbul:v4'), 'bulbul:v4');
       assert.equal(normalizeTtsModel('bulbul:v2'), 'bulbul:v2');
-      assert.equal(normalizeTtsModel('unknown'), 'bulbul:v4-flash');
-      assert.equal(normalizeTtsModel(undefined), 'bulbul:v4-flash');
+      assert.equal(normalizeTtsModel(undefined), 'bulbul:v3');
     });
 
-    it('resolves speakers correctly per language code', () => {
-      assert.equal(resolveRecommendedSpeaker('te-IN'), 'meera');
-      assert.equal(resolveRecommendedSpeaker('te'), 'meera');
-      assert.equal(resolveRecommendedSpeaker('hi-IN'), 'shubh');
-      assert.equal(resolveRecommendedSpeaker('hi'), 'shubh');
-      assert.equal(resolveRecommendedSpeaker('en-IN'), 'aditya');
-      assert.equal(resolveRecommendedSpeaker('ta-IN'), 'pavithra');
-      assert.equal(resolveRecommendedSpeaker('kn-IN'), 'pavithra');
-      assert.equal(resolveRecommendedSpeaker('en-IN', 'custom_voice'), 'custom_voice');
+    it('resolves official Bulbul v3 legacy speaker names', () => {
+      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v3'), 'meera');
+      assert.equal(resolveRecommendedSpeaker('te', undefined, 'bulbul:v3'), 'meera');
+      assert.equal(resolveRecommendedSpeaker('hi-IN', undefined, 'bulbul:v3'), 'shubh');
+      assert.equal(resolveRecommendedSpeaker('hi', undefined, 'bulbul:v3'), 'shubh');
+      assert.equal(resolveRecommendedSpeaker('en-IN', undefined, 'bulbul:v3'), 'aditya');
+      assert.equal(resolveRecommendedSpeaker('ta-IN', undefined, 'bulbul:v3'), 'pavithra');
+      assert.equal(resolveRecommendedSpeaker('kn-IN', undefined, 'bulbul:v3'), 'pavithra');
+      assert.equal(resolveRecommendedSpeaker('en-IN', 'custom_voice', 'bulbul:v3'), 'custom_voice');
+    });
+
+    it('resolves Bulbul v4 Flash persona IDs', () => {
+      assert.equal(resolveRecommendedSpeaker('en-IN', undefined, 'bulbul:v4-flash'), 'simran_en_customer');
+      assert.equal(resolveRecommendedSpeaker('hi-IN', undefined, 'bulbul:v4-flash'), 'ishita_enhi_customer');
+      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v4-flash'), 'shubh_enhi_ads');
     });
   });
 
-  describe('SarvamTtsProvider Contract & Fallback', () => {
+  describe('SarvamTtsProvider Mocked REST Contract', () => {
     it('throws 401 when API key is missing', () => {
       assert.throws(
         () => new SarvamTtsProvider({ apiKey: '' }),
@@ -41,7 +53,7 @@ describe('Sarvam Contract & Provider Tests', () => {
       );
     });
 
-    it('successfully calls REST endpoint and parses RIFF WAV audio', async () => {
+    it('successfully calls REST endpoint with Bulbul v3 and parses RIFF WAV audio', async () => {
       const mockWavHeader = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45]);
       const mockAudioBase64 = mockWavHeader.toString('base64');
 
@@ -62,7 +74,7 @@ describe('Sarvam Contract & Provider Tests', () => {
 
       const provider = new SarvamTtsProvider({
         apiKey: mockApiKey,
-        model: 'bulbul:v4-flash',
+        model: 'bulbul:v3',
       });
 
       const result = await provider.generateSpeech({
@@ -72,7 +84,7 @@ describe('Sarvam Contract & Provider Tests', () => {
 
       assert.equal(callCount, 1);
       assert.equal(capturedUrl, 'https://api.sarvam.ai/text-to-speech');
-      assert.equal(capturedBody.model, 'bulbul:v4-flash');
+      assert.equal(capturedBody.model, 'bulbul:v3');
       assert.equal(capturedBody.target_language_code, 'te-IN');
       assert.equal(capturedBody.speaker, 'meera');
       assert.equal(capturedBody.speech_sample_rate, 22050);
@@ -81,7 +93,7 @@ describe('Sarvam Contract & Provider Tests', () => {
       assert.ok(result.audioBuffer);
     });
 
-    it('falls back to bulbul:v3 when bulbul:v4-flash returns 400 or 422', async () => {
+    it('safely falls back from bulbul:v4-flash to bulbul:v3 when persona ID returns 400/422', async () => {
       const mockWavHeader = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45]);
       const mockAudioBase64 = mockWavHeader.toString('base64');
 
@@ -93,7 +105,7 @@ describe('Sarvam Contract & Provider Tests', () => {
           return {
             ok: false,
             status: 400,
-            text: async () => 'Invalid speaker ID for v4-flash',
+            text: async () => 'Invalid persona/speaker ID for v4-flash',
           } as any;
         }
         return {
@@ -116,12 +128,13 @@ describe('Sarvam Contract & Provider Tests', () => {
       assert.equal(calls.length, 2);
       assert.equal(calls[0].body.model, 'bulbul:v4-flash');
       assert.equal(calls[1].body.model, 'bulbul:v3');
+      assert.equal(calls[1].body.speaker, 'shubh');
       assert.equal(result.contentType, 'audio/wav');
     });
   });
 
-  describe('SarvamStreamingTtsProvider Contract & Fallback', () => {
-    it('falls back to batch endpoint when /text-to-speech/stream returns 404', async () => {
+  describe('SarvamStreamingTtsProvider Mocked Fallback Contract', () => {
+    it('safely falls back to batch endpoint when streaming endpoint returns 404', async () => {
       const mockWavHeader = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45]);
       const mockAudioBase64 = mockWavHeader.toString('base64');
 
@@ -144,7 +157,7 @@ describe('Sarvam Contract & Provider Tests', () => {
 
       const streamingProvider = new SarvamStreamingTtsProvider({
         apiKey: mockApiKey,
-        model: 'bulbul:v4-flash',
+        model: 'bulbul:v3',
       });
 
       const chunks: Buffer[] = [];

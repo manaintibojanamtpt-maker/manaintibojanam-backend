@@ -14,6 +14,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getAuthoritativeDailySalesSummary } from './authoritativeReporting.js';
+import { verifyGuestOrderToken } from '../guestOrderToken.js';
 
 export interface VoiceTurnParams {
   sessionId: string;
@@ -380,10 +381,18 @@ export async function processVoiceAssistantTurn(
         const snap = await query.get();
         if (!snap.empty) {
           const order = snap.docs[0].data();
-          // Ownership verification
-          const isOwner =
-            (userId && (order.userId === userId || order.customerId === userId)) ||
-            (trackingToken && order.trackingToken === trackingToken);
+          let isOwner = false;
+          if (userId && userId !== 'guest' && (order.userId === userId || order.customerId === userId)) {
+            isOwner = true;
+          } else if (trackingToken) {
+            try {
+              verifyGuestOrderToken(trackingToken, snap.docs[0].id);
+              isOwner = true;
+            } catch {
+              // Backward compatibility for unhashed legacy tracking tokens
+              isOwner = order.trackingToken === trackingToken;
+            }
+          }
 
           if (isOwner) {
             const status = String(order.status || 'PREPARING').toUpperCase();
@@ -478,6 +487,53 @@ export async function processVoiceAssistantTurn(
     if (targetItem) {
       const cleanName = sanitizeTechnicalIds(targetItem.name);
       const note = transcript.trim();
+      const currentQty = Math.max(1, targetItem.quantity || 1);
+      const specifiedUnits = extractQuantity(transcript); // e.g. 1 from "One without onion"
+      const hasUnitConstraint = specifiedUnits > 0 && specifiedUnits < currentQty;
+
+      if (hasUnitConstraint) {
+        // Multi-Unit Modifier: Split into regular units and modified units (Total remains currentQty)
+        const regularQty = currentQty - specifiedUnits;
+        const reply =
+          lang === 'te-IN'
+            ? `మొత్తం ${currentQty} ${cleanName}: ${regularQty} సాధారణం మరియు ${specifiedUnits} "${note}" సిద్ధం చేశాము. కన్ఫర్మ్ చేయమంటారా?`
+            : lang === 'hi-IN'
+              ? `कुल ${currentQty} ${cleanName}: ${regularQty} सामान्य और ${specifiedUnits} "${note}" तैयार हैं। क्या कन्फर्म करें?`
+              : `Updated to ${currentQty} ${cleanName} total: ${regularQty} regular and ${specifiedUnits} with "${note}". Would you like to confirm?`;
+
+        return {
+          reply,
+          language: lang,
+          intent: 'cart_update_split_units',
+          proposedActions: [
+            {
+              type: 'cart_update_quantity',
+              payload: {
+                foodId: targetItem.id,
+                name: targetItem.name,
+                quantity: regularQty,
+                price: targetItem.price,
+                requiresConfirmation: true,
+              },
+            },
+            {
+              type: 'cart_add_item',
+              payload: {
+                foodId: `${targetItem.id}-custom`,
+                name: `${targetItem.name} (${note})`,
+                quantity: specifiedUnits,
+                price: targetItem.price,
+                notes: note,
+                instructions: note,
+                requiresConfirmation: true,
+              },
+            },
+          ],
+          correlationId,
+          latencyMs: Date.now() - startedAt,
+          authorized: true,
+        };
+      }
 
       const reply =
         lang === 'te-IN'
@@ -497,6 +553,7 @@ export async function processVoiceAssistantTurn(
               foodId: targetItem.id,
               name: targetItem.name,
               notes: note,
+              requiresConfirmation: true,
             },
           },
         ],
@@ -511,12 +568,74 @@ export async function processVoiceAssistantTurn(
   const isItemRemoval =
     /(remove|delete|cancel|teesey|teeseyandi|hata do|hatao)\s*(the\s*)?(last|aakhri|chivara|one|item)?/i.test(lower) ||
     lower.includes('last item vaddu') ||
-    lower.includes('hata do');
+    lower.includes('hata do') ||
+    lower.includes('reduce');
 
   if (isItemRemoval && cartItems.length > 0) {
     const lastItem = cartItems[cartItems.length - 1];
     const cleanName = sanitizeTechnicalIds(lastItem.name);
+    const lastQty = Math.max(1, lastItem.quantity || 1);
 
+    // 4A: Explicit single unit reduction ("remove one", "reduce by 1", "okati teesey")
+    const isExplicitSingleUnit =
+      /(remove\s*(one|1)|reduce\s*(by\s*)?(one|1)|decrease\s*(by\s*)?(one|1)|okati\s*teesey|ek\s*kam)/i.test(lower);
+    if (isExplicitSingleUnit) {
+      if (lastQty > 1) {
+        const newQty = lastQty - 1;
+        const reply =
+          lang === 'te-IN'
+            ? `${cleanName} సంఖ్యను ${newQty} కి తగ్గించాము.`
+            : lang === 'hi-IN'
+              ? `${cleanName} की संख्या घटाकर ${newQty} कर दी गई है।`
+              : `Reduced ${cleanName} to ${newQty}.`;
+        return {
+          reply,
+          language: lang,
+          intent: 'cart_reduce_quantity',
+          proposedActions: [
+            {
+              type: 'cart_update_quantity',
+              payload: {
+                foodId: lastItem.id,
+                name: lastItem.name,
+                quantity: newQty,
+                price: lastItem.price,
+                requiresConfirmation: true,
+              },
+            },
+          ],
+          correlationId,
+          latencyMs: Date.now() - startedAt,
+          authorized: true,
+        };
+      }
+    }
+
+    // 4B: Explicit all/line removal ("remove all", "remove line", "mottam teesey")
+    const isExplicitLineRemoval =
+      /(remove\s*all|delete\s*item|remove\s*(the\s*)?line|mottam\s*teesey|poora\s*hata)/i.test(lower);
+
+    // 4C: Ambiguity check for "Remove the last one" when quantity > 1
+    if (!isExplicitLineRemoval && !isExplicitSingleUnit && lastQty > 1) {
+      const reply =
+        lang === 'te-IN'
+          ? `మీ కార్ట్‌లో ${lastQty} ${cleanName} ఉన్నాయి. మీరు 1 ${cleanName}ను తొలగించాలనుకుంటున్నారా (${lastQty - 1} మిగులుతాయి), లేదా మొత్తం లైన్‌ను తొలగించాలా?`
+          : lang === 'hi-IN'
+            ? `आपके कार्ट में ${lastQty} ${cleanName} हैं। क्या आप 1 ${cleanName} हटाना चाहते हैं (${lastQty - 1} बचेंगे), या पूरा आइटम हटाना चाहते हैं?`
+            : `You have ${lastQty} ${cleanName}. Did you mean remove 1 ${cleanName} (leaving ${lastQty - 1}), or remove the entire line from your cart?`;
+
+      return {
+        reply,
+        language: lang,
+        intent: 'clarify_removal_ambiguity',
+        proposedActions: [],
+        correlationId,
+        latencyMs: Date.now() - startedAt,
+        authorized: true,
+      };
+    }
+
+    // Default: Single unit in cart or explicit line removal
     const reply =
       lang === 'te-IN'
         ? `కార్ట్ నుండి చివరి ఐటమ్ "${cleanName}"ను తొలగించాము.`
@@ -534,6 +653,7 @@ export async function processVoiceAssistantTurn(
           payload: {
             foodId: lastItem.id,
             name: lastItem.name,
+            requiresConfirmation: true,
           },
         },
       ],

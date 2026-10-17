@@ -1,5 +1,5 @@
 /**
- * Purpose: Sarvam AI Text-to-Speech (TTS) implementation using Bulbul v4-flash with validated v3 fallback.
+ * Purpose: Sarvam AI Text-to-Speech (TTS) implementation with bounded, format-safe model fallbacks.
  * Public API: SarvamTtsProvider
  * Dependencies: ITtsProvider, TtsRequest, TtsResult, VoiceProviderError
  */
@@ -46,6 +46,14 @@ export class SarvamTtsProvider implements ITtsProvider {
       });
     }
 
+    if (text.length > 2500) {
+      throw new VoiceProviderError({
+        message: 'Text exceeds maximum character limit of 2,500',
+        code: 'TTS_PROVIDER_ERROR',
+        statusCode: 400,
+      });
+    }
+
     let languageCode = request.language?.trim() || 'en-IN';
     if (languageCode === 'te') languageCode = 'te-IN';
     else if (languageCode === 'hi') languageCode = 'hi-IN';
@@ -65,7 +73,7 @@ export class SarvamTtsProvider implements ITtsProvider {
       }
     }
 
-    const speaker = resolveRecommendedSpeaker(languageCode, request.voiceId || this.defaultVoice);
+    const speaker = resolveRecommendedSpeaker(languageCode, request.voiceId || this.defaultVoice, this.model);
     const isBulbulV3OrV4 = this.model.startsWith('bulbul:v3') || this.model.startsWith('bulbul:v4');
     const payload: Record<string, any> = {
       inputs: [text],
@@ -81,6 +89,7 @@ export class SarvamTtsProvider implements ITtsProvider {
       payload.loudness = 1.0;
     }
 
+    const startTs = Date.now();
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/text-to-speech`, {
@@ -115,14 +124,26 @@ export class SarvamTtsProvider implements ITtsProvider {
       const status = response.status;
       const errorText = await response.text().catch(() => '');
 
-      // Validated Fallback: If v4-flash rejects the speaker or returns 400/404/422, retry with stable bulbul:v3
+      // Check if error is specifically an unsupported speaker or model error (NOT malformed input)
+      const isModelOrSpeakerError =
+        status === 404 ||
+        status === 422 ||
+        (status === 400 && /speaker|persona|model|not found|unsupported/i.test(errorText));
+
       let fallbackSuccess = false;
-      if ((status === 400 || status === 404 || status === 422) && this.model !== 'bulbul:v3') {
+      let fallbackLatencyMs = 0;
+
+      if (isModelOrSpeakerError && this.model !== 'bulbul:v3') {
+        const fallbackStart = Date.now();
+        // Model-compatible fallback: Resolve valid v3 speaker (e.g. meera for Telugu, shubh for Hindi, aditya for English)
+        const fallbackSpeaker = resolveRecommendedSpeaker(languageCode, undefined, 'bulbul:v3');
+        const fallbackPayload = {
+          ...payload,
+          model: 'bulbul:v3',
+          speaker: fallbackSpeaker,
+        };
+
         try {
-          const fallbackPayload = {
-            ...payload,
-            model: 'bulbul:v3',
-          };
           const fallbackRes = await fetch(`${this.baseUrl}/text-to-speech`, {
             method: 'POST',
             headers: {
@@ -132,13 +153,13 @@ export class SarvamTtsProvider implements ITtsProvider {
             body: JSON.stringify(fallbackPayload),
             signal,
           });
+
           if (fallbackRes.ok) {
             response = fallbackRes;
             fallbackSuccess = true;
+            fallbackLatencyMs = Date.now() - fallbackStart;
           }
-        } catch {
-          // Fallback attempt failed, will proceed to error handling
-        }
+        } catch {}
       }
 
       if (!fallbackSuccess && !response.ok) {
@@ -179,7 +200,6 @@ export class SarvamTtsProvider implements ITtsProvider {
       });
     }
 
-    // Sarvam API returns { audios: ["base64string..."] }
     const audioBase64 = Array.isArray(data?.audios) ? data.audios[0] : null;
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       throw new VoiceProviderError({

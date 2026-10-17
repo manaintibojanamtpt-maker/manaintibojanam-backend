@@ -53,24 +53,53 @@ export function normalizeTtsModel(raw?: string): string {
   if (clean && clean.includes('v4')) return 'bulbul:v4';
   if (clean && clean.includes('v2')) return 'bulbul:v2';
   if (clean && clean.includes('v3')) return 'bulbul:v3';
-  return 'bulbul:v4-flash';
+  return 'bulbul:v3';
 }
 
-export function resolveRecommendedSpeaker(languageCode?: string, requestedSpeaker?: string): string {
+/**
+ * Resolve speaker ID strictly based on target model and language.
+ * Bulbul v4-flash uses granular persona IDs (<name>_<lang>_<style>).
+ * Bulbul v3 uses legacy short names (meera, shubh, aditya, pavithra).
+ */
+export function resolveRecommendedSpeaker(
+  languageCode?: string,
+  requestedSpeaker?: string,
+  model?: string,
+): string {
+  const normModel = normalizeTtsModel(model);
+  const lang = (languageCode || 'en-IN').toLowerCase();
+
+  // If client provided a non-default custom speaker, use it directly
   if (requestedSpeaker && requestedSpeaker !== 'aditya' && requestedSpeaker.trim()) {
     return requestedSpeaker.trim().toLowerCase();
   }
-  const lang = (languageCode || 'en-IN').toLowerCase();
-  if (lang.startsWith('te')) return 'meera'; // Natural Telugu female voice
-  if (lang.startsWith('hi')) return 'shubh'; // Natural Hindi voice
+
+  // Bulbul v4 Flash Persona IDs
+  if (normModel === 'bulbul:v4-flash' || normModel === 'bulbul:v4') {
+    if (lang.startsWith('en')) return 'simran_en_customer';
+    if (lang.startsWith('hi')) return 'ishita_enhi_customer';
+    // For Telugu on v4-flash, if regional persona is not explicitly configured, use default persona
+    if (lang.startsWith('te')) return 'shubh_enhi_ads';
+    return 'simran_en_customer';
+  }
+
+  // Bulbul v3 Legacy flat speaker names
+  if (lang.startsWith('te')) return 'meera';
+  if (lang.startsWith('hi')) return 'shubh';
   if (lang.startsWith('ta') || lang.startsWith('kn')) return 'pavithra';
-  return 'aditya'; // English / default
+  return 'aditya';
 }
 
+/**
+ * Validated official Sarvam streaming STT model: saaras:v4 (or saaras:v3).
+ * Note: saaras:v4-realtime does not exist in Sarvam's official catalog.
+ */
 export function normalizeStreamingSttModel(raw?: string): string {
   const clean = cleanEnvString(raw);
-  if (clean === 'saaras:v4-realtime' || clean === 'saaras:v3-realtime') return clean;
-  return 'saaras:v4-realtime';
+  if (clean === 'saaras:v4' || clean === 'saaras:v3' || clean === 'saaras:v3-realtime') {
+    return clean;
+  }
+  return 'saaras:v4';
 }
 
 export function readVoiceConfig(env: NodeJS.ProcessEnv = process.env): VoiceConfig {
