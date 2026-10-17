@@ -67,9 +67,8 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
 
     const speaker = resolveRecommendedSpeaker(languageCode, request.voiceId || this.defaultVoice, this.model);
     const isBulbulV3OrV4 = this.model.startsWith('bulbul:v3') || this.model.startsWith('bulbul:v4');
-    const payload: Record<string, any> = {
+    const streamPayload: Record<string, any> = {
       text,
-      inputs: [text],
       target_language_code: languageCode,
       speaker: speaker.toLowerCase(),
       pace: request.pace ?? 1.0,
@@ -78,8 +77,8 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       model: this.model,
     };
     if (!isBulbulV3OrV4) {
-      payload.pitch = 0;
-      payload.loudness = 1.0;
+      streamPayload.pitch = 0;
+      streamPayload.loudness = 1.0;
     }
 
     let response: Response;
@@ -90,7 +89,7 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
           'api-subscription-key': this.apiKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(streamPayload),
         signal,
       });
     } catch (err: any) {
@@ -144,7 +143,7 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
       }
 
       // Safe bounded fallback to batch endpoint (only before any audio stream has started)
-      yield* this.fallbackToBatch(payload, languageCode, signal);
+      yield* this.fallbackToBatch(text, languageCode, speaker, request.pace ?? 1.0, isBulbulV3OrV4, signal);
       return;
     }
 
@@ -190,28 +189,49 @@ export class SarvamStreamingTtsProvider implements IStreamingTtsProvider {
   }
 
   private async *fallbackToBatch(
-    payload: any,
+    text: string,
     languageCode: string,
+    speaker: string,
+    pace: number,
+    isBulbulV3OrV4: boolean,
     signal?: AbortSignal,
   ): AsyncIterable<Buffer> {
     const fallbackStart = Date.now();
+    const batchPayload: Record<string, any> = {
+      inputs: [text],
+      target_language_code: languageCode,
+      speaker: speaker.toLowerCase(),
+      pace,
+      speech_sample_rate: 22050,
+      enable_preprocessing: true,
+      model: this.model,
+    };
+    if (!isBulbulV3OrV4) {
+      batchPayload.pitch = 0;
+      batchPayload.loudness = 1.0;
+    }
+
     let res = await fetch(`${this.baseUrl}/text-to-speech`, {
       method: 'POST',
       headers: {
         'api-subscription-key': this.apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(batchPayload),
       signal,
     }).catch(() => null);
 
     // If initial payload failed on model/speaker incompatibility, retry with bulbul:v3 and v3 speaker
     if (!res || !res.ok) {
       const v3Speaker = resolveRecommendedSpeaker(languageCode, undefined, 'bulbul:v3');
-      const fallbackPayload = {
-        ...payload,
-        model: 'bulbul:v3',
+      const fallbackPayload: Record<string, any> = {
+        inputs: [text],
+        target_language_code: languageCode,
         speaker: v3Speaker,
+        pace,
+        speech_sample_rate: 22050,
+        enable_preprocessing: true,
+        model: 'bulbul:v3',
       };
       res = await fetch(`${this.baseUrl}/text-to-speech`, {
         method: 'POST',
