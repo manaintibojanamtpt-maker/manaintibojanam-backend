@@ -273,10 +273,10 @@ export async function processVoiceAssistantTurn(
 
       const reply =
         lang === 'te-IN'
-          ? `${cleanedItem || 'ఐటమ్'}ను ${isMakeAvailable ? 'అందుబాటులో ఉంది' : 'స్టాక్ అయిపోయింది'}గా మార్చడానికి ప్రతిపాదన సిద్ధం చేయబడింది. దయచేసి స్క్రీన్‌పై కన్ఫర్మ్ చేయండి.`
+          ? `స్టాక్ మార్పులు ప్రతిపాదన మాత్రమే మరియు వాయిస్ ద్వారా నేరుగా అమలు చేయబడవు. ${cleanedItem || 'ఐటమ్'}ను ${isMakeAvailable ? 'అందుబాటులో ఉంది' : 'స్టాక్ అయిపోయింది'}గా మార్చడానికి ప్రతిపాదన సిద్ధం చేయబడింది. దయచేసి ఇన్వెంటరీ స్క్రీన్‌పై నిర్ధారించండి.`
           : lang === 'hi-IN'
-            ? `${cleanedItem || 'आइटम'} को ${isMakeAvailable ? 'उपलब्ध' : 'आउट ऑफ स्टॉक'} मार्क करने का प्रस्ताव तैयार है। कृपया स्क्रीन पर कन्फर्म करें।`
-            : `Proposal created to mark ${cleanedItem || 'the item'} as ${actionDesc}. Please review and confirm on your screen to apply.`;
+            ? `स्टॉक परिवर्तन केवल प्रस्ताव हैं और वॉयस द्वारा सीधे लागू नहीं होते हैं। ${cleanedItem || 'आइटम'} को ${isMakeAvailable ? 'उपलब्ध' : 'आउट ऑफ स्टॉक'} मार्क करने का प्रस्ताव तैयार है। कृपया इन्वेंटरी स्क्रीन पर कन्फर्म करें।`
+            : `Proposal created: Stock changes are proposal-only and cannot be applied directly by voice. Please review and confirm on your screen in the inventory screen to mark ${cleanedItem || 'the item'} as ${actionDesc}.`;
 
       return {
         reply,

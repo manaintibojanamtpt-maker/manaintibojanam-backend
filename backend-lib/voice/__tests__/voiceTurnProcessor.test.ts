@@ -339,6 +339,8 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       assert.equal((outcome.proposedActions![0].payload as any).isAvailable, false);
       assert.equal((outcome.proposedActions![0].payload as any).requiresConfirmation, true);
       assert.ok(outcome.reply.includes('Proposal created'));
+      assert.ok(outcome.reply.includes('proposal-only'));
+      assert.ok(outcome.reply.includes('inventory screen'));
       assert.ok(outcome.reply.includes('confirm on your screen'));
     });
   });

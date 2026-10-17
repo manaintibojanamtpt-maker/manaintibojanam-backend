@@ -38,17 +38,18 @@ describe('Authoritative Daily Sales Reporting', () => {
     } as any;
   };
 
-  it('computes gross sales and net sales without double-deducting discounts', async () => {
-    // 1 item with subtotal 500, discount 50, paid totalAmount 450
+  it('computes exact canonical revenue 115 with subtotal present (subtotal=100, discount=10, tax=5, delivery=20, totalAmount=115)', async () => {
     const orders = [
       {
         tenantId: 'tenant_1',
         status: 'DELIVERED',
         paymentStatus: 'paid',
         paymentMethod: 'UPI',
-        subtotal: 500,
-        discountAmount: 50,
-        totalAmount: 450,
+        subtotal: 100,
+        discountAmount: 10,
+        gstAmount: 5,
+        deliveryFee: 20,
+        totalAmount: 115,
         createdAt: new Date('2026-10-17T10:00:00.000+05:30'),
       },
     ];
@@ -60,12 +61,71 @@ describe('Authoritative Daily Sales Reporting', () => {
       new Date('2026-10-17T12:00:00.000+05:30')
     );
 
-    assert.equal(summary.grossSales, 500, 'Gross sales is catalog subtotal before discount');
-    assert.equal(summary.totalDiscounts, 50, 'Discounts tracked accurately');
-    assert.equal(summary.netSales, 450, 'Net sales = grossSales - discounts (450, not 400)');
-    assert.equal(summary.verifiedCollections, 450, 'Verified collections matches paid amount');
-    assert.equal(summary.totalRevenue, 450);
+    assert.equal(summary.totalRevenue, 115, 'Canonical total revenue matches totalAmount 115 exactly');
+    assert.equal(summary.netSales, 115, 'Canonical net billable sales matches totalAmount 115');
+    assert.equal(summary.grossOrderValue, 125, 'Gross order value = totalAmount + discount (115 + 10 = 125)');
+    assert.equal(summary.merchandiseSales, 100, 'Food subtotal before discount');
+    assert.equal(summary.netMerchandiseSales, 90, 'Food sales net of discount (100 - 10 = 90)');
+    assert.equal(summary.taxAmount, 5, 'Tax / GST collected');
+    assert.equal(summary.deliveryCharges, 20, 'Delivery fee collected');
+    assert.equal(summary.totalDiscounts, 10, 'Discount tracked');
+    assert.equal(summary.verifiedCollections, 115);
     assert.equal(summary.receivables, 0);
+  });
+
+  it('yields identical canonical revenue 115 when subtotal is missing from order schema', async () => {
+    const orders = [
+      {
+        tenantId: 'tenant_1',
+        status: 'DELIVERED',
+        paymentStatus: 'paid',
+        paymentMethod: 'UPI',
+        // subtotal missing
+        discountAmount: 10,
+        totalAmount: 115,
+        createdAt: new Date('2026-10-17T10:00:00.000+05:30'),
+      },
+    ];
+
+    const db = createMockDb(orders);
+    const summary = await getAuthoritativeDailySalesSummary(
+      db,
+      'tenant_1',
+      new Date('2026-10-17T12:00:00.000+05:30')
+    );
+
+    assert.equal(summary.totalRevenue, 115, 'Total revenue is 115 without subtotal');
+    assert.equal(summary.netSales, 115, 'Net billable sales is 115 without subtotal');
+    assert.equal(summary.grossOrderValue, 125);
+    assert.equal(summary.totalDiscounts, 10);
+  });
+
+  it('handles refunds occurring on a later calendar date accurately', async () => {
+    // Order placed on Oct 16 for 400
+    // Refund initiated on Oct 17 with refundedAt timestamp
+    const orders = [
+      {
+        tenantId: 'tenant_1',
+        status: 'REFUNDED',
+        paymentStatus: 'refunded',
+        totalAmount: 400,
+        refundAmount: 400,
+        createdAt: new Date('2026-10-16T18:00:00.000+05:30'),
+        refundedAt: new Date('2026-10-17T10:00:00.000+05:30'),
+      },
+    ];
+
+    const db = createMockDb(orders);
+    // When querying for Oct 16, order is reflected as refunded
+    const summaryOct16 = await getAuthoritativeDailySalesSummary(
+      db,
+      'tenant_1',
+      new Date('2026-10-16T20:00:00.000+05:30')
+    );
+
+    assert.equal(summaryOct16.refundAmount, 400);
+    assert.equal(summaryOct16.totalRevenue, 0, 'Collections zeroed out by refund');
+    assert.equal(summaryOct16.refundedOrderCount, 1);
   });
 
   it('separates verified collections from staff-recorded collections and COD receivables', async () => {

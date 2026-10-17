@@ -17,10 +17,15 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { isPaymentVerified, isCodOrder, normalizePaymentStatus } from '../paymentGate.js';
 
 export interface AuthoritativeDailySales {
-  totalRevenue: number;          // Canonical net collections (verifiedCollections + recordedCollections - refundAmount)
-  grossSales: number;            // Total value of non-cancelled/non-failed orders placed (before discounts)
+  totalRevenue: number;          // Canonical net collections = verifiedCollections + recordedCollections - refundAmount (matches dashboard todayRevenue)
+  grossOrderValue: number;       // Canonical gross order total before discount = totalAmount + discount
+  grossSales: number;            // Alias to grossOrderValue for backward compatibility
+  netSales: number;              // Canonical net billable sales = grossOrderValue - totalDiscounts - refundAmount (matches totalAmount - refunds)
+  merchandiseSales: number;      // Item / food subtotal before discount
+  netMerchandiseSales: number;   // Food sales net of discount (subtotal - discount)
+  taxAmount: number;             // Taxes / GST collected
+  deliveryCharges: number;       // Delivery & packaging fees collected
   totalDiscounts: number;        // Total promotional, coupon, or item discounts applied
-  netSales: number;              // Gross sales minus discounts and refunds
   totalCollections: number;      // Total payments received (verified + recorded)
   verifiedCollections: number;   // Payments verified via payment gateway / verified UPI
   recordedCollections: number;   // Payments recorded by staff / counter (cash, card, manual)
@@ -34,7 +39,7 @@ export interface AuthoritativeDailySales {
   upiAmount: number;
   otherAmount: number;
   businessDate: string;          // YYYY-MM-DD operational business date
-  businessDayStartHour: number;  // Configured hour when the business day begins (e.g. 4 for 04:00 AM IST)
+  businessDayStartHour: number;  // Configured hour when the business day begins (defaults to 0 for standard calendar day)
 }
 
 export interface ReportingOptions {
@@ -192,12 +197,12 @@ export async function getAuthoritativeDailySalesSummary(
           tData?.businessDayStartHour ??
           tData?.storeTiming?.businessDayStartHour ??
           tData?.storeOperations?.businessDayStartHour ??
-          4;
+          0;
       } else {
-        businessDayStartHour = 4;
+        businessDayStartHour = 0;
       }
     } catch {
-      businessDayStartHour = 4;
+      businessDayStartHour = 0;
     }
   }
 
@@ -206,8 +211,11 @@ export async function getAuthoritativeDailySalesSummary(
     businessDayStartHour,
   );
 
-  let grossSales = 0;
+  let grossOrderValue = 0;
+  let merchandiseSales = 0;
   let totalDiscounts = 0;
+  let taxAmount = 0;
+  let deliveryCharges = 0;
   let verifiedCollections = 0;
   let recordedCollections = 0;
   let refundAmount = 0;
@@ -224,6 +232,8 @@ export async function getAuthoritativeDailySalesSummary(
     const paymentStatus = normalizePaymentStatus(data.paymentStatus);
     const amount = Number(data.totalAmount ?? data.amount ?? 0);
     const discount = Number(data.discountAmount ?? data.discount ?? 0);
+    const tax = Number(data.gstAmount ?? data.taxAmount ?? data.tax ?? 0);
+    const delivery = Number(data.deliveryFee ?? 0) + Number(data.packingFee ?? data.packagingFee ?? 0);
     const orderRefund = Number(data.refundAmount ?? 0);
     const paymentMethod = String(data.paymentMethod || data.paymentMode || '').toUpperCase();
 
@@ -232,11 +242,16 @@ export async function getAuthoritativeDailySalesSummary(
       return;
     }
 
-    // Gross sales is item value before discounts; ensure discount is never double-deducted
-    const subtotal = data.subtotal != null ? Number(data.subtotal) : null;
-    const orderGross = subtotal != null ? subtotal : amount + discount;
-    grossSales += orderGross;
+    // Canonical Gross Order Value (Total order value before discount)
+    const orderBilledGross = amount + discount;
+    grossOrderValue += orderBilledGross;
     totalDiscounts += discount;
+    taxAmount += tax;
+    deliveryCharges += delivery;
+
+    // Merchandise item sales before discount
+    const subtotal = data.subtotal != null ? Number(data.subtotal) : Math.max(0, orderBilledGross - tax - delivery);
+    merchandiseSales += subtotal;
 
     // 2. Refund handling
     if (paymentStatus === 'refunded' || status === 'REFUNDED' || orderRefund > 0) {
@@ -355,15 +370,22 @@ export async function getAuthoritativeDailySalesSummary(
 
   const totalCollections = verifiedCollections + recordedCollections;
   const totalRevenue = Math.max(0, totalCollections - refundAmount);
-  // Net sales is Gross Sales minus Discounts minus Refunds (never double-deducting discounts)
-  const netSales = Math.max(0, grossSales - totalDiscounts - refundAmount);
+  // Canonical net billable sales (grossOrderValue - totalDiscounts - refundAmount)
+  // Perfectly matches totalAmount - refundAmount whether subtotal is present or absent!
+  const netSales = Math.max(0, grossOrderValue - totalDiscounts - refundAmount);
+  const netMerchandiseSales = Math.max(0, merchandiseSales - totalDiscounts);
   const averageOrderValue = paidOrderCount > 0 ? Math.round(totalRevenue / paidOrderCount) : 0;
 
   return {
     totalRevenue,
-    grossSales,
-    totalDiscounts,
+    grossOrderValue,
+    grossSales: grossOrderValue,
     netSales,
+    merchandiseSales,
+    netMerchandiseSales,
+    taxAmount,
+    deliveryCharges,
+    totalDiscounts,
     totalCollections,
     verifiedCollections,
     recordedCollections,
