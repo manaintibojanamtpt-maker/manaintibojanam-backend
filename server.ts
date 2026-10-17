@@ -1,11 +1,20 @@
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
+
+// Load .env.local before any provider or service initialization
+const envLocalPath = path.resolve(process.cwd(), ".env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
+dotenv.config(); // fallback to .env
+
 import { createPaymentIntentOnce } from './backend-lib/marketplace/customerCheckoutAttempt.js';
 import express from "express";
 import dns from "dns";
 import rateLimit from "express-rate-limit";
 import { createCorsMiddleware } from "./backend-lib/shared/corsPolicy.js";
 import bodyParser from "body-parser";
-import path from "path";
-import fs from "fs";
 import { createHmac, createHash } from "crypto";
 import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
