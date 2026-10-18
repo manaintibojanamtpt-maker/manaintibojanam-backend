@@ -36,9 +36,6 @@ export class GuestOrderTokenError extends Error {
 export const getGuestTokenSecret = (): string => {
   const secret = process.env.ORDER_GUEST_TOKEN_SECRET;
   if (!secret || secret.length < 32) {
-    if (process.env.NODE_ENV !== 'production') {
-      return 'dev-guest-token-secret-fixed-32-chars-long!';
-    }
     throw new GuestOrderTokenError(
       'ORDER_GUEST_TOKEN_SECRET must be set and at least 32 characters',
       'MISSING_SECRET'

@@ -20,6 +20,7 @@ import {
   signGuestOrderToken,
   verifyGuestOrderToken,
 } from '../../backend-lib/guestOrderToken';
+import { FirebaseAdminProvider } from '../../backend-lib/firebase/FirebaseAdminProvider.js';
 
 const TEST_SECRET = 'security-test-guest-secret-32-chars!!';
 const LIVE_BASE = process.env.SECURITY_TEST_BASE_URL?.replace(/\/$/, '');
@@ -45,6 +46,21 @@ describe('M0 API security matrix (order access)', () => {
 
   it('defaults FF_RAZORPAY_DRAFT_BIND to true', () => {
     assert.equal(isRazorpayDraftBindEnforced(), true);
+  });
+
+  it('strictly throws MISSING_SECRET if ORDER_GUEST_TOKEN_SECRET is missing or short', () => {
+    delete process.env.ORDER_GUEST_TOKEN_SECRET;
+    assert.throws(
+      () => getGuestTokenSecret(),
+      (err: any) => err.code === 'MISSING_SECRET'
+    );
+    process.env.ORDER_GUEST_TOKEN_SECRET = 'short';
+    assert.throws(
+      () => getGuestTokenSecret(),
+      (err: any) => err.code === 'MISSING_SECRET'
+    );
+    process.env.ORDER_GUEST_TOKEN_SECRET = TEST_SECRET;
+    assert.equal(getGuestTokenSecret(), TEST_SECRET);
   });
 
   it('denies unauthenticated order read decisions with 401', async () => {
@@ -219,6 +235,102 @@ describe('optional live API probes', { skip: !LIVE_BASE }, () => {
       const data = await response.json() as any;
       assert.equal(data.ok, false);
       assert.equal(data.error?.code, 'NOT_FOUND');
+    });
+
+    it('guest tracking against a real seeded order succeeds with 200 and tracking details', async () => {
+      const provider = await FirebaseAdminProvider.initialize();
+      const db = provider.getFirestore();
+      const testOrderId = 'order-live-seeded-1';
+      await db.collection('orders').doc(testOrderId).set({
+        tenantId: 'demo-biryani-house',
+        phone: '9876543210',
+        orderNumber: 101,
+        status: 'PLACED',
+        customerName: 'Test Customer',
+        deliveryAddress: 'Flat 101, Test Residency, Hyderabad',
+        items: [
+          { name: 'Hyderabadi Chicken Biryani', quantity: 2, price: 498 }
+        ],
+        createdAt: new Date().toISOString(),
+      });
+
+      const { token } = signGuestOrderToken(testOrderId, { secret: getGuestTokenSecret() });
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders/${testOrderId}/guest-tracking?phone=9876543210`, {
+        headers: { Authorization: `Guest ${token}` },
+      });
+      assert.equal(response.status, 200);
+      const data = await response.json() as any;
+      assert.equal(data.ok, true);
+      assert.equal(data.value?.orderId, testOrderId);
+      assert.equal(data.value?.status, 'PLACED');
+    });
+
+    it('guest tracking with token for order-1 rejected against order-2 with 401 ORDER_MISMATCH', async () => {
+      const { token } = signGuestOrderToken('order-live-seeded-1', { secret: getGuestTokenSecret() });
+      const response = await fetch(`${LIVE_BASE}/api/marketplace/orders/order-mismatch-target/guest-tracking?phone=9876543210`, {
+        headers: { Authorization: `Guest ${token}` },
+      });
+      assert.equal(response.status, 401);
+      const data = await response.json() as any;
+      assert.equal(data.ok, false);
+      assert.equal(data.error?.code, 'ORDER_MISMATCH');
+    });
+
+    it('legitimate checkout prepare and place succeeds and returns valid guest tracking token', async () => {
+      const provider = await FirebaseAdminProvider.initialize();
+      const db = provider.getFirestore();
+      const menuSnap = await db.collection('menu').where('tenantId', '==', 'demo-biryani-house').get();
+      assert.ok(menuSnap.docs.length > 0, 'Must have at least one seeded menu item');
+      const testItemId = menuSnap.docs[0].id;
+
+      // 1. Prepare checkout
+      const prepareRes = await fetch(`${LIVE_BASE}/api/marketplace/checkout/prepare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId: 'demo-biryani-house',
+          lines: [
+            { itemId: testItemId, quantity: 1 }
+          ],
+        }),
+      });
+      assert.equal(prepareRes.status, 200);
+      const prepareData = await prepareRes.json() as any;
+      assert.equal(prepareData.ok, true);
+      assert.ok(Array.isArray(prepareData.value?.paymentMethods));
+      assert.ok(prepareData.value.paymentMethods.includes('cod'));
+      assert.ok(prepareData.value?.quote?.grandTotal > 0);
+
+      // 2. Place order (COD)
+      const placeRes = await fetch(`${LIVE_BASE}/api/marketplace/checkout/place`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId: 'demo-biryani-house',
+          lines: [
+            { itemId: testItemId, quantity: 1 }
+          ],
+          paymentMethod: 'cod',
+          customerName: 'Test Customer',
+          phone: '9876543210',
+          deliveryAddress: { formattedAddress: 'Flat 101, Test Residency, Hyderabad' },
+        }),
+      });
+      assert.equal(placeRes.status, 200);
+      const placeData = await placeRes.json() as any;
+      assert.equal(placeData.ok, true);
+      assert.ok(typeof placeData.value?.orderId === 'string');
+      assert.ok(typeof placeData.value?.guestTrackingToken === 'string');
+
+      // 3. Track newly placed order using returned guestTrackingToken
+      const placedOrderId = placeData.value.orderId;
+      const trackingRes = await fetch(`${LIVE_BASE}/api/marketplace/orders/${placedOrderId}/guest-tracking?phone=9876543210`, {
+        headers: { Authorization: `Guest ${placeData.value.guestTrackingToken}` },
+      });
+      assert.equal(trackingRes.status, 200);
+      const trackingData = await trackingRes.json() as any;
+      assert.equal(trackingData.ok, true);
+      assert.equal(trackingData.value?.orderId, placedOrderId);
     });
   });
 });
