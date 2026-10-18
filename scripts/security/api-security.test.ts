@@ -21,6 +21,7 @@ import {
   verifyGuestOrderToken,
 } from '../../backend-lib/guestOrderToken';
 import { FirebaseAdminProvider } from '../../backend-lib/firebase/FirebaseAdminProvider.js';
+import { getAuth } from 'firebase-admin/auth';
 
 const TEST_SECRET = 'security-test-guest-secret-32-chars!!';
 const LIVE_BASE = process.env.SECURITY_TEST_BASE_URL?.replace(/\/$/, '');
@@ -316,8 +317,8 @@ describe('optional live API probes', { skip: !LIVE_BASE }, () => {
           deliveryAddress: { formattedAddress: 'Flat 101, Test Residency, Hyderabad' },
         }),
       });
-      assert.equal(placeRes.status, 200);
       const placeData = await placeRes.json() as any;
+      assert.equal(placeRes.status, 200, `Place failed with status ${placeRes.status}: ${JSON.stringify(placeData)}`);
       assert.equal(placeData.ok, true);
       assert.ok(typeof placeData.value?.orderId === 'string');
       assert.ok(typeof placeData.value?.guestTrackingToken === 'string');
@@ -331,6 +332,88 @@ describe('optional live API probes', { skip: !LIVE_BASE }, () => {
       const trackingData = await trackingRes.json() as any;
       assert.equal(trackingData.ok, true);
       assert.equal(trackingData.value?.orderId, placedOrderId);
+    });
+
+    it('legitimate authenticated checkout succeeds, associates order with customer, and enforces cross-user isolation', async () => {
+      const provider = await FirebaseAdminProvider.initialize();
+      const db = provider.getFirestore();
+      const auth = getAuth(provider.getApp());
+
+      const customerUid = 'usr_test_customer';
+      const otherUid = 'usr_other_customer';
+
+      // Create Firebase Auth custom tokens and exchange with emulator for ID tokens
+      const customToken = await auth.createCustomToken(customerUid);
+      const otherCustomToken = await auth.createCustomToken(otherUid);
+
+      const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099';
+      const apiKey = 'demo-key';
+
+      const exchangeToken = async (tok: string) => {
+        const res = await fetch(`http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tok, returnSecureToken: true }),
+        });
+        const data = await res.json() as any;
+        return data.idToken as string;
+      };
+
+      const customerIdToken = await exchangeToken(customToken);
+      const otherIdToken = await exchangeToken(otherCustomToken);
+
+      const menuSnap = await db.collection('menu').where('tenantId', '==', 'demo-biryani-house').get();
+      assert.ok(menuSnap.docs.length > 0, 'Must have at least one seeded menu item');
+      const testItemId = menuSnap.docs[0].id;
+
+      // 1. Authenticated checkout place
+      const placeRes = await fetch(`${LIVE_BASE}/api/marketplace/checkout/place`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${customerIdToken}`,
+        },
+        body: JSON.stringify({
+          restaurantId: 'demo-biryani-house',
+          lines: [{ itemId: testItemId, quantity: 1 }],
+          paymentMethod: 'cod',
+          customerName: 'Authenticated Customer',
+          phone: '9876543210',
+          deliveryAddress: { formattedAddress: 'Flat 101, Test Residency, Hyderabad' },
+        }),
+      });
+      const placeData = await placeRes.json() as any;
+      assert.equal(placeRes.status, 200, `Authenticated place failed with status ${placeRes.status}: ${JSON.stringify(placeData)}`);
+      assert.equal(placeData.ok, true);
+      const placedOrderId = placeData.value?.orderId;
+      assert.ok(typeof placedOrderId === 'string');
+
+      // 2. Verify order document in Firestore is bound to customerUid
+      const orderDoc = await db.collection('orders').doc(placedOrderId).get();
+      assert.ok(orderDoc.exists);
+      assert.equal(orderDoc.data()?.userId, customerUid);
+
+      // 3. Authenticated customer can retrieve their orders via GET /api/orders/user/:userId
+      const customerOrdersRes = await fetch(`${LIVE_BASE}/api/orders/user/${customerUid}`, {
+        headers: {
+          Authorization: `Bearer ${customerIdToken}`,
+          'x-tenant-id': 'demo-biryani-house',
+        },
+      });
+      assert.equal(customerOrdersRes.status, 200);
+      const customerOrdersData = await customerOrdersRes.json() as any;
+      assert.equal(customerOrdersData.success, true);
+      assert.ok(Array.isArray(customerOrdersData.data));
+      assert.ok(customerOrdersData.data.some((o: any) => o.id === placedOrderId));
+
+      // 4. Cross-user isolation: other user cannot view customer's orders (403 Forbidden)
+      const crossUserRes = await fetch(`${LIVE_BASE}/api/orders/user/${customerUid}`, {
+        headers: {
+          Authorization: `Bearer ${otherIdToken}`,
+          'x-tenant-id': 'demo-biryani-house',
+        },
+      });
+      assert.equal(crossUserRes.status, 403);
     });
   });
 });

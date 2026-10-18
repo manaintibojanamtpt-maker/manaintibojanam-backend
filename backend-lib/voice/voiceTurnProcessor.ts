@@ -60,6 +60,7 @@ export interface VoiceTurnParams {
     restaurantSlug?: string;
     restaurantId?: string;
     lastProposedItem?: { id: string; name: string; quantity: number; price: number };
+    currentProposal?: Array<{ foodId: string; name: string; quantity: number; price: number; variantId?: string }> | null;
     pendingClarification?: PendingClarification | null;
   };
 }
@@ -193,9 +194,9 @@ export function normalizeSpokenDishQuery(text: string): string {
   s = s.replace(/फुल/g, 'full ');
 
   // Common verbs and filler words to clean out
-  s = s.replace(/\b(add|want|give|please|kavali|kavale|ivvandi|cheyyandi|chahiye|do|dijiye|plate|plates|two|three|four|five|rendu|moodu|nalugu|ek|teen)\b/gi, ' ');
-  s = s.replace(/(కావాలి|కావాలె|ఇవ్వండి|తీసుకోండి|చేయండి|చేయి|పెట్టండి|ఆర్డర్|ప్లేట్లు?|ఒకటి|రెండు|మూడు|నాలుగు|ఐదు)/g, ' ');
-  s = s.replace(/(चाहिए|चाहिये|दीजिए|देना|लाओ|लगाओ|करो|कर\s*दो|डालो|ऑर्डर|प्लेट|एक|दो|तीन|चार|पाँच|पांच)/g, ' ');
+  s = s.replace(/\b(add|want|give|please|kavali|kavale|ivvandi|cheyyandi|chahiye|do|dijiye|plate|plates|two|three|four|five|rendu|moodu|nalugu|ek|teen|also|too|as well|kooda|bhi)\b/gi, ' ');
+  s = s.replace(/(కావాలి|కావాలె|ఇవ్వండి|తీసుకోండి|చేయండి|చేయి|పెట్టండి|ఆర్డర్|ప్లేట్లు?|ఒకటి|రెండు|మూడు|నాలుగు|ఐదు|కూడా|కూడ|కూడాను)/g, ' ');
+  s = s.replace(/(चाहिए|चाहिये|दीजिए|देना|लाओ|लगाओ|करो|कर\s*दो|डालो|ऑर्डर|प्लेट|एक|दो|तीन|चार|पाँच|पांच|भी|साथ\s*में)/g, ' ');
 
   return s.replace(/\s+/g, ' ').trim();
 }
@@ -666,6 +667,27 @@ export async function processVoiceAssistantTurn(
           authorized: true,
           pendingClarification: null,
         };
+      } else {
+        // User requested an unavailable variant (e.g. "Jumbo" when only Half/Full exist) or an unrecognized option.
+        // Clarify using authoritative options without silently mapping or inventing variants!
+        const optionsText = clarifyingItem.variantOptions.map((o) => o.name).join(' or ');
+        const cleanName = sanitizeTechnicalIds(clarifyingItem.name);
+        const reply =
+          lang === 'te-IN'
+            ? `${cleanName} కొరకు మా వద్ద ${optionsText} మాత్రమే అందుబాటులో ఉన్నాయి. మీకు ఏది కావాలి?`
+            : lang === 'hi-IN'
+              ? `${cleanName} के लिए हमारे पास केवल ${optionsText} ही उपलब्ध हैं। आप कौन सा लेना चाहेंगे?`
+              : `We only have ${optionsText} for ${cleanName}. Which one would you prefer?`;
+
+        return {
+          reply,
+          language: lang,
+          intent: 'clarify_dish_choice',
+          correlationId,
+          latencyMs: Date.now() - startedAt,
+          authorized: true,
+          pendingClarification,
+        };
       }
     }
   }
@@ -1087,7 +1109,7 @@ export async function processVoiceAssistantTurn(
           variantOptions = variants.map((v: any) => ({
             id: v.variantId || v.id || `var_${v.name}`,
             name: v.displayName || v.name,
-            price: v.price || v.offerPrice || match.price,
+            price: (v.offerPrice != null && Number.isFinite(v.offerPrice)) ? v.offerPrice : (v.price ?? match.price),
           }));
         }
       }
@@ -1121,8 +1143,8 @@ export async function processVoiceAssistantTurn(
             : c.matchedItem.name,
           quantity: c.qty,
           price: c.specifiedVariant
-            ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
-            : c.matchedItem.price,
+            ? ((c.specifiedVariant.offerPrice != null && Number.isFinite(c.specifiedVariant.offerPrice)) ? c.specifiedVariant.offerPrice : (c.specifiedVariant.price ?? c.matchedItem.price))
+            : ((c.matchedItem.offerPrice != null && Number.isFinite(c.matchedItem.offerPrice)) ? c.matchedItem.offerPrice : c.matchedItem.price),
           needsVariant: c.needsVariant,
           variantId: c.specifiedVariant ? (c.specifiedVariant.variantId || c.specifiedVariant.id) : undefined,
           variantOptions: c.variantOptions,
@@ -1153,20 +1175,44 @@ export async function processVoiceAssistantTurn(
     }
 
     // All items are resolved! Construct full proposal
-    const totalAmount = parsedCandidates.reduce((acc, c) => {
-      const unitPrice = c.specifiedVariant
-        ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
-        : c.matchedItem.price;
-      return acc + unitPrice * c.qty;
-    }, 0);
+    // Merge with existing unconfirmed items in proposal if present (e.g. user adds special raita to existing biryani proposal)
+    const existingProposalItems = (params.context?.currentProposal || []).filter((ep) => {
+      return !parsedCandidates.some(
+        (c) => c.matchedItem.id === ep.foodId && (!c.specifiedVariant || (c.specifiedVariant.variantId || c.specifiedVariant.id) === ep.variantId)
+      );
+    });
 
-    const itemSummaries = parsedCandidates.map((c) => {
+    const candidateProposalItems = parsedCandidates.map((c) => {
       const itemName = c.specifiedVariant
         ? `${c.matchedItem.name} (${c.specifiedVariant.displayName || c.specifiedVariant.name})`
         : c.matchedItem.name;
-      return `${c.qty} ${sanitizeTechnicalIds(itemName)}`;
+      const unitPrice = c.specifiedVariant
+        ? ((c.specifiedVariant.offerPrice != null && Number.isFinite(c.specifiedVariant.offerPrice)) ? c.specifiedVariant.offerPrice : (c.specifiedVariant.price ?? c.matchedItem.price))
+        : ((c.matchedItem.offerPrice != null && Number.isFinite(c.matchedItem.offerPrice)) ? c.matchedItem.offerPrice : c.matchedItem.price);
+      const variantId = c.specifiedVariant ? (c.specifiedVariant.variantId || c.specifiedVariant.id) : undefined;
+      return {
+        foodId: c.matchedItem.id,
+        name: itemName,
+        quantity: c.qty,
+        price: unitPrice,
+        variantId,
+      };
     });
 
+    const allProposalItems = [
+      ...existingProposalItems.map((ep) => ({
+        foodId: ep.foodId,
+        name: ep.name,
+        quantity: ep.quantity,
+        price: ep.price,
+        variantId: ep.variantId,
+      })),
+      ...candidateProposalItems,
+    ];
+
+    const totalAmount = allProposalItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+    const itemSummaries = allProposalItems.map((item) => `${item.quantity} ${sanitizeTechnicalIds(item.name)}`);
     const summaryText =
       itemSummaries.length === 1
         ? itemSummaries[0]
@@ -1181,18 +1227,14 @@ export async function processVoiceAssistantTurn(
           ? `आपका प्रस्तावित ऑर्डर है: ${summaryText}, कुल ₹${totalAmount.toLocaleString('en-IN')}। इन्हें अपने कार्ट में जोड़ने के लिए कन्फर्म करें।`
           : `Your proposed order is ${summaryText}, totaling ₹${totalAmount.toLocaleString('en-IN')}. Confirm to add these to your cart.`;
 
-    const proposedActions = parsedCandidates.map((c) => ({
+    const proposedActions = allProposalItems.map((item) => ({
       type: 'cart_add_plan',
       payload: {
-        foodId: c.matchedItem.id,
-        name: c.specifiedVariant
-          ? `${c.matchedItem.name} (${c.specifiedVariant.displayName || c.specifiedVariant.name})`
-          : c.matchedItem.name,
-        quantity: c.qty,
-        price: c.specifiedVariant
-          ? (c.specifiedVariant.price || c.specifiedVariant.offerPrice || c.matchedItem.price)
-          : c.matchedItem.price,
-        variantId: c.specifiedVariant ? (c.specifiedVariant.variantId || c.specifiedVariant.id) : undefined,
+        foodId: item.foodId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        variantId: item.variantId,
         restaurantId: params.restaurantId,
         requiresConfirmation: true,
       },

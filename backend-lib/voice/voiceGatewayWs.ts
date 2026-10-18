@@ -166,6 +166,19 @@ export function setupVoiceGatewayWebSocket(
       }
     });
 
+    socket.on('voice:proposal:confirm', () => {
+      if (clientContext.context) {
+        clientContext.context.currentProposal = null;
+      }
+    });
+
+    socket.on('voice:proposal:clear', () => {
+      if (clientContext.context) {
+        clientContext.context.currentProposal = null;
+        clientContext.context.pendingClarification = null;
+      }
+    });
+
     const handleFinalTranscript = async (transcript: string, lang: string) => {
       if (!transcript.trim() || isProcessingTurn) return;
       isProcessingTurn = true;
@@ -195,6 +208,17 @@ export function setupVoiceGatewayWebSocket(
         if (outcome.pendingClarification !== undefined) {
           if (!clientContext.context) clientContext.context = {};
           clientContext.context.pendingClarification = outcome.pendingClarification;
+        }
+
+        if (outcome.intent === 'cart_add_plan' && outcome.proposedActions) {
+          if (!clientContext.context) clientContext.context = {};
+          clientContext.context.currentProposal = outcome.proposedActions
+            .filter((a) => a.type === 'cart_add_plan')
+            .map((a) => a.payload as any);
+        } else if (outcome.intent === 'cancel_order' || outcome.proposedActions?.some((a) => a.type === 'clear_proposal')) {
+          if (clientContext.context) {
+            clientContext.context.currentProposal = null;
+          }
         }
 
         const turnLatency = Date.now() - turnStart;

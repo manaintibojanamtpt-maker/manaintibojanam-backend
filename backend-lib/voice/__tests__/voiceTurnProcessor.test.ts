@@ -809,5 +809,171 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       assert.deepEqual(hiTurn2.proposedActions, [{ type: 'clear_proposal' }]);
       assert.ok(hiTurn2.reply.includes('रद्द कर दिया गया है'));
     });
+
+    it('Authoritative menu options: asking unavailable variant ("Jumbo" on Half/Full menu) clarifies available options and preserves pendingClarification', async () => {
+      const liveSeededMenu = [
+        {
+          id: 'item_cb_001',
+          name: 'Hyderabadi Chicken Biryani',
+          price: 299,
+          offerPrice: 249,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v-half', kind: 'half', displayName: 'Half', price: 199, offerPrice: 169 },
+            { variantId: 'v-full', kind: 'full', displayName: 'Full', price: 299, offerPrice: 249 },
+          ],
+        },
+        {
+          id: 'item_raita_001',
+          name: 'Special Raita',
+          price: 49,
+          isAvailable: true,
+        },
+      ];
+
+      // Turn 1: User asks for 2 chicken biryanis
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_live_variant',
+        transcript: 'I want two chicken biryanis',
+        context: { menuItems: liveSeededMenu, restaurantId: 'demo-biryani-house' },
+      });
+      assert.equal(turn1.intent, 'clarify_dish_choice');
+      assert.ok(turn1.reply.includes('Half or Full'));
+      assert.ok(turn1.pendingClarification);
+
+      // Turn 2: User requests unavailable variant "Jumbo"
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_live_variant',
+        transcript: 'Jumbo',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.intent, 'clarify_dish_choice');
+      assert.ok(turn2.reply.includes('We only have Half or Full'));
+      // Must PRESERVE pendingClarification rather than silently mapping or dropping
+      assert.ok(turn2.pendingClarification);
+      assert.equal(turn2.pendingClarification?.pendingItems[0].needsVariant, true);
+
+      // Turn 3: User chooses available variant "Full" -> honors offer price ₹249 ($2 \times 249 = ₹498$)
+      const turn3 = await processVoiceAssistantTurn({
+        sessionId: 'sess_live_variant',
+        transcript: 'Full',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          pendingClarification: turn2.pendingClarification,
+        },
+      });
+      assert.equal(turn3.intent, 'cart_add_plan');
+      assert.equal(turn3.proposedActions?.length, 1);
+      const action = turn3.proposedActions![0].payload as any;
+      assert.equal(action.foodId, 'item_cb_001');
+      assert.equal(action.quantity, 2);
+      assert.equal(action.price, 249); // Must use offerPrice 249, NOT regular price 299 or fixture 499
+      assert.equal(action.variantId, 'v-full');
+      assert.ok(turn3.reply.includes('498'));
+
+      // Turn 4: User says "Add one special raita as well" -> preserves unconfirmed biryani proposal, total ₹547
+      const turn4 = await processVoiceAssistantTurn({
+        sessionId: 'sess_live_variant',
+        transcript: 'Add one special raita as well',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          currentProposal: turn3.proposedActions?.map((a) => a.payload as any),
+        },
+      });
+      assert.equal(turn4.intent, 'cart_add_plan');
+      assert.equal(turn4.proposedActions?.length, 2);
+      const items = turn4.proposedActions!.map((a) => a.payload as any);
+      assert.equal(items[0].name, 'Hyderabadi Chicken Biryani (Full)');
+      assert.equal(items[0].quantity, 2);
+      assert.equal(items[0].price, 249);
+      assert.equal(items[1].name, 'Special Raita');
+      assert.equal(items[1].quantity, 1);
+      assert.equal(items[1].price, 49);
+      // Total 2x249 + 1x49 = 547
+      assert.ok(turn4.reply.includes('547'));
+      assert.ok(turn4.reply.includes('2 Hyderabadi Chicken Biryani (Full)'));
+      assert.ok(turn4.reply.includes('1 Special Raita'));
+    });
+
+    it('Telugu: Authoritative menu variant clarification, offer pricing, and proposal retention', async () => {
+      const liveSeededMenu = [
+        {
+          id: 'item_cb_001',
+          name: 'Hyderabadi Chicken Biryani',
+          price: 299,
+          offerPrice: 249,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v-half', kind: 'half', displayName: 'Half', price: 199, offerPrice: 169 },
+            { variantId: 'v-full', kind: 'full', displayName: 'Full', price: 299, offerPrice: 249 },
+          ],
+        },
+        {
+          id: 'item_raita_001',
+          name: 'Special Raita',
+          price: 49,
+          isAvailable: true,
+        },
+      ];
+
+      // Turn 1: "రెండు చికెన్ బిర్యానీలు కావాలి"
+      const turn1 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_live',
+        transcript: 'రెండు చికెన్ బిర్యానీలు కావాలి',
+        context: { menuItems: liveSeededMenu, restaurantId: 'demo-biryani-house' },
+      });
+      assert.equal(turn1.language, 'te-IN');
+      assert.equal(turn1.intent, 'clarify_dish_choice');
+      assert.ok(turn1.pendingClarification);
+
+      // Turn 2: User says "జంబో" (Jumbo) -> unavailable variant
+      const turn2 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_live',
+        transcript: 'జంబో',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          pendingClarification: turn1.pendingClarification,
+        },
+      });
+      assert.equal(turn2.intent, 'clarify_dish_choice');
+      assert.ok(turn2.reply.includes('Half or Full మాత్రమే అందుబాటులో ఉన్నాయి'));
+      assert.ok(turn2.pendingClarification);
+
+      // Turn 3: User says "ఫుల్" (Full) -> resolves to 2x Full @ ₹249 = ₹498
+      const turn3 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_live',
+        transcript: 'ఫుల్',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          pendingClarification: turn2.pendingClarification,
+        },
+      });
+      assert.equal(turn3.intent, 'cart_add_plan');
+      assert.ok(turn3.reply.includes('498'));
+
+      // Turn 4: "ఒక స్పెషల్ రైతా కూడా కావాలి" -> combined proposal ₹547
+      const turn4 = await processVoiceAssistantTurn({
+        sessionId: 'sess_te_live',
+        transcript: 'ఒక స్పెషల్ రైతా కూడా కావాలి',
+        context: {
+          menuItems: liveSeededMenu,
+          restaurantId: 'demo-biryani-house',
+          currentProposal: turn3.proposedActions?.map((a) => a.payload as any),
+        },
+      });
+      assert.equal(turn4.intent, 'cart_add_plan');
+      assert.equal(turn4.proposedActions?.length, 2);
+      assert.ok(turn4.reply.includes('547'));
+      assert.ok(turn4.reply.includes('2 Hyderabadi Chicken Biryani (Full)'));
+      assert.ok(turn4.reply.includes('1 Special Raita'));
+    });
   });
 });

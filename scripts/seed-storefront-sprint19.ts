@@ -58,15 +58,10 @@ async function main() {
       },
 
       storeOperations: {
-
         isStoreOpen: true,
-
         businessHoursEnabled: true,
-
-        openTime: '11:00',
-
-        closeTime: '23:00',
-
+        openTime: '00:00',
+        closeTime: '23:59',
       },
 
       deliveryConfig: {
