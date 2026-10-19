@@ -819,8 +819,9 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
           offerPrice: 249,
           isAvailable: true,
           variants: [
-            { variantId: 'v-half', kind: 'half', displayName: 'Half', price: 199, offerPrice: 169 },
-            { variantId: 'v-full', kind: 'full', displayName: 'Full', price: 299, offerPrice: 249 },
+            { variantId: 'v-half', kind: 'half', displayName: 'Half', price: 199, offerPrice: 169, isAvailable: true },
+            { variantId: 'v-full', kind: 'full', displayName: 'Full', price: 299, offerPrice: 249, isAvailable: true },
+            { variantId: 'v-jumbo', kind: 'jumbo', displayName: 'Jumbo', price: 399, isAvailable: false },
           ],
         },
         {

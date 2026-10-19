@@ -1080,10 +1080,11 @@ export async function processVoiceAssistantTurn(
     }
 
     if (match) {
-      const variants =
-        match.variants && Array.isArray(match.variants) && match.variants.length > 1
-          ? match.variants
+      const rawVariants =
+        match.variants && Array.isArray(match.variants)
+          ? match.variants.filter((v: any) => v.isAvailable !== false)
           : null;
+      const variants = rawVariants && rawVariants.length > 1 ? rawVariants : null;
 
       let needsVariant = false;
       let specifiedVariant: any = null;

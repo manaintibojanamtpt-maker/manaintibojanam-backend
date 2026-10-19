@@ -82,8 +82,8 @@ export function resolveRecommendedSpeaker(
 
     if (lang.startsWith('en')) return 'simran_en_customer';
     if (lang.startsWith('hi')) return 'ishita_enhi_customer';
-    // For Telugu on v4-flash, if regional persona is not explicitly configured, use default persona
-    if (lang.startsWith('te')) return 'shubh_enhi_ads';
+    // For Telugu on v4-flash, use native Telugu conversation persona
+    if (lang.startsWith('te')) return 'kavitha_te_conversation';
     return 'simran_en_customer';
   }
 
@@ -91,7 +91,7 @@ export function resolveRecommendedSpeaker(
   if (req && req !== 'aditya') {
     return req;
   }
-  if (lang.startsWith('te')) return 'meera';
+  if (lang.startsWith('te')) return 'kavitha';
   if (lang.startsWith('hi')) return 'shubh';
   if (lang.startsWith('ta') || lang.startsWith('kn')) return 'pavithra';
   return 'aditya';

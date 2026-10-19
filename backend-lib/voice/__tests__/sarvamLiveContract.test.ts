@@ -28,8 +28,8 @@ describe('Sarvam Mocked Contract & Parameter Serialization Tests (Mocked Fetch)'
     });
 
     it('resolves official Bulbul v3 legacy speaker names', () => {
-      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v3'), 'meera');
-      assert.equal(resolveRecommendedSpeaker('te', undefined, 'bulbul:v3'), 'meera');
+      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v3'), 'kavitha');
+      assert.equal(resolveRecommendedSpeaker('te', undefined, 'bulbul:v3'), 'kavitha');
       assert.equal(resolveRecommendedSpeaker('hi-IN', undefined, 'bulbul:v3'), 'shubh');
       assert.equal(resolveRecommendedSpeaker('hi', undefined, 'bulbul:v3'), 'shubh');
       assert.equal(resolveRecommendedSpeaker('en-IN', undefined, 'bulbul:v3'), 'aditya');
@@ -41,7 +41,7 @@ describe('Sarvam Mocked Contract & Parameter Serialization Tests (Mocked Fetch)'
     it('resolves Bulbul v4 Flash persona IDs', () => {
       assert.equal(resolveRecommendedSpeaker('en-IN', undefined, 'bulbul:v4-flash'), 'simran_en_customer');
       assert.equal(resolveRecommendedSpeaker('hi-IN', undefined, 'bulbul:v4-flash'), 'ishita_enhi_customer');
-      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v4-flash'), 'shubh_enhi_ads');
+      assert.equal(resolveRecommendedSpeaker('te-IN', undefined, 'bulbul:v4-flash'), 'kavitha_te_conversation');
     });
   });
 
@@ -86,7 +86,7 @@ describe('Sarvam Mocked Contract & Parameter Serialization Tests (Mocked Fetch)'
       assert.equal(capturedUrl, 'https://api.sarvam.ai/text-to-speech');
       assert.equal(capturedBody.model, 'bulbul:v3');
       assert.equal(capturedBody.target_language_code, 'te-IN');
-      assert.equal(capturedBody.speaker, 'meera');
+      assert.equal(capturedBody.speaker, 'kavitha');
       assert.equal(capturedBody.speech_sample_rate, 22050);
 
       assert.equal(result.contentType, 'audio/wav');
