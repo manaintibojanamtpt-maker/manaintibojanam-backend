@@ -251,6 +251,96 @@ describe('projectCheckout', () => {
     assert.equal(quote.grandTotal, 612);
   });
 
+  it('resolves variant offer pricing and line items to ₹547 subtotal (2x v-full + 1x raita)', async () => {
+    const biryaniId = 'item-biryani';
+    const raitaId = 'item-raita';
+    const fakeDb = {
+      collection: (name: string) => {
+        if (name === 'tenants') {
+          return {
+            doc: (id: string) => ({
+              get: async () =>
+                id === 'demo-biryani'
+                  ? {
+                      exists: true,
+                      id: 'demo-biryani',
+                      data: () => ({
+                        slug: 'demo-biryani',
+                        deliveryConfig: { feesConfigured: false },
+                        pricingConfig: { packingFee: 0, gstPercent: 0 },
+                      }),
+                    }
+                  : { exists: false },
+            }),
+            where: () => ({
+              limit: () => ({
+                get: async () => ({ empty: true, docs: [] }),
+              }),
+            }),
+          };
+        }
+        if (name === 'menu') {
+          return {
+            where: () => ({
+              get: async () => ({
+                docs: [
+                  {
+                    id: biryaniId,
+                    data: () => ({
+                      name: 'Chicken Dum Biryani',
+                      price: 299,
+                      variants: [
+                        { variantId: 'v-half', displayName: 'Half', price: 199, offerPrice: 169 },
+                        { variantId: 'v-full', displayName: 'Full', price: 299, offerPrice: 249 },
+                      ],
+                      isAvailable: true,
+                    }),
+                  },
+                  {
+                    id: raitaId,
+                    data: () => ({
+                      name: 'Special Raita',
+                      price: 49,
+                      isAvailable: true,
+                    }),
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+        if (name === 'coupons') {
+          return {
+            where: () => ({
+              where: () => ({
+                limit: () => ({
+                  get: async () => ({ empty: true, docs: [] }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected collection ${name}`);
+      },
+    } as never;
+
+    const { quote } = await buildMarketplaceQuote(fakeDb, {
+      restaurantId: 'demo-biryani',
+      orderType: 'pickup',
+      lines: [
+        { itemId: biryaniId, variantId: 'v-full', quantity: 2 },
+        { itemId: raitaId, quantity: 1 },
+      ],
+    });
+
+    // 2 x 249 + 1 x 49 = 547
+    assert.equal(quote.subtotal, 547);
+    assert.equal(quote.grandTotal, 547);
+    assert.equal(quote.packagingFee, 0);
+    assert.equal(quote.deliveryFee, 0);
+    assert.equal(quote.gstAmount, 0);
+  });
+
   it('rejects invalid coupon codes during quote', async () => {
     const menuItemId = 'item-thali';
     const fakeDb = {
