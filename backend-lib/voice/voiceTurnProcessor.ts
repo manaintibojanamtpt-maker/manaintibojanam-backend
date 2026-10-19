@@ -1080,20 +1080,45 @@ export async function processVoiceAssistantTurn(
     }
 
     if (match) {
-      const rawVariants =
-        match.variants && Array.isArray(match.variants)
-          ? match.variants.filter((v: any) => v.isAvailable !== false)
-          : null;
-      const variants = rawVariants && rawVariants.length > 1 ? rawVariants : null;
+      const hasDeclaredVariants = Array.isArray(match.variants) && match.variants.length > 0;
+      const availableVariants = hasDeclaredVariants
+        ? match.variants.filter((v: any) => v.isAvailable !== false)
+        : null;
+
+      // 1. Zero available variants: item cannot be proposed or purchased
+      if (match.isAvailable === false || (hasDeclaredVariants && availableVariants && availableVariants.length === 0)) {
+        const cleanName = sanitizeTechnicalIds(match.name);
+        const reply =
+          lang === 'te-IN'
+            ? `క్షమించండి, ${cleanName} ప్రస్తుతం అందుబాటులో లేదు.`
+            : lang === 'hi-IN'
+              ? `क्षमा करें, ${cleanName} फ़िलहाल उपलब्ध नहीं है।`
+              : `Sorry, ${cleanName} is currently unavailable.`;
+
+        return {
+          reply,
+          language: lang,
+          intent: 'item_unavailable',
+          correlationId,
+          latencyMs: Date.now() - startedAt,
+          authorized: true,
+          pendingClarification: params.context?.pendingClarification || null,
+        };
+      }
 
       let needsVariant = false;
       let specifiedVariant: any = null;
       let variantOptions: Array<{ id: string; name: string; price: number }> | undefined = undefined;
 
-      if (variants) {
-        // Check if clause already specifies one of the variants
+      // 2. Exactly one available variant: preserve its ID and effective price
+      if (availableVariants && availableVariants.length === 1) {
+        specifiedVariant = availableVariants[0];
+        needsVariant = false;
+        variantOptions = undefined;
+      } else if (availableVariants && availableVariants.length > 1) {
+        // 3. Multiple available variants: clarify using available choices only
         const lowerClause = clause.toLowerCase();
-        specifiedVariant = variants.find((v: any) => {
+        specifiedVariant = availableVariants.find((v: any) => {
           const vName = (v.displayName || v.name || v.id || '').toLowerCase();
           return (
             normClause.includes(vName) ||
@@ -1107,7 +1132,7 @@ export async function processVoiceAssistantTurn(
 
         if (!specifiedVariant) {
           needsVariant = true;
-          variantOptions = variants.map((v: any) => ({
+          variantOptions = availableVariants.map((v: any) => ({
             id: v.variantId || v.id || `var_${v.name}`,
             name: v.displayName || v.name,
             price: (v.offerPrice != null && Number.isFinite(v.offerPrice)) ? v.offerPrice : (v.price ?? match.price),
@@ -1177,11 +1202,30 @@ export async function processVoiceAssistantTurn(
 
     // All items are resolved! Construct full proposal
     // Merge with existing unconfirmed items in proposal if present (e.g. user adds special raita to existing biryani proposal)
-    const existingProposalItems = (params.context?.currentProposal || []).filter((ep) => {
+    const rawExisting = (params.context?.currentProposal || []).filter((ep) => {
       return !parsedCandidates.some(
         (c) => c.matchedItem.id === ep.foodId && (!c.specifiedVariant || (c.specifiedVariant.variantId || c.specifiedVariant.id) === ep.variantId)
       );
     });
+
+    // 4. A variant or item becoming unavailable after a proposal: reject/requote safely
+    const existingProposalItems: typeof rawExisting = [];
+    const unavailableDroppedNames: string[] = [];
+    for (const ep of rawExisting) {
+      const liveItem = menuItems.find((m) => m.id === ep.foodId);
+      if (!liveItem || liveItem.isAvailable === false) {
+        unavailableDroppedNames.push(ep.name);
+        continue;
+      }
+      if (ep.variantId && Array.isArray(liveItem.variants)) {
+        const liveVar = liveItem.variants.find((v: any) => (v.variantId || v.id) === ep.variantId);
+        if (!liveVar || liveVar.isAvailable === false) {
+          unavailableDroppedNames.push(ep.name);
+          continue;
+        }
+      }
+      existingProposalItems.push(ep);
+    }
 
     const candidateProposalItems = parsedCandidates.map((c) => {
       const itemName = c.specifiedVariant
@@ -1221,12 +1265,22 @@ export async function processVoiceAssistantTurn(
           (lang === 'te-IN' ? ' మరియు ' : lang === 'hi-IN' ? ' और ' : ' and ') +
           itemSummaries[itemSummaries.length - 1];
 
+    const noticePrefix =
+      unavailableDroppedNames.length > 0
+        ? (lang === 'te-IN'
+            ? `గమనిక: ${unavailableDroppedNames.join(', ')} ఇప్పుడు అందుబాటులో లేదు మరియు ప్రతిపాదన నుండి తీసివేయబడింది. `
+            : lang === 'hi-IN'
+              ? `ध्यान दें: ${unavailableDroppedNames.join(', ')} अब उपलब्ध नहीं है और प्रस्ताव से हटा दिया गया है। `
+              : `Note: ${unavailableDroppedNames.join(', ')} is now unavailable and was removed from the proposal. `)
+        : '';
+
     const reply =
-      lang === 'te-IN'
+      noticePrefix +
+      (lang === 'te-IN'
         ? `మీ ప్రతిపాదిత ఆర్డర్: ${summaryText}, మొత్తం ₹${totalAmount.toLocaleString('en-IN')}. వీటిని మీ కార్ట్‌కి చేర్చడానికి నిర్ధారించండి.`
         : lang === 'hi-IN'
           ? `आपका प्रस्तावित ऑर्डर है: ${summaryText}, कुल ₹${totalAmount.toLocaleString('en-IN')}। इन्हें अपने कार्ट में जोड़ने के लिए कन्फर्म करें।`
-          : `Your proposed order is ${summaryText}, totaling ₹${totalAmount.toLocaleString('en-IN')}. Confirm to add these to your cart.`;
+          : `Your proposed order is ${summaryText}, totaling ₹${totalAmount.toLocaleString('en-IN')}. Confirm to add these to your cart.`);
 
     const proposedActions = allProposalItems.map((item) => ({
       type: 'cart_add_plan',

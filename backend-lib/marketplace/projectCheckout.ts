@@ -209,7 +209,7 @@ async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<MenuPr
     const isItemAvailable = data.isAvailable !== false && isItemActive;
     const basePrice = Number(data.offerPrice ?? data.price ?? 0);
     const variantsMap = new Map<string, MenuVariantPriceInfo>();
-    if (Array.isArray(data.variants)) {
+    if (Array.isArray(data.variants) && data.variants.length > 0) {
       data.variants.forEach((v: any, index: number) => {
         if (!v || typeof v !== 'object') return;
         const vId = String(v.variantId ?? v.id ?? `var_${doc.id}_${index}`).trim();
@@ -380,10 +380,18 @@ async function buildMarketplaceQuoteContext(
     }
 
     const hasVariants = Boolean(menuItem.variants && menuItem.variants.size > 0);
-    const variantId = typeof line.variantId === 'string' && line.variantId.trim() ? line.variantId.trim() : undefined;
+    let variantId = typeof line.variantId === 'string' && line.variantId.trim() ? line.variantId.trim() : undefined;
 
     if (hasVariants && !variantId) {
-      throw Object.assign(new Error(`Variant selection is required for '${menuItem.name}'`), { statusCode: 400 });
+      const availableVariants = Array.from(menuItem.variants!.values()).filter((v) => v.isAvailable);
+      if (availableVariants.length === 0) {
+        throw Object.assign(new Error(`Item '${menuItem.name}' is currently unavailable`), { statusCode: 400 });
+      }
+      if (availableVariants.length === 1) {
+        variantId = availableVariants[0].variantId;
+      } else {
+        throw Object.assign(new Error(`Variant selection is required for '${menuItem.name}'`), { statusCode: 400 });
+      }
     }
 
     let variant: MenuVariantPriceInfo | undefined;

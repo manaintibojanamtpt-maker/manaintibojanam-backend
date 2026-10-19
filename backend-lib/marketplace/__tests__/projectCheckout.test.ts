@@ -858,3 +858,154 @@ describe('marketplace referral reward API', () => {
     assert.match(source, /pendingDiscount/);
   });
 });
+
+describe('authoritative checkout variant contracts', () => {
+  function makeCheckoutDb(menuDocs: any[]) {
+    return {
+      collection(name: string) {
+        if (name === 'tenants') {
+          return {
+            doc: (docId: string) => ({
+              get: async () => ({
+                id: docId,
+                exists: true,
+                data: () => ({ storeStatus: 'open', pricingConfig: { baseDeliveryFee: 30 } }),
+              }),
+            }),
+            where: () => ({
+              limit: () => ({
+                get: async () => ({
+                  empty: false,
+                  docs: [{ id: 'tenant_t1', data: () => ({ storeStatus: 'open', pricingConfig: { baseDeliveryFee: 30 } }) }],
+                }),
+              }),
+            }),
+          };
+        }
+        if (name === 'menu') {
+          return {
+            where: () => ({
+              get: async () => ({
+                docs: menuDocs.map((m) => ({
+                  id: m.id,
+                  data: () => m.data,
+                })),
+              }),
+            }),
+          };
+        }
+        throw new Error(`Unexpected collection: ${name}`);
+      },
+    } as any;
+  }
+
+  it('Case 1: Zero available variants rejects purchase with 400', async () => {
+    const db = makeCheckoutDb([
+      {
+        id: 'item_zero_var',
+        data: {
+          name: 'Zero Var Biryani',
+          price: 250,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v1', name: 'Small', price: 150, isAvailable: false },
+            { variantId: 'v2', name: 'Large', price: 250, isAvailable: false },
+          ],
+        },
+      },
+    ]);
+
+    await assert.rejects(
+      () =>
+        buildMarketplaceQuote(db, {
+          restaurantId: 'tenant_t1',
+          orderType: 'pickup',
+          lines: [{ itemId: 'item_zero_var', quantity: 1 }],
+        }),
+      (err: any) => err.statusCode === 400 && err.message.includes("Item 'Zero Var Biryani' is currently unavailable"),
+    );
+  });
+
+  it('Case 2: Exactly one available variant auto-resolves and preserves its ID and effective price', async () => {
+    const db = makeCheckoutDb([
+      {
+        id: 'item_single_var',
+        data: {
+          name: 'Single Var Curry',
+          price: 200,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v_only', name: 'Standard', price: 200, offerPrice: 175, isAvailable: true },
+            { variantId: 'v_out', name: 'Extra Large', price: 300, isAvailable: false },
+          ],
+        },
+      },
+    ]);
+
+    // Omit variantId -> auto-resolves to single available variant v_only @ 175
+    const { quote } = await buildMarketplaceQuote(db, {
+      restaurantId: 'tenant_t1',
+      orderType: 'pickup',
+      lines: [{ itemId: 'item_single_var', quantity: 2 }],
+    });
+
+    assert.equal(quote.lines[0].variantId, 'v_only');
+    assert.equal(quote.lines[0].unitPrice, 175);
+    assert.equal(quote.lines[0].name, 'Single Var Curry (Standard)');
+    assert.equal(quote.subtotal, 350);
+  });
+
+  it('Case 3: Multiple available variants requires selection and rejects missing variantId', async () => {
+    const db = makeCheckoutDb([
+      {
+        id: 'item_multi_var',
+        data: {
+          name: 'Multi Var Pulao',
+          price: 220,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v_half', name: 'Half', price: 120, isAvailable: true },
+            { variantId: 'v_full', name: 'Full', price: 220, isAvailable: true },
+          ],
+        },
+      },
+    ]);
+
+    await assert.rejects(
+      () =>
+        buildMarketplaceQuote(db, {
+          restaurantId: 'tenant_t1',
+          orderType: 'pickup',
+          lines: [{ itemId: 'item_multi_var', quantity: 1 }],
+        }),
+      (err: any) => err.statusCode === 400 && err.message.includes('Variant selection is required'),
+    );
+  });
+
+  it('Case 4: A variant becoming unavailable after proposal is rejected at checkout with 400', async () => {
+    const db = makeCheckoutDb([
+      {
+        id: 'item_cb',
+        data: {
+          name: 'Hyderabadi Chicken Biryani',
+          price: 299,
+          isAvailable: true,
+          variants: [
+            { variantId: 'v_full', name: 'Full', price: 249, isAvailable: false }, // Now out of stock!
+            { variantId: 'v_half', name: 'Half', price: 149, isAvailable: true },
+          ],
+        },
+      },
+    ]);
+
+    await assert.rejects(
+      () =>
+        buildMarketplaceQuote(db, {
+          restaurantId: 'tenant_t1',
+          orderType: 'pickup',
+          lines: [{ itemId: 'item_cb', quantity: 2, variantId: 'v_full' }],
+        }),
+      (err: any) => err.statusCode === 400 && err.message.includes("Variant 'Full' of 'Hyderabadi Chicken Biryani' is currently unavailable"),
+    );
+  });
+});

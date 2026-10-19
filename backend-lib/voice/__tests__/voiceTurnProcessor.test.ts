@@ -976,5 +976,135 @@ describe('VoiceTurnProcessor Unit & Multi-Turn Tests', () => {
       assert.ok(turn4.reply.includes('2 Hyderabadi Chicken Biryani (Full)'));
       assert.ok(turn4.reply.includes('1 Special Raita'));
     });
+
+    describe('Variant Handling Contracts (Zero, Single, Multiple, Post-Proposal)', () => {
+      const testMenu = [
+        {
+          id: 'item_zero_var',
+          name: 'Zero Variant Biryani',
+          price: 250,
+          isAvailable: true,
+          variants: [
+            { id: 'v1', name: 'Small', price: 150, isAvailable: false },
+            { id: 'v2', name: 'Large', price: 250, isAvailable: false },
+          ],
+        },
+        {
+          id: 'item_single_var',
+          name: 'Single Variant Curry',
+          price: 200,
+          offerPrice: 180,
+          isAvailable: true,
+          variants: [
+            { id: 'v_only', name: 'Standard', price: 200, offerPrice: 175, isAvailable: true },
+            { id: 'v_out', name: 'Extra Large', price: 300, isAvailable: false },
+          ],
+        },
+        {
+          id: 'item_multi_var',
+          name: 'Multi Variant Pulao',
+          price: 220,
+          isAvailable: true,
+          variants: [
+            { id: 'v_half', name: 'Half', price: 120, isAvailable: true },
+            { id: 'v_full', name: 'Full', price: 220, isAvailable: true },
+            { id: 'v_jumbo', name: 'Jumbo', price: 320, isAvailable: false },
+          ],
+        },
+      ];
+
+      it('Case 1: Zero available variants cannot be proposed or purchased', async () => {
+        const turn = await processVoiceAssistantTurn({
+          sessionId: 'test_zero_var',
+          transcript: 'Zero Variant Biryani కావాలి',
+          language: 'te-IN',
+          context: { menuItems: testMenu, restaurantId: 'r1' },
+        });
+        assert.equal(turn.intent, 'item_unavailable');
+        assert.ok(turn.reply.includes('ప్రస్తుతం అందుబాటులో లేదు'));
+        assert.equal(turn.proposedActions, undefined);
+      });
+
+      it('Case 2: Exactly one available variant preserves its ID and effective price without clarification', async () => {
+        const turn = await processVoiceAssistantTurn({
+          sessionId: 'test_single_var',
+          transcript: 'I want one Single Variant Curry',
+          language: 'en-IN',
+          context: { menuItems: testMenu, restaurantId: 'r1' },
+        });
+        assert.equal(turn.intent, 'cart_add_plan');
+        assert.equal(turn.proposedActions?.length, 1);
+        const action = turn.proposedActions![0].payload as any;
+        assert.equal(action.foodId, 'item_single_var');
+        assert.equal(action.variantId, 'v_only');
+        assert.equal(action.price, 175); // effective offerPrice of the single available variant
+        assert.ok(turn.reply.includes('175'));
+      });
+
+      it('Case 3: Multiple available variants clarifies using available choices only', async () => {
+        const turn = await processVoiceAssistantTurn({
+          sessionId: 'test_multi_var',
+          transcript: 'Multi Variant Pulao కావాలి',
+          language: 'te-IN',
+          context: { menuItems: testMenu, restaurantId: 'r1' },
+        });
+        assert.equal(turn.intent, 'clarify_dish_choice');
+        assert.ok(turn.pendingClarification);
+        const clarifyingItem = turn.pendingClarification.pendingItems[0];
+        const optionNames = clarifyingItem.variantOptions?.map((o) => o.name);
+        assert.deepEqual(optionNames, ['Half', 'Full']); // Jumbo excluded because isAvailable is false
+        assert.ok(turn.reply.includes('Half or Full'));
+        assert.ok(!turn.reply.includes('Jumbo'));
+      });
+
+      it('Case 4: A variant becoming unavailable after proposal is rejected/requoted safely', async () => {
+        // Prior proposal had Multi Variant Pulao (Half @ 120) and Single Variant Curry (Standard @ 175)
+        const currentProposal = [
+          { foodId: 'item_multi_var', name: 'Multi Variant Pulao (Half)', quantity: 1, price: 120, variantId: 'v_half' },
+        ];
+
+        // Now stock changes: Multi Variant Pulao (Half) becomes unavailable!
+        const updatedMenu = [
+          {
+            id: 'item_multi_var',
+            name: 'Multi Variant Pulao',
+            price: 220,
+            isAvailable: true,
+            variants: [
+              { id: 'v_half', name: 'Half', price: 120, isAvailable: false }, // NOW UNAVAILABLE
+              { id: 'v_full', name: 'Full', price: 220, isAvailable: true },
+            ],
+          },
+          {
+            id: 'item_single_var',
+            name: 'Single Variant Curry',
+            price: 200,
+            offerPrice: 175,
+            isAvailable: true,
+            variants: [
+              { id: 'v_only', name: 'Standard', price: 200, offerPrice: 175, isAvailable: true },
+            ],
+          },
+        ];
+
+        // User speaks to add Single Variant Curry
+        const turn = await processVoiceAssistantTurn({
+          sessionId: 'test_requote',
+          transcript: 'I want one Single Variant Curry',
+          language: 'en-IN',
+          context: { menuItems: updatedMenu, restaurantId: 'r1', currentProposal },
+        });
+
+        assert.equal(turn.intent, 'cart_add_plan');
+        // The unavailable Pulao was dropped from the proposal
+        assert.equal(turn.proposedActions?.length, 1);
+        const action = turn.proposedActions![0].payload as any;
+        assert.equal(action.foodId, 'item_single_var');
+        assert.equal(action.price, 175);
+        // Notice prefix informs user that previously proposed item became unavailable
+        assert.ok(turn.reply.includes('Multi Variant Pulao (Half) is now unavailable'));
+        assert.ok(turn.reply.includes('175'));
+      });
+    });
   });
 });
