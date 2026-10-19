@@ -180,7 +180,10 @@ export function setupVoiceGatewayWebSocket(
     });
 
     const handleFinalTranscript = async (transcript: string, lang: string) => {
-      if (!transcript.trim() || isProcessingTurn) return;
+      if (!transcript.trim()) return;
+      if (isProcessingTurn) {
+        cancelActiveTurn();
+      }
       isProcessingTurn = true;
       const turnStart = Date.now();
       activeTurnAbortController = new AbortController();
@@ -311,9 +314,6 @@ export function setupVoiceGatewayWebSocket(
       cancelActiveTts();
     };
 
-    // Initialize upon connection
-    await initSttSession();
-
     // Client audio streaming frame
     socket.on('audio:chunk', (data: Buffer | ArrayBuffer | { audioBase64?: string }) => {
       let buffer: Buffer;
@@ -373,6 +373,9 @@ export function setupVoiceGatewayWebSocket(
         sttSession = null;
       }
     });
+
+    // Initialize upon connection (non-blocking so socket listeners are immediately bound)
+    void initSttSession();
   });
 
   return io;
