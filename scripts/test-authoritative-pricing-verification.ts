@@ -191,6 +191,7 @@ async function run() {
   const tokenData = await tokenRes.json() as any;
   const idToken = tokenData.idToken as string;
 
+  const attemptId1 = `attempt_price_change_${Date.now()}`;
   const mismatchRes = await fetch(`${LIVE_BASE}/api/marketplace/checkout/place`, {
     method: 'POST',
     headers: {
@@ -198,7 +199,7 @@ async function run() {
       Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify({
-      clientAttemptId: 'attempt_price_change_test_123',
+      clientAttemptId: attemptId1,
       expectedAmountPaise: 104700, // Client expected old ₹1,047 quote
       quoteExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       restaurantId: RESTAURANT_ID,
@@ -224,6 +225,7 @@ async function run() {
   console.log('Price change / expectedAmountPaise mismatch successfully rejected with HTTP 409.');
 
   console.log('--- 7. Testing matching authenticated place (expectedAmountPaise: 54700) ---');
+  const attemptId2 = `attempt_price_match_${Date.now()}`;
   const matchRes = await fetch(`${LIVE_BASE}/api/marketplace/checkout/place`, {
     method: 'POST',
     headers: {
@@ -231,7 +233,7 @@ async function run() {
       Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify({
-      clientAttemptId: 'attempt_price_match_test_456',
+      clientAttemptId: attemptId2,
       expectedAmountPaise: 54700, // Exactly ₹547.00
       quoteExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       restaurantId: RESTAURANT_ID,
@@ -251,6 +253,10 @@ async function run() {
       phone: '+919876543210',
     }),
   });
+  if (matchRes.status !== 200) {
+    const errText = await matchRes.text();
+    console.error('Match place response status:', matchRes.status, 'body:', errText);
+  }
   assert.equal(matchRes.status, 200, `Expected 200 but got ${matchRes.status}`);
   const matchData = await matchRes.json() as any;
   assert.equal(matchData.ok, true);
