@@ -1,4 +1,4 @@
-﻿import { describe, it, afterEach } from 'node:test';
+import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { SarvamSttProvider } from '../providers/sarvamSttProvider.js';
 import { SarvamTtsProvider } from '../providers/sarvamTtsProvider.js';
@@ -169,7 +169,7 @@ describe('Sarvam AI Voice Providers', () => {
         );
       }) as any;
 
-      const provider = new SarvamTtsProvider({ apiKey: 'test-tts-key', defaultVoice: 'aditya' });
+      const provider = new SarvamTtsProvider({ apiKey: 'test-tts-key', model: 'bulbul:v3', defaultVoice: 'aditya' });
       const result = await provider.generateSpeech({
         text: 'Order confirmed',
         language: 'en-IN',

@@ -51,6 +51,10 @@
 	<string>Use Face ID for secure and instant login to your account.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>BhojanOS uses your location to show nearby kitchens and delivery options.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BhojanOS uses your microphone to let store owners check sales, manage pending orders, and navigate POS using voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BhojanOS uses speech recognition to process voice commands for restaurant operations.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

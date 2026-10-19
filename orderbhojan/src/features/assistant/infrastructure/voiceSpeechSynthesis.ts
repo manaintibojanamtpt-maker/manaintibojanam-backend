@@ -20,11 +20,19 @@ export type SpeechSynthesisFactory = () => SpeechSynthesisLike | null;
 export type UtteranceFactory = (text: string) => SpeechSynthesisUtteranceLike;
 
 import { Capacitor } from '@capacitor/core';
-import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { loadFeatureFlags } from '../../../featureFlags/flags';
 import { getAppConfig } from '@/config';
 import { getMarketplaceAuthTokenProvider } from '@/marketplace-api';
 import { trackEvent } from '@/telemetry';
+
+async function getNativeTTS() {
+  try {
+    const mod = await import('@capacitor-community/text-to-speech');
+    return mod.TextToSpeech;
+  } catch {
+    return null;
+  }
+}
 
 function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
   return () => {
@@ -34,11 +42,16 @@ function getDefaultSynthesisFactory(): SpeechSynthesisFactory {
           return false;
         },
         cancel: () => {
-          TextToSpeech.stop().catch(console.error);
+          void getNativeTTS().then((tts) => tts?.stop().catch(console.error));
         },
         speak: async (utterance) => {
           try {
-            await TextToSpeech.speak({
+            const tts = await getNativeTTS();
+            if (!tts) {
+              console.warn('Native TextToSpeech plugin not found');
+              return;
+            }
+            await tts.speak({
               text: utterance.text,
               lang: utterance.lang,
               rate: utterance.rate,

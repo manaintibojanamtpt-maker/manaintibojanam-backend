@@ -186,6 +186,18 @@ export function resolveFirebaseCredential(
     };
   }
 
+  if (configuredProjectId.startsWith('demo-') || Boolean(process.env.FIRESTORE_EMULATOR_HOST)) {
+    return {
+      source: 'APPLICATION_DEFAULT_METADATA',
+      credential: {
+        getAccessToken: async () => ({ access_token: 'emulator-token', expires_in: 3600 }),
+      } as any,
+      serviceAccountEmail: `emulator@${configuredProjectId}.iam.gserviceaccount.com`,
+      credentialType: 'emulator_credentials',
+      serviceAccountProjectId: configuredProjectId,
+    };
+  }
+
   return {
     source: 'APPLICATION_DEFAULT_METADATA',
     credential: applicationDefault(),
@@ -286,17 +298,19 @@ export class FirebaseAdminProvider {
     const resolved = resolveFirebaseCredential(projectId);
     const adcDetected = await detectApplicationDefaultCredentials();
 
+    const isEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST || projectId.startsWith('demo-'));
     const app =
       getApps().length > 0
         ? getApp()
         : initializeApp({
-            credential: resolved.credential,
+            ...(isEmulator ? {} : { credential: resolved.credential }),
             projectId,
             storageBucket,
           });
 
-    const firestore =
-      databaseId !== '(default)'
+    const firestore = isEmulator
+      ? getFirestore(app)
+      : databaseId !== '(default)'
         ? initializeFirestore(app, { preferRest: true }, databaseId)
         : initializeFirestore(app, { preferRest: true });
 

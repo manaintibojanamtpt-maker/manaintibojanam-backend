@@ -288,14 +288,16 @@ export class SarvamStreamingSttProvider implements IStreamingSttProvider {
     this.apiKey = options.apiKey.trim().replace(/^["']|["']$/g, '');
     this.baseUrl = (options.baseUrl || 'https://api.sarvam.ai').replace(/\/$/, '');
     this.model = normalizeStreamingSttModel(options.model);
-    this.defaultLanguage = (options.defaultLanguage || 'unknown').replace(/^["']|["']$/g, '').trim();
+    this.defaultLanguage = (options.defaultLanguage || 'auto').replace(/^["']|["']$/g, '').trim();
     this.maxBufferedBytes = options.maxBufferedBytes || DEFAULT_MAX_BUFFERED_BYTES;
     this.maxReconnectRetries = options.maxReconnectRetries ?? DEFAULT_MAX_RETRIES;
     this.reconnectBaseDelayMs = options.reconnectBaseDelayMs ?? DEFAULT_BASE_DELAY_MS;
   }
 
   public async startStreamingSession(options?: StreamingSttOptions): Promise<IStreamingSttSession> {
-    const language = (options?.language?.trim() || this.defaultLanguage).replace(/^["']|["']$/g, '').trim();
+    const rawLanguage = (options?.language?.trim() || this.defaultLanguage).replace(/^["']|["']$/g, '').trim();
+    // Sarvam realtime STT endpoint (/speech-to-text-realtime/ws) uses 'auto' for auto-detection (whereas REST batch uses 'unknown')
+    const language = (!rawLanguage || rawLanguage.toLowerCase() === 'unknown') ? 'auto' : rawLanguage;
     const model = normalizeStreamingSttModel(options?.model || this.model);
     const wsBaseUrl = this.baseUrl.replace(/^http/i, 'ws');
     const wsUrl = `${wsBaseUrl}/speech-to-text-realtime/ws?language_code=${encodeURIComponent(

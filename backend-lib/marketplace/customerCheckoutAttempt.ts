@@ -5,9 +5,10 @@ export function checkoutAttemptRef(db: Firestore, uid: string, id: string) {
   if (!uid || !/^[a-zA-Z0-9_-]{16,128}$/.test(id)) throw Object.assign(new Error('Authenticated checkout attempt required'), { statusCode: 400 });
   return db.collection('customer_checkout_attempts').doc(createHash('sha256').update(uid + ':' + id).digest('hex'));
 }
+const canonical = (v: any): any => Array.isArray(v) ? v.map(canonical) : v && typeof v === 'object'
+  ? Object.fromEntries(Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => [k, canonical(v[k])])) : v;
+
 export function checkoutRequestHash(value: unknown): string {
-  const canonical = (v: any): any => Array.isArray(v) ? v.map(canonical) : v && typeof v === 'object'
-    ? Object.fromEntries(Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => [k, canonical(v[k])])) : v;
   return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 }
 export async function readCheckoutReplay<T>(db: Firestore, uid: string, id: string, request: unknown): Promise<T | null> {
@@ -29,7 +30,7 @@ export async function commitCheckoutAttempt<T>(db: Firestore, uid: string, id: s
       return previous.data()!.result as T;
     }
     write(tx);
-    tx.create(ref, { userId: uid, hash, result, createdAt: new Date().toISOString() });
+    tx.create(ref, { userId: uid, hash, result: canonical(result), createdAt: new Date().toISOString() });
     return result;
   });
 }

@@ -1104,7 +1104,7 @@ export function registerMarketplaceRoutes(
           error: { code: 'INVALID', message: 'phone query parameter is required', retryable: false },
         });
       }
-      const tracking = await getGuestTrackingForGuest(db, orderId, phone, FieldValue);
+      const tracking = await getMarketplaceTrackingForGuest(db, orderId, phone, FieldValue);
       if (!tracking) {
         return res.status(404).json(notFound('Order not found'));
       }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Development transport exception for local emulator / ADB reverse testing ONLY.
+         Gradle merges this manifest ONLY into debug builds. Release builds ignore src/debug. -->
+    <application
+        android:usesCleartextTraffic="true" />
+</manifest>
