@@ -69,6 +69,8 @@ export interface BillQuote {
   deliveryDecision?: DeliveryDecision;
   freeDeliveryApplied?: boolean;
   tenantSubsidy?: number | null;
+  items?: MarketplaceQuoteLine[];
+  lines?: MarketplaceQuoteLine[];
 }
 
 export interface CheckoutSchedulingContext {
@@ -182,10 +184,18 @@ async function loadTenantByRestaurantId(db: Firestore, restaurantId: string) {
   return null;
 }
 
+export interface MenuVariantPriceInfo {
+  variantId: string;
+  price: number;
+  name: string;
+  isAvailable: boolean;
+}
+
 export interface MenuItemPriceInfo {
   price: number;
   name: string;
-  variants?: Map<string, { price: number; name: string }>;
+  isAvailable: boolean;
+  variants?: Map<string, MenuVariantPriceInfo>;
 }
 
 export type MenuPriceMap = Map<string, MenuItemPriceInfo>;
@@ -195,21 +205,24 @@ async function loadMenuPriceMap(db: Firestore, tenantId: string): Promise<MenuPr
   const map = new Map<string, MenuItemPriceInfo>();
   for (const doc of snapshot.docs) {
     const data = doc.data() as Record<string, unknown>;
-    if (data.isAvailable === false || data.isActive === false) continue;
+    const isItemActive = data.isActive !== false;
+    const isItemAvailable = data.isAvailable !== false && isItemActive;
     const basePrice = Number(data.offerPrice ?? data.price ?? 0);
-    const variantsMap = new Map<string, { price: number; name: string }>();
+    const variantsMap = new Map<string, MenuVariantPriceInfo>();
     if (Array.isArray(data.variants)) {
       data.variants.forEach((v: any, index: number) => {
         if (!v || typeof v !== 'object') return;
         const vId = String(v.variantId ?? v.id ?? `var_${doc.id}_${index}`).trim();
         const vPrice = Number(v.offerPrice ?? v.price ?? basePrice);
         const vName = String(v.displayName ?? v.name ?? v.label ?? 'Option').trim();
-        variantsMap.set(vId, { price: vPrice, name: vName });
+        const vAvailable = v.isAvailable !== false && v.isActive !== false && isItemAvailable;
+        variantsMap.set(vId, { variantId: vId, price: vPrice, name: vName, isAvailable: vAvailable });
       });
     }
     map.set(doc.id, {
       price: basePrice,
       name: String(data.name ?? 'Item'),
+      isAvailable: isItemAvailable,
       variants: variantsMap.size > 0 ? variantsMap : undefined,
     });
   }
@@ -362,16 +375,38 @@ async function buildMarketplaceQuoteContext(
     if (!menuItem) {
       throw Object.assign(new Error(`Menu item not found: ${itemId}`), { statusCode: 400 });
     }
+    if (!menuItem.isAvailable) {
+      throw Object.assign(new Error(`Item '${menuItem.name}' is currently unavailable`), { statusCode: 400 });
+    }
+
+    const hasVariants = Boolean(menuItem.variants && menuItem.variants.size > 0);
     const variantId = typeof line.variantId === 'string' && line.variantId.trim() ? line.variantId.trim() : undefined;
-    const variant = variantId && menuItem.variants ? menuItem.variants.get(variantId) : undefined;
-    const unitPrice = variant ? variant.price : Number(line.unitPrice ?? menuItem.price);
+
+    if (hasVariants && !variantId) {
+      throw Object.assign(new Error(`Variant selection is required for '${menuItem.name}'`), { statusCode: 400 });
+    }
+
+    let variant: MenuVariantPriceInfo | undefined;
+    if (variantId) {
+      variant = menuItem.variants?.get(variantId);
+      if (!variant) {
+        throw Object.assign(new Error(`Variant '${variantId}' is not valid for item '${menuItem.name}'`), { statusCode: 400 });
+      }
+      if (!variant.isAvailable) {
+        throw Object.assign(new Error(`Variant '${variant.name}' of '${menuItem.name}' is currently unavailable`), { statusCode: 400 });
+      }
+    }
+
+    // Canonical server-side name and price strictly enforce security (client overrides are ignored)
+    const canonicalName = variant ? `${menuItem.name} (${variant.name})` : menuItem.name;
+    const unitPrice = variant ? variant.price : menuItem.price;
     subtotal += unitPrice * quantity;
     resolvedLines.push({
       itemId,
       quantity,
       unitPrice,
-      variantId,
-      name: line.name ?? (variant ? `${menuItem.name} (${variant.name})` : menuItem.name),
+      ...(variantId ? { variantId } : {}),
+      name: canonicalName,
     });
   }
 
@@ -441,6 +476,8 @@ async function buildMarketplaceQuoteContext(
       deliveryDecision,
       freeDeliveryApplied: deliveryDecision.freeDelivery.isFreeDelivery,
       tenantSubsidy: deliveryDecision.subsidy.tenantSubsidy,
+      items: resolvedLines,
+      lines: resolvedLines,
     },
   };
 }
@@ -561,14 +598,15 @@ function buildResolvedOrderItems(
     const menuItem = menuPrices.get(itemId);
     const variantId = typeof line.variantId === 'string' && line.variantId.trim() ? line.variantId.trim() : undefined;
     const variant = variantId && menuItem?.variants ? menuItem.variants.get(variantId) : undefined;
-    const unitPrice = variant ? variant.price : Number(line.unitPrice ?? menuItem?.price ?? 0);
+    const unitPrice = variant ? variant.price : Number(menuItem?.price ?? 0);
+    const canonicalName = variant ? `${menuItem?.name ?? 'Item'} (${variant.name})` : (menuItem?.name ?? 'Item');
     const lineSubtotal = unitPrice * quantity;
     const lineTax = Math.round((lineSubtotal * quote.gstPercent) / 100);
     return {
       menuItemId: itemId,
       itemId,
-      variantId,
-      name: line.name ?? (variant ? `${menuItem?.name ?? 'Item'} (${variant.name})` : (menuItem?.name ?? 'Item')),
+      ...(variantId ? { variantId } : {}),
+      name: canonicalName,
       unitPrice,
       price: unitPrice,
       quantity,
