@@ -223,6 +223,26 @@ function resolveOrderTrackingEtaMinutes(
 ): { min: number; max: number } | undefined {
   if (isTerminal) return undefined;
 
+  const deliveryType =
+    data.deliveryType === 'scheduled'
+      ? 'scheduled'
+      : data.deliveryType === 'asap'
+        ? 'asap'
+        : undefined;
+  const scheduledFor =
+    typeof data.scheduledFor === 'string' && data.scheduledFor.trim()
+      ? data.scheduledFor.trim()
+      : undefined;
+  const isScheduled = deliveryType === 'scheduled' || Boolean(scheduledFor);
+  const upperStatus = String(status || '').toUpperCase();
+  const isDispatched = upperStatus === 'OUT_FOR_DELIVERY' || upperStatus === 'DISPATCHED';
+
+  // Scheduled orders must NOT receive an ASAP ETA prior to actual dispatch,
+  // even if stored ETA fields exist on the order document.
+  if (isScheduled && !isDispatched) {
+    return undefined;
+  }
+
   // 1. Check data.etaMinutes if already an object with valid numbers
   if (data.etaMinutes && typeof data.etaMinutes === 'object' && !Array.isArray(data.etaMinutes)) {
     const rawEta = data.etaMinutes as Record<string, unknown>;
@@ -254,8 +274,7 @@ function resolveOrderTrackingEtaMinutes(
   }
 
   // 3. Fallback based on operational status: 20-min kitchen prep + travel
-  const upperStatus = String(status || '').toUpperCase();
-  if (upperStatus === 'OUT_FOR_DELIVERY' || upperStatus === 'DISPATCHED') {
+  if (isDispatched) {
     return { min: 10, max: 20 };
   }
   // Placed, Accepted, Preparing: 20 min kitchen prep + 5-15 min travel window
@@ -318,6 +337,16 @@ export function projectOrderTracking(
     orderNumber,
     status,
     paymentStatus: String(data.paymentStatus ?? 'pending'),
+    deliveryType:
+      data.deliveryType === 'scheduled'
+        ? 'scheduled'
+        : data.deliveryType === 'asap'
+          ? 'asap'
+          : undefined,
+    scheduledFor:
+      typeof data.scheduledFor === 'string' && data.scheduledFor.trim()
+        ? data.scheduledFor.trim()
+        : undefined,
     expiresAt,
     timeline,
     etaMinutes: resolveOrderTrackingEtaMinutes(data, isTerminal, status),
