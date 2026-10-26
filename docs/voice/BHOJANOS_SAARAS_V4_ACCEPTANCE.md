@@ -5,23 +5,25 @@
 **Production Origin:** `https://manaintibojanam-backend.onrender.com`  
 **Firebase Project:** `bhojanos-prod` (Database ID: `(default)`)  
 **Model:** Sarvam AI `saaras:v4`  
-**Deployment Timestamp:** October 26, 2026, 23:54:15 IST  
-**Status:** IMPLEMENTED, TESTED & VERIFIED (Branch Promotion to Render Main Pending)  
+**Deployment Commit:** `783dcfa` (Promoted and Deployed to Render `origin/main`)  
+**Deployment Timestamp:** October 27, 2026, 00:04:44 IST  
+**Status:** DEPLOYED AND VERIFIED  
 
 ---
 
-## 1. Executive Summary & Production Status Distinction
+## 1. Executive Summary & Production Status
 
-This report documents the verification, live cloud smoke testing, and deployment readiness for BhojanOS SaaS voice capabilities powered by Sarvam `saaras:v4`.
+This report documents the completed production rollout and live cloud verification for BhojanOS SaaS voice capabilities powered by Sarvam `saaras:v4`.
 
-### Current Deployment State vs. Working Branch
-- **Live Running Deployment on Render**: Build commit `c66ad21` (`platform.tier: "free"`).
-  - Verified live: `/api/health` reports `status: "ok"`, `projectId: "bhojanos-prod"`.
-  - Verified live: `/api/voice/stt` is active and successfully calling Sarvam AI speech-to-text with secret `SARVAM_API_KEY` (1062ms server latency).
-- **Tested Local Working Branch**: Branch `review/phaseb-projection-grants`.
-  - Implemented: Multi-tenant voice routes (`bhojanOsVoiceRoutes.ts`), POS billing draft generation (`/pos-draft`), kitchen command proposals (`/kitchen-command`), domain keyterm biasing helper (`voiceKeyterms.ts`), and `/api/voice/transcribe` alias.
-  - Verification: 42/42 voice tests passing, 216/216 order command tests passing, full server build (`dist-server/server.cjs`, 6.6MB) successful.
-  - **Promotion Action Pending**: Promoting/merging branch `review/phaseb-projection-grants` into `origin/main` to trigger the automated Render production deployment.
+### Live Deployment State
+- **Live Running Deployment on Render**: Build commit `783dcfa` (`platform.tier: "free"`).
+  - Verified live: `GET /api/health` reports `status: "ok"`, `platform.build: "783dcfa"`, `projectId: "bhojanos-prod"`.
+  - Verified live: `POST /api/voice/transcribe` returns `200 OK`, `model: "saaras:v4"`, upstream tracking `requestId: "20261026_34028149-0339-420f-b148-f2a277633607"`, `keytermsUsedCount: 3`.
+  - Verified live: Tenant voice routes (`/api/v1/tenants/:tenantId/voice/transcribe`, `/pos-draft`, `/kitchen-command`) enforce authentication and tenant authorization guards (returning HTTP 401 for unauthorized callers).
+- **Automated Verification**:
+  - Voice test suite: 93/93 PASS
+  - Orders & POS billing test suite: 216/216 PASS
+  - Full server build (`dist-server/server.cjs`, 6.6MB): Successful
 
 ---
 
@@ -32,7 +34,8 @@ This report documents the verification, live cloud smoke testing, and deployment
 | **Output Server Bundle** | `dist-server/server.cjs` |
 | **Bundle Toolchain** | Node.js 20 CJS bundle via `esbuild server.ts --bundle --platform=node` |
 | **Bundle Size** | `6.6 MB` |
-| **Build Status** | Successful in 6.45s (preceded by Vite web build in 56.30s) |
+| **Deployed Commit** | `783dcfa` |
+| **Git Remote** | `https://github.com/manaintibojanamtpt-maker/manaintibojanam-backend.git` (`origin/main`) |
 | **Target Runtime** | Node.js 20 LTS on Render Linux container |
 
 ---
