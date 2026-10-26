@@ -51,6 +51,9 @@ export interface SttRequest {
   readonly language?: string;
   readonly prompt?: string;
   readonly withDiarization?: boolean;
+  readonly keyterms?: readonly string[];
+  readonly withTimestamps?: boolean;
+  readonly inputAudioCodec?: string;
 }
 
 export interface SttResult {
@@ -59,6 +62,12 @@ export interface SttResult {
   readonly confidence?: number;
   readonly isFinal: boolean;
   readonly provider: string;
+  readonly requestId?: string;
+  readonly timestamps?: {
+    readonly words: readonly string[];
+    readonly start_time_seconds: readonly number[];
+    readonly end_time_seconds: readonly number[];
+  };
   readonly metadata?: Record<string, unknown>;
 }
 

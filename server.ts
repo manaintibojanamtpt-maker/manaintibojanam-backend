@@ -114,6 +114,7 @@ import { registerAiGatewayRoutes } from "./backend-lib/ai/registerAiGatewayRoute
 import { createServer } from "http";
 import { createVoiceTtsRoute } from "./backend-lib/api/routes/voiceTtsRoute.js";
 import { createVoiceSttRoute } from "./backend-lib/voice/voiceSttRoute.js";
+import { registerBhojanOsVoiceRoutes } from "./backend-lib/voice/bhojanOsVoiceRoutes.js";
 import { setupVoiceGatewayWebSocket } from "./backend-lib/voice/voiceGatewayWs.js";
 import { processVoiceAssistantTurn } from "./backend-lib/voice/voiceTurnProcessor.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
@@ -3721,7 +3722,13 @@ registerAiGatewayRoutes(app, {
 });
 
 app.use('/api/voice', optionalFirebaseToken, createVoiceTtsRoute());
-app.use('/api/voice', optionalFirebaseToken, createVoiceSttRoute());
+app.use('/api/voice', optionalFirebaseToken, createVoiceSttRoute({ db }));
+registerBhojanOsVoiceRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
