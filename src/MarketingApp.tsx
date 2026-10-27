@@ -86,7 +86,7 @@ export default function MarketingApp() {
 
   return (
     <BrowserRouter>
-      <LenisScrollWrapper className="min-h-screen bg-[#030303] flex flex-col">
+      <LenisScrollWrapper className="min-h-screen bg-[#030303] flex flex-col pb-[env(safe-area-inset-bottom,0.75rem)]">
         <MarketingWhatsAppFloat />
         {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
         <MarketingAssistantRoot />

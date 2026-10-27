@@ -945,6 +945,11 @@ body {
 
 /* ── Directoo-style Card Enhancements ── */
 
+/* Ensure global safe-area-bottom for sticky/fixed elements across all pages */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+}
+
 /* Top-edge specular highlight */
 .card-specular-top::before {
   content: '';
