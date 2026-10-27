@@ -98,23 +98,67 @@ self.addEventListener('message', (event) => {
 
 // Fallback for navigation requests (SPA routing).
 // Vercel renames the app shell to app.html; Capacitor/Firebase keep index.html.
+//
+// IMPORTANT: serve the cached shell FIRST, refresh in the background.
+// A network-first navigation route blocks the page on a cold connection —
+// mobile users see a blank screen for minutes until the fetch resolves or
+// fails. Stale-while-revalidate returns the cached shell instantly and
+// updates it asynchronously, so the page always paints immediately.
 registerRoute(
   new NavigationRoute(async ({ request }) => {
+    const url = new URL(request.url);
+    const marketingPath =
+      url.pathname === '/' ||
+      /\/(onboard|pricing|about|platform|security|contact|blog)\/?$/.test(url.pathname);
+    const candidates = marketingPath
+      ? ['/marketing.html', '/index.html', '/app.html']
+      : ['/app.html', '/index.html', '/marketing.html'];
+
+    // Try the cached shell first — instant paint, no network dependency.
+    for (const path of candidates) {
+      const cached = await caches.match(path);
+      if (cached) {
+        // Refresh the shell in the background; never block the response.
+        // Workbox's precacheAndRoute handles cache updates for the shell
+        // assets — we just need the network attempt to not stall the page.
+        const backgroundRefresh = fetch(request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              // Re-cache the fresh shell in whichever cache already holds it,
+              // so the next visit is current. Iterate all caches — we don't
+              // rely on Workbox's internal cache name being stable.
+              return caches.keys().then((names) =>
+                Promise.all(
+                  names.map(async (name) => {
+                    const cache = await caches.open(name);
+                    if (await cache.match(path)) {
+                      await cache.put(request, response.clone());
+                    }
+                  })
+                )
+              );
+            }
+          })
+          .catch(() => { /* network failed — cached shell already served */ });
+        // Hard cap: a hung connection must never delay the page.
+        Promise.race([
+          backgroundRefresh,
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]).catch(() => {});
+        return cached;
+      }
+    }
+
+    // No cached shell — fall back to the network with a timeout.
     try {
-      const response = await fetch(request);
+      const response = await Promise.race([
+        fetch(request),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('navigation timeout')), 4000)
+        ),
+      ]);
       return response;
     } catch {
-      const url = new URL(request.url);
-      const marketingPath =
-        url.pathname === '/' ||
-        /\/(onboard|pricing|about|platform|security|contact|blog)\/?$/.test(url.pathname);
-      const candidates = marketingPath
-        ? ['/marketing.html', '/index.html', '/app.html']
-        : ['/app.html', '/index.html', '/marketing.html'];
-      for (const path of candidates) {
-        const cached = await caches.match(path);
-        if (cached) return cached;
-      }
       return Response.error();
     }
   })
