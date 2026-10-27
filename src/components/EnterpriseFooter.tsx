@@ -73,12 +73,12 @@ export const EnterpriseFooter: React.FC = () => {
   };
 
   return (
-    <footer className="bg-[#070504] border-t border-white/[0.06]">
+    <footer className="bg-[#070504] border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_2fr] gap-12 lg:gap-16 mb-14">
           <div>
             <span className="font-display text-white font-bold text-2xl tracking-tight block mb-4">
-              Bhojan<span className="text-[#FF7A00]">OS</span>
+              Bhojan<span className="text-[#D9852F]">OS</span>
             </span>
             <p className="text-sm text-neutral-400 leading-relaxed max-w-sm mb-3">
               The operating platform for food businesses.
@@ -90,7 +90,7 @@ export const EnterpriseFooter: React.FC = () => {
               href={orderBhojanPublic.homeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF7A00] text-sm font-bold text-white hover:bg-[#E56D00] transition-colors shadow-[0_8px_28px_-8px_rgba(255,122,0,0.5)] mb-8"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D9852F] text-sm font-bold text-white hover:bg-[#b8702a] transition-colors shadow-[0_8px_28px_-8px_rgba(255,122,0,0.5)] mb-8"
             >
               <ShoppingBag size={15} aria-hidden />
               Order Food
@@ -102,7 +102,7 @@ export const EnterpriseFooter: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="BhojanOS on LinkedIn"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#D9852F] hover:border-[#D9852F]/30 transition-colors min-h-0 min-w-0"
                 >
                   <Linkedin size={18} />
                 </a>
@@ -113,7 +113,7 @@ export const EnterpriseFooter: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="BhojanOS on Twitter"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#D9852F] hover:border-[#D9852F]/30 transition-colors min-h-0 min-w-0"
                 >
                   <Twitter size={18} />
                 </a>
@@ -121,7 +121,7 @@ export const EnterpriseFooter: React.FC = () => {
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
                 aria-label="Email BhojanOS"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#FF7A00] hover:border-[#FF7A00]/30 transition-colors min-h-0 min-w-0"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-neutral-400 hover:text-[#D9852F] hover:border-[#D9852F]/30 transition-colors min-h-0 min-w-0"
               >
                 <Mail size={18} />
               </a>
@@ -140,7 +140,7 @@ export const EnterpriseFooter: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@restaurant.com"
-                className="flex-1 min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-[#FF7A00]/40"
+                className="flex-1 min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-[#D9852F]/40"
               />
               <SoftButton type="submit" tone="primary" size="compact">
                 Subscribe
@@ -160,7 +160,7 @@ export const EnterpriseFooter: React.FC = () => {
                   <li key={link.label}>
                     <Link
                       to={link.to}
-                      className="text-neutral-400 hover:text-[#FF7A00] text-sm font-medium transition-colors"
+                      className="text-neutral-400 hover:text-[#D9852F] text-sm font-medium transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -172,7 +172,7 @@ export const EnterpriseFooter: React.FC = () => {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-neutral-400 hover:text-[#FF7A00] text-sm font-medium transition-colors"
+                      className="text-neutral-400 hover:text-[#D9852F] text-sm font-medium transition-colors"
                     >
                       {link.label} ↗
                     </a>

@@ -22,7 +22,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Restaurant Technology',
     readTime: '6 min read',
     excerpt: 'Step-by-step guide to setting up a direct online ordering website, integrating Razorpay UPI payments, configuring delivery zones, and launching without writing a single line of code.',
-    icon: <Store className="text-[#FF7A00]" size={20} />,
+    icon: <Store className="text-[#D9852F]" size={20} />,
     primaryLink: '/restaurant-online-ordering',
     primaryAnchor: 'Explore BhojanOS Online Ordering System',
   },
@@ -32,7 +32,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Commission Economics',
     readTime: '8 min read',
     excerpt: 'A financial breakdown of how 25% marketplace commissions erode restaurant profit margins, and how shifting 30% of repeat diners to a direct storefront saves over ₹60,000 monthly.',
-    icon: <DollarSign className="text-[#FF7A00]" size={20} />,
+    icon: <DollarSign className="text-[#D9852F]" size={20} />,
     primaryLink: '/bhojanos-vs-zomato-swiggy',
     primaryAnchor: 'Compare BhojanOS vs Aggregators',
   },
@@ -42,7 +42,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Commission Economics',
     readTime: '7 min read',
     excerpt: 'Understand why customer data masking prevents sustainable restaurant valuations, and how forward-thinking food businesses use packaging inserts to convert Zomato diners into direct buyers.',
-    icon: <Shield className="text-[#FF7A00]" size={20} />,
+    icon: <Shield className="text-[#D9852F]" size={20} />,
     primaryLink: '/bhojanos-vs-zomato-swiggy',
     primaryAnchor: 'Compare BhojanOS vs Zomato & Swiggy',
   },
@@ -52,7 +52,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Restaurant Marketing',
     readTime: '9 min read',
     excerpt: 'Actionable marketing strategies: Google Business Profile optimization, delivery bag flyers with QR coupons, Instagram ordering links, and automated WhatsApp reorder triggers.',
-    icon: <TrendingUp className="text-[#FF7A00]" size={20} />,
+    icon: <TrendingUp className="text-[#D9852F]" size={20} />,
     primaryLink: '/direct-ordering-platform',
     primaryAnchor: 'Explore Direct Ordering Platform',
   },
@@ -62,7 +62,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Operations & Margins',
     readTime: '5 min read',
     excerpt: 'Why top cloud kitchens and restaurant chains adopt a hybrid distribution model: leveraging aggregators for top-of-funnel discovery while fulfilling repeat orders through direct software.',
-    icon: <DollarSign className="text-[#FF7A00]" size={20} />,
+    icon: <DollarSign className="text-[#D9852F]" size={20} />,
     primaryLink: '/pricing',
     primaryAnchor: 'See Transparent BhojanOS Pricing',
   },
@@ -72,7 +72,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Strategy & Brand',
     readTime: '6 min read',
     excerpt: 'The long-term danger of being a nameless kitchen inside an aggregator app. How customer phone numbers, past order preferences, and direct loyalty unlock predictable revenue.',
-    icon: <Utensils className="text-[#FF7A00]" size={20} />,
+    icon: <Utensils className="text-[#D9852F]" size={20} />,
     primaryLink: '/cloud-kitchen-software',
     primaryAnchor: 'Cloud Kitchen Growth Solutions',
   },
@@ -82,7 +82,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Restaurant Technology',
     readTime: '7 min read',
     excerpt: 'How dine-in restaurants accelerate table turnover, eliminate physical menu printing costs, and increase average order values by 18% using contactless table QR codes.',
-    icon: <QrCode className="text-[#FF7A00]" size={20} />,
+    icon: <QrCode className="text-[#D9852F]" size={20} />,
     primaryLink: '/qr-code-ordering-system',
     primaryAnchor: 'Explore QR Code Ordering System',
   },
@@ -92,7 +92,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Conversational Commerce',
     readTime: '6 min read',
     excerpt: 'How Indian food businesses leverage WhatsApp Business APIs to share digital catalogs, automate order confirmations, and trigger one-tap reorders without manual typing.',
-    icon: <Smartphone className="text-[#FF7A00]" size={20} />,
+    icon: <Smartphone className="text-[#D9852F]" size={20} />,
     primaryLink: '/whatsapp-food-ordering-system',
     primaryAnchor: 'Learn About WhatsApp Ordering',
   },
@@ -102,7 +102,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Software Comparison',
     readTime: '10 min read',
     excerpt: 'Comprehensive comparison of restaurant ordering platforms in India based on commission rates, UPI payment speed, kitchen operations, hardware independence, and total cost of ownership.',
-    icon: <Store className="text-[#FF7A00]" size={20} />,
+    icon: <Store className="text-[#D9852F]" size={20} />,
     primaryLink: '/features',
     primaryAnchor: 'View Complete Feature Matrix',
   },
@@ -112,7 +112,7 @@ const ARTICLES: ArticleItem[] = [
     category: 'Web & Growth',
     readTime: '8 min read',
     excerpt: 'Essential web design principles for food businesses: sub-second mobile load times, mouthwatering food photography, seamless cart checkout, and local SEO ranking factors.',
-    icon: <Store className="text-[#FF7A00]" size={20} />,
+    icon: <Store className="text-[#D9852F]" size={20} />,
     primaryLink: '/restaurant-website-builder',
     primaryAnchor: 'Explore Restaurant Website Builder',
   },
@@ -145,12 +145,12 @@ const BlogPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070504] text-white font-sans selection:bg-[#FF7A00]/20 relative">
+    <div className="min-h-[100dvh] flex flex-col bg-[#070504] text-white font-sans selection:bg-[#D9852F]/20 relative">
       <EnterpriseHeader />
 
       <main className="flex-grow marketing-main-offset pt-10 sm:pt-14 pb-24 px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto w-full">
         <div className="max-w-3xl mx-auto text-center mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FF7A00]/10 border border-[#FF7A00]/30 text-xs font-bold uppercase tracking-wider text-[#FF7A00] mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D9852F]/10 border border-[#D9852F]/30 text-xs font-bold uppercase tracking-wider text-[#D9852F] mb-6">
             <BookOpen size={14} aria-hidden />
             Restaurant Growth &amp; Technology Guides
           </div>
@@ -169,11 +169,11 @@ const BlogPage: React.FC = () => {
           {ARTICLES.map((article) => (
             <article
               key={article.id}
-              className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-7 flex flex-col justify-between hover:border-[#FF7A00]/40 transition-all hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
+              className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-7 flex flex-col justify-between hover:border-[#D9852F]/40 transition-all hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF7A00] bg-[#FF7A00]/10 px-2.5 py-1 rounded-full">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#D9852F] bg-[#D9852F]/10 px-2.5 py-1 rounded-full">
                     {article.category}
                   </span>
                   <span className="text-xs text-white/40 font-medium">{article.readTime}</span>
@@ -191,7 +191,7 @@ const BlogPage: React.FC = () => {
               <div className="pt-4 border-t border-white/[0.06]">
                 <Link
                   to={article.primaryLink}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-[#FF7A00] hover:text-[#FFA040] transition-colors"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-[#D9852F] hover:text-[#FFA040] transition-colors"
                 >
                   {article.primaryAnchor}
                   <ArrowRight size={14} aria-hidden />
@@ -202,7 +202,7 @@ const BlogPage: React.FC = () => {
         </div>
 
         {/* Bottom Banner */}
-        <div className="mt-20 rounded-3xl border border-[#FF7A00]/30 bg-gradient-to-r from-[#120d0a] via-[#1a120b] to-[#0c0806] p-8 sm:p-12 text-center max-w-4xl mx-auto shadow-[0_0_50px_rgba(255,122,0,0.1)]">
+        <div className="mt-20 rounded-3xl border border-[#D9852F]/30 bg-gradient-to-r from-[#120d0a] via-[#1a120b] to-[#0c0806] p-8 sm:p-12 text-center max-w-4xl mx-auto shadow-[0_0_50px_rgba(255,122,0,0.1)]">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
             Ready to Take Control of Your Restaurant Margins?
           </h2>
@@ -213,7 +213,7 @@ const BlogPage: React.FC = () => {
             {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
             <a
               href="/owner/register"
-              className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-[#D9852F] px-8 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#b8702a] transition-colors"
             >
               Start Free Today
               <ArrowRight size={15} aria-hidden />

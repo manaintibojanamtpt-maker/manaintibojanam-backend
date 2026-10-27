@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Star, Plus, Check, ArrowRight } from 'lucide-react';
-import { CINEMATIC_FOOD_CARDS, CINEMATIC_ENV_IMAGES } from '../../config/marketingFoodImages';
+import { CINEMATIC_FOOD_CARDS } from '../../config/marketingFoodImages';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 /**
@@ -8,8 +8,6 @@ import { useScrollReveal } from '../../hooks/useScrollReveal';
  * Cards overlap slightly; mouse position drives subtle perspective tilt.
  * Copy reduced; imagery dominant.
  */
-
-const IMG = CINEMATIC_ENV_IMAGES;
 
 function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]; index: number }) {
   const [added, setAdded] = useState(false);
@@ -47,7 +45,7 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
         href="https://orderbhojan.web.app"
         target="_blank"
         rel="noopener noreferrer"
-        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
+        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D9852F]"
         aria-label={`Order ${item.name} from ${item.restaurant} on OrderBhojan`}
       >
         <div className="cine-photo relative aspect-[3/4] overflow-hidden">
@@ -70,7 +68,7 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
               <p className="mt-0.5 truncate text-[11px] text-white/45">{item.restaurant}</p>
             </div>
             <span className="flex shrink-0 items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-bold text-white/85">
-              <Star size={10} className="fill-[#FF7A00] text-[#FF7A00]" aria-hidden />
+              <Star size={10} className="fill-[#D9852F] text-[#D9852F]" aria-hidden />
               {item.rating}
             </span>
           </div>
@@ -90,7 +88,7 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
         className={`absolute bottom-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full text-black shadow-lg transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
           added
             ? 'scale-110 bg-[#34D399]'
-            : 'bg-[#FF7A00] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(255,122,0,0.55)]'
+            : 'bg-[#D9852F] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(255,122,0,0.55)]'
         }`}
       >
         {added ? <Check size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
@@ -104,14 +102,9 @@ function MiniPhone() {
     <div className="cine-float cine-glass cine-glass-accent cine-phone-hover w-full max-w-[150px] rounded-[20px] p-1.5">
       <div className="rounded-[14px] bg-[#0A0A0A] p-2 text-center">
         <div className="mb-2 text-[10px] font-bold text-white">OrderBhojan</div>
-        <img
-          src={IMG.foodTable.url}
-          alt=""
-          aria-hidden
-          loading="lazy"
-          decoding="async"
-          className="cine-food-img mb-2 h-24 w-full rounded-lg object-cover"
-        />
+        <div className="h-24 rounded-lg bg-gradient-to-br from-[#D9852F]/20 to-[#D9852F]/5 flex items-center justify-center mb-2 border border-white/[0.05]">
+          <span className="text-[10px] text-white/60">Browse Menu</span>
+        </div>
         <div className="text-[9px] text-white/45">Direct to kitchen</div>
       </div>
     </div>
@@ -129,12 +122,12 @@ export function FoodDiscoverySection() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#FF7A00]/[0.06] blur-[120px]"
+        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#D9852F]/[0.06] blur-[120px]"
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center cine-reveal">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#FF7A00]">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#D9852F]">
             For customers
           </p>
           <h2
@@ -166,13 +159,13 @@ export function FoodDiscoverySection() {
         <div className="mt-12 grid items-center gap-8 md:grid-cols-12">
           <div className="md:col-span-4 cine-reveal">
             <h3 className="font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-              Order on <span className="text-[#FF7A00]">OrderBhojan</span>
+              Order on <span className="text-[#D9852F]">OrderBhojan</span>
             </h3>
             <a
               href="https://orderbhojan.web.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#D9852F] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Order Food
               <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />

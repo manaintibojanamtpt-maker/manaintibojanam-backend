@@ -45,7 +45,7 @@ export function ProfileMemberView({
           <button
             key={tile.id}
             type="button"
-            className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-sm font-bold text-white transition hover:border-[#FF7A00]/40"
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-sm font-bold text-white transition hover:border-[#D9852F]/40"
             onClick={() => onQuickTile(tile.id)}
           >
             {tile.label}

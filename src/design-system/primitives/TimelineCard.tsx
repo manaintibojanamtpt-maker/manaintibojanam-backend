@@ -17,13 +17,13 @@ export const TimelineCard: React.FC<TimelineCardProps> = ({
   return (
     <div className="relative flex gap-6 pb-12">
       {!isLast && (
-        <div className="absolute top-10 left-3 bottom-0 w-0.5 bg-gradient-to-b from-[#FF7A00]/50 to-transparent" />
+        <div className="absolute top-10 left-3 bottom-0 w-0.5 bg-gradient-to-b from-[#D9852F]/50 to-transparent" />
       )}
 
-      <div className="relative z-10 w-6 h-6 rounded-full bg-[#0A0A0A] border-4 border-[#FF7A00] flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(255,122,0,0.3)]" />
+      <div className="relative z-10 w-6 h-6 rounded-full bg-[#0A0A0A] border-4 border-[#D9852F] flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(255,122,0,0.3)]" />
 
       <div className="flex-1 min-w-0">
-        <span className="text-[#FF7A00] font-bold tracking-widest uppercase text-sm mb-1 block">
+        <span className="text-[#D9852F] font-bold tracking-widest uppercase text-sm mb-1 block">
           {year}
         </span>
         <h4 className="text-xl font-bold text-white mb-2">{title}</h4>

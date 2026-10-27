@@ -31,7 +31,7 @@ const faqItems = [
 
 const HelpCenterPage: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-[#030303] font-sans text-gray-100">
+    <div className="min-h-[100dvh] flex flex-col bg-[#030303] font-sans text-gray-100">
       <EnterpriseHeader />
       <main className="flex-grow marketing-main-offset">
         <MarketingPageHero
@@ -63,33 +63,33 @@ const HelpCenterPage: React.FC = () => {
           {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
           <a
             href="/owner/register"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
+            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
           >
-            <Store className="text-[#FF7A00] mb-3" size={22} />
+            <Store className="text-[#D9852F] mb-3" size={22} />
             <h3 className="font-bold text-white mb-1">Owner onboarding</h3>
             <p className="text-sm text-neutral-500">Register and launch your kitchen in minutes.</p>
           </a>
             <Link
               to="/pricing"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
             >
-              <BookOpen className="text-[#FF7A00] mb-3" size={22} />
+              <BookOpen className="text-[#D9852F] mb-3" size={22} />
               <h3 className="font-bold text-white mb-1">Plans & pricing</h3>
               <p className="text-sm text-neutral-500">Growth trial and subscription options.</p>
             </Link>
             {/* Cross-shell navigation: /owner/feedback lives in the app shell (full page load required — MarketingApp has no owner routes). */}
             <a
               href="/owner/feedback"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF7A00]/40 transition-colors"
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
             >
-              <Bug className="text-[#FF7A00] mb-3" size={22} />
+              <Bug className="text-[#D9852F] mb-3" size={22} />
               <h3 className="font-bold text-white mb-1">Report a bug</h3>
               <p className="text-sm text-neutral-500">Owners can submit feedback from the dashboard.</p>
             </a>
           </div>
 
           <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
-            <FileQuestion size={20} className="text-[#FF7A00]" />
+            <FileQuestion size={20} className="text-[#D9852F]" />
             Frequently asked questions
           </h2>
           <div className="space-y-3">
@@ -110,15 +110,15 @@ const HelpCenterPage: React.FC = () => {
           <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center">
             <p className="text-sm text-neutral-400 mb-4">
               Legal & policies:{' '}
-              <Link to="/terms" className="text-[#FF7A00] hover:underline">Terms</Link>
+              <Link to="/terms" className="text-[#D9852F] hover:underline">Terms</Link>
               {' · '}
-              <Link to="/privacy" className="text-[#FF7A00] hover:underline">Privacy</Link>
+              <Link to="/privacy" className="text-[#D9852F] hover:underline">Privacy</Link>
               {' · '}
-              <Link to="/refund-policy" className="text-[#FF7A00] hover:underline">Refund</Link>
+              <Link to="/refund-policy" className="text-[#D9852F] hover:underline">Refund</Link>
               {' · '}
-              <Link to="/cancellation-policy" className="text-[#FF7A00] hover:underline">Cancellation</Link>
+              <Link to="/cancellation-policy" className="text-[#D9852F] hover:underline">Cancellation</Link>
             </p>
-            <Link to="/contact" className="text-sm font-bold text-white hover:text-[#FF7A00]">
+            <Link to="/contact" className="text-sm font-bold text-white hover:text-[#D9852F]">
               Contact our team →
             </Link>
           </div>

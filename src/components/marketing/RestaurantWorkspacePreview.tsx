@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 ];
 
 const ORDER_LANES = [
-  { label: 'Incoming', tint: 'border-[#FF7A00]/30 text-[#FF7A00]', dot: 'bg-[#FF7A00]' },
+  { label: 'Incoming', tint: 'border-[#D9852F]/30 text-[#D9852F]', dot: 'bg-[#D9852F]' },
   { label: 'Preparing', tint: 'border-amber-500/30 text-amber-400', dot: 'bg-amber-500' },
   { label: 'Ready', tint: 'border-emerald-500/30 text-emerald-400', dot: 'bg-emerald-500' },
   { label: 'Completed', tint: 'border-white/[0.12] text-neutral-500', dot: 'bg-neutral-600' },
@@ -43,7 +43,7 @@ export const RestaurantWorkspacePreview = memo(function RestaurantWorkspacePrevi
     <Section id="restaurants" background="default" className="scroll-mt-24">
 <div className="max-w-4xl mx-auto">
         <div
-          className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-[#FF7A00]/[0.04] blur-[80px]"
+          className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-[#D9852F]/[0.04] blur-[80px]"
           aria-hidden
         />
         <div className="relative rounded-[1.5rem] border border-white/[0.06] overflow-hidden shadow-[0_40px_80px_-32px_rgba(0,0,0,0.8)] bg-[#070504]">
@@ -64,13 +64,13 @@ export const RestaurantWorkspacePreview = memo(function RestaurantWorkspacePrevi
             {/* Sidebar */}
             <aside className="hidden sm:flex flex-col gap-0.5 border-r border-white/[0.05] bg-[#0A0A0A]/60 p-2 w-40" aria-label="BhojanOS workspace navigation">
               <span className="px-2.5 pt-1.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-neutral-600">
-                Bhojan<span className="text-[#FF7A00]">OS</span>
+                Bhojan<span className="text-[#D9852F]">OS</span>
               </span>
               {NAV_ITEMS.map((item, i) => (
                 <div
                   key={item.label}
                   className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold ${
-                    i === 0 ? 'bg-[#FF7A00]/10 text-[#FF7A00]' : 'text-neutral-400 hover:text-white'
+                    i === 0 ? 'bg-[#D9852F]/10 text-[#D9852F]' : 'text-neutral-400 hover:text-white'
                   }`}
                 >
                   <item.icon size={14} aria-hidden />

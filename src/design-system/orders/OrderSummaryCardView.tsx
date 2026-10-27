@@ -3,7 +3,7 @@ import { GlassCard } from '../primitives/GlassCard';
 import type { OrderSummaryCardViewModel } from './types';
 
 const statusToneClass: Record<OrderSummaryCardViewModel['statusTone'], string> = {
-  active: 'bg-[#FF7A00]/15 text-[#FF7A00]',
+  active: 'bg-[#D9852F]/15 text-[#D9852F]',
   complete: 'bg-emerald-500/15 text-emerald-300',
   cancelled: 'bg-red-500/15 text-red-300',
 };
@@ -26,7 +26,7 @@ export function OrderSummaryCardView({ order, onSelect }: OrderSummaryCardViewPr
           onSelect();
         }
       }}
-      className="cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]/50"
+      className="cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#D9852F]/50"
     >
       <GlassCard hoverEffect className="!rounded-2xl !p-4 transition hover:border-white/20">
         <div className="flex items-start justify-between gap-3">
@@ -43,7 +43,7 @@ export function OrderSummaryCardView({ order, onSelect }: OrderSummaryCardViewPr
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
           <span className="text-lg font-extrabold text-white">{order.totalLabel}</span>
-          <span className="inline-flex items-center gap-0.5 text-sm font-semibold text-[#FF7A00]">
+          <span className="inline-flex items-center gap-0.5 text-sm font-semibold text-[#D9852F]">
             {order.trackLabel}
             <ChevronRight className="h-4 w-4" aria-hidden />
           </span>

@@ -34,7 +34,7 @@ export const Section: React.FC<SectionProps> = ({
     <section id={id} className={`w-full ${densityClasses} relative ${bgClasses[background]} ${className}`}>
       {background === 'gradient' && (
         <>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[480px] bg-gradient-to-b from-[#FF7A00]/[0.05] via-[#FF7A00]/[0.01] to-transparent blur-[100px] pointer-events-none" />
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[480px] bg-gradient-to-b from-[#D9852F]/[0.05] via-[#D9852F]/[0.01] to-transparent blur-[100px] pointer-events-none" />
         </>
       )}
               <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

@@ -53,7 +53,7 @@ const MarketingShell = () => (
       <div className="h-4 w-32 rounded bg-white/[0.06] animate-pulse mb-6" />
       <div className="h-12 w-full max-w-xl rounded bg-white/[0.06] animate-pulse mb-4" />
       <div className="h-12 w-full max-w-lg rounded bg-white/[0.06] animate-pulse mb-8" />
-      <div className="h-11 w-44 rounded-xl bg-[#FF7A00]/20 animate-pulse" />
+      <div className="h-11 w-44 rounded-xl bg-[#D9852F]/20 animate-pulse" />
     </main>
   </div>
 );
@@ -68,11 +68,12 @@ function prefetchMarketingRoutes() {
     void import('./pages/marketing/PlatformPage');
     void import('./pages/OnboardKitchen');
   };
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+  const win = typeof window !== 'undefined' ? window : null;
+  if (win && 'requestIdleCallback' in win) {
+    (win as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
       .requestIdleCallback(run, { timeout: 3500 });
   } else {
-    window.setTimeout(run, 1500);
+    win?.setTimeout(run, 1500);
   }
 }
 

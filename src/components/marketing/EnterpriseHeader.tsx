@@ -55,7 +55,7 @@ export const EnterpriseHeader: React.FC = () => {
             />
           </div>
           <span className="text-lg sm:text-xl font-bold tracking-tight leading-snug text-white truncate">
-            Bhojan<span className="text-[#FF7A00]">OS</span>
+            Bhojan<span className="text-[#D9852F]">OS</span>
           </span>
         </Link>
 
@@ -78,7 +78,7 @@ export const EnterpriseHeader: React.FC = () => {
                 <Link to="/digital-menu-for-restaurants" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-white text-xs font-medium">Digital Menu</Link>
                 <Link to="/delivery-management-software" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-white text-xs font-medium">Delivery Management</Link>
                 <div className="my-1 border-t border-white/5" />
-                <Link to="/features" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-[#FF7A00] text-xs font-semibold">All Platform Features →</Link>
+                <Link to="/features" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-[#D9852F] text-xs font-semibold">All Platform Features →</Link>
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@ export const EnterpriseHeader: React.FC = () => {
             href={orderBhojanPublic.homeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold hover:bg-[#FF7A00]/15 transition-colors"
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-[#D9852F]/40 bg-[#D9852F]/10 text-[#D9852F] text-sm font-bold hover:bg-[#D9852F]/15 transition-colors"
           >
             <ShoppingBag size={15} aria-hidden />
             Order Food
@@ -174,7 +174,7 @@ export const EnterpriseHeader: React.FC = () => {
       {mobileMenuOpen ? (
       <div
         id="marketing-mobile-menu"
-        className="marketing-mobile-menu open lg:hidden border-t border-white/[0.06] bg-[#030303] max-h-[80vh] overflow-y-auto"
+        className="marketing-mobile-menu fixed inset-0 top-16 lg:hidden border-t border-white/[0.06] bg-[#030303] overflow-y-auto"
       >
         <div className="px-4 sm:px-6 py-5 flex flex-col gap-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 pt-1">Products</div>
@@ -213,7 +213,7 @@ export const EnterpriseHeader: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold"
+              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#D9852F]/40 bg-[#D9852F]/10 text-[#D9852F] text-sm font-bold"
             >
               <ShoppingBag size={15} aria-hidden />
               Order Food

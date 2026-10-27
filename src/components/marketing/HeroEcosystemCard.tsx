@@ -45,7 +45,7 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
     <div className="relative w-full max-w-md mx-auto lg:max-w-none" aria-label="BhojanOS ecosystem overview">
       {/* Soft orange glow behind the card */}
       <div
-        className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-[#FF7A00]/[0.07] blur-3xl"
+        className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-[#D9852F]/[0.07] blur-3xl"
         aria-hidden
       />
 
@@ -53,7 +53,7 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
         {/* Card header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-white/[0.06] bg-[#080808]/90">
           <span className="text-sm font-black text-white tracking-tight">
-            Bhojan<span className="text-[#FF7A00]">OS</span>
+            Bhojan<span className="text-[#D9852F]">OS</span>
           </span>
           <span className="text-[10px] font-mono text-neutral-500">Restaurant → Customer</span>
         </div>
@@ -65,24 +65,24 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
               <div
                 className={`marketing-hero-enter ${ENTER_DELAYS[i]} flex items-center gap-3 rounded-xl border p-3 ${
                   step.highlight
-                    ? 'border-[#FF7A00]/25 bg-[#FF7A00]/[0.07]'
+                    ? 'border-[#D9852F]/25 bg-[#D9852F]/[0.07]'
                     : 'border-white/[0.07] bg-white/[0.02]'
                 }`}
               >
                 <div
                   className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center border ${
                     step.highlight
-                      ? 'bg-[#FF7A00]/15 border-[#FF7A00]/30'
+                      ? 'bg-[#D9852F]/15 border-[#D9852F]/30'
                       : 'bg-white/[0.05] border-white/[0.06]'
                   }`}
                   aria-hidden
                 >
-                  <step.icon size={18} className={step.highlight ? 'text-[#FF7A00]' : 'text-neutral-300'} />
+                  <step.icon size={18} className={step.highlight ? 'text-[#D9852F]' : 'text-neutral-300'} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white leading-tight">{step.label}</p>
                   {step.role ? (
-                    <p className="text-[11px] font-semibold text-[#FF7A00]/90 leading-tight mt-0.5">
+                    <p className="text-[11px] font-semibold text-[#D9852F]/90 leading-tight mt-0.5">
                       {step.role}
                     </p>
                   ) : null}
@@ -91,7 +91,7 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
               </div>
               {i < STEPS.length - 1 && (
                 <div className="flex justify-center py-1" aria-hidden>
-                  <ArrowDown size={14} className="text-[#FF7A00]/70" />
+                  <ArrowDown size={14} className="text-[#D9852F]/70" />
                 </div>
               )}
             </React.Fragment>
@@ -99,7 +99,7 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
 
           {/* Connection statement */}
           <p className="mt-4 text-center text-[11px] sm:text-xs text-neutral-400 leading-relaxed px-1">
-            Orders placed on <span className="text-[#FF7A00] font-semibold">OrderBhojan</span> flow
+            Orders placed on <span className="text-[#D9852F] font-semibold">OrderBhojan</span> flow
             directly to the restaurant&rsquo;s <span className="text-white font-semibold">BhojanOS</span>.
           </p>
         </div>
@@ -110,7 +110,7 @@ export const HeroEcosystemCard = memo(function HeroEcosystemCard() {
             href={orderBhojanPublic.homeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#FF7A00] px-4 py-3 text-white text-sm font-bold hover:bg-[#E56D00] transition-colors"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#D9852F] px-4 py-3 text-white text-sm font-bold hover:bg-[#b8702a] transition-colors"
           >
             <ShoppingBag size={16} aria-hidden />
             Order Food on OrderBhojan →

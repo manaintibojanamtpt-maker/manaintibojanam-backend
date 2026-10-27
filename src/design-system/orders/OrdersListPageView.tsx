@@ -34,7 +34,7 @@ export function OrdersListPageView({
           <MarketplaceUxStateView
             title="No orders yet"
             description="When you place your first order, it will appear here with live tracking."
-            icon={<ShoppingBag className="h-7 w-7 text-[#FF7A00]" aria-hidden />}
+            icon={<ShoppingBag className="h-7 w-7 text-[#D9852F]" aria-hidden />}
             primaryLabel="Explore restaurants"
             onPrimary={onBrowse}
           />

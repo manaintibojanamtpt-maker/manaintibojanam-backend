@@ -115,7 +115,7 @@ export const FreeStorefrontBanner: React.FC<FreeStorefrontBannerProps> = ({
     : onboardingPlanMessaging.wizardIntro;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#FF7A00]/30 bg-gradient-to-r from-[#FF7A00]/15 via-[#FF7A00]/8 to-transparent p-5 sm:p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-[#D9852F]/30 bg-gradient-to-r from-[#D9852F]/15 via-[#D9852F]/8 to-transparent p-5 sm:p-6">
       <button
         type="button"
         onClick={handleDismiss}
@@ -128,7 +128,7 @@ export const FreeStorefrontBanner: React.FC<FreeStorefrontBannerProps> = ({
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 pr-8">
         <div className="min-w-0 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FF7A00]/20 border border-[#FF7A00]/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D9852F]/20 border border-[#D9852F]/30">
               <Store className="h-4 w-4 text-[#ffb347]" />
             </div>
             <h2 className="text-lg sm:text-xl font-black text-white">{title}</h2>
@@ -166,7 +166,7 @@ export const FreeStorefrontBanner: React.FC<FreeStorefrontBannerProps> = ({
             type="button"
             onClick={handlePrimary}
             disabled={activating}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap px-5 py-3 rounded-xl font-bold text-sm text-white bg-[#FF7A00] hover:bg-[#E56D00] transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap px-5 py-3 rounded-xl font-bold text-sm text-white bg-[#D9852F] hover:bg-[#b8702a] transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {activating ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
             {primaryLabel}

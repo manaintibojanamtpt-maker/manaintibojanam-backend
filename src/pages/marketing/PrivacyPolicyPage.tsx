@@ -10,15 +10,15 @@ const PrivacyPolicyPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070504] text-white font-sans selection:bg-[#FF7A00]/20">
+    <div className="min-h-[100dvh] flex flex-col bg-[#070504] text-white font-sans selection:bg-[#D9852F]/20">
       <EnterpriseHeader />
 
       <main className="flex-grow marketing-main-offset pt-10 sm:pt-14 pb-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-[#FF7A00]/10 text-[#FF7A00] flex items-center justify-center border border-[#FF7A00]/20">
+          <div className="w-10 h-10 rounded-xl bg-[#D9852F]/10 text-[#D9852F] flex items-center justify-center border border-[#D9852F]/20">
             <Shield size={20} />
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#FF7A00]">Legal Transparency</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#D9852F]">Legal Transparency</span>
         </div>
 
         <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
@@ -59,7 +59,7 @@ const PrivacyPolicyPage: React.FC = () => {
             <h2 className="text-xl font-bold text-white mb-3">5. Contact Our Privacy Officer</h2>
             <p>
               For inquiries regarding data access, corrections, or deletion under Indian data protection laws, please contact our privacy desk at{' '}
-              <a href="mailto:support@bhojanos.com" className="text-[#FF7A00] font-semibold underline">
+              <a href="mailto:support@bhojanos.com" className="text-[#D9852F] font-semibold underline">
                 support@bhojanos.com
               </a>.
             </p>

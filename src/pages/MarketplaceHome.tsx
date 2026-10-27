@@ -58,13 +58,13 @@ const MarketplaceHome: React.FC = () => {
   const showDiscoveryList = !search.isSearchMode && view.status === 'success' && view.kitchens.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-[#FF7A00]/20">
+    <div className="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-[#D9852F]/20">
       <EnterpriseHeader />
 
       <main className="flex-grow">
-        <section className="border-b border-white/5 bg-gradient-to-b from-[#FF7A00]/10 to-transparent">
+        <section className="border-b border-white/5 bg-gradient-to-b from-[#D9852F]/10 to-transparent">
           <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#FF7A00]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#D9852F]">
               BhojanOS Marketplace
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -76,7 +76,7 @@ const MarketplaceHome: React.FC = () => {
 
             {view.locationLabel && (
               <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
-                <MapPin className="h-3.5 w-3.5 text-[#FF7A00]" />
+                <MapPin className="h-3.5 w-3.5 text-[#D9852F]" />
                 {view.locationLabel}
               </div>
             )}
@@ -140,7 +140,7 @@ const MarketplaceHome: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => void refresh()}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:border-[#FF7A00]/40"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:border-[#D9852F]/40"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
                       Refresh

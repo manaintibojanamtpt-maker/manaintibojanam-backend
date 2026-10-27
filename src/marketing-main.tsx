@@ -7,11 +7,12 @@ function deferPwa() {
       void mountPwaUpdatePrompt();
     });
   };
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+  const win = typeof window !== 'undefined' ? window : null;
+  if (win && 'requestIdleCallback' in win) {
+    (win as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
       .requestIdleCallback(run, { timeout: 4000 });
   } else {
-    window.setTimeout(run, 2000);
+    win?.setTimeout(run, 2000);
   }
 }
 
@@ -38,6 +39,6 @@ start().catch((error) => {
     rootEl.innerHTML =
       '<div style="min-height:100dvh;background:#030303;color:#fff;display:flex;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:system-ui,sans-serif">' +
       '<div><p style="font-weight:700;margin-bottom:0.5rem">Unable to load page</p>' +
-      '<button type="button" onclick="location.reload()" style="margin-top:1rem;padding:0.65rem 1.25rem;border-radius:0.75rem;border:none;background:#ff7a00;color:#fff;font-weight:600;cursor:pointer">Retry</button></div></div>';
+      '<button type="button" onclick="location.reload()" style="margin-top:1rem;padding:0.65rem 1.25rem;border-radius:0.75rem;border:none;background:#d9852f;color:#fff;font-weight:600;cursor:pointer">Retry</button></div></div>';
   }
 });

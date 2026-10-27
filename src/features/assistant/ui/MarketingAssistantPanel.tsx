@@ -123,7 +123,7 @@ export function MarketingAssistantPanel({
                 <button
                   key={starter}
                   type="button"
-                  className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-left text-xs text-neutral-200 transition hover:border-[#FF7A00]/40 hover:text-white"
+                  className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-left text-xs text-neutral-200 transition hover:border-[#D9852F]/40 hover:text-white"
                   onClick={() => void onSend(starter)}
                 >
                   {starter}
@@ -141,7 +141,7 @@ export function MarketingAssistantPanel({
             <div
               className={
                 msg.role === 'user'
-                  ? 'max-w-[85%] rounded-2xl rounded-br-md bg-[#FF7A00] px-3 py-2 text-sm text-black'
+                  ? 'max-w-[85%] rounded-2xl rounded-br-md bg-[#D9852F] px-3 py-2 text-sm text-black'
                   : 'max-w-[90%] rounded-2xl rounded-bl-md border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm text-neutral-100'
               }
             >
@@ -170,7 +170,7 @@ export function MarketingAssistantPanel({
             {rateLimited ? (
               <button
                 type="button"
-                className="mt-2 text-[#FF7A00] underline-offset-2 hover:underline"
+                className="mt-2 text-[#D9852F] underline-offset-2 hover:underline"
                 onClick={onClearError}
               >
                 Dismiss — try again in a moment
@@ -178,7 +178,7 @@ export function MarketingAssistantPanel({
             ) : (
               <button
                 type="button"
-                className="mt-2 text-[#FF7A00] underline-offset-2 hover:underline"
+                className="mt-2 text-[#D9852F] underline-offset-2 hover:underline"
                 onClick={onClearError}
               >
                 Dismiss
@@ -203,7 +203,7 @@ export function MarketingAssistantPanel({
             }}
             placeholder={listening ? 'Listening…' : 'Ask about BhojanOS…'}
             disabled={loading || listening}
-            className="max-h-28 min-h-[42px] flex-1 resize-none rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#FF7A00]/50 focus:outline-none"
+            className="max-h-28 min-h-[42px] flex-1 resize-none rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#D9852F]/50 focus:outline-none"
           />
           {voiceAvailable ? (
             <button
@@ -213,7 +213,7 @@ export function MarketingAssistantPanel({
                 else void startVoice();
               }}
               disabled={loading}
-              className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/15 text-[#FF7A00] transition hover:bg-[#FF7A00]/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[#D9852F]/40 bg-[#D9852F]/15 text-[#D9852F] transition hover:bg-[#D9852F]/25 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={listening ? 'Stop listening' : 'Ask with voice'}
               data-testid="marketing-assistant-mic"
             >

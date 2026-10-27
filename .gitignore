@@ -34,3 +34,10 @@ scripts/.smoke-ops-health-report.json
 # Local Firebase credentials from Render export
 .firebase-service-account.json
 
+# Backup snapshots (never commit — multi-GB archives)
+.backup-mtb-marketing/
+.backup-marketing-ui/
+.backup-orderbhojan-reconcile-*/
+.backup-phaseb-*/
+.orderbhojan-safety-backup/
+

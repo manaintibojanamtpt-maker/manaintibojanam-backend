@@ -45,7 +45,7 @@ export function AuthShellView({
   return (
     <div className="flex min-h-[70dvh] items-center justify-center px-4 py-8">
       <GlassCard hoverEffect={false} className="w-full max-w-md !rounded-[2rem] !p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#FF7A00]">{brandLabel}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#D9852F]">{brandLabel}</p>
         <SectionHeader title={title} description={subtitle} align="left" className="!mb-6 !mt-2" />
 
         {tabs && activeTab && onTabChange ? (
@@ -55,7 +55,7 @@ export function AuthShellView({
                 key={tab.id}
                 type="button"
                 className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  activeTab === tab.id ? 'bg-[#FF7A00] text-white' : 'text-white/60 hover:text-white'
+                  activeTab === tab.id ? 'bg-[#D9852F] text-white' : 'text-white/60 hover:text-white'
                 }`}
                 onClick={() => onTabChange(tab.id)}
               >

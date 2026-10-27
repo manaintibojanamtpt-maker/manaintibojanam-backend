@@ -14,6 +14,7 @@ export interface OwnerStorefrontPayload {
   pricingConfig?: Record<string, unknown>;
   paymentConfig?: Record<string, unknown>;
   features?: Record<string, unknown>;
+  dietaryPreference?: string;
 }
 
 export interface OwnerStorefrontResponse {
