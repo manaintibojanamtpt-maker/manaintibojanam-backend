@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MarketingWhatsAppFloat } from './components/marketing/MarketingWhatsAppFloat';
 import { MarketingAssistantRoot } from './features/assistant/ui/MarketingAssistantRoot';
+import { LenisScrollWrapper } from './components/marketing/LenisScrollWrapper';
 import './marketing.css';
 
 // Existing Marketing Pages
@@ -85,11 +86,12 @@ export default function MarketingApp() {
 
   return (
     <BrowserRouter>
-      <MarketingWhatsAppFloat />
-      {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
-      <MarketingAssistantRoot />
-      <Suspense fallback={<MarketingShell />}>
-        <Routes>
+      <LenisScrollWrapper className="min-h-screen bg-[#030303] flex flex-col">
+        <MarketingWhatsAppFloat />
+        {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
+        <MarketingAssistantRoot />
+        <Suspense fallback={<MarketingShell />}>
+          <Routes>
           {/* Main Landing & Funnel */}
           <Route path="/" element={<OnboardKitchen />} />
           <Route path="/onboard" element={<OnboardKitchen />} />
@@ -153,7 +155,8 @@ export default function MarketingApp() {
           {/* Fallback to 404 handler or Root */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+        </Suspense>
+      </LenisScrollWrapper>
     </BrowserRouter>
   );
 }
