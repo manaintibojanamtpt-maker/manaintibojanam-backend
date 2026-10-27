@@ -57,6 +57,8 @@ export interface RegisterPosTenantRoutesOptions {
   getTenantMemberships?: (uid: string) => Promise<TenantMembership[]>;
   /** Resolve a display name for a tenant. Optional; ids still work without it. */
   getTenantName?: (tenantId: string) => Promise<string | null>;
+  /** Check if POS is enabled for a tenant. Missing posEnabled defaults to true. */
+  isPosEnabled?: (tenantId: string) => Promise<boolean>;
 }
 
 const extractBearerToken = (header: unknown): string | null => {
@@ -98,7 +100,7 @@ export function registerPosTenantRoutes(
   app: Express,
   options: RegisterPosTenantRoutesOptions
 ): void {
-  const { verifyFirebaseToken, getTenantMemberships, getTenantName } = options;
+  const { verifyFirebaseToken, getTenantMemberships, getTenantName, isPosEnabled } = options;
 
   app.get('/api/v1/pos/tenants', async (req: Request, res: Response) => {
     if (!verifyFirebaseToken) {
@@ -131,8 +133,19 @@ export function registerPosTenantRoutes(
     const memberships = getTenantMemberships ? await getTenantMemberships(user.uid) : [];
     const selected = selectPosTenants(memberships);
 
+    // Filter candidates by POS enablement (POS boundary enforcement)
+    const enabledTenants = isPosEnabled
+      ? (
+          await Promise.all(
+            selected.map(async (membership) =>
+              (await isPosEnabled(membership.tenantId)) ? membership : null
+            )
+          )
+        ).filter((membership): membership is PosTenantMembership => membership !== null)
+      : selected;
+
     const tenants = await Promise.all(
-      selected.map(async (membership) => ({
+      enabledTenants.map(async (membership) => ({
         ...membership,
         name: getTenantName ? await getTenantName(membership.tenantId) : null,
       }))
@@ -194,6 +207,21 @@ export function registerPosTenantRoutes(
         authorized: false,
         error: { code: resolved.code, message: resolved.message },
       });
+    }
+
+    // Check POS enablement at the boundary
+    if (isPosEnabled) {
+      const enabled = await isPosEnabled(tenantId);
+      if (!enabled) {
+        return res.status(403).json({
+          success: false,
+          authorized: false,
+          error: {
+            code: 'POS_DISABLED',
+            message: 'Point of Sale is currently disabled for this restaurant.',
+          },
+        });
+      }
     }
 
     return res.status(200).json({

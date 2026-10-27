@@ -23,6 +23,7 @@ public/backup.json
 
 .tmp-*
 .sync-work/
+scratch/
 .firebase/
 backups/
 

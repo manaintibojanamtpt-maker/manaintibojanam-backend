@@ -61,6 +61,8 @@ export interface RegisterOrderCommandRoutesOptions {
    * actor's authority comes from the membership record rather than a guess.
    */
   getTenantMemberships?: (uid: string) => Promise<TenantMembership[]>;
+  /** Check if POS is enabled for a tenant. Missing posEnabled defaults to true. */
+  isPosEnabled?: (tenantId: string) => Promise<boolean>;
 }
 
 const errorBody = (
@@ -161,7 +163,7 @@ export function registerOrderCommandRoutes(
   app: Express,
   options: RegisterOrderCommandRoutesOptions
 ): void {
-  const { db, fieldValue, verifyFirebaseToken, getOwnedTenantIds, getTenantMemberships } = options;
+  const { db, fieldValue, verifyFirebaseToken, getOwnedTenantIds, getTenantMemberships, isPosEnabled } = options;
 
   /**
    * Scraper-friendly snapshot of command/outbox metrics. Admin only.
@@ -306,6 +308,28 @@ export function registerOrderCommandRoutes(
             correlationId,
           })
         );
+    }
+
+    // POS counter operations (CreateOrder) are checked against the operational toggle server-side.
+    // General order lifecycle operations (MarkPreparing, MarkReady, UpdateOrderStatus) are preserved.
+    if (commandType === 'CreateOrder' && isPosEnabled) {
+      const enabled = await isPosEnabled(tenantId);
+      if (!enabled) {
+        recordCounter(METRIC.commandFailed, 1, { code: 'POS_DISABLED' });
+        logStructured('warn', 'order_command.pos_disabled', {
+          correlationId,
+          tenantId,
+          orderId,
+          commandId,
+          commandType,
+        });
+        return res.status(503).json(
+          errorBody('POS_DISABLED', 'Point of Sale is currently disabled for this restaurant.', {
+            correlationId,
+            retryable: true,
+          })
+        );
+      }
     }
 
     // Path parameters are authoritative over the body so a client cannot claim

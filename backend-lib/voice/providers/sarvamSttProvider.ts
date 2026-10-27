@@ -70,6 +70,27 @@ export class SarvamSttProvider implements ISttProvider {
     if (request.withDiarization) {
       formData.append('with_diarization', 'true');
     }
+    if (request.withTimestamps) {
+      formData.append('with_timestamps', 'true');
+    }
+    if (request.inputAudioCodec) {
+      formData.append('input_audio_codec', request.inputAudioCodec);
+    }
+
+    // Saaras v4 keyterms domain biasing (up to 50 terms, max 64 chars each)
+    if (Array.isArray(request.keyterms) && request.keyterms.length > 0) {
+      const sanitizedKeyterms = [
+        ...new Set(
+          request.keyterms
+            .map((term) => (typeof term === 'string' ? term.trim() : ''))
+            .filter((term) => term.length > 0 && term.length <= 64),
+        ),
+      ].slice(0, 50);
+
+      if (sanitizedKeyterms.length > 0) {
+        formData.append('keyterms', JSON.stringify(sanitizedKeyterms));
+      }
+    }
 
     let response: Response;
     try {
@@ -149,16 +170,25 @@ export class SarvamSttProvider implements ISttProvider {
 
     const transcript = typeof data?.transcript === 'string' ? data.transcript.trim() : '';
     const detectedLanguage = typeof data?.language_code === 'string' ? data.language_code : language;
+    const probability =
+      typeof data?.language_probability === 'number'
+        ? data.language_probability
+        : typeof data?.confidence === 'number'
+        ? data.confidence
+        : undefined;
 
     return {
       transcript,
       language: detectedLanguage,
-      confidence: typeof data?.confidence === 'number' ? data.confidence : undefined,
+      confidence: probability,
+      requestId: typeof data?.request_id === 'string' ? data.request_id : undefined,
+      timestamps: data?.timestamps && Array.isArray(data.timestamps.words) ? data.timestamps : undefined,
       isFinal: true,
       provider: 'sarvam',
       metadata: {
         model: this.model,
         diarized: Boolean(data?.diarized),
+        requestId: data?.request_id,
       },
     };
   }

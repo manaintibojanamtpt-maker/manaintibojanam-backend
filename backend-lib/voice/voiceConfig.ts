@@ -31,10 +31,11 @@ const VALID_STT_MODELS = new Set([
 ]);
 
 const VALID_TTS_MODELS = new Set([
+  'bulbul:v4-flash',
+  'bulbul:v4',
   'bulbul:v3',
   'bulbul:v2',
   'bulbul:v3-beta',
-  'bulbul:v4',
 ]);
 
 export function normalizeSttModel(raw?: string): string {
@@ -48,15 +49,64 @@ export function normalizeSttModel(raw?: string): string {
 export function normalizeTtsModel(raw?: string): string {
   const clean = cleanEnvString(raw);
   if (clean && VALID_TTS_MODELS.has(clean)) return clean;
-  if (clean && clean.includes('v2')) return 'bulbul:v2';
+  if (clean && clean.includes('v4-flash')) return 'bulbul:v4-flash';
   if (clean && clean.includes('v4')) return 'bulbul:v4';
-  return 'bulbul:v3';
+  if (clean && clean.includes('v2')) return 'bulbul:v2';
+  if (clean && clean.includes('v3')) return 'bulbul:v3';
+  return 'bulbul:v4-flash';
 }
 
+/**
+ * Resolve speaker ID strictly based on target model and language.
+ * Bulbul v4-flash uses granular persona IDs (<name>_<lang>_<style>).
+ * Bulbul v3 uses legacy short names (meera, shubh, aditya, pavithra).
+ */
+export function resolveRecommendedSpeaker(
+  languageCode?: string,
+  requestedSpeaker?: string,
+  model?: string,
+): string {
+  const normModel = normalizeTtsModel(model);
+  const lang = (languageCode || 'en-IN').toLowerCase();
+  const req = requestedSpeaker?.trim()?.toLowerCase();
+
+  // Bulbul v4 Flash Persona IDs
+  if (normModel === 'bulbul:v4-flash' || normModel === 'bulbul:v4') {
+    if (req && req.includes('_') && req !== 'aditya') {
+      return req;
+    }
+    if (req === 'meera') return 'kavitha_te_conversation';
+    if (req === 'aditi' || req === 'shubh') return 'ishita_enhi_customer';
+    if (req === 'aravind') return lang.startsWith('ta') ? 'aravind_ta_ads' : 'simran_en_customer';
+    if (req && req !== 'aditya') return req;
+
+    if (lang.startsWith('en')) return 'simran_en_customer';
+    if (lang.startsWith('hi')) return 'ishita_enhi_customer';
+    // For Telugu on v4-flash, use native Telugu conversation persona
+    if (lang.startsWith('te')) return 'kavitha_te_conversation';
+    return 'simran_en_customer';
+  }
+
+  // Bulbul v3 Legacy flat speaker names
+  if (req && req !== 'aditya') {
+    return req;
+  }
+  if (lang.startsWith('te')) return 'kavitha';
+  if (lang.startsWith('hi')) return 'shubh';
+  if (lang.startsWith('ta') || lang.startsWith('kn')) return 'pavithra';
+  return 'aditya';
+}
+
+/**
+ * Validated official Sarvam streaming STT model: saaras:v4 (or saaras:v3).
+ * Note: saaras:v4-realtime does not exist in Sarvam's official catalog.
+ */
 export function normalizeStreamingSttModel(raw?: string): string {
   const clean = cleanEnvString(raw);
-  if (clean === 'saaras:v4-realtime' || clean === 'saaras:v3-realtime') return clean;
-  return 'saaras:v4-realtime';
+  if (clean === 'saaras:v4' || clean === 'saaras:v3' || clean === 'saaras:v3-realtime') {
+    return clean;
+  }
+  return 'saaras:v4';
 }
 
 export function readVoiceConfig(env: NodeJS.ProcessEnv = process.env): VoiceConfig {

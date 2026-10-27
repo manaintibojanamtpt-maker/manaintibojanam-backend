@@ -55,7 +55,7 @@ describe('Phase 4B: Sarvam Realtime Streaming STT & TTS', () => {
 
       const provider = new SarvamStreamingSttProvider({
         apiKey: 'test-sarvam-key',
-        model: 'saaras:v4-realtime',
+        model: 'saaras:v4',
         defaultLanguage: 'te-IN',
       });
 
@@ -63,7 +63,7 @@ describe('Phase 4B: Sarvam Realtime Streaming STT & TTS', () => {
 
       assert.match(createdWsUrl, /speech-to-text-realtime\/ws/);
       assert.match(createdWsUrl, /language_code=te-IN/);
-      assert.match(createdWsUrl, /model=saaras%3Av4-realtime/);
+      assert.match(createdWsUrl, /model=saaras%3Av4/);
 
       const partials: any[] = [];
       const finals: any[] = [];

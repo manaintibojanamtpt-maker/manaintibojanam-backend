@@ -1,11 +1,20 @@
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
+
+// Load .env.local before any provider or service initialization
+const envLocalPath = path.resolve(process.cwd(), ".env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
+dotenv.config(); // fallback to .env
+
 import { createPaymentIntentOnce } from './backend-lib/marketplace/customerCheckoutAttempt.js';
 import express from "express";
 import dns from "dns";
 import rateLimit from "express-rate-limit";
 import { createCorsMiddleware } from "./backend-lib/shared/corsPolicy.js";
 import bodyParser from "body-parser";
-import path from "path";
-import fs from "fs";
 import { createHmac, createHash } from "crypto";
 import { initializeApp, getApp, getApps, deleteApp, cert } from "firebase-admin/app";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
@@ -69,6 +78,7 @@ import { registerPricingReviewRoutes } from "./backend-lib/orders/registerPricin
 import { registerSupervisorRoutes } from "./backend-lib/orders/registerSupervisorRoutes.js";
 import { registerBusinessDayRoutes } from "./backend-lib/orders/registerBusinessDayRoutes.js";
 import { registerPosTenantRoutes } from "./backend-lib/domain/posTenantRoutes.js";
+import { resolveTenantMembershipsForUser } from "./backend-lib/domain/tenantMembershipResolver.js";
 import {
   dispatchOutboxBatch,
   listOrderOutboxSubscriptions,
@@ -104,7 +114,9 @@ import { registerAiGatewayRoutes } from "./backend-lib/ai/registerAiGatewayRoute
 import { createServer } from "http";
 import { createVoiceTtsRoute } from "./backend-lib/api/routes/voiceTtsRoute.js";
 import { createVoiceSttRoute } from "./backend-lib/voice/voiceSttRoute.js";
+import { registerBhojanOsVoiceRoutes } from "./backend-lib/voice/bhojanOsVoiceRoutes.js";
 import { setupVoiceGatewayWebSocket } from "./backend-lib/voice/voiceGatewayWs.js";
+import { processVoiceAssistantTurn } from "./backend-lib/voice/voiceTurnProcessor.js";
 import { ingestClientError } from "./backend-lib/observability/clientErrorPipeline.js";
 import { publishTenantDomainEvent } from "./backend-lib/marketplace/tenantDomainEventBus.js";
 import { normalizeMenuItemPayload } from "./backend-lib/marketplace/ownerMenuNormalization.js";
@@ -1554,22 +1566,41 @@ const tenantLookupInflight = new Map<string, Promise<{ exists: boolean; status?:
 let lastTenantValidationErrorLogAt = 0;
 const TENANT_CACHE_MS = Number(process.env.TENANT_CACHE_MS || 10 * 60 * 1000);
 
-const shouldBypassTenantValidation = (path: string) =>
-  path.startsWith("/api/health") ||
-  path.startsWith("/api/server-time") ||
-  path.startsWith("/api/env-debug") ||
-  path.startsWith("/api/firestore-") ||
-  path.startsWith("/api/cron/") ||
-  path.startsWith("/api/admin/") ||
-  path.startsWith("/api/webhooks/") ||
-  path.startsWith("/api/monitoring/") ||
-  path.startsWith("/api/client-errors") ||
-  path.startsWith("/api/client-config") ||
-  path.startsWith("/api/notifications/") ||
-  path.startsWith("/api/owner/") ||
-  path.startsWith("/api/platform/") ||
-  path.startsWith("/api/auth/") ||
-  path.startsWith("/api/ai/");
+const shouldBypassTenantValidation = (path: string, method = "GET") => {
+  const isSafeRead = method === "GET" || method === "HEAD";
+  const isMarketplaceCatalogRead =
+    isSafeRead && (
+      path.startsWith("/api/marketplace/restaurants/") ||
+      path.startsWith("/api/marketplace/discovery") ||
+      path.startsWith("/api/marketplace/discover") ||
+      path.startsWith("/api/marketplace/search") ||
+      path.startsWith("/api/marketplace/health") ||
+      path.startsWith("/api/marketplace/sync/")
+    );
+  const isMarketplaceCustomerRoute =
+    path.startsWith("/api/marketplace/checkout/") ||
+    path.startsWith("/api/marketplace/orders");
+
+  return (
+    path.startsWith("/api/health") ||
+    path.startsWith("/api/server-time") ||
+    path.startsWith("/api/env-debug") ||
+    path.startsWith("/api/firestore-") ||
+    path.startsWith("/api/cron/") ||
+    path.startsWith("/api/admin/") ||
+    path.startsWith("/api/webhooks/") ||
+    path.startsWith("/api/monitoring/") ||
+    path.startsWith("/api/client-errors") ||
+    path.startsWith("/api/client-config") ||
+    path.startsWith("/api/notifications/") ||
+    path.startsWith("/api/owner/") ||
+    path.startsWith("/api/platform/") ||
+    path.startsWith("/api/auth/") ||
+    isMarketplaceCatalogRead ||
+    isMarketplaceCustomerRoute ||
+    path.startsWith("/api/ai/")
+  );
+};
 
 const loadTenantRecord = async (tenantId: string) => {
   if (tenantLookupInflight.has(tenantId)) {
@@ -1602,7 +1633,7 @@ app.use(async (req: any, res, next) => {
 
   const tenantId = String(defaultTenantId);
 
-  if (shouldBypassTenantValidation(req.path)) {
+  if (shouldBypassTenantValidation(req.path, req.method)) {
     req.tenantId = tenantId;
     return next();
   }
@@ -3576,60 +3607,10 @@ registerOwnerOrdersRoutes(app, db, verifyFirebaseToken, assertOwnerTenantAccess,
  * a tenant is refused rather than upgraded, because the default grant would let
  * any authenticated user record payments in that tenant.
  */
-const POS_ROLE_ALIASES: Record<string, string> = {
-  owner: 'owner',
-  founder: 'owner',
-  manager: 'manager',
-  admin: 'manager',
-  superadmin: 'manager',
-  cashier: 'cashier',
-  counter: 'cashier',
-  kitchen: 'kitchen',
-  chef: 'kitchen',
-};
-
 const getTenantMembershipsForUser = async (
   uid: string
 ): Promise<Array<{ tenantId: string; role?: string }>> => {
-  const userDoc = await db.collection('users').doc(uid).get();
-  const data = (userDoc.exists ? userDoc.data() : {}) as Record<string, any>;
-  const memberships = new Map<string, { tenantId: string; role?: string }>();
-
-  const addCandidate = (tenantId: unknown, role: unknown) => {
-    const id = typeof tenantId === 'string' ? tenantId.trim() : '';
-    if (!id) return;
-    const normalized = POS_ROLE_ALIASES[String(role ?? '').trim().toLowerCase()];
-    const existing = memberships.get(id);
-    if (!existing) {
-      memberships.set(id, normalized ? { tenantId: id, role: normalized } : { tenantId: id });
-      return;
-    }
-    // Keep the most specific role seen for the tenant.
-    if (!existing.role && normalized) existing.role = normalized;
-  };
-
-  for (const key of ['tenantId', 'restaurantId']) addCandidate(data[key], data.posRole ?? data.role);
-  for (const key of ['ownedTenantIds', 'ownedTenants']) {
-    const list = Array.isArray(data[key]) ? data[key] : [];
-    for (const tenantId of list) addCandidate(tenantId, 'owner');
-  }
-
-  // Per-tenant overrides, e.g. tenantRoles: { tenant_x: 'cashier' }.
-  const perTenant = data.tenantRoles && typeof data.tenantRoles === 'object' ? data.tenantRoles : {};
-  for (const [tenantId, role] of Object.entries(perTenant as Record<string, unknown>)) {
-    addCandidate(tenantId, role);
-  }
-
-  // Tenant ownership recorded on the tenant document itself.
-  for (const membership of [...memberships.values()]) {
-    if (membership.role) continue;
-    const tenantDoc = await db.collection('tenants').doc(membership.tenantId).get();
-    if (tenantDoc.exists && tenantDoc.data()?.ownerId === uid) {
-      membership.role = 'owner';
-    }
-  }
-
-  return [...memberships.values()];
+  return resolveTenantMembershipsForUser(uid, db);
 };
 
 /**
@@ -3650,10 +3631,27 @@ const getTenantDisplayName = async (tenantId: string): Promise<string | null> =>
   }
 };
 
+/**
+ * Whether Point of Sale is enabled for a tenant.
+ * Missing features.posEnabled defaults to true.
+ * Explicit posEnabled === false disables terminal access at the POS authorization boundary.
+ */
+const isPosEnabledForTenant = async (tenantId: string): Promise<boolean> => {
+  try {
+    const snap = await db.collection('tenants').doc(tenantId).get();
+    if (!snap.exists) return false;
+    const data = snap.data() as Record<string, any>;
+    return data?.features?.posEnabled !== false;
+  } catch {
+    return false;
+  }
+};
+
 registerPosTenantRoutes(app, {
   verifyFirebaseToken: verifyFirebaseAuthUser,
   getTenantMemberships: getTenantMembershipsForUser,
   getTenantName: getTenantDisplayName,
+  isPosEnabled: isPosEnabledForTenant,
 });
 
 registerOrderCommandRoutes(app, {
@@ -3663,6 +3661,7 @@ registerOrderCommandRoutes(app, {
   // authenticates from its own Authorization header and enforces tenant scope.
   verifyFirebaseToken: verifyFirebaseAuthUser,
   getTenantMemberships: getTenantMembershipsForUser,
+  isPosEnabled: isPosEnabledForTenant,
 });
 registerPricingReviewRoutes(app, {
   db,
@@ -3723,7 +3722,13 @@ registerAiGatewayRoutes(app, {
 });
 
 app.use('/api/voice', optionalFirebaseToken, createVoiceTtsRoute());
-app.use('/api/voice', optionalFirebaseToken, createVoiceSttRoute());
+app.use('/api/voice', optionalFirebaseToken, createVoiceSttRoute({ db }));
+registerBhojanOsVoiceRoutes(app, {
+  db,
+  fieldValue: FieldValue,
+  verifyFirebaseToken: verifyFirebaseAuthUser,
+  getTenantMemberships: getTenantMembershipsForUser,
+});
 
 app.post('/api/owner/onboarding/step', verifyFirebaseToken, async (req: any, res: any) => {
   try {
@@ -5876,6 +5881,12 @@ async function startServer() {
       } catch {
         return null;
       }
+    },
+    onTranscriptReceived: async (params) => {
+      return processVoiceAssistantTurn(params, {
+        db,
+        assertOwnerTenantAccess,
+      });
     },
   });
 

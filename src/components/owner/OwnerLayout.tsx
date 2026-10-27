@@ -27,6 +27,7 @@ import {
   resolvePreferredOwnerTenantId,
   writeOwnerActiveTenantId,
 } from '../../lib/ownerActiveTenant';
+import { OwnerVoiceAssistantLauncher } from '../../features/ownerAssistant';
 
 const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, userProfile, logout } = useAuth();
@@ -583,7 +584,7 @@ const OwnerLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
 
       </main>
-
+      <OwnerVoiceAssistantLauncher />
     </div>
   );
 };

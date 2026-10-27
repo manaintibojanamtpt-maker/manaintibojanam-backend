@@ -3,6 +3,7 @@ import type { ISttProvider, SttResult } from './providers/types.js';
 import { SarvamSttProvider } from './providers/sarvamSttProvider.js';
 import { readVoiceConfig } from './voiceConfig.js';
 import { VoiceProviderError } from './providers/types.js';
+import { sanitizeKeyterms, fetchRestaurantDishesKeyterms } from './voiceKeyterms.js';
 
 let activeSttProvider: ISttProvider | null = null;
 
@@ -32,30 +33,70 @@ export function resetSttProviderForTests(): void {
   activeSttProvider = null;
 }
 
-export function createVoiceSttRoute(): Router {
+export interface VoiceSttRouteOptions {
+  db?: any;
+}
+
+export function createVoiceSttRoute(options: VoiceSttRouteOptions = {}): Router {
   const router = Router();
 
-  // Raw audio buffer or base64 JSON payload
-  router.post('/stt', async (req: any, res: any) => {
+  const handleTranscription = async (req: any, res: any) => {
     const startedAt = Date.now();
     try {
       let audioBuffer: Buffer | null = null;
       let mimeType = 'audio/wav';
       let language = 'unknown';
       let prompt: string | undefined;
+      let rawKeyterms: any = null;
+      let restaurantIdOrSlug: string | undefined;
+      let withTimestamps = false;
+      let inputAudioCodec: string | undefined;
 
       if (Buffer.isBuffer(req.body)) {
         audioBuffer = req.body;
         mimeType = req.headers['content-type'] || 'audio/wav';
-        language = (req.query.lang as string) || (req.headers['x-voice-lang'] as string) || 'unknown';
+        language = (req.query.lang as string) || (req.query.language_code as string) || (req.headers['x-voice-lang'] as string) || 'unknown';
+        rawKeyterms = req.query.keyterms || req.headers['x-voice-keyterms'];
+        restaurantIdOrSlug = (req.query.restaurantId as string) || (req.query.restaurantSlug as string) || (req.headers['x-restaurant-id'] as string);
+        withTimestamps = req.query.with_timestamps === 'true' || req.query.withTimestamps === 'true';
+        inputAudioCodec = (req.query.input_audio_codec as string) || (req.headers['x-audio-codec'] as string);
       } else if (req.body && typeof req.body === 'object') {
-        const { audioBase64, lang, mime, promptText } = req.body;
-        if (typeof audioBase64 === 'string' && audioBase64.trim()) {
-          audioBuffer = Buffer.from(audioBase64, 'base64');
+        const {
+          audioBase64,
+          audio,
+          lang,
+          language_code,
+          mime,
+          mimeType: bodyMime,
+          promptText,
+          prompt: bodyPrompt,
+          keyterms,
+          restaurantId,
+          restaurantSlug,
+          withTimestamps: bodyWithTimestamps,
+          with_timestamps,
+          inputAudioCodec: bodyInputAudioCodec,
+          input_audio_codec,
+        } = req.body;
+
+        const base64Data = audioBase64 || audio;
+        if (typeof base64Data === 'string' && base64Data.trim()) {
+          audioBuffer = Buffer.from(base64Data, 'base64');
         }
-        if (typeof mime === 'string') mimeType = mime;
+
+        if (typeof bodyMime === 'string') mimeType = bodyMime;
+        else if (typeof mime === 'string') mimeType = mime;
+
         if (typeof lang === 'string') language = lang;
+        else if (typeof language_code === 'string') language = language_code;
+
         if (typeof promptText === 'string') prompt = promptText;
+        else if (typeof bodyPrompt === 'string') prompt = bodyPrompt;
+
+        rawKeyterms = keyterms ?? req.query.keyterms ?? req.headers['x-voice-keyterms'];
+        restaurantIdOrSlug = restaurantId ?? restaurantSlug ?? req.query.restaurantId ?? req.query.restaurantSlug;
+        withTimestamps = bodyWithTimestamps === true || with_timestamps === true || req.query.with_timestamps === 'true';
+        inputAudioCodec = bodyInputAudioCodec || input_audio_codec || req.query.input_audio_codec;
       }
 
       if (!audioBuffer || audioBuffer.length === 0) {
@@ -65,6 +106,25 @@ export function createVoiceSttRoute(): Router {
           code: 'STT_INVALID_AUDIO',
         });
       }
+
+      // Collect keyterms from caller + active restaurant dishes
+      const userKeyterms = sanitizeKeyterms(rawKeyterms);
+      let dynamicRestaurantDishes: string[] = [];
+
+      if (restaurantIdOrSlug && options.db) {
+        dynamicRestaurantDishes = await fetchRestaurantDishesKeyterms(
+          options.db,
+          restaurantIdOrSlug,
+          Math.max(0, 50 - userKeyterms.length),
+        );
+      }
+
+      // Combine user keyterms and menu dish names up to 50 terms, 64 chars max
+      const combinedKeyterms = sanitizeKeyterms(
+        [...userKeyterms, ...dynamicRestaurantDishes],
+        50,
+        64,
+      );
 
       const provider = getSttProvider();
       const config = readVoiceConfig();
@@ -79,6 +139,9 @@ export function createVoiceSttRoute(): Router {
             mimeType,
             language,
             prompt,
+            keyterms: combinedKeyterms.length > 0 ? combinedKeyterms : undefined,
+            withTimestamps,
+            inputAudioCodec,
           },
           controller.signal,
         );
@@ -95,6 +158,10 @@ export function createVoiceSttRoute(): Router {
         confidence: result.confidence,
         isFinal: result.isFinal,
         provider: result.provider,
+        model: 'saaras:v4',
+        requestId: result.requestId,
+        timestamps: result.timestamps,
+        keytermsUsedCount: combinedKeyterms.length,
         latencyMs,
       });
     } catch (err: any) {
@@ -107,7 +174,11 @@ export function createVoiceSttRoute(): Router {
         retryable: err?.retryable ?? false,
       });
     }
-  });
+  };
+
+  // Primary endpoint & alias
+  router.post('/stt', handleTranscription);
+  router.post('/transcribe', handleTranscription);
 
   return router;
 }
