@@ -12,13 +12,13 @@ import { LandingFAQ } from './LandingFAQ';
 import { FoodDiscoverySection } from './FoodDiscoverySection';
 import { RestaurantWorkspacePreview } from './RestaurantWorkspacePreview';
 import { CallToAction } from '../CallToAction';
-import { TrustStripWithMarquee } from './TrustStripWithMarquee';
+import { TrustGrid } from './TrustGrid';
 
 /** Below-the-fold landing sections — lazy-loaded so hero paints first. */
 export default function MarketingLandingSections() {
   return (
     <LazyMotion features={domAnimation}>
-      <TrustStripWithMarquee />
+      <TrustGrid />
       <EcosystemVisual />
       <FoodDiscoverySection />
       <RestaurantWorkspacePreview />
