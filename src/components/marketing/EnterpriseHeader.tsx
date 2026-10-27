@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import bhojanOsLogo from '../../assets/bhojan-os-logo.png';
 import { ChevronDown, Menu, X, ShoppingBag } from 'lucide-react';
 import { MarketingSoftCTA } from './MarketingSoftCTA';
 import { orderBhojanPublic } from '../../config/demoData';
+import BhojanOSLogo from '../BhojanOSLogo';
 
 const navLinkClass = (active: boolean) =>
   `transition-colors ${active ? 'text-white font-semibold' : 'hover:text-white text-neutral-400'}`;
@@ -43,16 +43,8 @@ export const EnterpriseHeader: React.FC = () => {
     <header className="fixed top-0 z-[100] w-full border-b border-white/[0.06] bg-[#070504]/90 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-[4.5rem] flex items-center justify-between w-full overflow-visible">
         <Link to="/" className="flex items-center gap-3 cursor-pointer min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
-            <img
-              src={bhojanOsLogo}
-              alt="BhojanOS Logo"
-              className="w-full h-full object-cover"
-              width={40}
-              height={40}
-              fetchPriority="high"
-              decoding="async"
-            />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 shrink-0">
+            <BhojanOSLogo size={36} className="w-full h-full" />
           </div>
           <span className="text-lg sm:text-xl font-bold tracking-tight leading-snug text-white truncate">
             Bhojan<span className="text-[#D9852F]">OS</span>

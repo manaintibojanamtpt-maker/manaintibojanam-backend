@@ -154,12 +154,11 @@ export const PlatformFeatures = memo(function PlatformFeatures() {
         </RevealOnScroll>
       )}
 
-      {/* Remaining feature grid */}
+      {/* Remaining feature grid — Directoo-style with spotlight + spring hover */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-6">
         {otherFeatures.map(({ icon: Icon, title, description }, i) => (
           <RevealOnScroll key={title} delay={0.05 * (i + 1)}>
-            <div className="group relative h-full marketing-card p-5 sm:p-6 transition-all duration-300 hover:border-[#D9852F]/25 hover:-translate-y-1">
-              <div className="absolute inset-0 rounded-[1.25rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-[#D9852F]/10 via-transparent to-transparent pointer-events-none" />
+            <div className="card-spring-hover card-specular-top card-spotlight group relative h-full marketing-card p-5 sm:p-6 transition-all duration-300 hover:border-[#D9852F]/25">
               <div className="relative">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D9852F]/10 border border-[#D9852F]/20 text-[#D9852F] mb-4">
                   <Icon size={20} strokeWidth={2} />

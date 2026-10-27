@@ -34,7 +34,7 @@ export const HowItWorksTimeline = memo(function HowItWorksTimeline() {
                 {step.step}
               </div>
               <h3 className="text-base font-bold text-white mb-2">{step.title}</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+              <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </m.div>
           ))}
         </div>

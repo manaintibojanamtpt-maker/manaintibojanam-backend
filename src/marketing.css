@@ -942,3 +942,117 @@ body {
     font-size: 1rem;
   }
 }
+
+/* ── Directoo-style Card Enhancements ── */
+
+/* Top-edge specular highlight */
+.card-specular-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 133, 47, 0.4), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Mouse-tracking spotlight */
+.card-spotlight {
+  position: relative;
+  overflow: hidden;
+}
+.card-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    rgba(217, 133, 47, 0.08),
+    transparent 40%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-spotlight:hover::after {
+  opacity: 1;
+}
+
+/* Spring physics hover lift */
+.card-spring-hover {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.card-spring-hover:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6), 0 0 20px rgba(217, 133, 47, 0.1);
+}
+
+/* ── Marquee Animations ── */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-scroll {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 30s linear infinite;
+}
+.marquee-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Gradient fade masks for marquee */
+.marquee-mask-left,
+.marquee-mask-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  pointer-events: none;
+  z-index: 2;
+}
+.marquee-mask-left {
+  left: 0;
+  background: linear-gradient(90deg, #070504, transparent);
+}
+.marquee-mask-right {
+  right: 0;
+  background: linear-gradient(270deg, #070504, transparent);
+}
+
+/* ── Trust Strip Styles ── */
+.trust-strip {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 0;
+  overflow: hidden;
+  position: relative;
+}
+.trust-strip__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 80px;
+  text-align: center;
+}
+.trust-strip__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(217, 133, 47, 0.1);
+  border: 1px solid rgba(217, 133, 47, 0.2);
+  color: #D9852F;
+}
+.trust-strip__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.05em;
+}
