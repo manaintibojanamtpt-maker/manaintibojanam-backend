@@ -11,11 +11,45 @@ declare let self: ServiceWorkerGlobalScope;
 (self as any).__WB_DISABLE_DEV_LOGS = true;
 
 // Cache versioning to force PWA refresh
-const SW_VERSION = 'v47-firestore-bypass';
+const SW_VERSION = 'v48-version-aware-cache-bust';
 console.log(`[SW] Initializing Service Worker ${SW_VERSION}`);
+
+/**
+ * Compare the cached build hash against the live one. If they differ, the
+ * deployed code has changed but the SW is serving a stale shell — purge the
+ * precache so the next navigation serves the fresh build.
+ *
+ * This is what prevents users from seeing a blank or outdated page until
+ * they manually clear browsing history (which removes the SW entirely).
+ */
+async function bustStaleCacheIfVersionChanged(): Promise<void> {
+  try {
+    const cached = await caches.match('/version.json');
+    const live = await fetch('/version.json', { cache: 'no-store' });
+    if (!live.ok) return;
+
+    const cachedBuild = cached ? (await cached.clone().json())?.build : null;
+    const liveBuild = (await live.json())?.build;
+
+    if (cachedBuild && liveBuild && cachedBuild !== liveBuild) {
+      console.log(`[SW] Build changed (${cachedBuild} → ${liveBuild}), busting caches`);
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch (err) {
+    console.warn('[SW] Version check failed, keeping existing cache:', err);
+  }
+}
 
 // Take control of all clients as soon as the service worker activates
 clientsClaim();
+
+// On every activation, verify the cached build matches the deployed one.
+// If a new deploy landed while the SW was sleeping, purge stale caches so
+// the next navigation serves the fresh shell instead of a blank page.
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(bustStaleCacheIfVersionChanged());
+});
 
 // Automatically cleanup old caches provided by workbox
 cleanupOutdatedCaches();

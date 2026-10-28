@@ -234,7 +234,7 @@ export function MarketingHero() {
         aria-hidden
       />
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-0">
+      <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-[calc(env(safe-area-inset-top)+6rem)] sm:pt-[calc(env(safe-area-inset-top)+7rem)] lg:pt-24 pb-24 sm:pb-32 lg:pb-0">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
           {/* LEFT — Copy */}
