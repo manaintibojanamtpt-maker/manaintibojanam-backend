@@ -40,7 +40,7 @@ const stagger = {
 
 const BADGE_STYLES: Record<InvestorStatusBadge, string> = {
   Excellent: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-  Growing: 'bg-[#FF7A00]/15 text-orange-300 border-[#FF7A00]/25',
+  Growing: 'bg-[#D9852F]/15 text-orange-300 border-[#D9852F]/25',
   Healthy: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
   Attention: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
 };
@@ -111,7 +111,7 @@ const InvestorKpiCard = memo(function InvestorKpiCard({
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       <div className="relative z-10 flex items-start justify-between gap-3 mb-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#FF7A00]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#D9852F]">
           {icon}
         </div>
         <StatusBadge status={status} />
@@ -151,7 +151,7 @@ const RevenueHealthGauge = memo(function RevenueHealthGauge({
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <Gauge size={16} className="text-[#FF7A00]" />
+            <Gauge size={16} className="text-[#D9852F]" />
             Revenue Health
           </h3>
           <p className="text-xs text-gray-500 mt-1">Composite signal from MRR, retention & conversion</p>
@@ -163,7 +163,7 @@ const RevenueHealthGauge = memo(function RevenueHealthGauge({
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#FF7A00] via-orange-400 to-emerald-400"
+          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#D9852F] via-orange-400 to-emerald-400"
         />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
@@ -316,7 +316,7 @@ export const InvestorDataRoomPanel = memo(function InvestorDataRoomPanel(props: 
             Automated metrics reporting for stakeholders and board members — live from platform data.
           </p>
           <p className="text-[11px] font-medium text-gray-600 flex items-center gap-2">
-            <RefreshCw size={12} className={refreshing ? 'animate-spin text-[#FF7A00]' : ''} />
+            <RefreshCw size={12} className={refreshing ? 'animate-spin text-[#D9852F]' : ''} />
             Last synced {lastUpdated}
           </p>
         </div>
@@ -334,11 +334,11 @@ export const InvestorDataRoomPanel = memo(function InvestorDataRoomPanel(props: 
       {/* Executive Summary */}
       <m.div
         variants={fadeUp}
-        className="rounded-2xl border border-[#FF7A00]/20 bg-gradient-to-br from-[#FF7A00]/10 via-[#151515] to-[#121212] p-6 sm:p-8"
+        className="rounded-2xl border border-[#D9852F]/20 bg-gradient-to-br from-[#D9852F]/10 via-[#151515] to-[#121212] p-6 sm:p-8"
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3 max-w-3xl">
-            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#FF7A00]">Executive Summary</h2>
+            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#D9852F]">Executive Summary</h2>
             <p className="text-base sm:text-lg font-medium leading-relaxed text-gray-200">{derived.executiveSummary}</p>
           </div>
           <div className="shrink-0 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-center">
@@ -455,7 +455,7 @@ export const InvestorDataRoomPanel = memo(function InvestorDataRoomPanel(props: 
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles size={18} className="text-[#FF7A00]" />
+                <Sparkles size={18} className="text-[#D9852F]" />
                 AI Investor Insights
               </h3>
               <p className="text-xs text-gray-500 mt-1">Dynamic narrative generated from live platform metrics</p>
@@ -505,9 +505,9 @@ export const InvestorDataRoomPanel = memo(function InvestorDataRoomPanel(props: 
 
           <m.div
             variants={fadeUp}
-            className="rounded-2xl border border-[#FF7A00]/15 bg-gradient-to-br from-[#FF7A00]/8 to-[#121212] p-5"
+            className="rounded-2xl border border-[#D9852F]/15 bg-gradient-to-br from-[#D9852F]/8 to-[#121212] p-5"
           >
-            <div className="mb-3 flex items-center gap-2 text-[#FF7A00]">
+            <div className="mb-3 flex items-center gap-2 text-[#D9852F]">
               <Globe2 size={16} />
               <h3 className="text-sm font-bold uppercase tracking-wider">Market Opportunity</h3>
             </div>
@@ -587,7 +587,7 @@ export const InvestorDataRoomPanel = memo(function InvestorDataRoomPanel(props: 
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#FF7A00]/80 to-orange-400/80"
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#D9852F]/80 to-orange-400/80"
                   />
                   <span className="relative z-10 flex h-full items-center px-3 text-xs font-bold text-white">
                     {stage.count} merchants · {pct}%

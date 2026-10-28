@@ -103,5 +103,67 @@ describe('projectMarketplaceOrders guest tracking', () => {
       createdAt: '2026-01-01T10:00:00.000Z',
     });
     assert.equal(deliveredOrder.etaMinutes, undefined);
+
+    const cancelledOrder = projectOrderTracking('ord-eta-cancelled', {
+      status: 'CANCELLED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+    });
+    assert.equal(cancelledOrder.etaMinutes, undefined);
+
+    // 6. Scheduled orders: must NEVER receive ASAP ETA before dispatch, even with stored eta/etaMinutes
+    const scheduledMissingEta = projectOrderTracking('ord-sched-1', {
+      status: 'PLACED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      deliveryType: 'scheduled',
+      scheduledFor: '2026-01-02T12:00:00.000Z',
+    });
+    assert.equal(scheduledMissingEta.etaMinutes, undefined);
+    assert.equal(scheduledMissingEta.deliveryType, 'scheduled');
+    assert.equal(scheduledMissingEta.scheduledFor, '2026-01-02T12:00:00.000Z');
+
+    const scheduledWithStoredObjEta = projectOrderTracking('ord-sched-2', {
+      status: 'PREPARING',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      deliveryType: 'scheduled',
+      scheduledFor: '2026-01-02T12:00:00.000Z',
+      etaMinutes: { min: 25, max: 35 },
+    });
+    assert.equal(scheduledWithStoredObjEta.etaMinutes, undefined);
+
+    const scheduledWithScalarEta = projectOrderTracking('ord-sched-3', {
+      status: 'ACCEPTED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      deliveryType: 'scheduled',
+      scheduledFor: '2026-01-02T12:00:00.000Z',
+      eta: 30,
+    });
+    assert.equal(scheduledWithScalarEta.etaMinutes, undefined);
+
+    const scheduledByTimestampOnly = projectOrderTracking('ord-sched-4', {
+      status: 'PREPARING',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      scheduledFor: '2026-01-02T12:00:00.000Z',
+      etaMinutes: { min: 20, max: 30 },
+    });
+    assert.equal(scheduledByTimestampOnly.etaMinutes, undefined);
+    assert.equal(scheduledByTimestampOnly.scheduledFor, '2026-01-02T12:00:00.000Z');
+
+    // 7. Scheduled order when actually dispatched: receives live travel ETA
+    const scheduledDispatched = projectOrderTracking('ord-sched-5', {
+      status: 'OUT_FOR_DELIVERY',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      deliveryType: 'scheduled',
+      scheduledFor: '2026-01-02T12:00:00.000Z',
+    });
+    assert.deepEqual(scheduledDispatched.etaMinutes, { min: 10, max: 20 });
+
+    // 8. Unknown deliveryType sanitization
+    const unknownDeliveryType = projectOrderTracking('ord-unknown-type', {
+      status: 'PLACED',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      deliveryType: 'express-nonexistent' as never,
+    });
+    assert.equal(unknownDeliveryType.deliveryType, undefined);
+    assert.deepEqual(unknownDeliveryType.etaMinutes, { min: 25, max: 35 });
   });
 });

@@ -22,13 +22,13 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
       aria-label="BhojanOS-powered restaurant storefront preview"
     >
       <div
-        className="pointer-events-none absolute -inset-3 sm:-inset-4 rounded-[1.75rem] sm:rounded-[2rem] bg-[#FF7A00]/[0.04] blur-[80px] sm:blur-[100px]"
+        className="pointer-events-none absolute -inset-3 sm:-inset-4 rounded-[1.75rem] sm:rounded-[2rem] bg-[#D9852F]/[0.04] blur-[80px] sm:blur-[100px]"
         aria-hidden
       />
       <div className="relative rounded-[1.25rem] sm:rounded-[1.5rem] border border-white/[0.05] overflow-hidden shadow-[0_32px_64px_-24px_rgba(0,0,0,0.65)]">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04] bg-[#070504]">
           <span className="text-sm font-black text-white tracking-tight">
-            Your<span className="text-[#FF7A00]">Kitchen</span>
+            Your<span className="text-[#D9852F]">Kitchen</span>
           </span>
           <span
             className="text-[10px] font-mono text-neutral-600 truncate max-w-[55%]"
@@ -40,7 +40,7 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
 
         <div className="p-3.5 sm:p-4 space-y-2.5 bg-[#070504]">
           <div className="rounded-lg border border-white/[0.04] p-3 sm:p-4">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-[#FF7A00]/80 mb-1">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-[#D9852F]/80 mb-1">
               Your brand
             </p>
             <h3 className="text-sm sm:text-base font-black text-white leading-tight">
@@ -69,7 +69,7 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-semibold text-white truncate">{item.name}</p>
-                      <span className="hidden sm:inline text-[8px] font-bold uppercase tracking-wide text-[#FF7A00]/70">
+                      <span className="hidden sm:inline text-[8px] font-bold uppercase tracking-wide text-[#D9852F]/70">
                         {item.tag}
                       </span>
                     </div>
@@ -81,7 +81,7 @@ export const StorefrontPreviewMockup = memo(function StorefrontPreviewMockup() {
             })}
           </div>
 
-          <div className="flex items-center justify-between rounded-lg bg-[#FF7A00] px-3 py-2.5 text-white">
+          <div className="flex items-center justify-between rounded-lg bg-[#D9852F] px-3 py-2.5 text-white">
             <div className="flex items-center gap-1.5">
               <ShoppingBag size={15} aria-hidden />
               <span className="text-xs font-bold">Your storefront cart</span>

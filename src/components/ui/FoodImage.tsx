@@ -74,10 +74,10 @@ export const FoodImage = memo(function FoodImage({
 
       {showFallback && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF7A00]/15 to-[#1a1410]"
+          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#D9852F]/15 to-[#1a1410]"
           aria-hidden
         >
-          {fallback ?? <UtensilsCrossed size={20} className="text-[#FF7A00]/60" />}
+          {fallback ?? <UtensilsCrossed size={20} className="text-[#D9852F]/60" />}
         </div>
       )}
     </div>

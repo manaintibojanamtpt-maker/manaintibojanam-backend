@@ -37,7 +37,7 @@ function showBootError() {
     '<div style="min-height:100dvh;background:#030303;color:#fff;display:flex;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:system-ui,sans-serif">' +
     '<div><p style="font-weight:700;margin-bottom:0.5rem">Unable to load BhojanOS</p>' +
     '<p style="color:#737373;font-size:14px;margin-bottom:1rem">Please check your connection and try again.</p>' +
-    '<button type="button" onclick="location.reload()" style="padding:0.65rem 1.25rem;border-radius:0.75rem;border:none;background:#ff7a00;color:#fff;font-weight:600;cursor:pointer">Retry</button></div></div>';
+    '<button type="button" onclick="location.reload()" style="padding:0.65rem 1.25rem;border-radius:0.75rem;border:none;background:#d9852f;color:#fff;font-weight:600;cursor:pointer">Retry</button></div></div>';
 }
 
 async function bootstrap() {

@@ -1,6 +1,6 @@
 /** Design system token constants — verified Phase 5 */
 export const colors = {
-  primary: '#FF7A00',
+  primary: '#D9852F',
   primaryLight: '#FF9F43',
   accent: '#FFB366',
   brandBg: '#070504',

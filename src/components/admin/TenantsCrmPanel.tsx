@@ -130,7 +130,7 @@ const IconAction = memo(function IconAction({
 }) {
   const toneClass = {
     neutral:
-      'border-white/10 bg-white/[0.04] text-gray-300 hover:border-[#FF7A00]/30 hover:bg-[#FF7A00]/10 hover:text-white',
+      'border-white/10 bg-white/[0.04] text-gray-300 hover:border-[#D9852F]/30 hover:bg-[#D9852F]/10 hover:text-white',
     success:
       'border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20',
     danger: 'border-rose-500/20 bg-rose-500/5 text-rose-400 hover:bg-rose-500/10',
@@ -332,7 +332,7 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
       {/* Header */}
       <m.div variants={fadeUp} className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#FF7A00]">Tenant CRM</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#D9852F]">Tenant CRM</p>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Kitchen Directory</h2>
           <p className="mt-1 text-sm font-medium text-gray-400">Manage active kitchens, trials, and storefront access.</p>
         </div>
@@ -358,7 +358,7 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
             placeholder="Search by name or slug…"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.06] bg-[#121212] py-3 pl-11 pr-4 text-sm text-white shadow-inner outline-none transition-all placeholder:text-gray-600 focus:border-[#FF7A00]/30 focus:ring-2 focus:ring-[#FF7A00]/15"
+            className="w-full rounded-xl border border-white/[0.06] bg-[#121212] py-3 pl-11 pr-4 text-sm text-white shadow-inner outline-none transition-all placeholder:text-gray-600 focus:border-[#D9852F]/30 focus:ring-2 focus:ring-[#D9852F]/15"
           />
         </div>
         <button
@@ -412,7 +412,7 @@ export const TenantsCrmPanel = memo(function TenantsCrmPanel({
                       <button
                         type="button"
                         onClick={onSeedDefault}
-                        className="mt-5 rounded-xl bg-[#FF7A00] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#E56D00]"
+                        className="mt-5 rounded-xl bg-[#D9852F] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#E56D00]"
                       >
                         Seed Default Database
                       </button>

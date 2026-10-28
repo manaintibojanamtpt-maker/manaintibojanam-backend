@@ -38,7 +38,7 @@ export const LandingFAQ = memo(function LandingFAQ() {
                 <ChevronDown
                   size={18}
                   className={`text-neutral-500 shrink-0 transition-transform duration-200 ${
-                    isOpen ? 'rotate-180 text-[#FF7A00]' : ''
+                    isOpen ? 'rotate-180 text-[#D9852F]' : ''
                   }`}
                   aria-hidden
                 />

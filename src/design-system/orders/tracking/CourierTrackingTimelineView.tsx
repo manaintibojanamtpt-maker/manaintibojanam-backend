@@ -58,7 +58,7 @@ export function CourierTrackingTimelineView({
             {!isLast ? (
               <span
                 className={`absolute left-5 top-10 bottom-0 w-0.5 ${
-                  done || active ? 'bg-gradient-to-b from-[#FF7A00] to-white/10' : 'bg-white/10'
+                  done || active ? 'bg-gradient-to-b from-[#D9852F] to-white/10' : 'bg-white/10'
                 }`}
                 aria-hidden
               />
@@ -66,9 +66,9 @@ export function CourierTrackingTimelineView({
             <div
               className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 ${
                 active
-                  ? 'border-[#FF7A00] bg-[#FF7A00]/15 text-[#FF7A00] shadow-[0_0_0_4px_rgba(255,122,0,0.12)]'
+                  ? 'border-[#D9852F] bg-[#D9852F]/15 text-[#D9852F] shadow-[0_0_0_4px_rgba(255,122,0,0.12)]'
                   : done
-                    ? 'border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00]'
+                    ? 'border-[#D9852F]/40 bg-[#D9852F]/10 text-[#D9852F]'
                     : 'border-white/10 bg-white/[0.03] text-white/40'
               }`}
             >

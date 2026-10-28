@@ -16,7 +16,7 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({ text, query, c
         segment.highlight ? (
           <mark
             key={`${segment.text}-${index}`}
-            className="rounded bg-[#FF7A00]/25 px-0.5 text-[#FF7A00]"
+            className="rounded bg-[#D9852F]/25 px-0.5 text-[#D9852F]"
           >
             {segment.text}
           </mark>

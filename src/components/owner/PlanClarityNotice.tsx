@@ -31,12 +31,12 @@ export const PlanClarityNotice: React.FC<PlanClarityNoticeProps> = ({ variant, c
 
   return (
     <div
-      className={`rounded-2xl border border-[#FF7A00]/25 bg-[#FF7A00]/[0.06] p-4 sm:p-5 ${className}`}
+      className={`rounded-2xl border border-[#D9852F]/25 bg-[#D9852F]/[0.06] p-4 sm:p-5 ${className}`}
       role="note"
       aria-label="Plan and trial information"
     >
       <div className="flex gap-3">
-        <Info className="w-5 h-5 text-[#FF7A00] shrink-0 mt-0.5" aria-hidden />
+        <Info className="w-5 h-5 text-[#D9852F] shrink-0 mt-0.5" aria-hidden />
         <div className="min-w-0 space-y-2">
           <p className="text-sm font-bold text-[#ffb347]">{copy.title}</p>
           <p className="text-sm text-white/75 leading-relaxed">{copy.body}</p>

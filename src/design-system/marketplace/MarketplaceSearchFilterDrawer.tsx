@@ -17,7 +17,7 @@ interface MarketplaceSearchFilterDrawerProps {
 
 const optionClass = (active: boolean) =>
   active
-    ? 'border-[#FF7A00]/50 bg-[#FF7A00]/15 text-[#FF7A00]'
+    ? 'border-[#D9852F]/50 bg-[#D9852F]/15 text-[#D9852F]'
     : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20';
 
 export const MarketplaceSearchFilterDrawer: React.FC<MarketplaceSearchFilterDrawerProps> = ({
@@ -139,7 +139,7 @@ export const MarketplaceSearchFilterDrawer: React.FC<MarketplaceSearchFilterDraw
               onApply(draft);
               onClose();
             }}
-            className="flex-1 rounded-xl bg-[#FF7A00] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#ff8f2b]"
+            className="flex-1 rounded-xl bg-[#D9852F] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#ff8f2b]"
           >
             Apply filters
           </button>

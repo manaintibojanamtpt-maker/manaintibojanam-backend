@@ -106,6 +106,28 @@ const ContactPage = lazy(() => import('./pages/marketing/ContactPage'));
 const HelpCenterPage = lazy(() => import('./pages/marketing/HelpCenterPage'));
 const BlogPage = lazy(() => import('./pages/marketing/BlogPage'));
 const PricingPage = lazy(() => import('./pages/marketing/PricingPage'));
+const FeaturesPage = lazy(() => import('./pages/marketing/FeaturesPage'));
+const IntegrationsPage = lazy(() => import('./pages/marketing/IntegrationsPage'));
+const RestaurantOnlineOrderingPage = lazy(() => import('./pages/marketing/RestaurantOnlineOrderingPage'));
+const DirectOrderingPlatformPage = lazy(() => import('./pages/marketing/DirectOrderingPlatformPage'));
+const RestaurantManagementPage = lazy(() => import('./pages/marketing/RestaurantManagementPage'));
+const RestaurantPosPage = lazy(() => import('./pages/marketing/RestaurantPosPage'));
+const RestaurantBillingPage = lazy(() => import('./pages/marketing/RestaurantBillingPage'));
+const QrOrderingPage = lazy(() => import('./pages/marketing/QrOrderingPage'));
+const WhatsappOrderingPage = lazy(() => import('./pages/marketing/WhatsappOrderingPage'));
+const RestaurantWebsitePage = lazy(() => import('./pages/marketing/RestaurantWebsitePage'));
+const DigitalMenuPage = lazy(() => import('./pages/marketing/DigitalMenuPage'));
+const DeliveryManagementPage = lazy(() => import('./pages/marketing/DeliveryManagementPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/marketing/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/marketing/TermsOfServicePage'));
+const RefundPolicyPage = lazy(() => import('./pages/marketing/RefundPolicyPage'));
+const CloudKitchensSolutionPage = lazy(() => import('./pages/marketing/solutions/CloudKitchensSolutionPage'));
+const CafesSolutionPage = lazy(() => import('./pages/marketing/solutions/CafesSolutionPage'));
+const QsrSolutionPage = lazy(() => import('./pages/marketing/solutions/QsrSolutionPage'));
+const SolutionsOverviewPage = lazy(() => import('./pages/marketing/solutions/SolutionsOverviewPage'));
+const ZomatoSwiggyComparePage = lazy(() => import('./pages/marketing/compare/ZomatoSwiggyComparePage'));
+const PetpoojaComparePage = lazy(() => import('./pages/marketing/compare/PetpoojaComparePage'));
+const DotpeComparePage = lazy(() => import('./pages/marketing/compare/DotpeComparePage'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { currentUser, userProfile, loading, profileLoading, refreshProfile, logout } = useAuth();
@@ -500,7 +522,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-[#030303] flex flex-col">
       <div className="h-16 border-b border-white/5 bg-[#030303]/95" />
       <div className="flex-1 flex items-center justify-center">
-        <div className="h-10 w-10 rounded-full border-2 border-[#FF7A00]/30 border-t-[#FF7A00] animate-spin" />
+        <div className="h-10 w-10 rounded-full border-2 border-[#D9852F]/30 border-t-[#D9852F] animate-spin" />
       </div>
     </div>
   );
@@ -566,7 +588,7 @@ const AppContent: React.FC = () => {
   return (
     <LazyMotion features={domAnimation}>
       <Router>
-        <div className="flex-1 flex flex-col w-full min-h-screen bg-brand-bg dark:bg-dark-bg transition-colors duration-300">
+        <div className="flex-1 flex flex-col w-full min-h-[100dvh] bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-x-hidden">
           <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
           
           <Suspense fallback={routeFallback}>
@@ -584,6 +606,28 @@ const AppContent: React.FC = () => {
               <Route path="/help" element={<HelpCenterPage />} />
               <Route path="/refund" element={<Navigate to="/refund-policy" replace />} />
               <Route path="/blog" element={<BlogPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/restaurant-online-ordering" element={<RestaurantOnlineOrderingPage />} />
+              <Route path="/direct-ordering-platform" element={<DirectOrderingPlatformPage />} />
+              <Route path="/restaurant-management-system" element={<RestaurantManagementPage />} />
+              <Route path="/restaurant-pos" element={<RestaurantPosPage />} />
+              <Route path="/restaurant-billing-software" element={<RestaurantBillingPage />} />
+              <Route path="/qr-code-ordering-system" element={<QrOrderingPage />} />
+              <Route path="/whatsapp-food-ordering-system" element={<WhatsappOrderingPage />} />
+              <Route path="/restaurant-website-builder" element={<RestaurantWebsitePage />} />
+              <Route path="/digital-menu-for-restaurants" element={<DigitalMenuPage />} />
+              <Route path="/delivery-management-software" element={<DeliveryManagementPage />} />
+              <Route path="/cloud-kitchen-software" element={<CloudKitchensSolutionPage />} />
+              <Route path="/cafe-pos-billing-software" element={<CafesSolutionPage />} />
+              <Route path="/qsr-pos-software" element={<QsrSolutionPage />} />
+              <Route path="/solutions" element={<SolutionsOverviewPage />} />
+              <Route path="/bhojanos-vs-zomato-swiggy" element={<ZomatoSwiggyComparePage />} />
+              <Route path="/petpooja-alternative" element={<PetpoojaComparePage />} />
+              <Route path="/dotpe-alternative" element={<DotpeComparePage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
+              <Route path="/refund-policy" element={<RefundPolicyPage />} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
               <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><BhojanOSSuperAdmin /></ProtectedRoute>} />
               <Route path="/admin/system-health" element={<ProtectedRoute adminOnly><SystemHealth /></ProtectedRoute>} />
@@ -729,7 +773,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isLogin = isRoute('/login') || path === '/owner/login' || path === '/owner/register';
   const isAdmin = path.startsWith('/admin') || path.startsWith('/super-admin');
   const isOwnerRoute = path.startsWith('/owner') && path !== '/owner/login';
-  const isMarketing = path === '/onboard' || path === '/pricing' || path === '/about' || path === '/platform' || path === '/security' || path === '/contact' || path === '/blog' || (path === '/' && EnvironmentConfig.isBhojanOSRoot());
+  const isMarketing = isMarketingPath() || (path === '/' && EnvironmentConfig.isBhojanOSRoot());
   const isMyOrders = isRoute('/orders'); // also fixing my-orders path since route is /orders
   const isOrderTracking = path.startsWith('/order/') || !!path.match(/^\/k\/[^/]+\/order\//);
   
@@ -751,7 +795,7 @@ const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isEdgeToEdge = isFullScreen || isAccount || isOrderSuccess || isPaymentSuccess || isAddresses;
 
   return (
-      <div className="flex-1 flex w-full min-h-screen bg-brand-bg dark:bg-dark-bg">
+        <div className="flex-1 flex w-full min-h-[100dvh] bg-brand-bg dark:bg-dark-bg overflow-x-hidden">
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {customerPreview && <CustomerPreviewBanner />}
         {!isFullScreen && !isHome && (

@@ -10,7 +10,7 @@ export function TrackingMapPlaceholderView() {
       className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center"
       aria-hidden
     >
-      <MapPin className="h-8 w-8 text-[#FF7A00]/70" />
+      <MapPin className="h-8 w-8 text-[#D9852F]/70" />
       <p className="text-sm font-medium text-white/60">Live map updates when courier is on the way</p>
     </div>
   );
@@ -42,7 +42,7 @@ export function TrackingDeliveryPanelView({ delivery, onOpenTracking }: Tracking
         {delivery.riderPhone ? (
           <div className="col-span-2">
             <p className="text-xs uppercase tracking-wide text-white/50">Rider phone</p>
-            <a href={`tel:${delivery.riderPhone}`} className="font-semibold text-[#FF7A00]">
+            <a href={`tel:${delivery.riderPhone}`} className="font-semibold text-[#D9852F]">
               {delivery.riderPhone}
             </a>
           </div>

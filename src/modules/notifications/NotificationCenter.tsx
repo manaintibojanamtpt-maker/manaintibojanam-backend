@@ -262,7 +262,7 @@ export const NotificationCenter: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handlePriorityAction(action)}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold bg-[#FF7A00] hover:bg-[#E56D00] text-white transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold bg-[#D9852F] hover:bg-[#b8702a] text-white transition-colors"
                 >
                   {action.action}
                   <ArrowRight size={14} />

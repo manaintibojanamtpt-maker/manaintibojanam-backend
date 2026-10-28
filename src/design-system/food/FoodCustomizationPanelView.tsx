@@ -30,8 +30,8 @@ function SegmentVariants({
           aria-checked={option.selected}
           className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
             option.selected
-              ? 'border-[#FF7A00]/50 bg-[#FF7A00]/15 text-white'
-              : 'border-white/10 bg-white/5 text-white/70 hover:border-[#FF7A00]/30'
+              ? 'border-[#D9852F]/50 bg-[#D9852F]/15 text-white'
+              : 'border-white/10 bg-white/5 text-white/70 hover:border-[#D9852F]/30'
           }`}
           onClick={() => onSelect(option.id)}
         >
@@ -55,7 +55,7 @@ function ListOptionRow({
       type="button"
       className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
         option.selected
-          ? 'border-[#FF7A00]/40 bg-[#FF7A00]/10'
+          ? 'border-[#D9852F]/40 bg-[#D9852F]/10'
           : 'border-white/10 bg-white/[0.03] hover:border-white/20'
       }`}
       aria-pressed={option.selected}
@@ -63,7 +63,7 @@ function ListOptionRow({
     >
       <span className="text-sm font-semibold text-white">{option.label}</span>
       {option.priceLabel ? (
-        <span className="shrink-0 rounded-full bg-[#FF7A00]/15 px-2 py-0.5 text-xs font-bold text-[#F4C27A]">
+        <span className="shrink-0 rounded-full bg-[#D9852F]/15 px-2 py-0.5 text-xs font-bold text-[#F4C27A]">
           {option.priceLabel}
         </span>
       ) : null}
@@ -152,7 +152,7 @@ export function FoodCustomizationPanelView({
       <section className="mb-6" aria-label="Special instructions">
         <SectionHeader title="Special instructions" align="left" className="!mb-3 !text-left" />
         <textarea
-          className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#FF7A00]/40 focus:outline-none focus:ring-1 focus:ring-[#FF7A00]/30"
+          className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#D9852F]/40 focus:outline-none focus:ring-1 focus:ring-[#D9852F]/30"
           rows={3}
           placeholder={model.instructionsPlaceholder}
           value={model.instructions}

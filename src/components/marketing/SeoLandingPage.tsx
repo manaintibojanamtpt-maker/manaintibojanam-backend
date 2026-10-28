@@ -118,7 +118,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070504] text-white font-sans selection:bg-[#FF7A00]/20 relative overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-[#070504] text-white font-sans selection:bg-[#D9852F]/20 relative overflow-x-hidden">
       {/* JSON-LD Schema for Search Engines and AI Crawlers */}
       <script
         type="application/ld+json"
@@ -130,7 +130,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
       <main className="flex-grow marketing-main-offset pt-10 sm:pt-14 pb-20">
         {/* Hero Section */}
         <section className="relative px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center mb-16 sm:mb-24">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#FF7A00]/30 bg-[#FF7A00]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#FF7A00] mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#D9852F]/30 bg-[#D9852F]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#D9852F] mb-6">
             <Sparkles size={13} aria-hidden />
             {data.badge}
           </div>
@@ -139,7 +139,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
             {data.h1}
           </h1>
 
-          <p className="text-lg sm:text-xl text-[#FF7A00] font-semibold max-w-2xl mx-auto mb-4">
+          <p className="text-lg sm:text-xl text-[#D9852F] font-semibold max-w-2xl mx-auto mb-4">
             {data.subhead}
           </p>
 
@@ -151,7 +151,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
             {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
             <a
               href="/owner/register"
-              className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
+              className="inline-flex items-center gap-2 rounded-full bg-[#D9852F] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#b8702a] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
             >
               Start Free Today
               <ArrowRight size={16} aria-hidden />
@@ -180,10 +180,10 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
             {data.features.map((feat, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-6 hover:border-[#FF7A00]/40 transition-all hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+                className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-6 hover:border-[#D9852F]/40 transition-all hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
               >
                 {feat.tag && (
-                  <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-[#FF7A00] bg-[#FF7A00]/10 px-2.5 py-0.5 rounded-full mb-3">
+                  <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-[#D9852F] bg-[#D9852F]/10 px-2.5 py-0.5 rounded-full mb-3">
                     {feat.tag}
                   </span>
                 )}
@@ -212,7 +212,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
                   <tr className="border-b border-white/[0.08] bg-white/[0.02]">
                     <th className="p-4 sm:p-5 font-bold text-white/80">Evaluation Factor</th>
                     <th className="p-4 sm:p-5 font-bold text-neutral-400">{data.comparison.competitorName}</th>
-                    <th className="p-4 sm:p-5 font-extrabold text-[#FF7A00]">BhojanOS Platform</th>
+                    <th className="p-4 sm:p-5 font-extrabold text-[#D9852F]">BhojanOS Platform</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.05]">
@@ -220,7 +220,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
                     <tr key={idx} className="hover:bg-white/[0.01]">
                       <td className="p-4 sm:p-5 font-semibold text-white">{row.metric}</td>
                       <td className="p-4 sm:p-5 text-neutral-400">{row.competitor}</td>
-                      <td className="p-4 sm:p-5 font-bold text-[#FF7A00]">{row.bhojanos}</td>
+                      <td className="p-4 sm:p-5 font-bold text-[#D9852F]">{row.bhojanos}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -294,7 +294,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
                       <ChevronDown
                         size={18}
                         className={`text-neutral-400 shrink-0 transition-transform duration-200 ${
-                          isOpen ? 'rotate-180 text-[#FF7A00]' : ''
+                          isOpen ? 'rotate-180 text-[#D9852F]' : ''
                         }`}
                         aria-hidden
                       />
@@ -320,7 +320,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
                 <Link
                   key={idx}
                   to={rel.path}
-                  className="rounded-xl border border-white/[0.08] bg-[#0c0907] px-4 py-2.5 text-xs font-semibold text-neutral-300 hover:text-[#FF7A00] hover:border-[#FF7A00]/40 transition-colors"
+                  className="rounded-xl border border-white/[0.08] bg-[#0c0907] px-4 py-2.5 text-xs font-semibold text-neutral-300 hover:text-[#D9852F] hover:border-[#D9852F]/40 transition-colors"
                 >
                   {rel.label} →
                 </Link>
@@ -331,7 +331,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
 
         {/* Bottom CTA Banner */}
         <section className="px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
-          <div className="rounded-3xl border border-[#FF7A00]/30 bg-gradient-to-b from-[#150f0c] to-[#0a0705] p-8 sm:p-12 shadow-[0_0_60px_rgba(255,122,0,0.15)]">
+          <div className="rounded-3xl border border-[#D9852F]/30 bg-gradient-to-b from-[#150f0c] to-[#0a0705] p-8 sm:p-12 shadow-[0_0_60px_rgba(255,122,0,0.15)]">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
               Ready to Launch Your Direct Restaurant Ordering System?
             </h2>
@@ -342,7 +342,7 @@ export const SeoLandingPage: React.FC<SeoLandingPageProps> = ({ data }) => {
               {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
               <a
                 href="/owner/register"
-                className="inline-flex items-center gap-2 rounded-full bg-[#FF7A00] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#E56D00] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
+                className="inline-flex items-center gap-2 rounded-full bg-[#D9852F] px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black hover:bg-[#b8702a] transition-all hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]"
               >
                 Start Free with BhojanOS
                 <ArrowRight size={16} aria-hidden />

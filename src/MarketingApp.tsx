@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MarketingWhatsAppFloat } from './components/marketing/MarketingWhatsAppFloat';
 import { MarketingAssistantRoot } from './features/assistant/ui/MarketingAssistantRoot';
+import { LenisScrollWrapper } from './components/marketing/LenisScrollWrapper';
 import './marketing.css';
 
 // Existing Marketing Pages
@@ -53,7 +54,7 @@ const MarketingShell = () => (
       <div className="h-4 w-32 rounded bg-white/[0.06] animate-pulse mb-6" />
       <div className="h-12 w-full max-w-xl rounded bg-white/[0.06] animate-pulse mb-4" />
       <div className="h-12 w-full max-w-lg rounded bg-white/[0.06] animate-pulse mb-8" />
-      <div className="h-11 w-44 rounded-xl bg-[#FF7A00]/20 animate-pulse" />
+      <div className="h-11 w-44 rounded-xl bg-[#D9852F]/20 animate-pulse" />
     </main>
   </div>
 );
@@ -68,11 +69,12 @@ function prefetchMarketingRoutes() {
     void import('./pages/marketing/PlatformPage');
     void import('./pages/OnboardKitchen');
   };
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+  const win = typeof window !== 'undefined' ? window : null;
+  if (win && 'requestIdleCallback' in win) {
+    (win as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
       .requestIdleCallback(run, { timeout: 3500 });
   } else {
-    window.setTimeout(run, 1500);
+    win?.setTimeout(run, 1500);
   }
 }
 
@@ -84,11 +86,12 @@ export default function MarketingApp() {
 
   return (
     <BrowserRouter>
-      <MarketingWhatsAppFloat />
-      {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
-      <MarketingAssistantRoot />
-      <Suspense fallback={<MarketingShell />}>
-        <Routes>
+      <LenisScrollWrapper className="min-h-screen bg-[#030303] flex flex-col pb-[env(safe-area-inset-bottom,0.75rem)]">
+        <MarketingWhatsAppFloat />
+        {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
+        <MarketingAssistantRoot />
+        <Suspense fallback={<MarketingShell />}>
+          <Routes>
           {/* Main Landing & Funnel */}
           <Route path="/" element={<OnboardKitchen />} />
           <Route path="/onboard" element={<OnboardKitchen />} />
@@ -152,7 +155,8 @@ export default function MarketingApp() {
           {/* Fallback to 404 handler or Root */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+        </Suspense>
+      </LenisScrollWrapper>
     </BrowserRouter>
   );
 }

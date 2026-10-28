@@ -12,7 +12,7 @@ interface MarketplaceSearchFilterChipsProps {
 
 const chipClass = (active: boolean) =>
   active
-    ? 'border-[#FF7A00]/50 bg-[#FF7A00]/15 text-[#FF7A00]'
+    ? 'border-[#D9852F]/50 bg-[#D9852F]/15 text-[#D9852F]'
     : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20';
 
 export const MarketplaceSearchFilterChips: React.FC<MarketplaceSearchFilterChipsProps> = ({
@@ -46,7 +46,7 @@ export const MarketplaceSearchFilterChips: React.FC<MarketplaceSearchFilterChips
         <SlidersHorizontal className="h-3.5 w-3.5" />
         More filters
         {activeFilterCount > 0 && (
-          <span className="rounded-full bg-[#FF7A00] px-1.5 text-[10px] font-semibold text-black">
+          <span className="rounded-full bg-[#D9852F] px-1.5 text-[10px] font-semibold text-black">
             {activeFilterCount}
           </span>
         )}

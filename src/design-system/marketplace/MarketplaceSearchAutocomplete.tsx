@@ -65,7 +65,7 @@ export const MarketplaceSearchAutocomplete: React.FC<MarketplaceSearchAutocomple
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => onSelect(item)}
                   className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition ${
-                    active ? 'bg-[#FF7A00]/15 text-white' : 'text-white/80 hover:bg-white/5'
+                    active ? 'bg-[#D9852F]/15 text-white' : 'text-white/80 hover:bg-white/5'
                   }`}
                 >
                   {itemIcon(item)}
@@ -86,7 +86,7 @@ export const MarketplaceSearchAutocomplete: React.FC<MarketplaceSearchAutocomple
     <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-xl">
       {view.status === 'loading' && (
         <div className="flex items-center gap-2 px-3 py-3 text-sm text-white/60">
-          <Loader2 className="h-4 w-4 animate-spin text-[#FF7A00]" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin text-[#D9852F]" aria-hidden="true" />
           Loading suggestions…
         </div>
       )}

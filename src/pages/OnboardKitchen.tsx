@@ -24,7 +24,7 @@ const OnboardKitchen: React.FC = () => {
   }, [location.pathname, location.hash, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070504] text-white font-sans selection:bg-[#FF7A00]/20 relative overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-[#070504] text-white font-sans selection:bg-[#D9852F]/20 relative overflow-x-hidden">
       <EnterpriseSchema />
       <EnterpriseHeader />
 

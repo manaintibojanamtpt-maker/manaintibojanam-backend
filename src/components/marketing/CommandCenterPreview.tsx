@@ -70,7 +70,7 @@ export const CommandCenterPreview = memo(function CommandCenterPreview() {
                     <p className="text-sm text-neutral-400">AI projection based on last 4 weekends and weather.</p>
                   </div>
                   <MarketingSoftPill variant="accent">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#FF7A00]">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#D9852F]">
                       High Confidence
                     </span>
                   </MarketingSoftPill>
@@ -86,16 +86,16 @@ export const CommandCenterPreview = memo(function CommandCenterPreview() {
                     <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Peak Hour</div>
                     <div className="text-2xl font-bold text-white tabular-nums">{marketingDemoData.demandForecast.peakHour}</div>
                   </div>
-                  <div className="bg-[#0A0A0A] border border-[#FF7A00]/20 rounded-xl p-4">
-                    <div className="text-[10px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-1">Recommendation</div>
+                  <div className="bg-[#0A0A0A] border border-[#D9852F]/20 rounded-xl p-4">
+                    <div className="text-[10px] font-semibold text-[#D9852F] uppercase tracking-wider mb-1">Recommendation</div>
                     <div className="text-sm font-medium text-neutral-200">{marketingDemoData.demandForecast.recommendation}</div>
                   </div>
                 </div>
                 <div className="h-32 flex items-end gap-1.5">
                   {[20, 30, 25, 45, 60, 90, 80, 50, 30, 20].map((h, i) => (
                     <div key={i} className="flex-1 h-full flex items-end">
-                      <div className="w-full bg-[#FF7A00]/15 rounded-t-sm relative" style={{ height: `${h}%` }}>
-                        <div className="absolute top-0 w-full h-0.5 bg-[#FF7A00]" />
+                      <div className="w-full bg-[#D9852F]/15 rounded-t-sm relative" style={{ height: `${h}%` }}>
+                        <div className="absolute top-0 w-full h-0.5 bg-[#D9852F]" />
                       </div>
                     </div>
                   ))}
@@ -116,9 +116,9 @@ export const CommandCenterPreview = memo(function CommandCenterPreview() {
                       { title: 'Looking up Master Recipe', sub: 'Chicken Biryani (Large)', icon: Database, color: 'neutral' },
                       { title: 'Inventory Impact', sub: 'Deducting from Central Kitchen', icon: Activity, color: 'orange' },
                     ].map((step, i) => (
-                      <div key={step.title} className={`bg-[#0A0A0A] border rounded-xl p-4 flex items-center gap-3 ${i === 0 ? 'border-emerald-500/20' : i === 2 ? 'border-[#FF7A00]/20' : 'border-white/[0.06]'}`}>
-                        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${i === 0 ? 'bg-emerald-500/10' : i === 2 ? 'bg-[#FF7A00]/10' : 'bg-white/[0.04]'}`}>
-                          <step.icon size={16} className={i === 0 ? 'text-emerald-400' : i === 2 ? 'text-[#FF7A00]' : 'text-neutral-400'} />
+                      <div key={step.title} className={`bg-[#0A0A0A] border rounded-xl p-4 flex items-center gap-3 ${i === 0 ? 'border-emerald-500/20' : i === 2 ? 'border-[#D9852F]/20' : 'border-white/[0.06]'}`}>
+                        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${i === 0 ? 'bg-emerald-500/10' : i === 2 ? 'bg-[#D9852F]/10' : 'bg-white/[0.04]'}`}>
+                          <step.icon size={16} className={i === 0 ? 'text-emerald-400' : i === 2 ? 'text-[#D9852F]' : 'text-neutral-400'} />
                         </div>
                         <div>
                           <div className="text-sm font-medium text-white">{step.title}</div>

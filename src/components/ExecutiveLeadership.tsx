@@ -17,7 +17,7 @@ export const ExecutiveLeadership: React.FC<ExecutiveLeadershipProps> = ({
   return (
     <Section id={id} background="default" className="relative scroll-mt-24">
       {!compact && (
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-[#FF7A00]/5 to-transparent blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-[#D9852F]/5 to-transparent blur-[80px] pointer-events-none" />
       )}
       <SectionHeader
         label="Leadership"
@@ -37,7 +37,7 @@ export const ExecutiveLeadership: React.FC<ExecutiveLeadershipProps> = ({
         <p className="text-center mt-6">
           <Link
             to="/about#leadership"
-            className="text-sm font-semibold text-[#FF7A00] hover:text-[#ff9533] transition-colors underline-offset-4 hover:underline"
+            className="text-sm font-semibold text-[#D9852F] hover:text-[#ff9533] transition-colors underline-offset-4 hover:underline"
           >
             Read full leadership bios →
           </Link>

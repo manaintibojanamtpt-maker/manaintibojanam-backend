@@ -14,7 +14,7 @@ export function TrackingHeroView({ hero }: TrackingHeroViewProps) {
       {(hero.etaLabel || hero.prepBadgeLabel) ? (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           {hero.etaLabel ? (
-            <p className="inline-flex rounded-full bg-[#FF7A00]/15 px-4 py-2 text-sm font-bold text-[#FF7A00]">
+            <p className="inline-flex rounded-full bg-[#D9852F]/15 px-4 py-2 text-sm font-bold text-[#D9852F]">
               ETA {hero.etaLabel}
             </p>
           ) : null}
@@ -33,7 +33,7 @@ export function TrackingHeroView({ hero }: TrackingHeroViewProps) {
           aria-live="polite"
         >
           <span
-            className={`h-2 w-2 rounded-full bg-[#FF7A00] ${hero.liveActive ? 'motion-safe:animate-pulse' : ''}`}
+            className={`h-2 w-2 rounded-full bg-[#D9852F] ${hero.liveActive ? 'motion-safe:animate-pulse' : ''}`}
             aria-hidden
           />
           {hero.liveLabel}

@@ -9,7 +9,7 @@ import { MarketingSoftPill } from './MarketingSoftPill';
 const typeStyles = {
   success: 'border-emerald-500/20 bg-emerald-500/[0.04]',
   warning: 'border-amber-500/20 bg-amber-500/[0.04]',
-  info: 'border-[#FF7A00]/20 bg-[#FF7A00]/[0.04]',
+  info: 'border-[#D9852F]/20 bg-[#D9852F]/[0.04]',
   neutral: 'border-white/[0.08] bg-white/[0.02]',
 };
 
@@ -25,8 +25,8 @@ export const AIManagerSection = memo(function AIManagerSection() {
     <Section id="ai" background="gradient" className="scroll-mt-24">
       <RevealOnScroll className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
         <MarketingSoftPill variant="accent" className="mb-6">
-          <Sparkles size={13} className="text-[#FF7A00]" />
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FF7A00]">
+          <Sparkles size={13} className="text-[#D9852F]" />
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#D9852F]">
             AI Copilot
           </span>
         </MarketingSoftPill>
@@ -40,14 +40,14 @@ export const AIManagerSection = memo(function AIManagerSection() {
 
       <div className="relative max-w-4xl mx-auto">
         <div
-          className="pointer-events-none absolute inset-0 bg-[#FF7A00]/[0.06] blur-[80px] rounded-full"
+          className="pointer-events-none absolute inset-0 bg-[#D9852F]/[0.06] blur-[80px] rounded-full"
           aria-hidden
         />
 
         <div className="relative rounded-[1.75rem] border border-white/[0.08] bg-[#0A0A0A]/90 backdrop-blur-md overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
-              <MessageCircle size={16} className="text-[#FF7A00]" />
+              <MessageCircle size={16} className="text-[#D9852F]" />
               <span className="text-sm font-semibold text-white">AI Notification Center</span>
             </div>
             <span className="text-[10px] font-mono text-neutral-600">Updated just now</span>
@@ -70,7 +70,7 @@ export const AIManagerSection = memo(function AIManagerSection() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04]">
-                      <Icon size={15} className="text-[#FF7A00]" />
+                      <Icon size={15} className="text-[#D9852F]" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white mb-1">{item.title}</p>

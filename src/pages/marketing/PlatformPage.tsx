@@ -10,7 +10,7 @@ import { EnterpriseSchema } from '../../components/EnterpriseSchema';
 
 const PlatformPage: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-[#030303] font-sans text-gray-100">
+    <div className="min-h-[100dvh] flex flex-col bg-[#030303] font-sans text-gray-100">
       <EnterpriseSchema />
       <EnterpriseHeader />
       <main className="flex-grow marketing-main-offset">

@@ -68,8 +68,13 @@ export const platformFeatures: Array<{
   },
   {
     icon: Sparkles,
-    title: 'AI Insights',
-    description: 'Order trends, prep suggestions, and actionable insights — explained clearly.',
+    title: 'AI Insights & EOD Briefings',
+    description: 'Daily revenue briefings, growth intelligence, and recipe costing — explained clearly with one action.',
+  },
+  {
+    icon: Package,
+    title: 'Recipe Intelligence',
+    description: 'Map every dish to ingredients. Auto-calculate food cost, margins, and ingredient usage from live orders.',
   },
 ];
 
@@ -92,10 +97,13 @@ export const commissionComparison = {
 };
 
 export const aiManagerInsights = [
-  { type: 'info', title: 'AI Insights', body: 'Order trends, prep suggestions, and actionable insights — explained clearly.' },
-  { type: 'neutral', title: 'Kitchen Health', body: 'Monitor prep latency, packaging bottlenecks, and kitchen performance.' },
-  { type: 'success', title: 'Customer Retention', body: 'Track repeat buyers, order history, and retention campaigns.' },
-  { type: 'warning', title: 'Inventory Alerts', body: 'Low-stock warnings and automatic deduction on every order.' },
+  { type: 'info', title: 'Daily EOD Briefing', body: 'End-of-day summary sent to owner — orders, revenue, top sellers, and what to improve tomorrow.' },
+  { type: 'success', title: 'Revenue Growth Intelligence', body: 'Track daily, weekly, monthly revenue trends with AI-powered growth recommendations.' },
+  { type: 'warning', title: 'Recipe Intelligence', body: 'Map every menu item to ingredients. Auto-calculate food cost, margins, and ingredient usage.' },
+  { type: 'neutral', title: 'Kitchen Health', body: 'Monitor prep latency, packaging bottlenecks, and kitchen performance in real time.' },
+  { type: 'info', title: 'Zero Commission', body: 'Keep 100% of every direct order. No marketplace cut. Ever.' },
+  { type: 'success', title: 'Customer Retention', body: 'Track repeat buyers, order history, and AI-suggested retention campaigns.' },
+  { type: 'warning', title: 'Smart Inventory Alerts', body: 'Low-stock warnings with automatic deduction on every order. Never run out of key ingredients.' },
 ];
 
 export const howItWorksSteps = [

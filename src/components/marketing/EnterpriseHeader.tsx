@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import bhojanOsLogo from '../../assets/bhojan-os-logo.png';
 import { ChevronDown, Menu, X, ShoppingBag } from 'lucide-react';
 import { MarketingSoftCTA } from './MarketingSoftCTA';
 import { orderBhojanPublic } from '../../config/demoData';
+import BhojanOSLogo from '../BhojanOSLogo';
 
 const navLinkClass = (active: boolean) =>
   `transition-colors ${active ? 'text-white font-semibold' : 'hover:text-white text-neutral-400'}`;
@@ -43,19 +43,11 @@ export const EnterpriseHeader: React.FC = () => {
     <header className="fixed top-0 z-[100] w-full border-b border-white/[0.06] bg-[#070504]/90 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-[4.5rem] flex items-center justify-between w-full overflow-visible">
         <Link to="/" className="flex items-center gap-3 cursor-pointer min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
-            <img
-              src={bhojanOsLogo}
-              alt="BhojanOS Logo"
-              className="w-full h-full object-cover"
-              width={40}
-              height={40}
-              fetchPriority="high"
-              decoding="async"
-            />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-white/10 shrink-0">
+            <BhojanOSLogo size={36} className="w-full h-full" />
           </div>
           <span className="text-lg sm:text-xl font-bold tracking-tight leading-snug text-white truncate">
-            Bhojan<span className="text-[#FF7A00]">OS</span>
+            Bhojan<span className="text-[#D9852F]">OS</span>
           </span>
         </Link>
 
@@ -78,7 +70,7 @@ export const EnterpriseHeader: React.FC = () => {
                 <Link to="/digital-menu-for-restaurants" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-white text-xs font-medium">Digital Menu</Link>
                 <Link to="/delivery-management-software" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-white text-xs font-medium">Delivery Management</Link>
                 <div className="my-1 border-t border-white/5" />
-                <Link to="/features" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-[#FF7A00] text-xs font-semibold">All Platform Features →</Link>
+                <Link to="/features" className="block px-3 py-2 hover:bg-white/5 rounded-lg text-[#D9852F] text-xs font-semibold">All Platform Features →</Link>
               </div>
             </div>
           </div>
@@ -157,7 +149,7 @@ export const EnterpriseHeader: React.FC = () => {
             href={orderBhojanPublic.homeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold hover:bg-[#FF7A00]/15 transition-colors"
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-[#D9852F]/40 bg-[#D9852F]/10 text-[#D9852F] text-sm font-bold hover:bg-[#D9852F]/15 transition-colors"
           >
             <ShoppingBag size={15} aria-hidden />
             Order Food
@@ -174,7 +166,7 @@ export const EnterpriseHeader: React.FC = () => {
       {mobileMenuOpen ? (
       <div
         id="marketing-mobile-menu"
-        className="marketing-mobile-menu open lg:hidden border-t border-white/[0.06] bg-[#030303] max-h-[80vh] overflow-y-auto"
+        className="marketing-mobile-menu fixed inset-0 top-16 lg:hidden border-t border-white/[0.06] bg-[#030303] overflow-y-auto"
       >
         <div className="px-4 sm:px-6 py-5 flex flex-col gap-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 pt-1">Products</div>
@@ -213,7 +205,7 @@ export const EnterpriseHeader: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] text-sm font-bold"
+              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#D9852F]/40 bg-[#D9852F]/10 text-[#D9852F] text-sm font-bold"
             >
               <ShoppingBag size={15} aria-hidden />
               Order Food

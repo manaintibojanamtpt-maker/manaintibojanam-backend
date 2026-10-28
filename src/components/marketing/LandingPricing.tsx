@@ -42,7 +42,7 @@ export const LandingPricing = memo(function LandingPricing() {
       <p className="text-center">
         <Link
           to="/pricing"
-          className="text-sm font-semibold text-[#FF7A00] hover:text-[#ff9533] transition-colors underline-offset-4 hover:underline"
+          className="text-sm font-semibold text-[#D9852F] hover:text-[#ff9533] transition-colors underline-offset-4 hover:underline"
         >
           View full plan comparison →
         </Link>

@@ -14,7 +14,7 @@ export const SocialProofStrip = memo(function SocialProofStrip() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
         {PROOF_POINTS.map((point) => (
           <div key={point} className="flex items-center gap-2.5 text-sm">
-            <Check size={16} className="text-[#FF7A00] shrink-0" strokeWidth={2.5} />
+            <Check size={16} className="text-[#D9852F] shrink-0" strokeWidth={2.5} />
             <span className="text-neutral-300">{point}</span>
           </div>
         ))}

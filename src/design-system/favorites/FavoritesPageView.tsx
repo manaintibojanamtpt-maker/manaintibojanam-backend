@@ -14,7 +14,7 @@ export function FavoritesGuestView({
       <MarketplaceUxStateView
         title="Sign in to save favorites"
         description="Keep your go-to restaurants one tap away."
-        icon={<Heart className="h-7 w-7 text-[#FF7A00]" aria-hidden />}
+        icon={<Heart className="h-7 w-7 text-[#D9852F]" aria-hidden />}
         primaryLabel="Sign in"
         onPrimary={onSignIn}
       />
@@ -54,7 +54,7 @@ export function FavoritesPageView({
         <MarketplaceUxStateView
           title={emptyTitle}
           description={emptyDescription}
-          icon={<Heart className="h-7 w-7 text-[#FF7A00]" aria-hidden />}
+          icon={<Heart className="h-7 w-7 text-[#D9852F]" aria-hidden />}
           primaryLabel={exploreLabel}
           onPrimary={onExplore}
         />

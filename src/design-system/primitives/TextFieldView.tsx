@@ -26,7 +26,7 @@ export function TextFieldView({
         id={fieldId}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined}
-        className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#FF7A00]/50 focus:ring-2 focus:ring-[#FF7A00]/20"
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#D9852F]/50 focus:ring-2 focus:ring-[#D9852F]/20"
         {...inputProps}
       />
       {error ? (
