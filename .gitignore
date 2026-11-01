@@ -42,3 +42,5 @@ scripts/.smoke-ops-health-report.json
 .backup-phaseb-*/
 .orderbhojan-safety-backup/
 
+
+.claude/

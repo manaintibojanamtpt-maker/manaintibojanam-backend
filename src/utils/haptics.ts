@@ -1,45 +1,72 @@
-type HapticFeedbackType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
+type HapticFeedbackType = 'selection' | 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
 /**
  * Safely triggers haptic feedback on supported devices.
- * Uses window.navigator.vibrate under the hood.
+ * Supports Capacitor Haptics on native iOS/Android shells and falls back to
+ * navigator.vibrate on modern mobile web browsers.
  */
 export const triggerHaptic = (type: HapticFeedbackType = 'light') => {
-  if (typeof window === 'undefined' || !window.navigator || !window.navigator.vibrate) {
+  if (typeof window === 'undefined') return;
+
+  // 1. Try Capacitor native Haptics if available (iOS / Android app shell)
+  try {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; Plugins?: { Haptics?: { impact?: (opts: { style: string }) => Promise<void>; notification?: (opts: { type: string }) => Promise<void>; selectionStart?: () => Promise<void> } } } }).Capacitor;
+    if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+      const haptics = cap.Plugins?.Haptics;
+      if (haptics) {
+        if (type === 'selection') {
+          haptics.selectionStart?.();
+          return;
+        }
+        if (type === 'success' || type === 'warning' || type === 'error') {
+          haptics.notification?.({ type: type.toUpperCase() });
+          return;
+        }
+        const styleMap: Record<string, string> = {
+          light: 'LIGHT',
+          medium: 'MEDIUM',
+          heavy: 'HEAVY',
+        };
+        haptics.impact?.({ style: styleMap[type] || 'LIGHT' });
+        return;
+      }
+    }
+  } catch {
+    // Ignore Capacitor lookup errors and fallback to web vibration
+  }
+
+  // 2. Web vibration fallback (Android Chrome, Firefox, Progressive Web Apps)
+  if (!window.navigator || typeof window.navigator.vibrate !== 'function') {
     return;
   }
 
   try {
     switch (type) {
+      case 'selection':
+        window.navigator.vibrate(6);
+        break;
       case 'light':
-        // A very short, subtle tap
         window.navigator.vibrate(10);
         break;
       case 'medium':
-        // A solid tap, good for standard button presses
-        window.navigator.vibrate(20);
+        window.navigator.vibrate(22);
         break;
       case 'heavy':
-        // A strong, prominent tap
-        window.navigator.vibrate(40);
+        window.navigator.vibrate(45);
         break;
       case 'success':
-        // Two quick ascending taps
-        window.navigator.vibrate([10, 30, 20]);
+        window.navigator.vibrate([12, 30, 24]);
         break;
       case 'warning':
-        // Two moderate taps
-        window.navigator.vibrate([20, 40, 20]);
+        window.navigator.vibrate([24, 40, 24]);
         break;
       case 'error':
-        // Three quick taps
-        window.navigator.vibrate([10, 50, 10, 50, 10]);
+        window.navigator.vibrate([15, 45, 15, 45, 15]);
         break;
       default:
         window.navigator.vibrate(10);
     }
-  } catch (error) {
-    // Ignore errors (e.g. if browser throws security error)
-    console.warn('Haptic feedback failed:', error);
+  } catch {
+    // Silent fail if vibration permissions or focus prevents it
   }
 };

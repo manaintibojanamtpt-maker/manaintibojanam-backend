@@ -32,13 +32,13 @@ export const LandingFAQ = memo(function LandingFAQ() {
                 onClick={() => setOpen(isOpen ? null : i)}
                 className="marketing-faq-trigger"
               >
-                <span className="font-semibold text-white text-sm sm:text-[15px] leading-snug pr-1">
+                <span className="font-semibold text-[#FAFAFA] text-sm sm:text-[15px] leading-snug pr-1">
                   {item.question}
                 </span>
                 <ChevronDown
                   size={18}
                   className={`text-neutral-500 shrink-0 transition-transform duration-200 ${
-                    isOpen ? 'rotate-180 text-[#D9852F]' : ''
+                    isOpen ? 'rotate-180 text-[#D97706]' : ''
                   }`}
                   aria-hidden
                 />

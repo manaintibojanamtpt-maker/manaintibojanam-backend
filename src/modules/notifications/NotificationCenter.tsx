@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { GlassCard } from '../../components/ui/GlassCard';
+import { AnimatedTabs } from '../../components/ui/animated-tabs';
 import { useNotificationCenter } from './hooks/useNotifications';
 import {
   NotificationCategory,
@@ -199,19 +200,16 @@ export const NotificationCenter: React.FC = () => {
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-red-500/50"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
-                  activeTab === tab.id ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-white/5 text-white/50 border border-white/10'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex items-center">
+            <AnimatedTabs
+              tabs={STATUS_TABS}
+              activeTab={activeTab}
+              onChange={(tabId) => setActiveTab(tabId as any)}
+              size="sm"
+              activeBgClassName="bg-red-500 text-white shadow-md shadow-red-500/25"
+              className="mx-0"
+              ariaLabel="Notification status filter tabs"
+            />
           </div>
         </div>
 

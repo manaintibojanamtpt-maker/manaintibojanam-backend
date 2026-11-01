@@ -6,7 +6,7 @@ import { useScrollReveal } from '../../hooks/useScrollReveal';
 /**
  * Food Discovery V2 — cinematic gallery with 3D tilt on hover.
  * Cards overlap slightly; mouse position drives subtle perspective tilt.
- * Copy reduced; imagery dominant.
+ * Clean, editorial, white-first card styling.
  */
 
 function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]; index: number }) {
@@ -38,14 +38,14 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="cine-food-card cine-tilt group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A]"
+      className="cine-food-card cine-tilt group relative overflow-hidden rounded-sm border border-[#27272A] bg-[#111114] hover:border-[#D97706]/50 shadow-none hover:shadow-lg hover:shadow-black/40 transition-all duration-300"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <a
         href="https://orderbhojan.web.app"
         target="_blank"
         rel="noopener noreferrer"
-        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D9852F]"
+        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706]"
         aria-label={`Order ${item.name} from ${item.restaurant} on OrderBhojan`}
       >
         <div className="cine-photo relative aspect-[3/4] overflow-hidden">
@@ -56,7 +56,7 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
             decoding="async"
             className="cine-food-img absolute inset-0 h-full w-full object-cover"
           />
-          <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/85 backdrop-blur-sm">
+          <span className="absolute left-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-md border border-white/10">
             {item.category}
           </span>
         </div>
@@ -64,16 +64,16 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
         <div className="p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-sm font-bold text-white">{item.name}</h3>
-              <p className="mt-0.5 truncate text-[11px] text-white/45">{item.restaurant}</p>
+              <h3 className="truncate text-sm font-bold text-[#FAFAFA]">{item.name}</h3>
+              <p className="mt-0.5 truncate text-[11px] text-[#A1A1AA]">{item.restaurant}</p>
             </div>
-            <span className="flex shrink-0 items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-bold text-white/85">
-              <Star size={10} className="fill-[#D9852F] text-[#D9852F]" aria-hidden />
+            <span className="flex shrink-0 items-center gap-1 rounded-md bg-[#18181B] border border-[#27272A] px-1.5 py-0.5 text-[11px] font-bold text-[#FAFAFA]">
+              <Star size={10} className="fill-[#D97706] text-[#D97706]" aria-hidden />
               {item.rating}
             </span>
           </div>
           <div className="mt-2.5 flex items-center justify-between">
-            <span className="text-base font-extrabold text-white">{item.price}</span>
+            <span className="text-base font-extrabold text-[#FAFAFA]">{item.price}</span>
           </div>
         </div>
       </a>
@@ -85,10 +85,10 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
           setAdded(true);
           window.setTimeout(() => setAdded(false), 1400);
         }}
-        className={`absolute bottom-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full text-black shadow-lg transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+        className={`absolute bottom-3.5 right-3.5 flex h-9 w-9 items-center justify-center rounded-full text-white shadow-none transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706] ${
           added
-            ? 'scale-110 bg-[#34D399]'
-            : 'bg-[#D9852F] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(255,122,0,0.55)]'
+            ? 'scale-110 bg-[#059669]'
+            : 'bg-[#D97706] hover:bg-[#c27223] group-hover:scale-110'
         }`}
       >
         {added ? <Check size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
@@ -99,13 +99,13 @@ function FoodCard({ item, index }: { item: (typeof CINEMATIC_FOOD_CARDS)[number]
 
 function MiniPhone() {
   return (
-    <div className="cine-float cine-glass cine-glass-accent cine-phone-hover w-full max-w-[150px] rounded-[20px] p-1.5">
-      <div className="rounded-[14px] bg-[#0A0A0A] p-2 text-center">
-        <div className="mb-2 text-[10px] font-bold text-white">OrderBhojan</div>
-        <div className="h-24 rounded-lg bg-gradient-to-br from-[#D9852F]/20 to-[#D9852F]/5 flex items-center justify-center mb-2 border border-white/[0.05]">
-          <span className="text-[10px] text-white/60">Browse Menu</span>
+    <div className="cine-float cine-phone-hover w-full max-w-[150px] rounded-[22px] p-1.5 border border-[#27272A] bg-[#111114] shadow-xl shadow-black/50">
+      <div className="rounded-[16px] bg-[#18181B] p-2.5 text-center border border-[#27272A]">
+        <div className="mb-2 text-[10px] font-bold text-[#FAFAFA]">OrderBhojan</div>
+        <div className="h-24 rounded-sm bg-gradient-to-br from-[#D97706]/20 to-[#D97706]/5 flex items-center justify-center mb-2 border border-[#D97706]/30">
+          <span className="text-[10px] font-semibold text-[#D97706]">Browse Menu</span>
         </div>
-        <div className="text-[9px] text-white/45">Direct to kitchen</div>
+        <div className="text-[9px] text-[#A1A1AA]">Direct to kitchen</div>
       </div>
     </div>
   );
@@ -116,23 +116,23 @@ export function FoodDiscoverySection() {
 
   return (
     <section
-      className="relative overflow-hidden py-20 sm:py-24"
+      className="relative overflow-hidden py-20 sm:py-24 bg-[#09090B] border-b border-[#27272A] text-[#FAFAFA]"
       aria-labelledby="discovery-heading"
       ref={scrollRef}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#D9852F]/[0.06] blur-[120px]"
+        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#D97706]/[0.05] blur-[140px]"
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center cine-reveal">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#D9852F]">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#D97706]">
             For customers
           </p>
           <h2
             id="discovery-heading"
-            className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
+            className="font-display text-3xl font-extrabold tracking-tight text-[#FAFAFA] sm:text-5xl"
           >
             Food worth ordering.
           </h2>
@@ -158,14 +158,14 @@ export function FoodDiscoverySection() {
         {/* Bottom row: phone + remaining dishes */}
         <div className="mt-12 grid items-center gap-8 md:grid-cols-12">
           <div className="md:col-span-4 cine-reveal">
-            <h3 className="font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-              Order on <span className="text-[#D9852F]">OrderBhojan</span>
+            <h3 className="font-display text-2xl font-extrabold tracking-tight text-[#FAFAFA] sm:text-3xl">
+              Order on <span className="text-[#D97706]">OrderBhojan</span>
             </h3>
             <a
               href="https://orderbhojan.web.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#D9852F] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,122,0,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-[#D97706] px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition-all duration-300 hover:bg-[#F59E0B] hover:shadow-lg hover:shadow-[#D97706]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706]"
             >
               Order Food
               <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
@@ -188,4 +188,3 @@ export function FoodDiscoverySection() {
 }
 
 export default FoodDiscoverySection;
-

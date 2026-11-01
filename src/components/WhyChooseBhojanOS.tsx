@@ -3,7 +3,6 @@ import { Section } from './ui/Section';
 import { SectionHeader } from './ui/SectionHeader';
 import { whyChooseFeatures } from '../config/whyChoose';
 import { CheckCircle2 } from 'lucide-react';
-import { GlassCard } from './ui/GlassCard';
 
 export const WhyChooseBhojanOS: React.FC = () => {
   return (
@@ -15,13 +14,13 @@ export const WhyChooseBhojanOS: React.FC = () => {
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {whyChooseFeatures.map((feature, i) => (
-          <GlassCard key={i} delay={i * 0.1} hoverEffect={true} className="flex gap-4">
-            <CheckCircle2 className="w-6 h-6 text-[#FF6B00] shrink-0 mt-1" />
+          <div key={i} className="flex gap-4 rounded-xl border border-[#27272A] bg-[#111114] p-6 transition-colors hover:border-[#D97706]/40">
+            <CheckCircle2 className="w-5 h-5 text-[#D97706] shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
-              <p className="text-gray-400 font-medium">{feature.description}</p>
+              <h3 className="text-base font-bold text-[#FAFAFA] mb-2">{feature.title}</h3>
+              <p className="text-sm text-[#A1A1AA] leading-relaxed">{feature.description}</p>
             </div>
-          </GlassCard>
+          </div>
         ))}
       </div>
     </Section>

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap');
 @import "tailwindcss" source(none);
 @import "./styles/soft-buttons.css";
 @import "./styles/marketing-cinematic.css";
@@ -33,57 +34,83 @@
 @theme {
   /* === TYPOGRAPHY === */
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader", Georgia, Cambria, serif;
   --font-display: "Space Grotesk", "Plus Jakarta Sans", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-  /* === BRAND COLORS — Burnished Amber Gold System === */
-  --color-primary: #D9852F;
-  --color-primary-hover: #E8A95E;
-  --color-primary-soft: rgba(217, 133, 47, 0.1);
-  --color-primary-glow: rgba(217, 133, 47, 0.25);
-  --color-primary-gold: #D9852F;
-  --color-primary-luminous: #E8A95E;
+  /* === BRAND COLORS — Warm Editorial Saffron === */
+  --color-primary: #D97706;
+  --color-primary-hover: #B45309;
+  --color-primary-soft: rgba(217, 119, 6, 0.10);
+  --color-primary-glow: rgba(217, 119, 6, 0.22);
+  --color-primary-gold: #D97706;
+  --color-primary-luminous: #F59E0B;
 
   /* === PARTNER ACCENT COLORS === */
   --color-partner-rapido: #FF5F1F;
   --color-partner-porter: #1E88E5;
   --color-partner-uber: #000000;
-  --color-partner-inhouse: #34D399;
+  --color-partner-inhouse: #059669;
 
-  /* === SURFACE COLORS — Warm Charcoal Ink === */
-  --color-marketing-bg: #0E0C0A;
-  --color-marketing-surface: #15120F;
-  --color-marketing-elevated: #1D1915;
-  --color-marketing-overlay: rgba(24, 20, 16, 0.72);
-  --color-marketing-ink: #0E0C0A;
+  /* === SURFACE COLORS — Minimalism & Swiss Style === */
+  --color-marketing-bg: #FFFFFF;
+  --color-marketing-surface: #FAFAFA;
+  --color-marketing-elevated: #F4F4F5;
+  --color-marketing-overlay: rgba(9, 9, 11, 0.40);
+  --color-marketing-ink: #09090B;
 
-  /* === TEXT COLORS === */
-  --color-marketing-text: #FFF8F0;
-  --color-marketing-text-secondary: #C8B9A8;
-  --color-marketing-text-muted: #8A7E72;
-  --color-marketing-text-subtle: #5C5045;
+  /* === BASE COLORS (for Tailwind utilities) === */
+  --color-white: #FFFFFF;
+  --color-black: #000000;
 
-  /* === BORDER COLORS === */
-  --color-marketing-border: rgba(217, 133, 47, 0.08);
-  --color-marketing-border-hover: rgba(217, 133, 47, 0.18);
-  --color-marketing-border-accent: rgba(217, 133, 47, 0.28);
+  /* === DARK PRODUCT SURFACES — Obsidian hardware (KDS, dispatch, mockups) === */
+  --color-marketing-dark-bg: #0F1117;
+  --color-marketing-dark-surface: #161922;
+  --color-marketing-dark-elevated: #1C2030;
+  --color-marketing-dark-soft: #232838;
+
+  /* === TEXT COLORS — High-Contrast Swiss Typography === */
+  --color-marketing-text: #09090B;
+  --color-marketing-text-secondary: #52525B;
+  --color-marketing-text-muted: #71717A;
+  --color-marketing-text-subtle: #A1A1AA;
+
+  /* === DARK TEXT COLORS (on obsidian surfaces) === */
+  --color-marketing-dark-text: #F4F1EB;
+  --color-marketing-dark-text-secondary: #B4A898;
+  --color-marketing-dark-text-muted: #7A7368;
+
+  /* === BORDER COLORS — Hairline Swiss Grids === */
+  --color-marketing-border: #E4E4E7;
+  --color-marketing-border-hover: #18181B;
+  --color-marketing-border-accent: rgba(217, 119, 6, 0.40);
 
   /* === SEMANTIC COLORS === */
-  --color-success: #34D399;
-  --color-warning: #E8A95E;
-  --color-danger: #F87171;
-  --color-info: #60A5FA;
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+  --color-info: #2563EB;
 
-  /* === RADII === */
-  --radius-marketing-card: 1.5rem;
-  --radius-marketing-lg: 1.75rem;
-  --radius-marketing-xl: 2rem;
+  /* === RADII — Geometric Swiss Precision === */
+  --radius-marketing-card: 0.25rem;
+  --radius-marketing-lg: 0.375rem;
+  --radius-marketing-xl: 0.5rem;
 
-  /* === SHADOWS === */
-  --shadow-marketing-card: 0 0 0 1px rgba(217, 133, 47, 0.06), 0 16px 48px -24px rgba(0, 0, 0, 0.7);
-  --shadow-marketing-elevated: 0 0 0 1px rgba(217, 133, 47, 0.1), 0 32px 80px -32px rgba(0, 0, 0, 0.8);
-  --shadow-marketing-glow: 0 0 32px rgba(217, 133, 47, 0.18);
-  --shadow-marketing-glow-lg: 0 0 64px rgba(217, 133, 47, 0.22);
+  /* === SHADOWS — Minimal Swiss Hairline Elevation === */
+  --shadow-marketing-card: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-marketing-elevated: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  --shadow-marketing-glow: none;
+  --shadow-marketing-glow-lg: none;
+  --shadow-marketing-dark: 0 16px 36px -12px rgba(0, 0, 0, 0.60);
+
+  /* === MOTION TOKENS === */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in-quad: cubic-bezier(0.55, 0.08, 0.68, 0.53);
+  --duration-fast: 180ms;
+  --duration-base: 320ms;
+  --duration-slow: 520ms;
+  --duration-stagger: 70ms;
 }
 
 * {
@@ -98,43 +125,133 @@ body {
   color: var(--color-marketing-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@keyframes marketing-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
+/* Respect reduced motion globally — strip all authored animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
-.marketing-hero-enter {
-  animation: marketing-fade-up 0.6s var(--ease-out, cubic-bezier(0.25, 0.4, 0.25, 1)) both;
+/* ── Scroll-triggered reveal primitives ── */
+@keyframes mkt-reveal-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes mkt-reveal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes mkt-reveal-scale {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.marketing-hero-enter-delay-1 {
-  animation-delay: 0.08s;
+.mkt-reveal {
+  animation: mkt-reveal-up var(--duration-base) var(--ease-out-expo) both;
 }
-.marketing-hero-enter-delay-2 {
-  animation-delay: 0.16s;
+.mkt-reveal-fade {
+  animation: mkt-reveal-fade var(--duration-base) var(--ease-out-expo) both;
 }
-.marketing-hero-enter-delay-3 {
-  animation-delay: 0.24s;
+.mkt-reveal-scale {
+  animation: mkt-reveal-scale var(--duration-base) var(--ease-out-expo) both;
 }
 
-.marketing-mobile-menu {
-  overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease;
-  max-height: 0;
-  opacity: 0;
+/* Staggered entrance for grids / lists */
+.mkt-stagger > * {
+  animation: mkt-reveal-up var(--duration-base) var(--ease-out-expo) both;
 }
-.marketing-mobile-menu.open {
-  max-height: 520px;
-  opacity: 1;
+.mkt-stagger > *:nth-child(1)  { animation-delay: 0.02s; }
+.mkt-stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.mkt-stagger > *:nth-child(3)  { animation-delay: 0.18s; }
+.mkt-stagger > *:nth-child(4)  { animation-delay: 0.26s; }
+.mkt-stagger > *:nth-child(5)  { animation-delay: 0.34s; }
+.mkt-stagger > *:nth-child(6)  { animation-delay: 0.42s; }
+.mkt-stagger > *:nth-child(7)  { animation-delay: 0.50s; }
+.mkt-stagger > *:nth-child(8)  { animation-delay: 0.58s; }
+.mkt-stagger > *:nth-child(9)  { animation-delay: 0.66s; }
+.mkt-stagger > *:nth-child(10) { animation-delay: 0.74s; }
+.mkt-stagger > *:nth-child(11) { animation-delay: 0.82s; }
+.mkt-stagger > *:nth-child(12) { animation-delay: 0.90s; }
+
+/* Hero headline: one authored entrance moment. */
+@keyframes mkt-hero-word {
+  from { opacity: 0; transform: translateY(26px) rotateX(6deg); }
+  to   { opacity: 1; transform: translateY(0) rotateX(0deg); }
 }
+.mkt-hero-word {
+  animation: mkt-hero-word var(--duration-slow) var(--ease-out-expo) both;
+  animation-fill-mode: both;
+}
+.mkt-hero-word.d1 { animation-delay: 0.05s; }
+.mkt-hero-word.d2 { animation-delay: 0.22s; }
+.mkt-hero-word.d3 { animation-delay: 0.38s; }
+.mkt-hero-word.d4 { animation-delay: 0.52s; }
+
+.mkt-hero-lead {
+  animation: mkt-reveal-up var(--duration-base) var(--ease-out-expo) both;
+  animation-delay: 0.72s;
+}
+.mkt-hero-cta {
+  animation: mkt-reveal-up var(--duration-base) var(--ease-out-expo) both;
+  animation-delay: 0.90s;
+}
+.mkt-hero-trust {
+  animation: mkt-reveal-fade var(--duration-base) var(--ease-out-expo) both;
+  animation-delay: 1.04s;
+}
+
+/* Subtle ambient breathing glow behind the product stage. */
+@keyframes mkt-ambience {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.06); }
+}
+.mkt-ambience {
+  animation: mkt-ambience 9s var(--ease-in-quad) infinite alternate;
+}
+
+/* KDS ticket lane transitions — height + opacity, no layout thrash. */
+@keyframes mkt-ticket-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.mkt-ticket-in { animation: mkt-ticket-in var(--duration-fast) var(--ease-out-expo) both; }
+
+/* Live status pulse — small, restrained, on the indicator dot only. */
+@keyframes mkt-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.45); }
+  50%      { box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.0); }
+}
+.mkt-live-dot {
+  position: relative;
+}
+.mkt-live-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  animation: mkt-live-pulse 2.2s var(--ease-in-quad) infinite;
+}
+
+/* Smooth section crossfade for editorial→dark transitions. */
+.mkt-section-fade {
+  animation: mkt-reveal-fade var(--duration-slow) var(--ease-out-expo) both;
+}
+
+/* Text-selection and caret themed to the warm palette. */
+::selection {
+  background: rgba(217, 119, 6, 0.22);
+  color: var(--color-marketing-text);
+}
+
+/* marketing-mobile-menu managed by Tailwind */
 
 .marketing-hero-offset {
   padding-top: calc(env(safe-area-inset-top, 0px) + 4.75rem + 0.75rem);
@@ -621,9 +738,9 @@ body {
 
 .marketing-card {
   border-radius: var(--radius-marketing-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 10, 0.85);
-  box-shadow: var(--shadow-marketing-card);
+  border: 1px solid #E5E5DE;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .marketing-section-eyebrow {
@@ -632,9 +749,9 @@ body {
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-primary);
+  border: 1px solid #E5E5DE;
+  background: rgba(217, 119, 6, 0.08);
+  color: #D97706;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -644,14 +761,16 @@ body {
 /* ── Comparison: mobile stacked cards ── */
 .marketing-compare-card {
   border-radius: var(--radius-marketing-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid #E5E5DE;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow: hidden;
 }
 
 .marketing-compare-card--highlight {
-  border-color: rgba(217, 133, 47, 0.22);
-  background: linear-gradient(180deg, rgba(217, 133, 47, 0.06) 0%, rgba(10, 10, 10, 0.95) 100%);
+  border-color: rgba(217, 119, 6, 0.4);
+  background: #FAF9F6;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.08);
 }
 
 .marketing-compare-value {
@@ -671,14 +790,15 @@ body {
 
 .marketing-faq-item {
   border-radius: var(--radius-marketing-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid #E5E5DE;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .marketing-faq-item[data-open='true'] {
-  border-color: rgba(217, 133, 47, 0.22);
-  box-shadow: 0 0 0 1px rgba(217, 133, 47, 0.06);
+  border-color: #09090B;
+  box-shadow: none;
 }
 
 .marketing-faq-trigger {
@@ -721,7 +841,7 @@ body {
   padding: 0 1.125rem 1rem;
   font-size: 0.875rem;
   line-height: 1.65;
-  color: rgba(163, 163, 163, 0.95);
+  color: #52525B;
 }
 
 /* ── Compact leadership strip ── */
@@ -891,7 +1011,7 @@ body {
   letter-spacing: 0.02em;
   color: #0A0A0A;
   text-decoration: none;
-  background: linear-gradient(135deg, #F0B860 0%, #D9852F 45%, #C07020 100%);
+  background: linear-gradient(135deg, #F0B860 0%, #D97706 45%, #B45309 100%);
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.15) inset,
     0 4px 20px -6px rgba(217,133,47,0.45),
@@ -1020,11 +1140,11 @@ html, body {
 }
 .marquee-mask-left {
   left: 0;
-  background: linear-gradient(90deg, #070504, transparent);
+  background: linear-gradient(90deg, #0F1117, transparent);
 }
 .marquee-mask-right {
   right: 0;
-  background: linear-gradient(270deg, #070504, transparent);
+  background: linear-gradient(270deg, #0F1117, transparent);
 }
 
 /* ── Trust Strip Styles ── */
@@ -1051,13 +1171,145 @@ html, body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(217, 133, 47, 0.1);
-  border: 1px solid rgba(217, 133, 47, 0.2);
-  color: #D9852F;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: #D97706;
 }
 .trust-strip__label {
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.05em;
+}
+
+
+/* === WARM EDITORIAL MERCHANT ARCHITECTURE UTILITIES === */
+.paper-canvas, .swiss-canvas {
+  background-color: #FFFFFF;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.hairline-border, .swiss-border { border: 1px solid #E4E4E7; }
+
+.hairline-b, .swiss-b { border-bottom: 1px solid #E4E4E7; }
+
+.hairline-t, .swiss-t { border-top: 1px solid #E4E4E7; }
+
+.hairline-r, .swiss-r { border-right: 1px solid #E4E4E7; }
+
+.hardware-bezel {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08), 0 24px 48px -18px rgba(0, 0, 0, 0.45);
+}
+
+.hardware-card {
+  background-color: #181B24;
+  border: 1px solid #2A2E39;
+}
+
+.text-\[\#FFFFFF\] { color: #FFFFFF; }
+.text-\[\#000000\] { color: #000000; }
+
+/* === ACCESSIBILITY: Swiss High-Contrast Focus Indicators === */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #09090B !important;
+  outline-offset: 2px !important;
+}
+
+[data-theme='dark'] a:focus-visible,
+[data-theme='dark'] button:focus-visible,
+.hardware-card a:focus-visible,
+.hardware-card button:focus-visible {
+  outline: 2px solid #FAFAFA !important;
+  outline-offset: 2px !important;
+}
+
+
+/* === GUARANTEED WHITE TEXT UTILITY === */
+.text-white,
+.text-\[\#FFFFFF\],
+.text-\[\#ffffff\] {
+  color: #FFFFFF !important;
+}
+
+
+/* === NEONE DARK THEME VISUAL LAYER OVERRIDES === */
+.neone-dark .marketing-card {
+  border-color: #27272A !important;
+  background-color: #18181B !important;
+  box-shadow: none !important;
+}
+
+.neone-dark .marketing-card h3 {
+  color: #FAFAFA !important;
+}
+
+.neone-dark .marketing-card p.text-\[\#52525B\] {
+  color: #A1A1AA !important;
+}
+
+.neone-dark .marketing-card a {
+  background-color: #111114 !important;
+  border-color: #27272A !important;
+  color: #A1A1AA !important;
+}
+
+.neone-dark .marketing-card a:hover {
+  border-color: #D97706 !important;
+  color: #D97706 !important;
+}
+
+.neone-dark .marketing-faq-item {
+  border-color: #27272A !important;
+  background-color: #18181B !important;
+  box-shadow: none !important;
+}
+
+.neone-dark .marketing-faq-item[data-open='true'] {
+  border-color: #D97706 !important;
+}
+
+.neone-dark .marketing-faq-answer {
+  color: #A1A1AA !important;
+}
+
+:root {
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+}
+
+.dark {
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration, 30s) linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse var(--duration, 30s) linear infinite;
 }

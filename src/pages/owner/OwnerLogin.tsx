@@ -4,6 +4,7 @@ import { auth, ensureAuthPersistence } from '../../firebase';
 import { Link } from 'react-router-dom';
 import { Store, Mail, Lock, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import SoftButton from '../../components/ui/SoftButton';
+import BhojanOSLogo from '../../components/BhojanOSLogo';
 import { logIncident } from '../../lib/monitoring';
 import toast from 'react-hot-toast';
 import { redirectToOwnerDashboard, cacheOwnerTenantIds } from '../../lib/ownerRedirect';
@@ -265,120 +266,143 @@ const OwnerLogin = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col px-4 py-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="w-full max-w-[420px] mx-auto flex-1 flex flex-col justify-center">
-        <Link
-          to={marketingHome}
-          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors mb-4 self-start"
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#121212] relative overflow-hidden w-full px-4 py-8">
+      {/* Ambient background glow */}
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] rounded-full bg-[#D97706]/10 blur-[130px] pointer-events-none -z-0" 
+        aria-hidden="true" 
+      />
+
+      <div className="relative z-10 w-full max-w-sm mb-4">
+        <a
+          href={marketingHome}
+          className="inline-flex items-center gap-2 text-white/50 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
         >
           <ArrowLeft size={14} /> Back to BhojanOS
-        </Link>
+        </a>
+      </div>
 
-        <div className="w-full bg-[#111] border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
+      {/* Centered glass card */}
+      <div className="relative z-10 w-full max-w-sm rounded-3xl bg-gradient-to-r from-[#ffffff10] to-[#121212] backdrop-blur-md shadow-2xl p-8 flex flex-col items-center border border-white/10">
+        {/* Logo */}
+        <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 mb-5 shadow-lg border border-white/15 p-2 transition-transform duration-300 hover:scale-105">
+          <BhojanOSLogo size={36} />
+        </div>
 
-          <div className="relative z-10 flex flex-col items-center text-center mb-6 sm:mb-8">
-            <div className="flex items-center justify-center gap-2.5 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
-                <Store size={20} className="text-white" />
-              </div>
-              <div className="text-xl sm:text-2xl font-black tracking-tight text-white whitespace-nowrap">
-                BhojanOS<span className="text-red-500">Owner</span>
-              </div>
-            </div>
-            <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Welcome Back</h1>
-            <p className="text-white/50 text-sm font-medium max-w-xs">Log in to manage your kitchen operations</p>
-          </div>
+        {/* Title */}
+        <h2 className="text-2xl font-bold text-white mb-1 text-center tracking-tight">
+          Bhojan<span className="bg-gradient-to-r from-[#D97706] to-[#F59E0B] bg-clip-text text-transparent">OS</span>
+        </h2>
+        <p className="text-xs text-zinc-400 mb-6 text-center">Restaurant Owner Operations Portal</p>
 
-          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
-            {loginError ? (
-              <div
-                role="alert"
-                className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-left"
-              >
+        {/* Form */}
+        <form onSubmit={handleLogin} className="flex flex-col w-full gap-4">
+          <div className="w-full flex flex-col gap-3">
+            <input
+              placeholder="Owner email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (loginError) setLoginError(null);
+              }}
+              className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#D97706] border border-white/10 transition-all font-medium"
+            />
+            <input
+              placeholder="Password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (loginError) setLoginError(null);
+              }}
+              className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#D97706] border border-white/10 transition-all font-medium"
+            />
+            {loginError && (
+              <div role="alert" className="text-xs text-red-400 text-left bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
                 {loginError}
               </div>
-            ) : null}
-            <div>
-              <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail size={18} className="text-white/20" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (loginError) setLoginError(null);
-                  }}
-                  placeholder="owner@example.com"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
-                />
-              </div>
-            </div>
+            )}
+          </div>
 
-            <div>
-              <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock size={18} className="text-white/20" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (loginError) setLoginError(null);
-                  }}
-                  placeholder="••••••••"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
-                />
-              </div>
-            </div>
+          <hr className="opacity-10 border-white" />
 
-            <SoftButton type="submit" tone="primary" fullWidth disabled={loading || redirecting} className="mt-2">
+          <div>
+            <button
+              type="submit"
+              disabled={loading || redirecting}
+              className="w-full bg-white/10 hover:bg-white/20 text-white font-medium px-5 py-3 rounded-full shadow hover:shadow-lg transition mb-3 text-sm cursor-pointer border border-white/15 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
               {loading || redirecting ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
                 <>
-                  <span>Sign In</span>
-                  <ArrowRight size={18} />
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Signing in…</span>
                 </>
+              ) : (
+                <span>Sign in</span>
               )}
-            </SoftButton>
-          </form>
+            </button>
 
-          <div className="mt-6 flex items-center gap-3 relative z-10">
-            <div className="h-px bg-white/10 flex-1" />
-            <span className="text-white/40 text-xs font-bold uppercase tracking-wider">or</span>
-            <div className="h-px bg-white/10 flex-1" />
+            {/* Google Sign In */}
+            <button
+              type="button"
+              disabled={loading || redirecting}
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-b from-[#232526] to-[#2d2e30] hover:brightness-125 rounded-full px-5 py-3 font-medium text-white shadow transition mb-2 text-sm cursor-pointer border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <img
+                src="https://cdn.21st.dev/assets/mirror/38/38146bfd9eff6dbf0d74771f2e625c70d87d3770e0d080dbb6e50db1d5403f46.svg"
+                alt="Google"
+                className="w-5 h-5 shrink-0"
+              />
+              <span>Continue with Google</span>
+            </button>
+
+            <div className="w-full text-center mt-3">
+              <span className="text-xs text-gray-400">
+                Don't have an account?{' '}
+                <Link
+                  to="/owner/register"
+                  className="underline text-white/80 hover:text-white cursor-pointer ml-1"
+                >
+                  Sign up, it's free!
+                </Link>
+              </span>
+            </div>
           </div>
+        </form>
+      </div>
 
-          <SoftButton
-            type="button"
-            tone="secondary"
-            fullWidth
-            disabled={loading || redirecting}
-            onClick={handleGoogleLogin}
-            className="mt-6 relative z-10"
-          >
-            <GoogleIcon />
-            <span>Continue with Google</span>
-          </SoftButton>
-
-          <div className="mt-8 pt-6 border-t border-white/5 text-center relative z-10">
-            <p className="text-white/40 text-sm">
-              Don't have a store yet?{' '}
-              <Link to="/owner/register" className="text-red-500 hover:text-red-400 font-bold">
-                Create one
-              </Link>
-            </p>
-          </div>
+      {/* User count and avatars */}
+      <div className="relative z-10 mt-10 flex flex-col items-center text-center max-w-sm">
+        <p className="text-gray-400 text-sm mb-3">
+          Join over <span className="font-semibold text-white">1,200+</span> restaurant owners &amp; cloud kitchens scaling with Bhojan<span className="text-[#F59E0B] font-bold">OS</span>.
+        </p>
+        <div className="flex -space-x-2 overflow-hidden items-center justify-center py-1">
+          <img
+            src="https://cdn.21st.dev/assets/mirror/a6/a634d4f02fe5b77804943c1d74b8d70e35ffe26454e0e9af9717432a2c72bfde.jpg"
+            alt="Restaurant owner"
+            className="w-8 h-8 rounded-full border-2 border-[#181824] object-cover ring-1 ring-white/10"
+          />
+          <img
+            src="https://cdn.21st.dev/assets/mirror/d8/d8dab29a5736d5c2b0084d720d3db02c785560071609be501541922928fdf831.jpg"
+            alt="Restaurant owner"
+            className="w-8 h-8 rounded-full border-2 border-[#181824] object-cover ring-1 ring-white/10"
+          />
+          <img
+            src="https://cdn.21st.dev/assets/mirror/d1/d1a3e08d4e37d6ee2b7de1db8df87c1dc7acd8ffb004caaf980917de518a60c9.jpg"
+            alt="Restaurant owner"
+            className="w-8 h-8 rounded-full border-2 border-[#181824] object-cover ring-1 ring-white/10"
+          />
+          <img
+            src="https://cdn.21st.dev/assets/mirror/f0/f07b84f12ef125cbb837a7bd64da401992f5f62bd55fee10d01cd3dcc8abae80.jpg"
+            alt="Restaurant owner"
+            className="w-8 h-8 rounded-full border-2 border-[#181824] object-cover ring-1 ring-white/10"
+          />
         </div>
       </div>
     </div>

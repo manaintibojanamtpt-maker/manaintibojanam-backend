@@ -167,3 +167,22 @@ describe('projectMarketplaceOrders guest tracking', () => {
     assert.deepEqual(unknownDeliveryType.etaMinutes, { min: 25, max: 35 });
   });
 });
+
+it('resolves POS-only progress without regressing owner updates, payment checks or terminal orders', () => {
+  for (const [status, orderStatus, expected] of [
+    ['ACCEPTED', 'PREPARING', 'PREPARING'], ['READY', 'READY', 'READY'],
+    ['OUT_FOR_DELIVERY', 'PREPARING', 'OUT_FOR_DELIVERY'], ['PAYMENT_VERIFICATION', 'NEW', 'PAYMENT_VERIFICATION'],
+    ['CANCELLED', 'READY', 'CANCELLED'],
+  ]) assert.equal(projectOrderTracking('test', { status, orderStatus }).lifecycleStatus, expected);
+});
+
+it('projects an undated pending-COD invoice and advertises feedback only to eligible owners', () => {
+  const order = { status: 'COMPLETED', paymentMethod: 'cod', paymentStatus: 'pending' };
+  const result = projectOrderTracking('test', order, undefined, true);
+  assert.ok(result.invoice);
+  assert.equal(result.invoice.createdAt, undefined);
+  assert.equal(result.invoice.paymentStatus, 'pending');
+  assert.equal(result.feedback.eligible, false);
+  assert.equal(projectOrderTracking('test', { status: 'DELIVERED' }).feedback.eligible, false);
+  assert.equal(projectOrderTracking('test', { status: 'DELIVERED' }, undefined, true).feedback.eligible, true);
+});

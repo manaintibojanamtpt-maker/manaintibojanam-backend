@@ -1,3 +1,9 @@
+import { getMarketplaceOrderForUser, getMarketplaceTrackingForGuest, projectOrderTracking } from '../../backend-lib/marketplace/projectMarketplaceOrders.js';
+import { signGuestOrderToken, verifyGuestOrderToken } from '../../backend-lib/guestOrderToken.js';
+import assert from 'node:assert/strict';
+import { initializeApp, deleteApp } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { placeMarketplaceOrder } from '../../backend-lib/marketplace/projectCheckout.js';
 /**
  * M0 PR-6 — Firestore security rules tests (emulator-backed).
  * Run: npm run test:rules
@@ -804,6 +810,46 @@ describe('order commerce rules integration', () => {
       );
     });
 
+    it('denies anonymous reads of actual marketplace checkout orders, including by onlineOrderId', async () => {
+      assert.match(process.env.FIRESTORE_EMULATOR_HOST ?? '', /^(localhost|127\.0\.0\.1):/);
+      const admin = initializeApp({ projectId: PROJECT_ID }, 'checkout-rules-test');
+      try {
+        const db = getFirestore(admin);
+        db.settings({ ignoreUndefinedProperties: true });
+        await db.collection('tenants').doc('tenant-1').set({ name: 'Kitchen', businessHoursEnabled: false });
+        await db.collection('menu').doc('meal').set({ tenantId: 'tenant-1', name: 'Meal', price: 100, isAvailable: true });
+        await db.collection('users').doc('staff-1').set({ restaurantId: 'tenant-1', role: 'cashier' });
+        await db.collection('users').doc('other-staff').set({ restaurantId: 'tenant-2', role: 'cashier' });
+        const placed = await placeMarketplaceOrder(db, FieldValue, {
+          restaurantId: 'tenant-1', orderType: 'pickup', paymentMethod: 'cod',
+          phone: '9876543210', lines: [{ itemId: 'meal', quantity: 1 }],
+        });
+        assert.ok(placed.kind === 'cod');
+        await db.collection('users').doc('owner-1').set({ ownedTenantIds: ['tenant-1'], role: 'owner' });
+        const path = 'orders/' + placed.orderId;
+        assert.equal((await db.doc(path).get()).get('onlineOrderId'), placed.orderId);
+        await assertFails(testEnv.unauthenticatedContext().firestore().doc(path).get());
+        await assertFails(testEnv.authenticatedContext('other-staff').firestore().doc(path).get());
+        await assertSucceeds(testEnv.authenticatedContext('staff-1').firestore().doc(path).get());
+        await assertSucceeds(testEnv.authenticatedContext('owner-1').firestore().doc(path).get());
+        const secret = 'synthetic-emulator-only-signing-secret';
+        const { token } = signGuestOrderToken(placed.orderId, { secret });
+        verifyGuestOrderToken(token, placed.orderId, { secret });
+        assert.throws(() => verifyGuestOrderToken(token, 'different-order', { secret }));
+        const guest = await getMarketplaceTrackingForGuest(db, placed.orderId, '3210');
+        assert.equal(guest?.orderId, placed.orderId);
+        assert.equal(guest?.feedback.eligible, false);
+        assert.equal(await getMarketplaceTrackingForGuest(db, placed.orderId, '9999'), null);
+        // Authenticated checkout uses the same payload shape with userId set.
+        await db.doc(path).update({ userId: 'alice' });
+        await assertSucceeds(testEnv.authenticatedContext('alice').firestore().doc(path).get());
+        assert.equal((await getMarketplaceOrderForUser(db, placed.orderId, 'alice'))?.summary.orderId, placed.orderId);
+        assert.equal(await getMarketplaceOrderForUser(db, placed.orderId, 'stranger'), null);
+      } finally {
+        await deleteApp(admin);
+      }
+    });
+
     it('denies an anonymous caller reading an order it was not addressed by', async () => {
       await seedFirestore(async (db) => {
         await db.collection('orders').doc('order-secret').set({
@@ -842,6 +888,11 @@ describe('order commerce rules integration', () => {
           orderStatus: 'PREPARING',
         })
       );
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const stored = (await context.firestore().collection('orders').doc('order-1').get()).data()!;
+        assert.equal(stored.status, 'ACCEPTED');
+        assert.equal(projectOrderTracking('order-1', stored).lifecycleStatus, 'PREPARING');
+      });
     });
 
     it('denies the legacy client fallback that tried to set paymentStatus directly', async () => {

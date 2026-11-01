@@ -84,6 +84,8 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
+        '@/components': path.resolve(__dirname, 'src/components'),
+        '@/lib': path.resolve(__dirname, 'src/lib'),
         '@': path.resolve(__dirname, '.'),
         '@bhojan/location-core': path.resolve(__dirname, 'packages/location-core/src/index.ts'),
         '@bhojan/location-v2': path.resolve(__dirname, 'src/features/location-v2/index.ts'),
@@ -178,7 +180,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modifyâ€”file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       warmup: {
         clientFiles: [

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Section } from './ui/Section';
 import { SectionHeader } from './ui/SectionHeader';
-import { ExecutiveCard } from './ui/ExecutiveCard';
+import { BhojanOSLeadershipCarousel } from './ui/BhojanOSLeadershipCarousel';
 import { executiveTeam } from '../config/team';
 
 interface ExecutiveLeadershipProps {
@@ -17,7 +17,7 @@ export const ExecutiveLeadership: React.FC<ExecutiveLeadershipProps> = ({
   return (
     <Section id={id} background="default" className="relative scroll-mt-24">
       {!compact && (
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-[#D9852F]/5 to-transparent blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-[#D97706]/10 to-transparent blur-[80px] pointer-events-none" />
       )}
       <SectionHeader
         label="Leadership"
@@ -28,18 +28,17 @@ export const ExecutiveLeadership: React.FC<ExecutiveLeadershipProps> = ({
             : 'Our team brings together decades of expertise in artificial intelligence, enterprise SaaS, and hands-on restaurant operations.'
         }
       />
-      <div className={compact ? 'marketing-leadership-grid' : 'grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8'}>
-        {executiveTeam.map((executive) => (
-          <ExecutiveCard key={executive.id} executive={executive} compact={compact} />
-        ))}
-      </div>
+      
+      {/* Interactive Circular Leadership Showcase */}
+      <BhojanOSLeadershipCarousel members={executiveTeam} compact={compact} />
+
       {compact && (
         <p className="text-center mt-6">
           <Link
             to="/about#leadership"
-            className="text-sm font-semibold text-[#D9852F] hover:text-[#ff9533] transition-colors underline-offset-4 hover:underline"
+            className="text-sm font-semibold text-[#D97706] hover:text-[#F59E0B] transition-colors underline-offset-4 hover:underline inline-flex items-center gap-1.5"
           >
-            Read full leadership bios →
+            Read full leadership bios on About page →
           </Link>
         </p>
       )}

@@ -100,6 +100,8 @@ const OwnerSettings = lazy(() => import('./pages/owner/OwnerSettings'));
 const OwnerSubscription = lazy(() => import('./pages/owner/OwnerSubscription'));
 
 const AboutPage = lazy(() => import('./pages/marketing/AboutPage'));
+const CinematicHeroDemo = lazy(() => import('./components/ui/demo'));
+const AnimatedTabsDemo = lazy(() => import('./components/ui/animated-tabs-demo'));
 const PlatformPage = lazy(() => import('./pages/marketing/PlatformPage'));
 const SecurityPage = lazy(() => import('./pages/marketing/SecurityPage'));
 const ContactPage = lazy(() => import('./pages/marketing/ContactPage'));
@@ -374,6 +376,18 @@ const StorefrontRootRoute: React.FC = () => {
   return <Home />;
 };
 
+const ScrollToTopOnNavigate: React.FC = () => {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [pathname, hash]);
+
+  return null;
+};
+
 const AppContent: React.FC = () => {
   const { currentUser, loading: authLoading, logout } = useAuth();
   const { connected, loading: firestoreLoading, retry } = useFirestoreConnection();
@@ -588,6 +602,7 @@ const AppContent: React.FC = () => {
   return (
     <LazyMotion features={domAnimation}>
       <Router>
+        <ScrollToTopOnNavigate />
         <div className="flex-1 flex flex-col w-full min-h-[100dvh] bg-brand-bg dark:bg-dark-bg transition-colors duration-300 overflow-x-hidden">
           <NetworkAwareness connected={connected} loading={firestoreLoading} retry={retry} />
           
@@ -598,11 +613,16 @@ const AppContent: React.FC = () => {
               <Route path="/owner/login" element={<OwnerLogin />} />
               <Route path="/owner/register" element={<OwnerRegister />} />
               <Route path="/onboard" element={<OnboardKitchen />} />
+              <Route path="/demo" element={<CinematicHeroDemo />} />
+              <Route path="/tabs-demo" element={<AnimatedTabsDemo />} />
+              <Route path="/cinematic-hero" element={<CinematicHeroDemo />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/platform" element={<PlatformPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/support" element={<Navigate to="/contact" replace />} />
+              <Route path="/contact-sales" element={<Navigate to="/contact" replace />} />
               <Route path="/help" element={<HelpCenterPage />} />
               <Route path="/refund" element={<Navigate to="/refund-policy" replace />} />
               <Route path="/blog" element={<BlogPage />} />
@@ -624,6 +644,10 @@ const AppContent: React.FC = () => {
               <Route path="/solutions" element={<SolutionsOverviewPage />} />
               <Route path="/bhojanos-vs-zomato-swiggy" element={<ZomatoSwiggyComparePage />} />
               <Route path="/petpooja-alternative" element={<PetpoojaComparePage />} />
+              <Route path="/compare/petpooja" element={<PetpoojaComparePage />} />
+              <Route path="/compare/dotpe" element={<DotpeComparePage />} />
+              <Route path="/compare/zomato-swiggy" element={<ZomatoSwiggyComparePage />} />
+              <Route path="/compare" element={<Navigate to="/bhojanos-vs-zomato-swiggy" replace />} />
               <Route path="/dotpe-alternative" element={<DotpeComparePage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />

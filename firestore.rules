@@ -348,19 +348,14 @@ service cloud.firestore {
 
     // Unified Orders Collection (BhojanOS + OrderBhojan + POS Customer Orders)
     match /orders/{orderId} {
-      allow read: if (isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.customerUid == request.auth.uid ||
+      // Guest reads go through the marketplace API, which verifies the order-bound token.
+      allow read: if isAuthenticated() && (
+        resource.data.get('userId', null) == request.auth.uid ||
+        resource.data.get('customerUid', null) == request.auth.uid ||
         isAdmin() ||
         isTenantOwner(tenantOf(resource.data)) ||
         isTenantStaff(tenantOf(resource.data))
-      )) ||
-      // Guest tracking lookup by an order id the caller already holds. A document
-      // that is not addressed by its own id or its tracking id is not public,
-      // so this cannot be used to enumerate the collection.
-      (!isAuthenticated() && orderId != '' && (
-        resource.data.id == orderId || resource.data.onlineOrderId == orderId
-      ));
+      );
 
       allow create: if
         /**

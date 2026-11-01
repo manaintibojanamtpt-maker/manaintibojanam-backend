@@ -1,3 +1,4 @@
+import { normalizeOrderStatus, isTerminalOrderStatus } from '../orders/canonicalOrderLifecycle.js';
 import type { Firestore } from 'firebase-admin/firestore';
 import type { FieldValue } from 'firebase-admin/firestore';
 import {
@@ -115,6 +116,49 @@ function buildTrackingTimeline(data: OrderRecord): TrackingTimelineEntry[] {
   return deduped;
 }
 
+// Expose only recorded order events. Older mobile clients still consume the
+// legacy timeline, which includes estimated intermediate milestones.
+function recordedAt(value: unknown): string | undefined {
+  const date = typeof value === 'string' ? new Date(value)
+      : value instanceof Date ? value
+      : value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function'
+        ? value.toDate() : undefined;
+  return date instanceof Date && Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+}
+
+function recordedTrackingEvents(data: OrderRecord): TrackingTimelineEntry[] {
+  const events: TrackingTimelineEntry[] = [];
+  const record = (status: unknown, value: unknown) => {
+    const at = recordedAt(value);
+    if (typeof status === 'string' && status.trim() && at) events.push({ status, at });
+  };
+  const times = (data.timestamps ?? {}) as OrderRecord;
+  record('PLACED', data.createdAt ?? times.createdAt);
+  for (const history of [data.statusHistory, data.timeline]) {
+    if (!Array.isArray(history)) continue;
+    for (const entry of history) {
+      if (entry && (!entry.previousStatus || entry.newStatus !== entry.previousStatus)) record(entry.newStatus ?? entry.status, entry.occurredAt ?? entry.timestamp ?? entry.at);
+    }
+  }
+  for (const [status, field] of Object.entries({
+    ACCEPTED: 'acceptedAt', PREPARING: 'preparingAt', READY: 'readyAt',
+    OUT_FOR_DELIVERY: 'outForDeliveryAt', COMPLETED: 'completedAt',
+    DELIVERED: 'deliveredAt', REJECTED: 'rejectedAt', CANCELLED: 'cancelledAt',
+  })) record(status, times[field] ?? data[field]);
+  return events.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+function trackingOrderType(data: OrderRecord) {
+  const type = String(data.fulfillmentType ?? data.orderType ?? '').toLowerCase();
+  if (type === 'pickup' || type === 'takeaway') return 'pickup';
+  if (type === 'dine_in') return 'dine_in';
+  if (type === 'delivery') return 'delivery';
+  const snapshot = data.delivery as { route?: { provider?: string } } | undefined;
+  if (snapshot?.route?.provider === 'pickup') return 'pickup';
+  if (data.source === 'marketplace_checkout_v1' && snapshot?.route) return 'delivery';
+  return undefined;
+}
+
 function tenantDisplayName(db: Firestore, tenantId: string): Promise<string> {
   return db
     .collection('tenants')
@@ -220,6 +264,7 @@ function resolveOrderTrackingEtaMinutes(
   data: OrderRecord,
   isTerminal: boolean,
   status: string,
+  allowFallback = true,
 ): { min: number; max: number } | undefined {
   if (isTerminal) return undefined;
 
@@ -273,6 +318,8 @@ function resolveOrderTrackingEtaMinutes(
     }
   }
 
+  if (!allowFallback) return undefined;
+
   // 3. Fallback based on operational status: 20-min kitchen prep + travel
   if (isDispatched) {
     return { min: 10, max: 20 };
@@ -281,13 +328,34 @@ function resolveOrderTrackingEtaMinutes(
   return { min: 25, max: 35 };
 }
 
+// Checkout seeds orderStatus=NEW. Later, owner and legacy POS clients can
+// advance either field alone; keep the furthest evidenced phase.
+function trackingLifecycle(data: OrderRecord) {
+  const status = String(data.status ?? '').trim().toUpperCase();
+  const pos = String(data.orderStatus ?? '').trim().toUpperCase();
+  const canonicalPos = normalizeOrderStatus(pos);
+  if (!status) return pos;
+  if (!canonicalPos || canonicalPos === 'PLACED') return status;
+  const current = normalizeOrderStatus(status);
+  if (status === 'FAILED_DELIVERY' || (current && isTerminalOrderStatus(current))) return status;
+  if (isTerminalOrderStatus(canonicalPos)) return pos;
+  const stages = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'];
+  const deliveryAliases: Record<string, string> = {
+    IN_TRANSIT: 'OUT_FOR_DELIVERY', COURIER_BOOKED: 'OUT_FOR_DELIVERY',
+    READY_FOR_PICKUP: 'READY', KITCHEN_PREPARING: 'PREPARING',
+  };
+  return stages.indexOf(canonicalPos) > stages.indexOf(current ?? deliveryAliases[status]) ? pos : status;
+}
+
 export function projectOrderTracking(
   orderId: string,
   data: OrderRecord,
   meta?: OrderTrackingMeta,
+  signedInOwner = false,
 ) {
-  const timeline = buildTrackingTimeline(data);
-  const status = normalizeTrackingStatus(String(data.status ?? timeline[timeline.length - 1]?.status ?? 'PLACED'));
+  const lifecycleStatus = trackingLifecycle(data);
+  const timeline = buildTrackingTimeline({ ...data, status: lifecycleStatus || data.status });
+  const status = normalizeTrackingStatus(lifecycleStatus || timeline[timeline.length - 1]?.status || 'PLACED');
   const items = readOrderItems(data);
   const grandTotal = Number(data.totalAmount ?? data.total ?? 0);
   const deliveryPartner = deliveryPartnerLabel(data.deliveryPartner);
@@ -300,13 +368,14 @@ export function projectOrderTracking(
   const restaurantName = meta?.displayName ?? safeText(data.tenantName) ?? restaurantSlug ?? 'Kitchen';
   const orderNumberValue = readOrderNumber(data);
   const orderNumber = formatOrderNumberLabel(orderNumberValue, orderId);
-  const isTerminal = status === 'DELIVERED' || status === 'CANCELLED';
+  const completed = status === 'DELIVERED' || status === 'COMPLETED';
+  const isTerminal = completed || status === 'CANCELLED';
   const resolvedAddress = resolveOrderAddressText(data.address, data.deliveryAddress);
   const invoice =
-    status === 'DELIVERED'
+    completed
       ? {
           orderNumber,
-          createdAt: readTimestamp(data.createdAt),
+          createdAt: recordedAt(data.createdAt) ?? recordedAt((data.timestamps as OrderRecord | undefined)?.createdAt),
           kitchenName: restaurantName,
           customerName: safeText(data.customerName),
           phone: phoneDigits(data.phone ?? data.customerPhone),
@@ -336,6 +405,10 @@ export function projectOrderTracking(
     orderId,
     orderNumber,
     status,
+    lifecycleStatus: lifecycleStatus || status,
+    recordedTimeline: recordedTrackingEvents(data),
+    recordedEtaMinutes: resolveOrderTrackingEtaMinutes(data, isTerminal, status, false),
+    fulfillmentType: trackingOrderType(data),
     paymentStatus: String(data.paymentStatus ?? 'pending'),
     deliveryType:
       data.deliveryType === 'scheduled'
@@ -365,7 +438,7 @@ export function projectOrderTracking(
       : undefined,
     invoice,
     feedback: {
-      eligible: status === 'DELIVERED',
+      eligible: signedInOwner && completed && String(data.status).toUpperCase() === 'DELIVERED',
       submitted: reviewed,
       rating: typeof data.rating === 'number' ? data.rating : undefined,
       comment: safeText(data.feedback),
@@ -419,7 +492,7 @@ export async function getMarketplaceOrderForUser(
   const meta = await tenantMeta(db, String(data.tenantId ?? ''));
   return {
     summary: projectOrderSummary(doc.id, data, displayName),
-    tracking: projectOrderTracking(doc.id, data, meta),
+    tracking: projectOrderTracking(doc.id, data, meta, true),
   };
 }
 

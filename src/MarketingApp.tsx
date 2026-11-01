@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MarketingWhatsAppFloat } from './components/marketing/MarketingWhatsAppFloat';
 import { MarketingAssistantRoot } from './features/assistant/ui/MarketingAssistantRoot';
+import { BhojanOSDock } from './components/marketing/BhojanOSDock';
 import { LenisScrollWrapper } from './components/marketing/LenisScrollWrapper';
 import './marketing.css';
 
@@ -45,16 +46,16 @@ const TermsOfServicePage = lazy(() => import('./pages/marketing/TermsOfServicePa
 const RefundPolicyPage = lazy(() => import('./pages/marketing/RefundPolicyPage'));
 
 const MarketingShell = () => (
-  <div className="min-h-screen bg-[#030303] flex flex-col">
-    <header className="h-16 border-b border-white/[0.06] bg-[#030303]/95 flex items-center px-4 sm:px-6">
-      <div className="h-9 w-9 rounded-lg bg-white/[0.06] animate-pulse" />
-      <div className="ml-3 h-4 w-28 rounded bg-white/[0.06] animate-pulse" />
+  <div className="min-h-screen bg-[#09090B] flex flex-col">
+    <header className="h-16 border-b border-[#27272A] bg-[#09090B]/95 flex items-center px-4 sm:px-6">
+      <div className="h-9 w-9 rounded-lg bg-[#18181B] animate-pulse" />
+      <div className="ml-3 h-4 w-28 rounded bg-[#18181B] animate-pulse" />
     </header>
     <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-24 max-w-[1200px] mx-auto w-full">
-      <div className="h-4 w-32 rounded bg-white/[0.06] animate-pulse mb-6" />
-      <div className="h-12 w-full max-w-xl rounded bg-white/[0.06] animate-pulse mb-4" />
-      <div className="h-12 w-full max-w-lg rounded bg-white/[0.06] animate-pulse mb-8" />
-      <div className="h-11 w-44 rounded-xl bg-[#D9852F]/20 animate-pulse" />
+      <div className="h-4 w-32 rounded bg-[#18181B] animate-pulse mb-6" />
+      <div className="h-12 w-full max-w-xl rounded bg-[#18181B] animate-pulse mb-4" />
+      <div className="h-12 w-full max-w-lg rounded bg-[#18181B] animate-pulse mb-8" />
+      <div className="h-11 w-44 rounded-full bg-[#D97706]/20 animate-pulse" />
     </main>
   </div>
 );
@@ -86,8 +87,9 @@ export default function MarketingApp() {
 
   return (
     <BrowserRouter>
-      <LenisScrollWrapper className="min-h-screen bg-[#030303] flex flex-col pb-[env(safe-area-inset-bottom,0.75rem)]">
+      <LenisScrollWrapper className="min-h-screen bg-[#09090B] text-[#FAFAFA] font-sans flex flex-col pb-[env(safe-area-inset-bottom,0.75rem)]">
         <MarketingWhatsAppFloat />
+        <BhojanOSDock />
         {/* Phase 8: flag-gated; returns null when VITE_FF_AI_MARKETING_ASSISTANT is OFF */}
         <MarketingAssistantRoot />
         <Suspense fallback={<MarketingShell />}>
@@ -152,11 +154,28 @@ export default function MarketingApp() {
           <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
           <Route path="/cancellation-policy" element={<Navigate to="/refund-policy" replace />} />
 
+          {/* Owner & Customer Auth Redirects (bypasses marketing SPA to trigger native auth bundles) */}
+          <Route path="/owner/*" element={<ExternalAuthRedirect />} />
+          <Route path="/login" element={<ExternalAuthRedirect to="/owner/login" />} />
+
           {/* Fallback to 404 handler or Root */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
       </LenisScrollWrapper>
     </BrowserRouter>
+  );
+}
+
+function ExternalAuthRedirect({ to }: { to?: string }) {
+  React.useEffect(() => {
+    const dest = to || (typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/owner/login');
+    window.location.href = dest;
+  }, [to]);
+
+  return (
+    <div className="min-h-screen bg-[#09090B] flex items-center justify-center text-white">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#D97706] border-t-transparent" />
+    </div>
   );
 }

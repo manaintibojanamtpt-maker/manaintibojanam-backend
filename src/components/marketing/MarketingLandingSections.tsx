@@ -9,18 +9,23 @@ import { SocialProofGrid } from './SocialProofGrid';
 import { ExecutiveLeadership } from '../ExecutiveLeadership';
 import { LandingPricing } from './LandingPricing';
 import { LandingFAQ } from './LandingFAQ';
-import { FoodDiscoverySection } from './FoodDiscoverySection';
 import { RestaurantWorkspacePreview } from './RestaurantWorkspacePreview';
 import { CallToAction } from '../CallToAction';
 import { TrustGrid } from './TrustGrid';
+import { StackingNavbarDemo } from '../ui/StackingNavbarDemo';
+import { StackedGlassCards } from './StackedGlassCards';
+import { BhojanOSFeatureCards } from './BhojanOSFeatureCards';
+import { ContactSalesSupportSection } from './ContactSalesSupportSection';
 
 /** Below-the-fold landing sections — lazy-loaded so hero paints first. */
 export default function MarketingLandingSections() {
   return (
     <LazyMotion features={domAnimation}>
       <TrustGrid />
+      <StackingNavbarDemo />
+      <StackedGlassCards />
+      <BhojanOSFeatureCards />
       <EcosystemVisual />
-      <FoodDiscoverySection />
       <RestaurantWorkspacePreview />
       <PlatformFeatures />
       <CommissionComparison />
@@ -30,6 +35,7 @@ export default function MarketingLandingSections() {
       <LandingPricing />
       <ExecutiveLeadership compact />
       <LandingFAQ />
+      <ContactSalesSupportSection />
       <CallToAction />
     </LazyMotion>
   );

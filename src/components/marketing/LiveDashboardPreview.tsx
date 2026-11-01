@@ -68,7 +68,7 @@ const StatTile = memo(function StatTile({
         <div className="flex items-center gap-2 mb-2">
           <div
             className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-              accent ? 'bg-[#D9852F]/15 text-[#D9852F]' : 'bg-white/[0.05] text-neutral-400'
+              accent ? 'bg-[#D97706]/15 text-[#D97706]' : 'bg-white/[0.05] text-neutral-400'
             }`}
           >
             <Icon size={14} strokeWidth={2.25} />
@@ -109,7 +109,7 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview({
   return (
     <div className="relative w-full marketing-hero-enter" aria-label="Live restaurant dashboard preview">
       <div
-        className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-[#D9852F]/[0.08] blur-3xl"
+        className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-[#D97706]/[0.08] blur-3xl"
         aria-hidden
       />
 
@@ -180,7 +180,7 @@ export const LiveDashboardPreview = memo(function LiveDashboardPreview({
                       style={{ originY: 1 }}
                     >
                       <div
-                        className="w-full rounded-t-sm bg-gradient-to-t from-[#D9852F]/20 to-[#D9852F]"
+                        className="w-full rounded-t-sm bg-gradient-to-t from-[#D97706]/20 to-[#D97706]"
                         style={{ height: `${h}%` }}
                       />
                     </m.div>

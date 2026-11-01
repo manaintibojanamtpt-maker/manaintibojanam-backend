@@ -15,6 +15,7 @@ import { RecipeAnalyticsCards } from '../../components/owner/recipes/RecipeAnaly
 import { IngredientMasterPanel } from '../../components/owner/recipes/IngredientMasterPanel';
 import { RecipeEditorPanel } from '../../components/owner/recipes/RecipeEditorPanel';
 import { ForecastPanel } from '../../components/owner/recipes/ForecastPanel';
+import { AnimatedTabs } from '../../components/ui/animated-tabs';
 
 type Tab = 'recipes' | 'ingredients' | 'forecast';
 
@@ -140,23 +141,19 @@ export default function OwnerRecipes() {
 
       <RecipeAnalyticsCards summary={summary} />
 
-      <div className="flex gap-2 mb-4 overflow-x-auto">
-        {([
-          ['recipes', 'Recipes'],
-          ['ingredients', 'Raw Ingredients'],
-          ['forecast', 'Forecast & Alerts'],
-        ] as const).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setActiveTab(id)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${
-              activeTab === id ? 'bg-orange-600 text-white' : 'bg-white/5 text-white/60 hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mb-5 flex justify-start">
+        <AnimatedTabs
+          tabs={[
+            { id: 'recipes', label: 'Recipes' },
+            { id: 'ingredients', label: 'Raw Ingredients' },
+            { id: 'forecast', label: 'Forecast & Alerts' },
+          ]}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as Tab)}
+          activeBgClassName="bg-[#D97706] text-white shadow-md shadow-[#D97706]/20"
+          className="mx-0"
+          ariaLabel="Recipe management tabs"
+        />
       </div>
 
       <div className="flex-1 min-h-[520px]">

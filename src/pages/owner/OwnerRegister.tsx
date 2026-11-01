@@ -10,6 +10,8 @@ import { EnvironmentConfig } from '../../config/environment';
 import { onboardingPlanMessaging } from '../../config/pricing';
 import PlanClarityNotice from '../../components/owner/PlanClarityNotice';
 import SoftButton from '../../components/ui/SoftButton';
+import BhojanOSLogo from '../../components/BhojanOSLogo';
+import { OnboardCard } from '../../components/ui/onboard-card';
 import { requestOwnerWelcomeEmail } from '../../lib/ownerWelcomeEmail';
 import { waitForOwnerTenantIds, resolveOwnerTenantIds } from '../../lib/ownerAccess';
 import { cacheOwnerTenantIds } from '../../lib/ownerRedirect';
@@ -294,15 +296,15 @@ const OwnerRegister = () => {
           <ArrowLeft size={14} /> Back to BhojanOS
         </Link>
 
-        <div className="w-full bg-[#111] border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shrink-0">
+        <div className="w-full bg-gradient-to-r from-[#ffffff10] to-[#121212] backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00]/5 to-transparent pointer-events-none" />
           
-          <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B00] to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-[#FF6B00]/20">
-              <Store size={20} className="text-white" />
+          <div className="flex flex-col items-center justify-center mb-6 relative z-10">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 mb-4 shadow-lg border border-white/15 p-2 transition-transform duration-300 hover:scale-105">
+              <BhojanOSLogo size={36} />
             </div>
-            <div className="text-2xl font-black tracking-tight text-white">
-              BhojanOS
+            <div className="text-2xl font-bold tracking-tight text-white">
+              Bhojan<span className="bg-gradient-to-r from-[#D97706] to-[#F59E0B] bg-clip-text text-transparent">OS</span>
             </div>
           </div>
           
@@ -457,6 +459,26 @@ const OwnerRegister = () => {
         </div>
         </div>
       </div>
+    
+
+      {provisioning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-[#27272A] bg-[#111114] p-6 shadow-2xl text-center">
+            <h3 className="text-base font-bold text-white mb-1">
+              Provisioning Your Kitchen OS
+            </h3>
+            <p className="text-xs text-zinc-400 mb-5">
+              Configuring {restaurantName || 'your restaurant'} on sovereign rails…
+            </p>
+            <OnboardCard
+              duration={2200}
+              step1="Account Credentials Created"
+              step2="Generating Storefront &amp; Digital Menu"
+              step3="Launching Kitchen Dashboard"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

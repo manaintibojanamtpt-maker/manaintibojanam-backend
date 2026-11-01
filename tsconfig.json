@@ -13,6 +13,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
       "@/*": ["./*"],
       "@bhojan/location-core": ["./packages/location-core/src/index.ts"],
       "@bhojan/location-v2": ["./src/features/location-v2/index.ts"],

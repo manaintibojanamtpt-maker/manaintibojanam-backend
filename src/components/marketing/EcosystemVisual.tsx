@@ -9,8 +9,8 @@ import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 function Connector({ label, pathD }: { label: string; pathD: string }) {
   return (
-    <div className="relative flex items-center justify-center max-md:py-6" aria-hidden>
-      <span className="absolute max-md:rotate-90 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D9852F]/70">
+    <div className="relative flex items-center justify-center max-md:py-6" aria-hidden="true">
+      <span className="absolute max-md:rotate-90 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D97706]/70">
         {label}
       </span>
       <svg
@@ -22,15 +22,15 @@ function Connector({ label, pathD }: { label: string; pathD: string }) {
       >
         <path
           d={pathD}
-          stroke="rgba(217,133,47,0.35)"
+          stroke="rgba(217,119,6,0.35)"
           strokeWidth="1.5"
           fill="none"
           className="svg-beam-flow"
         />
-        <circle r="3.5" fill="#D9852F" className="cine-particle" style={{ offsetPath: `path("${pathD}")`, animationDuration: '2.8s' }} />
+        <circle r="3.5" fill="#D97706" className="cine-particle" style={{ offsetPath: `path("${pathD}")`, animationDuration: '2.8s' }} />
         <circle
           r="6"
-          fill="rgba(232,169,94,0.25)"
+          fill="rgba(245,158,11,0.25)"
           className="cine-particle"
           style={{ offsetPath: `path("${pathD}")`, animationDelay: '1.2s', animationDuration: '3.2s' }}
         />
@@ -41,9 +41,9 @@ function Connector({ label, pathD }: { label: string; pathD: string }) {
 
 function VerticalConnector({ label }: { label: string }) {
   return (
-    <div className="flex flex-col items-center py-4" aria-hidden>
-      <ArrowDown size={16} className="text-[#D9852F]" />
-      <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#D9852F]/60">
+    <div className="flex flex-col items-center py-4" aria-hidden="true">
+      <ArrowDown size={16} className="text-[#D97706]" />
+      <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#D97706]/70 font-mono">
         {label}
       </span>
     </div>
@@ -53,38 +53,38 @@ function VerticalConnector({ label }: { label: string }) {
 function StageLabel({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#D9852F]/12 text-[#D9852F]">
+      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#D97706]/15 text-[#D97706]">
         {icon}
       </span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/60">{title}</span>
+      <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#A1A1AA] font-mono">{title}</span>
     </div>
   );
 }
 
 function DashboardMockup() {
   return (
-    <div className="cine-glass flex h-full min-h-[240px] flex-col rounded-2xl p-3.5 border border-white/[0.06]">
+    <div className="rounded-lg border border-[#27272A] bg-[#18181B] p-4 min-h-[240px] flex flex-col shadow-xl text-white">
       <div className="mb-3 flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-white/15" />
-        <span className="h-2 w-2 rounded-full bg-white/15" />
-        <span className="h-2 w-2 rounded-full bg-[#D9852F]/60" />
-        <span className="ml-2 text-[10px] font-semibold tracking-wide text-white/50">
+        <span className="h-2 w-2 rounded-full bg-[#EF4444]" />
+        <span className="h-2 w-2 rounded-full bg-[#F59E0B]" />
+        <span className="h-2 w-2 rounded-full bg-[#10B981]" />
+        <span className="ml-2 text-[10px] font-semibold tracking-wide text-zinc-400 font-mono">
           BhojanOS · Command Center
         </span>
       </div>
       <div className="mb-2 grid grid-cols-3 gap-1.5">
         {([['Orders', '48'], ['Sales', '₹18,450'], ['New', '25']] as [string, string][]).map(([k, v]) => (
-          <div key={k} className="rounded-lg bg-white/[0.04] px-2 py-1.5 border border-white/[0.04]">
-            <div className="text-[9px] uppercase tracking-wider text-white/40">{k}</div>
+          <div key={k} className="rounded-md bg-[#111114] px-2 py-1.5 border border-[#27272A]">
+            <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">{k}</div>
             <div className="text-[13px] font-bold text-white">{v}</div>
           </div>
         ))}
       </div>
       <div className="mb-2 flex gap-1.5">
         {([
-          ['Incoming', 'bg-white/[0.06] text-white/60'],
-          ['Preparing', 'bg-[#D9852F]/15 text-[#D9852F]'],
-          ['Ready', 'bg-[#34D399]/15 text-[#34D399]'],
+          ['Incoming', 'bg-white/10 text-zinc-300'],
+          ['Preparing', 'bg-[#D97706]/20 text-[#D97706] border border-[#D97706]/30'],
+          ['Ready', 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'],
         ] as [string, string][]).map(([s, c]) => (
           <span key={s} className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${c}`}>
             {s}
@@ -97,15 +97,15 @@ function DashboardMockup() {
       ] as [string, string, string, string][]).map(([id, item, amt, st]) => (
         <div
           key={id}
-          className="mb-1.5 flex items-center justify-between rounded-lg bg-white/[0.04] px-2.5 py-2 border border-white/[0.03]"
+          className="mb-1.5 flex items-center justify-between rounded-md bg-[#111114] px-2.5 py-2 border border-[#27272A]"
         >
           <div>
-            <div className="text-[10px] font-semibold text-white/85">{item}</div>
-            <div className="text-[9px] text-white/40">{id}</div>
+            <div className="text-[10px] font-semibold text-white">{item}</div>
+            <div className="text-[9px] text-zinc-500 font-mono">{id}</div>
           </div>
           <div className="text-right">
             <div className="text-[11px] font-bold text-white">{amt}</div>
-            <div className={`text-[9px] font-semibold ${st === 'Preparing' ? 'text-[#D9852F]' : 'text-[#34D399]'}`}>
+            <div className={`text-[9px] font-semibold ${st === 'Preparing' ? 'text-[#D97706]' : 'text-emerald-400'}`}>
               {st}
             </div>
           </div>
@@ -117,19 +117,19 @@ function DashboardMockup() {
 
 function PhoneMockup() {
   return (
-    <div className="cine-glass cine-glass-accent cine-float-soft cine-phone-hover relative mx-auto w-full max-w-[170px] rounded-[22px] p-2 border border-white/[0.08]">
-      <div className="rounded-[16px] bg-[#0A0A0A] p-2.5">
+    <div className="relative mx-auto w-full max-w-[170px] rounded-[22px] p-2 border border-[#27272A] bg-[#18181B] shadow-xl">
+      <div className="rounded-[16px] bg-[#111114] border border-[#27272A] p-2.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-[10px] font-bold text-white">BhojanOS</span>
-          <span className="rounded-full bg-[#34D399]/15 px-1.5 py-0.5 text-[8px] font-bold text-[#34D399]">
+          <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-400 border border-emerald-500/25">
             Active
           </span>
         </div>
         <div className="mb-1.5 flex items-center justify-between text-[9px]">
-          <span className="font-semibold text-white/85">Dashboard</span>
-          <span className="font-bold text-[#34D399]">Live</span>
+          <span className="font-semibold text-zinc-300">Dashboard</span>
+          <span className="font-bold text-emerald-400">Live</span>
         </div>
-        <div className="flex h-7 items-center justify-center rounded-lg bg-gradient-to-r from-[#D9852F] to-[#D9852F] text-[10px] font-bold text-black">
+        <div className="flex h-7 items-center justify-center rounded-full bg-[#D97706] text-[10px] font-bold text-white shadow-md shadow-[#D97706]/20">
           View Dashboard
         </div>
       </div>
@@ -139,13 +139,13 @@ function PhoneMockup() {
 
 function PlatformCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="cine-glass flex flex-col gap-2 rounded-2xl p-3.5 border border-white/[0.06] min-h-[240px] justify-center">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D9852F]/12 text-[#D9852F]">
+    <div className="flex flex-col gap-2 rounded-lg p-4 border border-[#27272A] bg-[#18181B] min-h-[240px] justify-center shadow-xl text-white">
+      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#D97706]/15 text-[#D97706] border border-[#D97706]/25">
         {icon}
       </div>
       <div>
         <div className="text-[11px] font-bold text-white mb-1">{title}</div>
-        <div className="text-[9px] text-white/50 leading-relaxed">{desc}</div>
+        <div className="text-[9px] text-zinc-400 leading-relaxed">{desc}</div>
       </div>
     </div>
   );
@@ -158,28 +158,28 @@ export function EcosystemVisual() {
 
   return (
     <section
-      className="relative overflow-hidden py-20 sm:py-24"
+      className="relative overflow-hidden py-20 sm:py-24 bg-[#09090B] border-b border-[#27272A] text-white"
       aria-labelledby="ecosystem-heading"
       ref={scrollRef}
     >
       {/* Ambient gradient glow for depth */}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#D9852F]/[0.03] to-transparent"
-        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#D97706]/[0.03] to-transparent"
+        aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-[#D9852F]/[0.04] blur-[120px]"
-        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-[#D97706]/[0.05] blur-[120px]"
+        aria-hidden="true"
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center cine-reveal">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#D9852F]">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#D97706] font-mono">
             How it works
           </p>
           <h2
             id="ecosystem-heading"
-            className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
+            className="font-display text-3xl font-extrabold tracking-tight text-[#FAFAFA] sm:text-5xl"
           >
             One connected ecosystem
           </h2>
@@ -232,11 +232,6 @@ export function EcosystemVisual() {
             <PlatformCard icon={<User size={13} />} title="Your Customer" desc="Loyal patrons who return because of your brand, not an app." />
           </div>
         </div>
-
-        <p className="mt-10 text-center text-sm font-semibold text-white/60 cine-reveal">
-          Orders flow directly.{' '}
-          <span className="text-[#D9852F]">Customers stay yours.</span>
-        </p>
       </div>
     </section>
   );

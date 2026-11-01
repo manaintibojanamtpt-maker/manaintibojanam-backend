@@ -31,7 +31,7 @@ const faqItems = [
 
 const HelpCenterPage: React.FC = () => {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#030303] font-sans text-gray-100">
+    <div className="min-h-[100dvh] flex flex-col bg-[#09090B] font-sans text-[#FAFAFA] neone-dark">
       <EnterpriseHeader />
       <main className="flex-grow marketing-main-offset">
         <MarketingPageHero
@@ -43,14 +43,14 @@ const HelpCenterPage: React.FC = () => {
               href={SUPPORT_WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#25D366] text-white font-bold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 bg-[#25D366] text-white font-semibold py-3 px-6 rounded-sm hover:opacity-90 transition-opacity"
             >
               <MessageCircle size={18} />
               WhatsApp Support
             </a>
             <a
               href={`mailto:${SUPPORT_EMAIL}?subject=BhojanOS%20Support`}
-              className="inline-flex items-center gap-2 bg-white/10 text-white font-bold py-3 px-6 rounded-xl border border-white/10 hover:bg-white/15 transition-colors"
+              className="inline-flex items-center gap-2 bg-[#09090B] text-white font-semibold py-3 px-6 rounded-sm border border-[#09090B] hover:bg-[#27272A] transition-colors"
             >
               <Mail size={18} />
               Email Support
@@ -60,65 +60,65 @@ const HelpCenterPage: React.FC = () => {
 
         <section className="max-w-[900px] mx-auto px-4 sm:px-6 pb-16">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-          {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
-          <a
-            href="/owner/register"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
-          >
-            <Store className="text-[#D9852F] mb-3" size={22} />
-            <h3 className="font-bold text-white mb-1">Owner onboarding</h3>
-            <p className="text-sm text-neutral-500">Register and launch your kitchen in minutes.</p>
-          </a>
+            {/* Cross-shell navigation: /owner/register lives in the app shell (full page load required — MarketingApp has no owner routes). */}
+            <a
+              href="/owner/register"
+              className="rounded-xl border border-[#27272A] bg-[#111114] p-5 hover:border-[#D97706]/40 transition-colors"
+            >
+              <Store className="text-[#D97706] mb-3" size={22} />
+              <h3 className="font-bold text-[#FAFAFA] mb-1">Owner onboarding</h3>
+              <p className="text-sm text-[#A1A1AA]">Register and launch your kitchen in minutes.</p>
+            </a>
             <Link
               to="/pricing"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
+              className="rounded-xl border border-[#27272A] bg-[#111114] p-5 hover:border-[#D97706]/40 transition-colors"
             >
-              <BookOpen className="text-[#D9852F] mb-3" size={22} />
-              <h3 className="font-bold text-white mb-1">Plans & pricing</h3>
-              <p className="text-sm text-neutral-500">Growth trial and subscription options.</p>
+              <BookOpen className="text-[#D97706] mb-3" size={22} />
+              <h3 className="font-bold text-[#FAFAFA] mb-1">Plans &amp; pricing</h3>
+              <p className="text-sm text-[#A1A1AA]">Growth trial and subscription options.</p>
             </Link>
             {/* Cross-shell navigation: /owner/feedback lives in the app shell (full page load required — MarketingApp has no owner routes). */}
             <a
               href="/owner/feedback"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D9852F]/40 transition-colors"
+              className="rounded-xl border border-[#27272A] bg-[#111114] p-5 hover:border-[#D97706]/40 transition-colors"
             >
-              <Bug className="text-[#D9852F] mb-3" size={22} />
-              <h3 className="font-bold text-white mb-1">Report a bug</h3>
-              <p className="text-sm text-neutral-500">Owners can submit feedback from the dashboard.</p>
+              <Bug className="text-[#D97706] mb-3" size={22} />
+              <h3 className="font-bold text-[#FAFAFA] mb-1">Report a bug</h3>
+              <p className="text-sm text-[#A1A1AA]">Owners can submit feedback from the dashboard.</p>
             </a>
           </div>
 
-          <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
-            <FileQuestion size={20} className="text-[#D9852F]" />
+          <h2 className="text-xl font-bold text-[#FAFAFA] mb-6 flex items-center gap-2">
+            <FileQuestion size={20} className="text-[#D97706]" />
             Frequently asked questions
           </h2>
           <div className="space-y-3">
             {faqItems.map((item) => (
               <details
                 key={item.q}
-                className="group rounded-xl border border-white/10 bg-white/[0.02] open:bg-white/[0.04]"
+                className="group rounded-xl border border-[#27272A] bg-[#111114] open:bg-[#18181B]"
               >
-                <summary className="cursor-pointer list-none px-5 py-4 font-semibold text-white flex justify-between items-center">
+                <summary className="cursor-pointer list-none px-5 py-4 font-semibold text-[#FAFAFA] flex justify-between items-center">
                   {item.q}
-                  <span className="text-neutral-500 group-open:rotate-45 transition-transform text-xl leading-none">+</span>
+                  <span className="text-[#A1A1AA] group-open:rotate-45 transition-transform text-xl leading-none">+</span>
                 </summary>
-                <p className="px-5 pb-4 text-sm text-neutral-400 leading-relaxed">{item.a}</p>
+                <p className="px-5 pb-4 text-sm text-[#A1A1AA] leading-relaxed border-t border-[#27272A] pt-3">{item.a}</p>
               </details>
             ))}
           </div>
 
-          <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center">
-            <p className="text-sm text-neutral-400 mb-4">
-              Legal & policies:{' '}
-              <Link to="/terms" className="text-[#D9852F] hover:underline">Terms</Link>
+          <div className="mt-10 rounded-2xl border border-[#27272A] bg-[#18181B] p-6 text-center">
+            <p className="text-sm text-[#A1A1AA] mb-4">
+              Legal &amp; policies:{' '}
+              <Link to="/terms" className="text-[#D97706] hover:underline font-medium">Terms</Link>
               {' · '}
-              <Link to="/privacy" className="text-[#D9852F] hover:underline">Privacy</Link>
+              <Link to="/privacy" className="text-[#D97706] hover:underline font-medium">Privacy</Link>
               {' · '}
-              <Link to="/refund-policy" className="text-[#D9852F] hover:underline">Refund</Link>
+              <Link to="/refund-policy" className="text-[#D97706] hover:underline font-medium">Refund</Link>
               {' · '}
-              <Link to="/cancellation-policy" className="text-[#D9852F] hover:underline">Cancellation</Link>
+              <Link to="/cancellation-policy" className="text-[#D97706] hover:underline font-medium">Cancellation</Link>
             </p>
-            <Link to="/contact" className="text-sm font-bold text-white hover:text-[#D9852F]">
+            <Link to="/contact" className="text-sm font-bold text-[#FAFAFA] hover:text-[#D97706]">
               Contact our team →
             </Link>
           </div>

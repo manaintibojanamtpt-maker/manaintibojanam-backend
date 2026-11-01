@@ -7,13 +7,13 @@ import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 /** ── Trust indicators for marquee ── */
 const TRUST_ITEMS = [
-  { icon: CheckCircle2, label: 'Zero Commission', color: '#34D399' },
+  { icon: CheckCircle2, label: 'Zero Commission', color: '#059669' },
   { icon: ShieldCheck, label: 'Data Ownership', color: '#60A5FA' },
-  { icon: Clock, label: 'Instant Settlement', color: '#D9852F' },
+  { icon: Clock, label: 'Instant Settlement', color: '#D97706' },
   { icon: TrendingUp, label: 'AI Insights', color: '#A78BFA' },
   { icon: Users, label: '50K+ Customers', color: '#F472B6' },
-  { icon: Store, label: '3.5K+ Restaurants', color: '#34D399' },
-  { icon: ChefHat, label: 'Free POS', color: '#D9852F' },
+  { icon: Store, label: '3.5K+ Restaurants', color: '#059669' },
+  { icon: ChefHat, label: 'Free POS', color: '#D97706' },
   { icon: Zap, label: 'Zero Setup Fee', color: '#60A5FA' },
 ] as const;
 
@@ -22,14 +22,14 @@ const PARTNER_ITEMS = [
   { name: 'Rapido', color: '#FACC15', bg: 'rgba(250,204,21,0.12)', border: 'rgba(250,204,21,0.35)' },
   { name: 'Porter', color: '#38BDF8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)' },
   { name: 'Uber Direct', color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.35)' },
-  { name: 'In-House', color: '#34D399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.35)' },
+  { name: 'In-House', color: '#059669', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.35)' },
   { name: 'Zepto', color: '#F472B6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(244,114,182,0.35)' },
   { name: 'Swiggy Genie', color: '#F97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)' },
 ] as const;
 
 /** ── Mouse-tracking spotlight hook ── */
 function useSpotlight(ref: React.RefObject<HTMLDivElement>) {
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();

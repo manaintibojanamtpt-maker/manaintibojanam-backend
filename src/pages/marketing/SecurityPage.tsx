@@ -7,7 +7,7 @@ import { EnterpriseSchema } from '../../components/EnterpriseSchema';
 
 const SecurityPage: React.FC = () => {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#030303] font-sans text-gray-100">
+    <div className="min-h-[100dvh] flex flex-col bg-[#09090B] font-sans text-[#FAFAFA] neone-dark">
       <EnterpriseSchema />
       <EnterpriseHeader />
       <main className="flex-grow marketing-main-offset">

@@ -1,21 +1,20 @@
 import React from 'react';
 import { Section } from './ui/Section';
 import { SectionHeader } from './ui/SectionHeader';
-import { GlassCard } from './ui/GlassCard';
 import { executiveTeam } from '../config/team';
 
 const founder = executiveTeam.find((member) => member.id === 'vishwa-kalyan');
 
 export const FounderStory: React.FC = () => {
   return (
-    <Section background="dark">
+    <Section background="subtle">
       <SectionHeader 
         label="The Origin"
         title="Built by Operators, For Operators."
       />
-      <GlassCard className="max-w-4xl mx-auto bg-white/5 border-white/10 p-8 md:p-12">
-        <div className="max-w-none text-neutral-300 space-y-6 text-base sm:text-lg leading-relaxed">
-          <p className="font-medium text-xl text-white">
+      <div className="max-w-4xl mx-auto rounded-xl border border-[#27272A] bg-[#111114] p-8 md:p-12">
+        <div className="max-w-none space-y-6 text-base leading-relaxed text-[#A1A1AA]">
+          <p className="font-medium text-xl text-[#FAFAFA] leading-snug">
             "BhojanOS was born out of sheer frustration with the status quo of restaurant software."
           </p>
           <p>
@@ -28,18 +27,18 @@ export const FounderStory: React.FC = () => {
             We built BhojanOS to replace the fragmented stack with one intelligent, AI-driven platform. Our vision is to handle the operational chaos so that food entrepreneurs can get back to doing what they love: creating great food and unforgettable guest experiences.
           </p>
           {founder && (
-            <div className="mt-8 pt-8 border-t border-white/10 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 shrink-0">
+            <div className="mt-8 pt-8 border-t border-[#27272A] flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-[#18181B] shrink-0 border border-[#27272A]">
                 <img src={founder.imageUrl} alt={founder.alt} className="w-full h-full object-cover" />
               </div>
               <div>
-                <div className="text-white font-bold">{founder.name}</div>
-                <div className="text-neutral-500 text-sm">Founder & CEO</div>
+                <div className="text-[#FAFAFA] font-bold">{founder.name}</div>
+                <div className="text-[#A1A1AA] text-sm">Founder &amp; CEO</div>
               </div>
             </div>
           )}
         </div>
-      </GlassCard>
+      </div>
     </Section>
   );
 };

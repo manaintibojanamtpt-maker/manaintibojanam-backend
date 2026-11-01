@@ -10,42 +10,42 @@ const RefundPolicyPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#070504] text-white font-sans selection:bg-[#D9852F]/20">
+    <div className="min-h-[100dvh] flex flex-col bg-[#09090B] text-[#FAFAFA] font-sans selection:bg-[#D97706]/30 selection:text-white neone-dark">
       <EnterpriseHeader />
 
       <main className="flex-grow marketing-main-offset pt-10 sm:pt-14 pb-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-[#D9852F]/10 text-[#D9852F] flex items-center justify-center border border-[#D9852F]/20">
+          <div className="w-10 h-10 rounded-xl bg-[#18181B] text-[#D97706] flex items-center justify-center border border-[#27272A]">
             <RefreshCw size={20} />
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#D9852F]">Customer Protection</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#D97706] font-mono">Customer Protection</span>
         </div>
 
-        <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
+        <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#FAFAFA] mb-3">
           Refund &amp; Cancellation Policy
         </h1>
-        <p className="text-sm text-white/50 mb-10">Last updated: September 2026 · BhojanOS Platform</p>
+        <p className="text-sm text-zinc-400 mb-10">Last updated: September 2026 · BhojanOS Platform</p>
 
-        <div className="space-y-8 text-sm sm:text-base text-white/75 leading-relaxed">
-          <section className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-white mb-3">1. Food Order Cancellations &amp; Refunds</h2>
-            <p>
+        <div className="space-y-6 text-sm sm:text-base leading-relaxed">
+          <section className="rounded-xl border border-[#27272A] bg-[#111114] p-6 sm:p-8 transition-colors hover:border-[#D97706]/40">
+            <h2 className="text-lg sm:text-xl font-bold text-[#FAFAFA] mb-3">1. Food Order Cancellations &amp; Refunds</h2>
+            <p className="text-[#A1A1AA]">
               Direct food orders placed via restaurant storefronts are prepared fresh by each kitchen. Orders may be cancelled by the customer prior to kitchen confirmation. Once food preparation has commenced, cancellations are at the sole discretion of the restaurant management. In cases of unfulfilled orders, missing items, or quality disputes, refund requests are reviewed promptly and processed back to the original payment source via Razorpay within 5–7 business days.
             </p>
           </section>
 
-          <section className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-white mb-3">2. BhojanOS Software Subscriptions</h2>
-            <p>
+          <section className="rounded-xl border border-[#27272A] bg-[#111114] p-6 sm:p-8 transition-colors hover:border-[#D97706]/40">
+            <h2 className="text-lg sm:text-xl font-bold text-[#FAFAFA] mb-3">2. BhojanOS Software Subscriptions</h2>
+            <p className="text-[#A1A1AA]">
               BhojanOS offers transparent subscription plans for restaurant operators. Operators may cancel paid software subscriptions at any time from their account dashboard. Cancellations take effect at the conclusion of the current monthly billing period, with no penalties or retroactive lock-in.
             </p>
           </section>
 
-          <section className="rounded-2xl border border-white/[0.08] bg-[#0c0907] p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-white mb-3">3. Dispute Resolution &amp; Support</h2>
-            <p>
+          <section className="rounded-xl border border-[#27272A] bg-[#111114] p-6 sm:p-8 transition-colors hover:border-[#D97706]/40">
+            <h2 className="text-lg sm:text-xl font-bold text-[#FAFAFA] mb-3">3. Dispute Resolution &amp; Support</h2>
+            <p className="text-[#A1A1AA]">
               For urgent refund inquiries or billing assistance, reach our dedicated support desk at{' '}
-              <a href="mailto:support@bhojanos.com" className="text-[#D9852F] font-semibold underline">
+              <a href="mailto:support@bhojanos.com" className="text-[#D97706] font-semibold underline hover:text-[#B45309]">
                 support@bhojanos.com
               </a>. We respond to all operator and customer inquiries within 24 hours.
             </p>

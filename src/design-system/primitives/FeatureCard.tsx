@@ -1,5 +1,4 @@
 import React from 'react';
-import { GlassCard } from './GlassCard';
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -8,18 +7,18 @@ interface FeatureCardProps {
   delay?: number;
 }
 
-export const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, delay = 0 }) => {
+export const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
   return (
-    <GlassCard delay={delay} className="flex flex-col h-full">
-      <div className="w-12 h-12 rounded-xl bg-[#FF6B00]/10 border border-[#FF6B00]/20 flex items-center justify-center text-[#FF6B00] mb-6">
+    <div className="flex flex-col h-full rounded-xl border border-[#27272A] bg-[#111114] p-6 transition-all hover:border-[#D97706]/40 shadow-sm text-white">
+      <div className="w-10 h-10 rounded-lg bg-[#18181B] border border-[#27272A] flex items-center justify-center text-[#D97706] mb-5 shrink-0">
         {icon}
       </div>
-      <h3 className="text-xl font-bold text-white mb-3 tracking-tight">
+      <h3 className="text-lg font-bold text-[#FAFAFA] mb-2 tracking-tight">
         {title}
       </h3>
-      <p className="text-gray-400 font-medium leading-relaxed">
+      <p className="text-sm text-[#A1A1AA] font-normal leading-relaxed flex-1">
         {description}
       </p>
-    </GlassCard>
+    </div>
   );
 };
