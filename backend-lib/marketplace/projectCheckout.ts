@@ -653,6 +653,10 @@ export async function placeMarketplaceOrder(
   fieldValue: typeof FieldValue,
   request: MarketplacePlaceRequest,
 ): Promise<MarketplacePlaceResult> {
+  // ── Idempotency (authenticated CAS path only) ──
+  // clientAttemptId gates an atomic Firestore transaction that deduplicates
+  // retries. It is intentionally separate from amount validation: a guest
+  // without clientAttemptId still gets server-authoritative amount checks.
   if (request.clientAttemptId) {
     const replay = await readCheckoutReplay<MarketplacePlaceResult>(db, request.userId || '', request.clientAttemptId, request);
     if (replay) return replay;
@@ -671,9 +675,24 @@ export async function placeMarketplaceOrder(
         ? 'upi'
         : 'cod';
 
+  // ── Server-authoritative quote context ──
+  // Rebuilds the quote from tenant, cart, coupon, and delivery config. Any
+  // mismatch between the client-supplied expectedAmountPaise and the
+  // server-calculated grandTotal is rejected BEFORE any order or payment
+  // attempt is created. Applies to guest and authenticated, COD and UPA.
   const { tenantId, quote, menuPrices, etaMinutes, deliveryDecision } = await buildMarketplaceQuoteContext(db, request);
 
-  if (request.clientAttemptId && (!Number.isInteger(request.expectedAmountPaise) || request.expectedAmountPaise !== Math.round(quote.grandTotal * 100))) {
+  if (request.quoteExpiresAt && Number.isFinite(Date.parse(request.quoteExpiresAt)) && Date.parse(request.quoteExpiresAt) <= Date.now()) {
+    throw Object.assign(new Error('Checkout quote expired; refresh before creating an attempt'), { statusCode: 409 });
+  }
+  if (request.quoteExpiresAt && Number.isFinite(Date.parse(request.quoteExpiresAt)) && Date.parse(request.quoteExpiresAt) > Date.now() + 10 * 60_000) {
+    throw Object.assign(new Error('Checkout quote expiry is too far in the future; refresh before creating an attempt'), { statusCode: 409 });
+  }
+
+  if (!Number.isInteger(request.expectedAmountPaise ?? Number.MIN_SAFE_INTEGER)) {
+    throw Object.assign(new Error('expectedAmountPaise must be an integer paise value'), { statusCode: 400 });
+  }
+  if (request.expectedAmountPaise !== Math.round(quote.grandTotal * 100)) {
     throw Object.assign(new Error('Checkout total changed; review a fresh quote'), { statusCode: 409 });
   }
   const docId =
@@ -731,6 +750,11 @@ export async function placeMarketplaceOrder(
   if (request.clientAttemptId) return commitCheckoutAttempt(db, request.userId || '', request.clientAttemptId, request, result, write);
   // Backward-compatible legacy client, with atomic order/counter writes as well.
   await db.runTransaction(async tx => { write(tx); });
+  // Issue a guest-tracking JWT for any non-Razorpay guest checkout.
+  // COD and UPA both create a canonical Firestore order document bound to
+  // result.orderId, so the token (scoped to that orderId) authorizes later
+  // GET /orders/:orderId/guest-tracking calls. Razorpay creates only an
+  // order_draft and defers payment, so no guest tracking token is issued there.
   if (!request.userId && result.kind !== 'razorpay') {
     try {
       const guestTokenResult = signGuestOrderToken(result.orderId);
