@@ -1,4 +1,4 @@
-import { readCheckoutReplay, commitCheckoutAttempt } from './customerCheckoutAttempt.js';
+import { readCheckoutReplay, commitCheckoutAttempt, guestIdentityUid } from './customerCheckoutAttempt.js';
 import type { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { formatOrderNumberLabel } from './orderNumberAllocator.js';
@@ -506,7 +506,7 @@ export interface MarketplacePlaceRequest extends MarketplaceQuoteRequest {
 }
 
 export type MarketplacePlaceResult =
-  | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote; guestTrackingToken?: string }
+  | { kind: 'cod'; orderId: string; orderNumber: number; tenantId: string; quote: BillQuote; guestTrackingToken?: string; replayed?: boolean }
   | {
       kind: 'upi';
       orderId: string;
@@ -517,6 +517,7 @@ export type MarketplacePlaceResult =
       paymentStatus: 'pending';
       expiresAt: string;
       guestTrackingToken?: string;
+      replayed?: boolean;
     }
   | {
       kind: 'razorpay';
@@ -526,6 +527,7 @@ export type MarketplacePlaceResult =
       quote: BillQuote;
       amountInPaise: number;
       guestTrackingToken?: string;
+      replayed?: boolean;
     };
 
 function buildResolvedOrderItems(
@@ -653,19 +655,21 @@ export async function placeMarketplaceOrder(
   fieldValue: typeof FieldValue,
   request: MarketplacePlaceRequest,
 ): Promise<MarketplacePlaceResult> {
-  // ── Idempotency (authenticated CAS path only) ──
+  if (!request.phone?.trim()) {
+    throw Object.assign(new Error('phone is required'), { statusCode: 400 });
+  }
+  // ── Idempotency (authenticated CAS path + guest retry guard) ──
   // clientAttemptId gates an atomic Firestore transaction that deduplicates
-  // retries. It is intentionally separate from amount validation: a guest
-  // without clientAttemptId still gets server-authoritative amount checks.
+  // retries for authenticated users. For guests we bind the attempt to a
+  // phone-derived uid so repeat retries with the same attemptId get the
+  // same atomic CAS. Amount validation below applies to ALL paths unconditionally.
+  const attemptUid = request.userId || guestIdentityUid(request.phone);
   if (request.clientAttemptId) {
-    const replay = await readCheckoutReplay<MarketplacePlaceResult>(db, request.userId || '', request.clientAttemptId, request);
-    if (replay) return replay;
+    const replay = await readCheckoutReplay<MarketplacePlaceResult>(db, attemptUid, request.clientAttemptId, request);
+    if (replay) return replay.result;
     if (!request.quoteExpiresAt || !Number.isFinite(Date.parse(request.quoteExpiresAt)) || Date.parse(request.quoteExpiresAt) <= Date.now() || Date.parse(request.quoteExpiresAt) > Date.now() + 10 * 60_000) {
       throw Object.assign(new Error('Checkout quote expired; refresh before creating an attempt'), { statusCode: 409 });
     }
-  }
-  if (!request.phone?.trim()) {
-    throw Object.assign(new Error('phone is required'), { statusCode: 400 });
   }
 
   const paymentMethod =
@@ -747,7 +751,28 @@ export async function placeMarketplaceOrder(
       if (item.menuItemId) tx.update(db.collection('menu').doc(item.menuItemId), { itemOrderCount: fieldValue.increment(item.quantity) });
     }
   };
-  if (request.clientAttemptId) return commitCheckoutAttempt(db, request.userId || '', request.clientAttemptId, request, result, write);
+  if (request.clientAttemptId) {
+    const committed = await commitCheckoutAttempt(db, attemptUid, request.clientAttemptId, request, result, write);
+    if (committed.replayed) return committed.result;
+    // New commit: issue a guest-tracking JWT for any non-Razorpay guest checkout.
+    // COD and UPA both create a canonical Firestore order document bound to
+    // result.orderId, so the token (scoped to that orderId) authorizes later
+    // GET /orders/:orderId/guest-tracking calls. Razorpay creates only an
+    // order_draft and defers payment, so no guest tracking token is issued there.
+    if (!request.userId && result.kind !== 'razorpay') {
+      try {
+        const guestTokenResult = signGuestOrderToken(result.orderId);
+        await db.collection('orders').doc(result.orderId).update({
+          guestTrackingToken: guestTokenResult.token,
+          guestTrackingTokenExpiresAt: guestTokenResult.expiresAt.toISOString(),
+        });
+        return { ...result, guestTrackingToken: guestTokenResult.token };
+      } catch {
+        return result;
+      }
+    }
+    return result;
+  }
   // Backward-compatible legacy client, with atomic order/counter writes as well.
   await db.runTransaction(async tx => { write(tx); });
   // Issue a guest-tracking JWT for any non-Razorpay guest checkout.

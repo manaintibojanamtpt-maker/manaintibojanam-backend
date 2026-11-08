@@ -94,6 +94,7 @@ export interface FakeDocRef {
 
 export interface FakeBatch {
   set(ref: FakeDocRef, data: Record<string, unknown>, options?: { merge?: boolean }): void;
+  create(ref: FakeDocRef, data: Record<string, unknown>): void;
   update(ref: FakeDocRef, data: Record<string, unknown>): void;
   delete(ref: FakeDocRef): void;
   commit(): Promise<void>;
@@ -306,6 +307,13 @@ export const createFakeFirestore = (options: FakeFirestoreOptions = {}): FakeFir
         };
 
         const tx: FakeTransaction = {
+          create(ref, data) {
+            guardReachable(ref.collectionName);
+            const current = staged.get(key(ref)) ?? committed.get(key(ref));
+            if (current) throw new Error(`Cannot create existing document ${key(ref)}`);
+            staged.set(key(ref), clone(data));
+            removed.delete(key(ref));
+          },
           async get(ref: FakeDocRef): Promise<FakeSnapshot> {
             guardReachable(ref.collectionName);
             if (removed.has(key(ref))) {
@@ -374,6 +382,12 @@ export const createFakeFirestore = (options: FakeFirestoreOptions = {}): FakeFir
           const current = staged.get(key(ref)) ?? committed.get(key(ref));
           const next = setOptions?.merge && current ? { ...clone(current), ...clone(data) } : clone(data);
           staged.set(key(ref), next);
+          removed.delete(key(ref));
+        },
+        create(ref, data) {
+          const current = staged.get(key(ref)) ?? committed.get(key(ref));
+          if (current) throw new Error(`Cannot create existing document ${key(ref)}`);
+          staged.set(key(ref), clone(data));
           removed.delete(key(ref));
         },
         update(ref, data) {
