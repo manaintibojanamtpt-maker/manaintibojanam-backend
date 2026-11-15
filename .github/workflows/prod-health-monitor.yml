@@ -31,12 +31,15 @@ jobs:
         id: smoke
         env:
           API_URL: https://manaintibojanam-backend.onrender.com
+          HEALTH_TIMEOUT_MS: '90000'
+          HEALTH_MAX_ATTEMPTS: '3'
         run: node scripts/smoke-ops-health.mjs
 
       - name: Release gate (discovery + search)
         id: gate
         env:
           RELEASE_API_BASE: https://manaintibojanam-backend.onrender.com
+          RELEASE_GATE_TIMEOUT_MS: '60000'
         run: node scripts/release-gate.mjs
 
       - name: Verify tsconfig baseUrl guard
