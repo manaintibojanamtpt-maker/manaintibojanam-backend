@@ -48,6 +48,8 @@
     "validate:design-system": "node scripts/validate-design-system.mjs",
     "validate:release-dashboard": "node scripts/design-system/generate-release-dashboard.mjs",
     "test:smoke": "tsx scripts/preprod-smoke-test.ts",
+    "test:smoke-ops-health": "node --test scripts/__tests__/smoke-ops-health.test.mjs",
+    "test:release-gate": "node --test scripts/__tests__/release-gate.test.mjs",
     "test:ai:golden": "node --import tsx --test backend-lib/ai/eval/__tests__/goldenEvalHarnessPhase23.test.ts",
     "test:ai:shadow": "node --import tsx --test backend-lib/ai/shadow/__tests__/aiShadowTrafficPhase24.test.ts backend-lib/ai/shadow/__tests__/shadowComparePhase24.test.ts",
     "test:ai:canary-gates": "node --import tsx --test backend-lib/ai/__tests__/aiLiveRolloutGatesPhase25.test.ts",
