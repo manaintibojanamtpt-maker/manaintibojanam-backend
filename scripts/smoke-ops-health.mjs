@@ -27,6 +27,19 @@ export const DEFAULT_INITIAL_BACKOFF_MS = 2_000;
 export const DEFAULT_BACKOFF_MULTIPLIER = 2;
 export const DEFAULT_MAX_BACKOFF_MS = 8_000;
 
+/**
+ * Transient HTTP status codes eligible for retry on /api/health:
+ * 429: Too Many Requests (rate limited)
+ * 502: Bad Gateway
+ * 503: Service Unavailable (cold start warming / container starting)
+ * 504: Gateway Timeout
+ */
+export const RETRYABLE_STATUS_CODES = [429, 502, 503, 504];
+
+export function isRetryableStatusCode(status) {
+  return typeof status === 'number' && RETRYABLE_STATUS_CODES.includes(status);
+}
+
 /** Public storefronts probed in addition to API /api/health. */
 export const STATIC_URLS = [
   { label: 'OrderBhojan', url: 'https://orderbhojan.web.app' },
@@ -113,8 +126,8 @@ export async function checkPrimaryHealth({
         body = JSON.parse(rawText);
       } catch (parseErr) {
         attemptError = new Error(`Malformed JSON response: ${parseErr.message}`);
-        // If HTTP status is transient (502/503/504), consider retryable
-        isRetryable = [502, 503, 504].includes(attemptStatus);
+        // If HTTP status is transient (429, 502, 503, 504), consider retryable
+        isRetryable = isRetryableStatusCode(attemptStatus);
       }
 
       if (!attemptError) {
@@ -148,7 +161,7 @@ export async function checkPrimaryHealth({
             // Server responded 200 but explicitly reports unhealthy/degraded
             isRetryable = false;
           }
-        } else if ([502, 503, 504, 429].includes(attemptStatus)) {
+        } else if (isRetryableStatusCode(attemptStatus)) {
           attemptError = new Error(`Transient HTTP ${attemptStatus}`);
           isRetryable = true;
         } else {

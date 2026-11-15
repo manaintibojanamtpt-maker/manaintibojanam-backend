@@ -6,6 +6,8 @@ import {
   probeStaticUrls,
   runSmokeHealth,
   DEFAULT_MAX_BACKOFF_MS,
+  RETRYABLE_STATUS_CODES,
+  isRetryableStatusCode,
 } from '../smoke-ops-health.mjs';
 
 describe('Cold-Start Resilient Production Health Monitoring Tests', () => {
@@ -212,6 +214,215 @@ describe('Cold-Start Resilient Production Health Monitoring Tests', () => {
     assert.equal(result.pass, false);
     assert.equal(callCount, 1);
     assert.match(result.attempts[0].error, /status is 'degraded'/);
+  });
+
+  // Scenario 7b: HTTP 429 with valid JSON: retry
+  it('7b. HTTP 429 with valid JSON: retry', async () => {
+    let callCount = 0;
+    const mockSleep = async () => {};
+    const mockFetch = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          status: 429,
+          text: async () => JSON.stringify({ error: 'Too Many Requests', retryAfter: 2 }),
+        };
+      }
+      return {
+        status: 200,
+        text: async () => JSON.stringify({ status: 'ok' }),
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(callCount, 2);
+    assert.equal(result.attempts[0].status, 429);
+    assert.equal(result.attempts[0].isRetryable, true);
+    assert.equal(result.pass, true);
+  });
+
+  // Scenario 7c: HTTP 429 with non-JSON response: retry
+  it('7c. HTTP 429 with non-JSON response: retry', async () => {
+    let callCount = 0;
+    const mockSleep = async () => {};
+    const mockFetch = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          status: 429,
+          text: async () => '<html><body>429 Too Many Requests (Rate limit reached)</body></html>',
+        };
+      }
+      return {
+        status: 200,
+        text: async () => JSON.stringify({ status: 'ok' }),
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(callCount, 2);
+    assert.equal(result.attempts[0].status, 429);
+    assert.equal(result.attempts[0].isRetryable, true);
+    assert.match(result.attempts[0].error, /Malformed JSON/);
+    assert.equal(result.pass, true);
+  });
+
+  // Scenario 7d: HTTP 429 followed by HTTP 200: overall PASS
+  it('7d. HTTP 429 followed by HTTP 200: overall PASS', async () => {
+    let callCount = 0;
+    const sleepDelays = [];
+    const mockSleep = async (ms) => sleepDelays.push(ms);
+    const mockFetch = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          status: 429,
+          text: async () => 'Rate limit exceeded',
+        };
+      }
+      return {
+        status: 200,
+        text: async () => JSON.stringify({ status: 'ok', platform: { tier: 'free' } }),
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      initialBackoffMs: 2500,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(result.pass, true);
+    assert.equal(callCount, 2);
+    assert.equal(result.attempts.length, 2);
+    assert.equal(result.attempts[0].status, 429);
+    assert.equal(result.attempts[0].isRetryable, true);
+    assert.equal(result.attempts[1].status, 200);
+    assert.equal(result.attempts[1].pass, true);
+    assert.deepEqual(sleepDelays, [2500]);
+  });
+
+  // Scenario 7e: HTTP 429 on all attempts: final FAIL after bounded attempts
+  it('7e. HTTP 429 on all attempts: final FAIL after bounded attempts', async () => {
+    let callCount = 0;
+    const sleepDelays = [];
+    const mockSleep = async (ms) => sleepDelays.push(ms);
+    const mockFetch = async () => {
+      callCount++;
+      return {
+        status: 429,
+        text: async () => 'Rate limit exceeded continuously',
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      initialBackoffMs: 1000,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(result.pass, false);
+    assert.equal(callCount, 3); // Bounded strictly by maxAttempts
+    assert.equal(result.attempts.length, 3);
+    assert.equal(sleepDelays.length, 2); // Sleeps after attempt 1 and 2
+    assert.ok(result.attempts.every((a) => a.status === 429 && a.isRetryable === true));
+  });
+
+  // Scenario 7f: HTTP 400 with non-JSON response: immediate FAIL without retry
+  it('7f. HTTP 400 with non-JSON response: immediate FAIL without retry', async () => {
+    let callCount = 0;
+    const mockSleep = async () => {
+      throw new Error('Should not sleep for non-retryable 400');
+    };
+    const mockFetch = async () => {
+      callCount++;
+      return {
+        status: 400,
+        text: async () => 'Bad Request: Missing required header',
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(result.pass, false);
+    assert.equal(callCount, 1); // Immediate fail, NO retry
+    assert.equal(result.attempts.length, 1);
+    assert.equal(result.attempts[0].status, 400);
+    assert.equal(result.attempts[0].isRetryable, false);
+    assert.match(result.attempts[0].error, /Malformed JSON/);
+  });
+
+  // Scenario 7g: HTTP 200 with malformed JSON: immediate FAIL without retry
+  it('7g. HTTP 200 with malformed JSON: immediate FAIL', async () => {
+    let callCount = 0;
+    const mockSleep = async () => {
+      throw new Error('Should not sleep for malformed 200');
+    };
+    const mockFetch = async () => {
+      callCount++;
+      return {
+        status: 200,
+        text: async () => 'Internal Error: String not JSON {broken',
+      };
+    };
+
+    const result = await checkPrimaryHealth({
+      apiUrl: 'https://test-backend.example.com',
+      maxAttempts: 3,
+      fetchFn: mockFetch,
+      sleepFn: mockSleep,
+      logger: createMockLogger(),
+    });
+
+    assert.equal(result.pass, false);
+    assert.equal(callCount, 1); // Immediate fail, NO retry
+    assert.equal(result.attempts.length, 1);
+    assert.equal(result.attempts[0].status, 200);
+    assert.equal(result.attempts[0].isRetryable, false);
+    assert.match(result.attempts[0].error, /Malformed JSON/);
+  });
+
+  // Scenario 7h: isRetryableStatusCode helper consistency check
+  it('7h. isRetryableStatusCode helper consistency check', () => {
+    assert.deepEqual(RETRYABLE_STATUS_CODES, [429, 502, 503, 504]);
+    assert.equal(isRetryableStatusCode(429), true);
+    assert.equal(isRetryableStatusCode(502), true);
+    assert.equal(isRetryableStatusCode(503), true);
+    assert.equal(isRetryableStatusCode(504), true);
+
+    // Non-retryable
+    assert.equal(isRetryableStatusCode(200), false);
+    assert.equal(isRetryableStatusCode(400), false);
+    assert.equal(isRetryableStatusCode(401), false);
+    assert.equal(isRetryableStatusCode(403), false);
+    assert.equal(isRetryableStatusCode(404), false);
+    assert.equal(isRetryableStatusCode(500), false);
   });
 
   // Scenario 8: Ops health-summary is unavailable but explicitly optional — WARN/SKIPPED
