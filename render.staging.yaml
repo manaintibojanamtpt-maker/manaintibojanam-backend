@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: bhojanos-staging-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build:staging:api
+    startCommand: node --max-old-space-size=320 dist-server/server.cjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: PLATFORM_TIER
+        value: free
+      - key: FIREBASE_PROJECT_ID
+        value: bhojanos-staging
+      - key: VOICE_AGENT_TOOL_SECRET
+        sync: false # Set securely in Render Dashboard (Environment tab)
+      - key: ORDERBHOJAN_URL
+        value: https://staging.orderbhojan.web.app
+      - key: PUBLIC_APP_URL
+        value: https://staging.bhojanos.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://staging.bhojanos.com,http://localhost:5173,http://localhost:8080
